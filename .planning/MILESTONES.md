@@ -1,5 +1,60 @@
 # Milestones
 
+## v5.27 Launch Readiness (Shipped: 2026-10-15 — tag `v5.27.0`)
+
+**Phases completed:** 7 phases (222–226, with 222.1 and 225.1 inserted), 75 plans, 75 numbered
+SUMMARY files plus 21 gap-closure/fix-draft SUMMARYs in Phase 224
+**Requirements:** **20/20 satisfied**, DOC-04 accepted as scoped (operator override 2026-10-13)
+**Audit:** `tech_debt` (`.planning/milestones/v5.27-MILESTONE-AUDIT.md`, at `main` `53476765`).
+Requirements 20/20, phases 7/7 (every VERIFICATION `passed`, CI observed green at each phase head),
+integration 13/15 (W12 PARTIAL, W15 BROKEN, both debt and not requirement gaps), flows 3/3,
+Nyquist 7/7.
+**Released:** `quirk-scanner` 5.27.0 on PyPI and GitHub Releases. Tag `v5.27.0` is on `265ea2e8`
+(PR #60), and the release body was composed from the `[5.27.0]` CHANGELOG section. It is the first
+tag since `v5.25.0`, so it carries v5.26 too. Six GitHub security advisories were published.
+**Scale:** 185 commits (172 non-merge), 449 files, +36,246 / -5,686, 14 days (2026-10-02 ->
+2026-10-15). Merged to `main` through PRs #46 and #52–#61.
+
+**What it was about:** making QU.I.R.K. fit to show the public. The operator gated the social
+launch on three things: the tool carries its own identity, every public doc claim is true of the
+code, and a tagged release contains both. **That launch gate is now satisfied** (REL-07, recorded in
+HORIZON and STATE).
+
+**Highlights:**
+- **Brand, reproducible and gated.** PR #46 landed after a refresh with CI green at the merged head.
+  The brand regenerates byte-identically, and one freshness gate covers SVGs, the packaged copies,
+  the PNG and the favicon ICO. It appears on the README (GitHub light/dark and PyPI), the report
+  colophon (HTML/PDF/DOCX and `/print`), the sidebar and the browser tab. Brand guidelines v2 adds a
+  Product UI palette. The accent moved to Ink-violet with no contrast pair getting worse.
+- **The doc review measured itself.** The doc set is enumerated from `git ls-files`, and an 8,927-row
+  claim ledger records every checkable claim, each verified by running a command, grepping source or
+  hitting a registry. A CI gate keeps its anchors resolving. Capabilities the docs omitted were added
+  as verified rows. The residual false-claim rate in deep reference docs was *measured* (4.0%, 8/201)
+  and disclosed, rather than declared zero.
+- **Security before the tag.** Phase 225.1, inserted after Phase 225, hardened auth config loading,
+  outbound URL validation (per hop), `trusted_targets` coverage, error/log text and sensor-push
+  auditing, and made the JWKS-with-verification-disabled finding HIGH on both pipelines with no
+  score impact. Every fix has a negative control recorded red on pre-fix code.
+- **A release that checks itself.** The install hints named `quirk[...]`, a different PyPI project.
+  They were corrected to `quirk-scanner` in the bump PR, with a source-scan guard. README images are
+  pinned to the release tag by gates that derive the tag from `pyproject.toml`. A clean-venv install
+  from PyPI reported 5.27.0.
+
+**Known open at close, counted from disk and not from `gsd-sdk query audit-open`, which reported 5
+todos:** 169 pending todos, including 118 `doc224` product defects (14 high priority, 117 with no
+owner field, so the todo -> owner gate does not police them). One open debug session,
+`github-release-notes-and-ci-failures`, has no status field; its finding #1 overlaps REL-06 and should be
+re-checked. The audit's second session, `sensor-enroll-id-mismatch`, is already `status: resolved`.
+There are 15 audit tech-debt items (7 groups, full list in the audit frontmatter): W15 (bundled mono font never served), the report-header old-blue
+wordmark, ledger code-cite drift, todos `261014` and `261015`, and others. Owners carried forward:
+`999.118`–`999.125`, with `999.120` (P2b) as the operator-reserved v5.28 anchor.
+
+**This close was hand-written under a pre-image + full-diff protocol.** No `phase.complete`,
+`milestone.complete`, or mutating `state.*` / `roadmap.*` verb was used. `ROADMAP.md`'s
+`## Backlog` was diff-verified byte-identical (243 lines), and every line removed from `ROADMAP.md`
+was checked present in the archive (2 deliberate rewrites only). No milestone tag was created:
+`v5.27.0` is the release tag, and this project has never cut separate milestone tags.
+
 ## v5.26 Accessibility & Instrument Truth (Development complete: 2026-10-02 — untagged)
 
 **Phases completed:** 7 phases (215-221, 221 a gap-closure insert), 44 plans, 44 SUMMARY files
