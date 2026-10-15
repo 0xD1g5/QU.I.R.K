@@ -463,3 +463,41 @@ def test_trends_does_not_500_when_severity_is_null():
             "severity must round-trip as null, not be coerced to a string "
             f"placeholder. Got: {sample!r}"
         )
+
+
+def _clean_tls_kwargs(i: int, ts, cert_not_after):
+    return dict(
+        host=f"ceil{i}.example.com", port=443, protocol="TLS",
+        service_detail="pqc-hybrid-detected",
+        tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+        tls_weak_ciphers_present=False, tls_legacy_suites_present=False,
+        cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+        cert_not_after=cert_not_after, cert_subject="CN=clean",
+        cert_issuer="CN=CA", tls_supported_versions="TLSv1.3",
+        scanned_at=ts,
+    )
+
+
+def test_timeline_point_applies_critical_ceiling():
+    """Phase 228 XSURF-07: the timeline point derives dashboard findings, so an
+    expired certificate among 4 otherwise-clean rows hits the consequence
+    ceiling and matches the session score the dashboard headline reports."""
+    from quirk.models import CryptoEndpoint
+
+    client, SessionFactory = _make_trend64_client_and_session()
+    db = SessionFactory()
+    ts = _dt_t64(2026, 5, 1, 10, 0, 0)
+    try:
+        for i in range(3):
+            db.add(CryptoEndpoint(**_clean_tls_kwargs(i, ts, ts + _td_t64(days=200))))
+        db.add(CryptoEndpoint(**_clean_tls_kwargs(9, ts, ts - _td_t64(days=5))))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.get("/api/trends/timeline?n=30")
+    assert resp.status_code == 200
+    points = resp.json()["sessions"]
+    assert len(points) == 1
+    assert points[0]["score"] is not None
+    assert points[0]["score"] <= 34, points[0]["score"]

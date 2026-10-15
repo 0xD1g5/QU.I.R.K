@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
+from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
 from quirk.dashboard.api.schemas import (
     FindingCounts,
     SampleFinding,
@@ -99,6 +100,7 @@ def get_trends(db: Session = Depends(get_db)) -> TrendReportResponse:
             current_ts=sessions[0],
             previous_ts=None,
             db=db,
+            findings_deriver=derive_dashboard_scoring_findings,
         )
         return _to_response(report)
 
@@ -107,6 +109,7 @@ def get_trends(db: Session = Depends(get_db)) -> TrendReportResponse:
         current_ts=sessions[0],
         previous_ts=sessions[1],
         db=db,
+        findings_deriver=derive_dashboard_scoring_findings,
     )
     return _to_response(report)
 
@@ -203,12 +206,8 @@ def get_trends_timeline(
         eps = _fetch_session_endpoints(db, ts)
         if not eps:
             continue
-        # D-07 (184.4): intentionally findings-less — TrendSessionPoint (schemas.py)
-        # exposes only `score: Optional[float]` (Phase 199 / TRIAGE-10 widening)
-        # and `subscores: SubScores` from this evidence/score_dict; it has no
-        # rating/band field, so this timeline point can never render a
-        # severity-blind band.
-        evidence = build_evidence_summary(eps)
+        # Phase 228 D-08/D-12: derive dashboard findings; no try/except on purpose.
+        evidence = build_evidence_summary(eps, derive_dashboard_scoring_findings(eps))
         score_dict = compute_readiness_score(evidence)
         sub = score_dict["subscores"]
         keys = [

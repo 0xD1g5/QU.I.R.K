@@ -315,3 +315,38 @@ class TestMergeLatestWithData:
         # exactly 99 legitimately, the assertion below only checks type consistency.)
         assert isinstance(per_seg["dmz"], (int, float)) and not isinstance(per_seg["dmz"], bool)
         assert isinstance(per_seg["corp"], (int, float)) and not isinstance(per_seg["corp"], bool)
+
+
+def test_merge_latest_scores_apply_critical_ceiling():
+    """Phase 228 XSURF-07: overall and per-segment merge scores derive dashboard
+    findings; an expired cert caps its segment and the overall, not the other."""
+    client, TestingSession = _make_isolated_client()
+    db = TestingSession()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    from quirk.models import CryptoEndpoint
+
+    def _ep(host, sensor, seg, not_after):
+        return CryptoEndpoint(
+            host=host, port=443, protocol="TLS", segment=seg, sensor_id=sensor,
+            scanned_at=now, service_detail="pqc-hybrid-detected",
+            tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+            tls_weak_ciphers_present=False, tls_legacy_suites_present=False,
+            cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+            cert_not_after=not_after, cert_subject="CN=clean",
+            cert_issuer="CN=CA", tls_supported_versions="TLSv1.3",
+        )
+
+    good = now + timedelta(days=200)
+    for i in range(3):
+        db.add(_ep(f"a{i}.example.com", "sensor-a", "seg-a", good))
+        db.add(_ep(f"b{i}.example.com", "sensor-b", "seg-b", good))
+    db.add(_ep("bad.example.com", "sensor-b", "seg-b", now - timedelta(days=5)))
+    db.commit()
+    _seed_merge_run(db, score=90, endpoint_count=7, sensor_count=2)
+    db.close()
+
+    data = client.get("/api/merge/latest").json()["merge"]
+    segs = data["per_segment_scores"]
+    assert segs["seg-b"] is not None and segs["seg-b"] <= 34
+    assert segs["seg-a"] is not None and segs["seg-a"] > 34
+    assert data["score"] <= 34
