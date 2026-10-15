@@ -114,13 +114,13 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
 
 ### Release cut (REL)
 
-- [ ] **REL-05**: The version is bumped to 5.27.0 in `pyproject.toml` (editable reinstall so
+- [x] **REL-05**: The version is bumped to 5.27.0 in `pyproject.toml` (editable reinstall so
       `tests/test_version.py` passes) and at every version-string site (README, `docs/UAT-SERIES.md`
       header and UAT-1-02). `CHANGELOG.md` gains a `## [5.27.0]` section that covers both v5.26 and
       v5.27 out of `[Unreleased]`.
-- [ ] **REL-06**: Tag `v5.27.0` is pushed and `release.yml` publishes to PyPI and GitHub Releases,
+- [x] **REL-06**: Tag `v5.27.0` is pushed and `release.yml` publishes to PyPI and GitHub Releases,
       with the release body composed from the CHANGELOG section rather than boilerplate.
-- [ ] **REL-07**: After publishing, a clean venv installed from PyPI reports `quirk --version` =
+- [x] **REL-07**: After publishing, a clean venv installed from PyPI reports `quirk --version` =
       5.27.0, and the PyPI project page renders the README logo. The launch gate is recorded as
       closed in HORIZON.md and STATE.md.
 
@@ -150,8 +150,8 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
 
 Deferred from this milestone with an owner:
 
-- **GitHub social preview** (1280x640 PNG from the hero SVG, uploaded by hand in repo settings):
-  deferred at the 2026-10-02 kickoff. The BRAND-03 raster pipeline makes it a one-command follow-up.
+- ~~**GitHub social preview** (1280x640 PNG from the hero SVG, uploaded by hand in repo settings):
+  deferred at the 2026-10-02 kickoff. The BRAND-03 raster pipeline makes it a one-command follow-up.~~ — delivered in Phase 226 (docs/brand/quirk-social-preview.png, uploaded 2026-10-15)
 - **CLI ASCII lens-as-Q banner** (`quirk/cli/banner.py`): optional, low value.
 - **Executable install gate** (README/installation install commands run in CI): deferred. DOC-04
   verifies them once; nothing keeps them true afterwards.
@@ -191,6 +191,6 @@ Deferred from this milestone with an owner:
 | SECH-03 | Phase 225.1 | Complete |
 | SECH-04 | Phase 225.1 | Complete |
 | SECH-05 | Phase 225.1 | Complete |
-| REL-05 | Phase 226 | Pending |
-| REL-06 | Phase 226 | Pending |
-| REL-07 | Phase 226 | Pending |
+| REL-05 | Phase 226 | Complete |
+| REL-06 | Phase 226 | Complete |
+| REL-07 | Phase 226 | Complete |
