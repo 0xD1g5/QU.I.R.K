@@ -801,10 +801,17 @@ def test_narrowing_is_not_vacuous_on_the_real_corpus():
 #   - an `**Owner...:**` line citing `999.N` with no HORIZON.md table row, or
 #     whose row's status cell says CLOSED / RESOLVED / DRAINED.
 #
-# Deliberately NOT enforced: that every todo HAS an owner. ~30 older todos carry
-# no owner field at all; an `**Owner:** unassigned` line is an honest record,
-# not a dangling one. This leg polices pointers that rot at a close, which is
-# the BACK-A11Y-01 / INT-01 loss mode -- not the size of the backlog.
+# Ownership is NOT enforced here for non-doc224 todos: ~30 older todos carry no
+# owner field at all, and an `**Owner:** unassigned` line is an honest record, not
+# a dangling one (extending ownership to every pending todo is a deferred
+# follow-up). `*doc224*` todos ARE enforced, by the Phase 227 leg at the end of
+# this module (frontmatter `owner:`, with the D-04/D-05 liveness rules). This leg
+# polices pointers that rot at a close, which is the BACK-A11Y-01 / INT-01 loss
+# mode -- not the size of the backlog.
+#
+# Known limitation: `_HORIZON_ROW_RE` reads only cell 2 as the status, so a row
+# whose terminal word sits in cell 3, or whose status is SHIPPED / OBSOLETE /
+# SUPERSEDED (not in `_TERMINAL_STATUS_RE`), reads as live.
 #
 # Runs in CI: `.planning/todos/`, ROADMAP.md, HORIZON.md and the recent
 # archived roadmaps are git-tracked. A phase whose roadmap is not visible on
@@ -1028,3 +1035,42 @@ def test_doc224_owner_detection_each_shape(tmp_path):
     assert "[x]" in by_name["d-doc224-reqchecked.md"] and "completed" in by_name["d-doc224-reqchecked.md"]
     assert "REQUIREMENTS.md" in by_name["e-doc224-reqabsent.md"]
     assert "no HORIZON.md table row" in by_name["i-doc224-floattrap.md"]
+
+
+def test_every_doc224_todo_has_a_live_owner():
+    todo_paths = sorted(TODOS_PENDING_DIR.glob(DOC224_GLOB))
+    req_text = REQUIREMENTS_PATH.read_text(encoding="utf-8", errors="replace")
+    req_states = _requirement_states(req_text)
+    rows = _horizon_rows(HORIZON_PATH.read_text(encoding="utf-8", errors="replace"))
+
+    owners = [_owner_of(p.read_text(encoding="utf-8", errors="replace"))[0] for p in todo_paths]
+    n_backlog = sum(1 for o in owners if o and o.startswith("999."))
+    n_req = sum(1 for o in owners if o and not o.startswith("999."))
+    assert todo_paths and req_states and rows and n_req >= 1 and n_backlog >= 1, (
+        f"vacuous: {len(todo_paths)} doc224 todos, {len(req_states)} requirement states, "
+        f"{len(rows)} HORIZON 999.* rows, {n_req} requirement owners, {n_backlog} 999.* owners "
+        "-- a parser has stopped matching; fix the parser, do not delete this assertion"
+    )
+
+    offenders = _owner_offenders(todo_paths, req_states, rows)
+    if offenders:
+        detail = "\n".join(f"  - {o}" for o in offenders)
+        pytest.fail(
+            f"{len(offenders)} pending doc224 todo(s) lack a live owner:\n{detail}\n\n"
+            "Fix: add a single owner: line (a live v5.28 requirement ID or a quoted open HORIZON "
+            '"999.N") to the todo\'s frontmatter, or move a resolved todo to '
+            ".planning/todos/completed/ with a ## Resolution citing live evidence. Do not delete "
+            "the owner line, the todo, or this assertion to make this pass."
+        )
+
+    # Traceability cross-check: a requirement-owned todo that names resolves_phase must agree
+    # with the Traceability table's phase for that requirement.
+    trace = {m.group(1): m.group(2) for m in _TRACE_ROW_RE.finditer(req_text)}
+    mismatches = []
+    for path, owner in zip(todo_paths, owners):
+        if not owner or owner.startswith("999."):
+            continue
+        rp = _RESOLVES_PHASE_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+        if rp and trace.get(owner) != rp.group(1):
+            mismatches.append(f"{path.name}: owner {owner} traces to Phase {trace.get(owner)}, resolves_phase {rp.group(1)}")
+    assert not mismatches, "resolves_phase disagrees with REQUIREMENTS.md Traceability:\n" + "\n".join(mismatches)
