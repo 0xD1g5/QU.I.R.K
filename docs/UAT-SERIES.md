@@ -976,7 +976,7 @@ CORRECTED 2026-09-28, post-publish: the parenthetical here previously read “Ph
 3. Open `quirk-output/<run>/report.html` and verify:
    - A `<h2>Coverage Gaps</h2>` section exists immediately before "All Findings".
    - The Coverage Gaps table contains rows for the enabled-but-skipped scanners.
-   - Each row's Recommendation column contains the literal backticked invocation `pip install quirk[<extra>]` for `cloud`, `dashboard`, `db`, and `identity` (motion is intentionally NOT in this registry — Phase 41 inline advisory path remains authoritative).
+   - Each row's Recommendation column contains the literal backticked invocation `pip install 'quirk-scanner[<extra>]'` for `cloud`, `dashboard`, `db`, and `identity` (motion is intentionally NOT in this registry — Phase 41 inline advisory path remains authoritative).
    - The All Findings table does NOT contain any row whose `category` is `coverage_gap`.
 4. Inspect `quirk-output/<run>/findings.json`: every coverage_gap finding has `category="coverage_gap"` and `severity="INFO"`.
 5. Run the scan a second time with `enable_kerberos`/`enable_db`/`enable_gcp`/`enable_k8s`/`enable_vault` set to `false` and confirm the readiness/intelligence score is identical to the first run (D-07 score-exclusion sanity check).
@@ -985,7 +985,8 @@ CORRECTED 2026-09-28, post-publish: the parenthetical here previously read “Ph
 
 **Pass Criteria:**
 - HTML report contains a `<h2>Coverage Gaps</h2>` section with ≥1 row
-- Each Recommendation cell contains the literal `pip install quirk[<extra>]` for at least `cloud`, `dashboard`, `db`, `identity`
+- Each Recommendation cell contains the literal `pip install 'quirk-scanner[<extra>]'` for at least `cloud`, `dashboard`, `db`, `identity`
+- Note (2026-10-14, Phase 226): the literal was renamed from `pip install quirk[<extra>]` to the quoted `pip install 'quirk-scanner[<extra>]'`; the old form resolved an unrelated PyPI project.
 - All Findings table contains zero rows with `category=coverage_gap`
 - Severity summary card excludes coverage_gap findings from INFO/total counts
 - Readiness score for run-A (enabled-but-skipped) equals run-B (disabled) within ±0.0
