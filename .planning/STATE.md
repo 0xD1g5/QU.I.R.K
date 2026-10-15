@@ -1476,6 +1476,8 @@ continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score 
 correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
 Last activity: 2026-10-15. Phase 227 planned, 9 plans (hand-edited from a pre-image).
 
+Standing obligation from Phase 227 (OWN-01): tests/test_backlog_reconciliation_gate.py::test_every_doc224_todo_has_a_live_owner goes red when a requirement that owns a doc224 todo is checked [x]. Phases 228-231 must therefore git mv the owned todo (XSURF-05..08, FIND-11..13, DETECT-01..05, QRAMM-20) to .planning/todos/completed/ with a Resolution section in the same change that checks the requirement. A milestone archive that replaces REQUIREMENTS.md turns still-pending requirement-owned todos UNRESOLVED, so re-home or close them first. HORIZON row 999.125 closes when Phase 230 closes.
+
 **Prior position (v5.27 close, superseded 2026-10-15):**
 Phase: — (milestone v5.27 closed 2026-10-15; no phase open)
 Plan: —
