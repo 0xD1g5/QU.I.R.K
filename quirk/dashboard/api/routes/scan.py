@@ -22,7 +22,7 @@ from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 # RVW-002: share the report engine's tri-state chain-verification logic rather
 # than reimplementing it here. Two implementations of 'did the chain verify?'
 # is how the two surfaces drifted apart in the first place.
-from quirk.engine.findings_evaluator import _chain_verified
+from quirk.engine.findings_evaluator import _chain_verified, runs_tls_certificate_checks
 from quirk.scanner.hardware_tier import TIER_ORDER as _TIER_ORDER  # Phase 155 D-04: shared tier ordering
 from quirk.dashboard.api.schemas import (
     BurndownBucket,
@@ -181,6 +181,11 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
             segment=ep.segment,
         ))
 
+    # Phase 228 D-05: the report gates its whole TLS block on the same
+    # predicate. JWKS advisory and HTTP stay above the gate on purpose.
+    if not runs_tls_certificate_checks(ep):
+        return findings
+
     # Legacy TLS version
     if ep.tls_version and ep.tls_version in ("TLSv1", "TLSv1.1", "TLS 1.0", "TLS 1.1"):
         findings.append(FindingItem(
@@ -241,7 +246,7 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
                 id=ep.id,
                 host=ep.host,
                 port=ep.port,
-                severity="HIGH",
+                severity="MEDIUM",  # Phase 228 D-01: matches the report
                 title=f"Certificate expiring in {days_to_expiry} day(s)",
                 protocol="TLS",
                 description="Certificate expires within 30 days.",

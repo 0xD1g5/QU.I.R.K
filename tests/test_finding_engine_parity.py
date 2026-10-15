@@ -97,6 +97,16 @@ _KNOWN_IDENTITY_DIVERGENCES = frozenset(
 )
 
 
+def _is_known_divergence(report_title, dash_title):
+    """D-178-A exact pairs, plus D-178-C (Phase 228): the near-expiry dashboard
+    title embeds a day count (so it cannot be an exact allowlist pair) and D-02
+    forbids changing it. Bounded in docs/reviews/178-derivation-path-divergence.md."""
+    if (report_title, dash_title) in _KNOWN_IDENTITY_DIVERGENCES:
+        return True
+    return (report_title == "TLS certificate expiring within 30 days"
+            and dash_title.startswith("Certificate expiring in "))
+
+
 def _report_titles():
     return {
         (f["host"], f["port"], f["title"]): f["severity"]
@@ -211,7 +221,7 @@ class TestIdentityParity:
             dash_title = _title_for(dash, host, dash_needle)
             if report_title is None or dash_title is None:
                 continue
-            if (report_title, dash_title) in _KNOWN_IDENTITY_DIVERGENCES:
+            if _is_known_divergence(report_title, dash_title):
                 continue
             report_fp = TicketingChannel.compute_fingerprint(
                 {"host": host, "port": 443, "title": report_title}
@@ -272,7 +282,7 @@ class TestIdentityParity:
             )
             if report_fp == dash_fp:
                 continue
-            if (report_title, dash_title) not in _KNOWN_IDENTITY_DIVERGENCES:
+            if not _is_known_divergence(report_title, dash_title):
                 unbounded.append((host, report_title, dash_title))
         assert not unbounded, (
             "IDENT-03: unbounded identity divergence(s) found — add to "
@@ -285,7 +295,6 @@ class TestIdentityParity:
 # --- Phase 228 (XSURF-05 / XSURF-06) -------------------------------------
 
 import ast
-import inspect
 from pathlib import Path
 
 from quirk.dashboard.api.routes.scan import findings_for_endpoint
