@@ -362,8 +362,7 @@ reports render; the fresh-install validation script under **Verify properly** ab
 > probes give no advisory (SNMP only logs a message), and `--openapi-spec` without `[api]` produces an INFO record that is not a finding. Each
 > advisory names the extra (or, for nmap, the binary) to install so you can opt in to that capability
 > without re-installing the world. The PyPI distribution is `quirk-scanner`, so install it as
-> `pip install 'quirk-scanner[<extra>]'`. Where the advisory text gives a pip command, it drops the
-> `-scanner` suffix from the package name, and a different, unrelated project uses that shorter name on PyPI.
+> `pip install 'quirk-scanner[<extra>]'`. The advisory prints that same command.
 
 ---
 

@@ -74,7 +74,7 @@ def _advisory_ep(**kwargs):
         port=0,
         protocol="ADVISORY",
         scan_error=(
-            "Kerberos scanning skipped — run `pip install quirk[identity]` to enable"
+            "Kerberos scanning skipped — run `pip install 'quirk-scanner[identity]'` to enable"
         ),
         scan_error_category="missing_extra",
     )

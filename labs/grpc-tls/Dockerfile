@@ -9,7 +9,13 @@ WORKDIR /app
 
 # Copy dependency manifests first for layer-cache efficiency.
 COPY go.mod go.sum ./
-RUN go mod download
+# Bounded retry (D-16): transient proxy.golang.org stream errors; still fails after attempt 3.
+RUN for i in 1 2 3; do \
+      go mod download && exit 0; \
+      echo "go mod download failed (attempt $i/3)" >&2; \
+      if [ "$i" -lt 3 ]; then sleep $((i * 10)); fi; \
+    done; \
+    exit 1
 
 COPY main.go ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o grpc-server .

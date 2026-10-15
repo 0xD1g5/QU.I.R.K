@@ -75,7 +75,7 @@ def scan_container_image(
     if not exe:
         if logger:
             logger.v(
-                "syft is not installed — pip install 'quirk[cbom]' and "
+                "syft is not installed — pip install 'quirk-scanner[cbom]' and "
                 "`brew install syft` to enable container scanning"
             )
         return []

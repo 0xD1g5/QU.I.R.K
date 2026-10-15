@@ -1,4 +1,4 @@
-"""Inclusion guard: ``pip install quirk[all]`` MUST pull slack-sdk.
+"""Inclusion guard: ``pip install 'quirk-scanner[all]'`` MUST pull slack-sdk.
 
 Phase 101 / NOTIFY-03 rationale
 ---------------------------------

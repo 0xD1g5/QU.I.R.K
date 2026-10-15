@@ -51,3 +51,7 @@ resolves_phase: 226
 - **Unknowns:** whether REL-05 runs `towncrier build` at all or hand-writes the 5.27.0 section; which of the 24
   version anchors the bump actually touches (depends on which docs it edits).
 - **Spike needed?** No.
+
+## Resolution
+
+Resolved 2026-10-14 (Phase 226-07): the three changelog.d fragments were deleted and folded by hand into CHANGELOG.md [5.27.0], towncrier build was not run, DCL-CHANGELOG-0001..0013 are REMOVED, and the ledger gate prints 77 passed.

@@ -433,7 +433,7 @@ def scan_k8s_targets(
             cluster_name=cluster_name,
             reason=(
                 "kubernetes Python SDK is not installed. "
-                "Install with: pip install quirk[cloud]"
+                "Install with: pip install 'quirk-scanner[cloud]'"
             ),
             session_start=session_start,
         ))
@@ -448,7 +448,7 @@ def scan_k8s_targets(
                 cluster_name=cluster_name,
                 reason=(
                     "google-cloud-container SDK is not installed. "
-                    "Install with: pip install quirk[cloud]"
+                    "Install with: pip install 'quirk-scanner[cloud]'"
                 ),
                 session_start=session_start,
             ))
@@ -469,7 +469,7 @@ def scan_k8s_targets(
                 cluster_name=cluster_name,
                 reason=(
                     "azure-mgmt-containerservice SDK is not installed. "
-                    "Install with: pip install quirk[cloud]"
+                    "Install with: pip install 'quirk-scanner[cloud]'"
                 ),
                 session_start=session_start,
             ))

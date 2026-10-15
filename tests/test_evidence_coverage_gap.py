@@ -12,7 +12,7 @@ def test_evidence_summary_excludes_coverage_gap():
             "host": "kerb",
             "port": 0,
             "title": "Scanner skipped — optional extra not installed",
-            "recommendation": "pip install quirk[identity]",
+            "recommendation": "pip install 'quirk-scanner[identity]'",
         },
         {
             "severity": "HIGH",

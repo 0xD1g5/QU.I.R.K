@@ -30,12 +30,12 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
     "INSTALL-001": ErrorEntry(
         code="INSTALL-001",
         cause="Optional scanner package not installed.",
-        fix="Run `pip install quirk[<extra>]` to enable this scanner.",
+        fix="Run `pip install 'quirk-scanner[<extra>]'` to enable this scanner.",
     ),
     "INSTALL-002": ErrorEntry(
         code="INSTALL-002",
         cause="Dashboard extras not installed.",
-        fix="Run `pip install quirk[dashboard]` then retry `quirk serve`.",
+        fix="Run `pip install 'quirk-scanner[dashboard]'` then retry `quirk serve`.",
     ),
     "INSTALL-003": ErrorEntry(
         code="INSTALL-003",

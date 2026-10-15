@@ -52,7 +52,7 @@ def scan_source_repo(
     if not exe:
         if logger:
             logger.v(
-                "semgrep is not installed — pip install 'quirk[cbom]' and "
+                "semgrep is not installed — pip install 'quirk-scanner[cbom]' and "
                 "`pip install semgrep` to enable source code scanning"
             )
         return []

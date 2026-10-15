@@ -214,7 +214,7 @@ describe("ExecutivePage — DELIV-02 report download group (render/availability)
   })
 
   it("renders an unavailable format disabled with its verbatim reason", async () => {
-    const reason = "DOCX requires the optional extra: pip install quirk[docx]"
+    const reason = "DOCX requires the optional extra: pip install 'quirk-scanner[docx]'"
     manifest = makeManifest({ formats: { docx: { available: false, reason } } })
     const { ExecutivePage } = await import("@/pages/executive")
     render(<ExecutivePage />)

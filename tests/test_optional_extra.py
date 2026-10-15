@@ -30,7 +30,7 @@ def test_registry_omits_motion_and_redis():
 
 
 # ---------------------------------------------------------------------------
-# Test 2 — every install_hint contains the literal `pip install quirk[<extra>]`
+# Test 2 — every install_hint contains the literal `pip install 'quirk-scanner[<extra>]'`
 #           (binary-only extras are exempt — they have no pip package)
 # ---------------------------------------------------------------------------
 def test_all_hints_contain_pip_install_literal():
@@ -41,10 +41,13 @@ def test_all_hints_contain_pip_install_literal():
         # contains system-package instructions instead (Phase 47 / D-08).
         if not entry.modules:
             continue
-        literal = f"pip install quirk[{entry.extra}]"
+        literal = f"pip install 'quirk-scanner[{entry.extra}]'"
         assert literal in entry.install_hint, (
             f"entry {entry.extra!r} hint missing literal {literal!r}: "
             f"{entry.install_hint!r}"
+        )
+        assert f"pip install quirk[{entry.extra}]" not in entry.install_hint, (
+            f"entry {entry.extra!r} hint names the unrelated 'quirk' PyPI project"
         )
 
 
@@ -102,8 +105,8 @@ def test_probe_emits_one_advisory_per_missing_extra():
         assert ep.scan_error_category == "missing_extra"
 
     # Hint literals.
-    assert "pip install quirk[identity]" in advisories_by_label["kerberos_scanner"].scan_error
-    assert "pip install quirk[db]" in advisories_by_label["db_connector"].scan_error
+    assert "pip install 'quirk-scanner[identity]'" in advisories_by_label["kerberos_scanner"].scan_error
+    assert "pip install 'quirk-scanner[db]'" in advisories_by_label["db_connector"].scan_error
 
 
 # ---------------------------------------------------------------------------
@@ -204,7 +207,7 @@ def test_binary_field_default_is_none():
         extra="x",
         modules=("y",),
         scanner_label="z",
-        install_hint="hint with `pip install quirk[x]`",
+        install_hint="hint with `pip install 'quirk-scanner[x]'`",
         enabled_attrs=(),
     )
     assert entry.binary is None
@@ -344,7 +347,7 @@ def test_cbom_registry_entry_present():
     """D-13 / D-16: REGISTRY must contain exactly one entry with extra=='cbom',
     modules==('jsonschema', 'referencing'), enabled_attrs==(),
     scanner_label=='cbom_validator', and install_hint containing the literal
-    substring 'pip install quirk[cbom]' (INSTALL-04 / Phase 45 D-09 invariant)."""
+    substring 'pip install 'quirk-scanner[cbom]'' (INSTALL-04 / Phase 45 D-09 invariant)."""
     from quirk.util.optional_extra import REGISTRY
 
     cbom_entries = [e for e in REGISTRY if e.extra == "cbom"]
@@ -361,8 +364,8 @@ def test_cbom_registry_entry_present():
     assert entry.scanner_label == "cbom_validator", (
         f"cbom entry.scanner_label mismatch: {entry.scanner_label!r}"
     )
-    assert "pip install quirk[cbom]" in entry.install_hint, (
-        f"cbom install_hint missing literal 'pip install quirk[cbom]': {entry.install_hint!r}"
+    assert "pip install 'quirk-scanner[cbom]'" in entry.install_hint, (
+        f"cbom install_hint missing literal 'pip install 'quirk-scanner[cbom]'': {entry.install_hint!r}"
     )
 
 
@@ -395,7 +398,7 @@ def test_cbom_extra_advisory_when_jsonschema_missing():
     ep = cbom_advisories[0]
     assert ep.protocol == "ADVISORY"
     assert ep.scan_error_category == "missing_extra"
-    assert "pip install quirk[cbom]" in ep.scan_error
+    assert "pip install 'quirk-scanner[cbom]'" in ep.scan_error
 
     # --- modules present: no cbom_validator advisory ---
     error_endpoints2 = []

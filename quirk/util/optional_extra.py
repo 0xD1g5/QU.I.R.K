@@ -50,13 +50,13 @@ class OptionalExtra:
     """Describes one optional-extra group.
 
     Attributes:
-        extra: PyPI extras name (e.g. ``"identity"`` for ``pip install quirk[identity]``).
+        extra: PyPI extras name (e.g. ``"identity"`` for ``pip install 'quirk-scanner[identity]'``).
         modules: Tuple of importable module names that gate availability.
             ALL must be importable for the extra to count as "available".
         scanner_label: Human-readable scanner name; populates ``CryptoEndpoint.host``
             on the advisory row.
         install_hint: User-facing message; MUST contain the literal
-            ``pip install quirk[<extra>]`` substring (INSTALL-04 / D-09) OR contain
+            ``pip install 'quirk-scanner[<extra>]'`` substring (INSTALL-04 / D-09) OR contain
             actionable install instructions (for binary-only extras like nmap).
         enabled_attrs: Tuple of ``cfg.connectors.enable_*`` attribute names.
             The probe emits an advisory only if at least one is True
@@ -82,7 +82,7 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         modules=("impacket",),
         scanner_label="kerberos_scanner",
         install_hint=(
-            "Kerberos scanning skipped — run `pip install quirk[identity]` to enable"
+            "Kerberos scanning skipped — run `pip install 'quirk-scanner[identity]'` to enable"
         ),
         enabled_attrs=("enable_kerberos",),
     ),
@@ -92,7 +92,7 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         scanner_label="db_connector",
         install_hint=(
             "Database TLS scanning (PostgreSQL/MySQL) skipped — "
-            "run `pip install quirk[db]` to enable"
+            "run `pip install 'quirk-scanner[db]'` to enable"
         ),
         enabled_attrs=("enable_db",),
     ),
@@ -102,7 +102,7 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         scanner_label="cloud_connectors",
         install_hint=(
             "GCP / Kubernetes / HashiCorp Vault scanning skipped — "
-            "run `pip install quirk[cloud]` to enable"
+            "run `pip install 'quirk-scanner[cloud]'` to enable"
         ),
         enabled_attrs=("enable_gcp", "enable_k8s", "enable_vault"),
     ),
@@ -112,7 +112,7 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         scanner_label="dashboard",
         install_hint=(
             "Web dashboard / PDF export unavailable — "
-            "run `pip install quirk[dashboard]` to enable"
+            "run `pip install 'quirk-scanner[dashboard]'` to enable"
         ),
         # Empty tuple = always probe; the dashboard / PDF export is not gated by
         # a scan-time enable_* flag (separate `quirk serve` concern). See plan
@@ -141,7 +141,7 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         scanner_label="cbom_validator",
         install_hint=(
             "CBOM JSON schema validation skipped — "
-            "run `pip install quirk[cbom]` to enable"
+            "run `pip install 'quirk-scanner[cbom]'` to enable"
         ),
         enabled_attrs=(),  # always probe — CBOM is always written
     ),
@@ -153,7 +153,7 @@ REGISTRY: Tuple[OptionalExtra, ...] = (
         modules=("jira",),
         scanner_label="jira_ticketing",
         install_hint=(
-            "Jira ticketing skipped — run `pip install quirk[tickets]` to enable"
+            "Jira ticketing skipped — run `pip install 'quirk-scanner[tickets]'` to enable"
         ),
         enabled_attrs=(),  # always probe — CLI command, not a scan-time flag
     ),

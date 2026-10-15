@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.27
 milestone_name: Launch Readiness
 status: executing
-last_updated: "2026-10-14T21:00:00.000Z"
-last_activity: "2026-10-14 -- Phase 225.1 CLOSED, verified passed 6/6 at d489ad2f with operator sign-off; CI green; PR #59 open. Next: merge PR #59, then Phase 226. Hand-edited from a pre-image (no gsd-sdk state verbs)"
+last_updated: "2026-10-15T03:21:06.000Z"
+last_activity: "2026-10-14 -- Phase 226 started: main observed green at 65921405 (branch_ci_state exit 0, head_sha asserted); branch phase-226-release-v5-27-0 cut. Hand-edited from a pre-image (no gsd-sdk state verbs)"
 progress:
   total_phases: 7
   completed_phases: 6
@@ -1443,6 +1443,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
+Phase: 226 (Release v5.27.0) — EXECUTING, plan 1 of 17 complete
+Branch `phase-226-release-v5-27-0` cut from `main` at observed sha 65921405ed24050531d1345a14ad0349b81f1045 (CI green, head_sha asserted).
+
 Phase: 225.1 (Pre-release security hardening) — COMPLETE 2026-10-14, 16 of 16 plans, verified passed 6/6 (6 of 7 phases in v5.27; next 226)
 Plans 225.1-01..16 tracked work complete on branch `phase-225.1-pre-release-security-hardening`: strict operator-token config
 loading (SECH-01); per-hop redirect validation for the URL-fetching scanners, metadata checks over IPv4 carried in IPv6, and a

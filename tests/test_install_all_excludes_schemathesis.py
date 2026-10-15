@@ -1,4 +1,4 @@
-"""Regression test: ``pip install quirk[all]`` MUST NOT pull schemathesis.
+"""Regression test: ``pip install 'quirk-scanner[all]'`` MUST NOT pull schemathesis.
 
 Phase 94 / PKG-01 rationale
 ----------------------------

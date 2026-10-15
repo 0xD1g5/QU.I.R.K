@@ -1,7 +1,7 @@
 <picture>
-<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/quirk-logo-dark.svg">
-<source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/quirk-logo.svg">
-<img src="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/quirk-logo.svg" alt="QU.I.R.K." height="64">
+<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo-dark.svg">
+<source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo.svg">
+<img src="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo.svg" alt="QU.I.R.K." height="64">
 </picture>
 
 [![Python Staleness Gate](https://img.shields.io/github/actions/workflow/status/0xD1g5/QU.I.R.K/python-staleness.yml?branch=main&label=staleness%20gate)](https://github.com/0xD1g5/QU.I.R.K/actions/workflows/python-staleness.yml)
@@ -10,7 +10,7 @@
 [![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](docs/release-process.md#attestation-verification-for-downstream-consumers)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue)](SECURITY.md)
 
-# QU.I.R.K. — v5.25.0
+# QU.I.R.K. — v5.27.0
 
 **Quantum Infrastructure Readiness Kit** is a consulting-grade cryptographic inventory and quantum-readiness assessment tool.
 
@@ -25,7 +25,7 @@ It produces three things:
 > [!IMPORTANT]
 > **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, HTTP and SNMP requests, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and the dashboard's New Scan form can also check targets against an optional trusted-targets allowlist (`security.trusted_targets`), and the check covers `targets.include_ips` and every host-naming connector field, whether or not that connector is enabled. See the [Operator's Guide](docs/operators-guide.md).
 
-![QU.I.R.K. dashboard — executive summary](https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/images/dashboard-hero.png)
+![QU.I.R.K. dashboard — executive summary](https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/images/dashboard-hero.png)
 *The executive summary for a scan of the bundled chaos lab, which is deliberately weak. The score is capped at 20 because six CRITICAL findings are open, even though the computed score is 78. It shows the harvest-now-decrypt-later verdict, the first three remediation steps, and the six subscores.*
 
 ## For your role
@@ -131,15 +131,18 @@ Four sample CBOMs live in [`examples/cbom/`](examples/cbom/): TLS-only, identity
 | [Upgrade Guide](docs/upgrade-guide.md) | Cross-version upgrades with `quirk db migrate` |
 | [Release Process](docs/release-process.md) | Publishing, and Sigstore attestation verification |
 
-## What's New in v5.25
+## What's New in v5.27
 
-The scoring model changed in v5.25 (`SCORING_VERSION` 3.0). v5.25 scores are **not comparable** with scores from earlier releases.
+v5.27.0 is the first release since v5.25.0, so it carries both the v5.26 accessibility work and the v5.27 launch-readiness work. There are no score-model changes (`SCORING_VERSION` stays 3.0), so v5.27 scores are comparable with v5.25 scores.
 
-- **A score-parity regression test.** For one scan scored with the default calibration, a regression test asserts that the dashboard and the report pipeline (the CLI and its HTML/PDF report) agree on the headline score, the CRITICAL count and the certificate count. That test's fixture holds SAML rows and two healthy TLS rows. The two can still differ, for example when a scan includes Kerberos or DNSSEC weaknesses, which only the dashboard lists as findings; when a certificate expires within 30 days, which the dashboard rates HIGH and the report MEDIUM; or when the config sets `intelligence.calibration_overrides`. The [Operator's Guide](docs/operators-guide.md) describes other causes.
-- **A more honest score.** An absolute consequence ceiling caps the headline score while CRITICAL findings are open. No score reaches 100 unless a hybrid post-quantum key exchange is observed. Certificate ratios now divide by the certificate count and endpoint ratios by the assessable-endpoint count, not the probe count; connector ratios (data at rest, data in motion and the identity connectors) still divide by the assessable-endpoint count.
-- **Dashboard fixes**, including chronological sorting of certificate expiry dates, and theme tokens in place of hard-coded colours.
+- **Score gauges no longer draw mirrored.** A score of 20 out of 100 used to draw an arc that looked about 90% full.
+- **Accessibility.** More dashboard badges meet WCAG AA contrast, and a dashboard table too wide or too tall for its space is a single Tab stop that the keyboard can scroll.
+- **A brand identity.** The logo appears in this README, the report colophon, the PDF footer, the favicon and the dashboard sidebar, and the dashboard accent is now Ink-violet.
+- **Every user-facing doc was reviewed claim by claim**, and the README hero image was retaken.
+- **Security hardening** of configuration loading, URL fetching and sensor enrollment.
+- **Upgrade notes.** `quirk serve` exits with an error when its config file exists but cannot be read, and protected API routes answer 503 in that state. `quirk sensor enroll` and `quirk sensor push` require an `https://` console URL for non-loopback hosts unless `--allow-insecure-console` is given, so re-enroll existing sensors that use an `http://` console.
 
-v5.25.0 is the first release since v5.21.0, so it also carries consulting-report branding and templates, a score-lift migration roadmap and the finding storyline drawer. The full per-release history is in [CHANGELOG.md](CHANGELOG.md).
+The full per-release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Install
 

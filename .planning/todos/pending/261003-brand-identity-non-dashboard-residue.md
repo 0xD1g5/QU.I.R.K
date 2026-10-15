@@ -25,7 +25,8 @@ Left over from 261001 when the dashboard work closed in Phase 223. Each item is 
       the dashboard does not serve this report, so Phase 223 criterion 5 ("no served surface") holds, but a
       repo-wide grep finds it. Operator accepted it as out of Phase 223 scope and re-homed it here. An earlier
       wording of this todo called the report item "the report palette, not the logo" — that was wrong.
-- [ ] GitHub social preview PNG (1280x640) from `docs/brand/quirk-hero-dark.svg`. Manual repo setting;
+- [x] GitHub social preview PNG (1280x640) from `docs/brand/quirk-hero-dark.svg`. Manual repo setting;
       candidate for Phase 225/226. The raster pipeline makes it one command.
+      DONE: generated in Phase 226 plan 03 as docs/brand/quirk-social-preview.png; uploaded in plan 11.
 - [ ] Windows sensor installer `.ico` (`packaging/windows/`) only if an executable wrapper ships.
 - [ ] apple-touch-icon / PWA manifest icons (new capability, not in BRAND-03).

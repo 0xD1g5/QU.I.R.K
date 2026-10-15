@@ -9,7 +9,11 @@ import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-RAW = "https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/docs/brand/"
+# Phase 226 D-10: README images are pinned to the release tag so the frozen PyPI
+# page cannot change after upload. The tag is derived from pyproject.toml, so a
+# version bump without moving the URLs turns this red.
+VERSION = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+RAW = f"https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v{VERSION}/docs/brand/"
 LIGHT = RAW + "quirk-logo.svg"
 DARK = RAW + "quirk-logo-dark.svg"
 
@@ -39,10 +43,10 @@ def test_sources_one_dark_one_light():
     dark = [s for s in sources if 'media="(prefers-color-scheme: dark)"' in s]
     light = [s for s in sources if 'media="(prefers-color-scheme: light)"' in s]
     assert len(dark) == 1 and f'srcset="{DARK}"' in dark[0], (
-        "Phase 222 D-06/D-07: dark source must point at quirk-logo-dark.svg on main"
+        f"Phase 222 D-06/D-07: dark source must point at quirk-logo-dark.svg at the release tag v{VERSION}"
     )
     assert len(light) == 1 and f'srcset="{LIGHT}"' in light[0], (
-        "Phase 222 D-06/D-07: light source must point at quirk-logo.svg on main"
+        f"Phase 222 D-06/D-07: light source must point at quirk-logo.svg at the release tag v{VERSION}"
     )
 
 

@@ -42,3 +42,7 @@ form and names the discrepancy (D-10: docs change, code does not).
 replacement, but it fans out to roughly eight pinned tests, the error-code doc generator
 (`docs/error-codes.md` is gated by `tests/test_error_codes_freshness.py`) and possibly report fixtures. No
 unknowns beyond finding every golden file that embeds the text. **No spike needed.**
+
+## Resolution
+
+Resolved in Phase 226 plans 04 and 06 (2026-10-14): runtime sites and quirk/config_template.yaml now name quirk-scanner; `git grep -nE "pip install ['"]?quirk\[" -- quirk run_scan.py` returns 0 lines; standing guard tests/test_install_hint_package_name.py.

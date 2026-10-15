@@ -215,7 +215,7 @@ def test_missing_extra_graceful_skip(monkeypatch: pytest.MonkeyPatch) -> None:
         if jira_module is not None:
             sys.modules["quirk.ticketing.jira"] = jira_module
 
-    assert "pip install quirk[tickets]" in str(exc_info.value)
+    assert "pip install 'quirk-scanner[tickets]'" in str(exc_info.value)
 
 
 def test_credentials_not_in_logs(

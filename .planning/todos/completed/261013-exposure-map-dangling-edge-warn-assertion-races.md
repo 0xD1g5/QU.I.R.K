@@ -31,3 +31,7 @@ src/pages/__tests__/exposure-map.test.tsx` -> `Tests 4 passed (4)` each time). T
 - **Unknowns:** whether other `*.test.tsx` files share the same "waitFor one thing, then assert a side effect
   synchronously" shape (worth a grep for `waitFor` followed by a bare `toHaveBeenCalled`).
 - **Spike:** no.
+
+## Resolution
+
+Fixed in Phase 226 plan 02: warn assertion moved inside `await waitFor`, spy restored in `finally`. Mutation matrix: old test + 50ms delayed warn = FAIL; new test + `dropped > 99` = FAIL (waitFor timeout); new test + 50ms delay = PASS. Component untouched.

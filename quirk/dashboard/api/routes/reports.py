@@ -106,7 +106,7 @@ _FORMAT_MEDIA_TYPES: dict[str, str] = {
 # D-09 verbatim reason strings (209-UI-SPEC.md Copywriting Contract). Named
 # module constants so this is the one source of truth other plans/tests cite.
 REASON_NO_SCAN = "No scan has run yet."
-REASON_DOCX_EXTRA_MISSING = "DOCX requires the optional extra: pip install quirk[docx]"
+REASON_DOCX_EXTRA_MISSING = "DOCX requires the optional extra: pip install 'quirk-scanner[docx]'"
 REASON_RENDER_FAILED = "This format failed to render for the latest scan. Check server logs."
 
 
