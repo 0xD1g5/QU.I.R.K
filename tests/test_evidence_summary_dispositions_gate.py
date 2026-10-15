@@ -59,48 +59,16 @@ _TARGET_FUNC_NAME = "build_evidence_summary"
 # ---------------------------------------------------------------------------
 # Disposition ledger.
 #
-# Keyed "<repo-relative-path>:<enclosing-function-name>". Reasons sourced
-# from plan 184.4-07's verified per-site disposition table
-# (184.4-07-SUMMARY.md "Site 2 Disposition Table"), not invented here.
-# Multiple call sites sharing one enclosing function collapse to one ledger
-# key, matching the isoformat gate's keying convention.
+# Keyed "<repo-relative-path>:<enclosing-function-name>". EMPTY since Phase
+# 228 (XSURF-07, D-09, D-26): the four entries that used to live here all
+# rested on the D-07 (184.4) premise that a score whose rating/band is never
+# rendered may be computed severity-blind. That premise was false -- the
+# number itself diverged from the dashboard headline -- and every site now
+# passes findings. Do NOT grow this ledger to make a failing assertion pass;
+# fix the call site. If a genuine exemption ever appears it needs a reason
+# that survives test_ledger_entries_still_name_a_findings_less_call.
 # ---------------------------------------------------------------------------
-_DISPOSITIONS: dict[str, str] = {
-    "quirk/intelligence/trends.py:_score_for_session": (
-        "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- the ONLY consumer "
-        "of this function's return value is `return score_dict[\"score\"]` "
-        "immediately below the call; no caller of _score_for_session() ever "
-        "reads a rating/band from it, so a severity-blind evidence summary "
-        "here can never diverge from a report band. Re-confirmed by plan "
-        "184.4-07 (not just trusted from 184.4-CONTEXT.md's earlier guess)."
-    ),
-    "quirk/dashboard/api/routes/trends.py:get_trends_timeline": (
-        "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- "
-        "TrendSessionPoint (quirk/dashboard/api/schemas.py) exposes only "
-        "`score: Optional[float]` (Phase 199 / TRIAGE-10 widening) and "
-        "`subscores: SubScores` (all ints); it has no rating/band field at "
-        "all, so this timeline point can never render a severity-blind band."
-    ),
-    "quirk/merge/scan.py:merge_scan": (
-        "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- this call scores "
-        "the merged union for the numeric score/subscores/drivers persisted "
-        "on MergeRun.score and returned to CLI/dashboard sensor callers. "
-        "The `rating` this call produces passes through the return dict but "
-        "has no DB column (MergeRun has no rating field) and no schema "
-        "consumer ever reads it -- MergeLatestData exposes only `score` and "
-        "`per_segment_scores`, both Optional[float] as of Phase 199 / "
-        "TRIAGE-10. No band is ever rendered from this call."
-    ),
-    "quirk/dashboard/api/routes/merge.py:get_merge_latest": (
-        "D-07 (184.4), verified in 184.4-07-SUMMARY.md -- covers BOTH "
-        "findings-less calls inside this function (per-segment score loop "
-        "and the overall live-recompute call). Both feed exclusively "
-        "float-capable, null-honest fields on MergeLatestData "
-        "(`per_segment_scores: Dict[str, Optional[float]]` and "
-        "`live_score: Optional[float]`, widened Phase 199 / TRIAGE-10); "
-        "neither result's rating/band is ever read."
-    ),
-}
+_DISPOSITIONS: dict[str, str] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -232,16 +200,56 @@ def test_no_undispositioned_findings_less_call_site() -> None:
 
 
 def test_disposition_ledger_is_valid() -> None:
-    """_DISPOSITIONS ships non-empty and every entry resolves to a real
-    file/anchor with a non-blank reason."""
-    assert len(_DISPOSITIONS) >= 4, (
-        "the disposition ledger must ship non-empty with named, concrete "
-        "exemptions sourced from plan 184.4-07's verified table -- it "
-        "should never be grown reflexively later just to make a failing "
-        "assertion pass"
-    )
+    """Every ledger entry that exists resolves to a real file/anchor with a
+    non-blank reason. The ledger MAY be empty: Phase 228 removed every
+    findings-less score site (D-09, D-26)."""
     problems = _validate_disposition_ledger(_DISPOSITIONS)
     assert not problems, problems
+
+
+def _ledger_entries_without_findings_less_call(
+    ledger: dict[str, str], root: Path
+) -> list[str]:
+    """Ledger keys whose named function no longer holds a findings-less
+    build_evidence_summary() call (a stale exemption)."""
+    stale: list[str] = []
+    for key in ledger:
+        relpath, _, func = key.partition(":")
+        path = root / relpath
+        if not path.exists():
+            stale.append(f"{key}: file missing")
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=relpath)
+        holds = any(
+            fn == func and not _call_supplies_findings(call)
+            for call, fn in _walk_target_calls_with_func_context(tree)
+        )
+        if not holds:
+            stale.append(f"{key}: no findings-less call remains in {func}")
+    return stale
+
+
+def test_ledger_entries_still_name_a_findings_less_call() -> None:
+    stale = _ledger_entries_without_findings_less_call(_DISPOSITIONS, _REPO_ROOT)
+    assert not stale, stale
+
+
+def test_stale_entry_leg_flags_an_entry_whose_call_now_supplies_findings(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "m_fixed.py").write_text(
+        "def handler(eps):\n    return build_evidence_summary(eps, derive(eps))\n"
+    )
+    (tmp_path / "m_still.py").write_text(
+        "def handler(eps):\n    return build_evidence_summary(eps)\n"
+    )
+    flagged = _ledger_entries_without_findings_less_call(
+        {"m_fixed.py:handler": "r"}, tmp_path
+    )
+    assert flagged, "an entry whose call now supplies findings was not flagged"
+    assert not _ledger_entries_without_findings_less_call(
+        {"m_still.py:handler": "r"}, tmp_path
+    )
 
 
 def test_findings_remains_optional_parameter() -> None:
