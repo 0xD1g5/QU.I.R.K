@@ -139,7 +139,18 @@ ordering among themselves beyond the dependencies stated below.
   2. The four out-of-scope high-priority todos (Azure Key Vault keys, Semgrep `p/cryptography` 404, CMVP-refresh error hints, Windows `install.ps1` sensor identity) each name a HORIZON backlog owner.
   3. `tests/test_backlog_reconciliation_gate.py` fails when a fixture `doc224` todo with no owner field is added, and passes on the real pending pool.
   4. Each todo named by a v5.28 requirement points at that requirement as its owner, so the phase that closes it is checkable by the gate.
-**Plans**: TBD
+**Plans**: 9 plans (4 waves)
+
+Plans:
+- [ ] 227-01-PLAN.md — Live recount + D-13 closure triage; HORIZON rows 999.126-999.137, 999.119/121/125 edits, rationale-log row (wave 1)
+- [ ] 227-02-PLAN.md — Owners for the 13 requirement-named todos + 999.119/999.121 members; reused IDEA.md updates (wave 2)
+- [ ] 227-03-PLAN.md — Owners + IDEA.md for 999.126/999.127/999.128 (3 of the SC#2 highs) (wave 2)
+- [ ] 227-04-PLAN.md — Owner + IDEA.md for 999.129; D-02 frontmatter for 6 bare todos (wave 2)
+- [ ] 227-05-PLAN.md — Owners + IDEA.md for 999.130/999.131 (wave 2)
+- [ ] 227-06-PLAN.md — Owners + IDEA.md for 999.132/999.133/999.134 (wave 2)
+- [ ] 227-07-PLAN.md — Owners + IDEA.md for 999.135/999.136/999.137 (wave 2)
+- [ ] 227-08-PLAN.md — doc224 live-owner gate leg, fixture matrix, D-17 comment rewrite, mutation probes (wave 3)
+- [ ] 227-09-PLAN.md — UAT Series 227 + worklist regen, STATE obligation note, VALIDATION flip, Obsidian note + UAT vault sync (wave 4)
 
 ### Phase 228: Cross-Surface Score Parity
 **Goal**: For the same scan, the dashboard and the CLI/HTML report show the same headline score, the same consequence ceilings and the same subscores, on every score surface (headline, trend, multi-sensor merge, per-segment).
