@@ -241,3 +241,96 @@ def test_profile_strict_increases_motion_penalty():
     assert strict["subscores"]["data_in_motion"] <= balanced["subscores"]["data_in_motion"]
     # And in the dominating-counter case strictly less:
     assert strict["score"] <= balanced["score"]
+
+
+# ---------- Phase 228 XSURF-08: unanswered mail probes are not plaintext ----------
+
+_FIXED_SCAN_TIME = datetime(2026, 10, 15)
+
+
+def _tls_row(host, *, versions="TLSv1.2,TLSv1.3", version="TLSv1.3"):
+    from quirk.models import CryptoEndpoint
+    return CryptoEndpoint(
+        host=host, port=443, protocol="TLS", scanned_at=_FIXED_SCAN_TIME,
+        tls_version=version, cipher_suite="TLS_AES_256_GCM_SHA384",
+        tls_supported_versions=versions,
+    )
+
+
+def _unanswered_rows(hosts, blocker):
+    from quirk.models import CryptoEndpoint
+    from quirk.scanner.email_scanner import EMAIL_PORTS
+    return [
+        CryptoEndpoint(
+            host=h, port=port, protocol=label, scanned_at=_FIXED_SCAN_TIME,
+            tls_blocker_reason=blocker, tls_version="",
+            service_detail=f"{label}:{port}",
+        )
+        for h in hosts
+        for (port, label, _sd, _enum) in EMAIL_PORTS
+    ]
+
+
+def _assert_unanswered_excluded(blocker):
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+    from quirk.scanner.email_scanner import EMAIL_PORTS
+    rows = _unanswered_rows(["mail-host"], blocker) + [
+        _tls_row("a.example"), _tls_row("b.example")]
+    ev = build_evidence_summary(rows)
+    assert ev["motion_email_starttls_missing_count"] == 0
+    assert ev["motion_email_plaintext_count"] == 0
+    for label in {row[1] for row in EMAIL_PORTS}:
+        assert ev["protocol_counts"].get(label, 0) == 0
+    assert compute_readiness_score(ev)["subscores"]["data_in_motion"] is None
+
+
+def test_refused_email_rows_leave_data_in_motion_unassessed():
+    _assert_unanswered_excluded("CONNECTION_REFUSED")
+
+
+def test_timeout_email_rows_are_excluded_like_refused():
+    _assert_unanswered_excluded("TIMEOUT")
+
+
+def test_refused_email_rows_do_not_dilute_coverage():
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+    tls = [_tls_row("a.example"),
+           _tls_row("b.example", versions="TLSv1.1,TLSv1.2,TLSv1.3")]
+    refused = _unanswered_rows(["m1", "m2"], "CONNECTION_REFUSED")
+    ev = build_evidence_summary(tls + refused)
+    base = build_evidence_summary(tls)
+    assert ev["assessable_endpoint_count"] == 2
+    assert ev["assessed_crypto_count"] == 2
+    assert compute_readiness_score(ev)["score"] == compute_readiness_score(base)["score"]
+    assert compute_readiness_score(ev)["score"] == 69
+
+
+def test_scan_error_email_row_still_counts():
+    """D-15 guard: a server that answered but errored is not 'unanswered'."""
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.models import CryptoEndpoint
+    row = CryptoEndpoint(
+        host="h", port=25, protocol="SMTP-STARTTLS", scanned_at=_FIXED_SCAN_TIME,
+        scan_error="STARTTLS extension not supported by server",
+        tls_blocker_reason="", tls_version="")
+    assert build_evidence_summary([row])["motion_email_starttls_missing_count"] == 1
+
+
+def test_answered_email_row_with_blocker_still_counts():
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.models import CryptoEndpoint
+    row = CryptoEndpoint(
+        host="h", port=465, protocol="SMTPS", scanned_at=_FIXED_SCAN_TIME,
+        tls_blocker_reason="TIMEOUT", tls_version="TLSv1.2",
+        cipher_suite="TLS_RSA_WITH_AES_128_CBC_SHA")
+    ev = build_evidence_summary([row])
+    assert ev["protocol_counts"]["SMTPS"] == 1
+    assert ev["motion_email_weak_cipher_count"] == 1
+
+
+def test_email_probe_protocols_match_scanner_table():
+    from quirk.intelligence.evidence import _EMAIL_PROBE_PROTOCOLS
+    from quirk.scanner.email_scanner import EMAIL_PORTS
+    assert _EMAIL_PROBE_PROTOCOLS == {row[1] for row in EMAIL_PORTS}
