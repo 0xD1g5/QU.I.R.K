@@ -4,7 +4,8 @@ created: 2026-10-13
 source: Phase 224 GC3-R3 (part 05, docs/report-interpretation.md §2/§3.6 consequence ceilings)
 priority: high
 area: quirk/dashboard/api/routes/trends.py, quirk/intelligence/trends.py, quirk/dashboard/api/routes/merge.py, quirk/merge/scan.py
-status: pending
+status: completed
+completed: 2026-10-15
 resolves_phase: 228
 owner: XSURF-07
 ---
@@ -32,3 +33,11 @@ When fixed, update docs/report-interpretation.md §2 (ceiling paragraph) and §3
   `:1568-1571` evidence with findings then `compute_readiness_score`).
 - Cost: the timeline is O(sessions) and finding derivation runs per session; check timeline latency on a large DB.
 - Unknown: whether the merge union should derive findings per sensor or over the union.
+
+## Resolution (Phase 228, 2026-10-15)
+
+- Fix: trend and drift scores derive findings `355a9332`; sensor merge score derives findings over the union `5c98febb`; dashboard trend, timeline and merge scores derive findings `6e90fa52`; `/compare` and the shared helper `6df84979` (D-23). The folded sensor-merge / Slack drift band todo closes here with the same commits.
+- Gate: `e02c7309` makes a findings-less score call site fail unless dispositioned (D-26).
+- Proof: `tests/test_cross_surface_parity.py::test_xsurf07_trend_merge_segment_scores_match_headline`, `::test_xsurf07_compare_includes_identity_findings` (`f0525092`), `tests/test_merge_scan.py::test_merge_score_applies_critical_ceiling`, `tests/test_notify_dispatcher.py::test_drift_band_applies_ceiling`, `tests/test_evidence_summary_dispositions_gate.py::test_no_undispositioned_findings_less_call_site`. UAT-228-04, -05, -07.
+- Docs: `ce1506b8`, changelog `19fe440a`.
+- Not closed here: a sub-millisecond timeline drop, recorded as a second symptom on the 999.134 timeline todo (`164bc9a1`).

@@ -4,7 +4,8 @@ created: 2026-10-13
 source: Phase 224 doc-claim ledger (DOC-04), gap closure GC3-OPS fork G; ledger rows DCL-OPS-GC3G-0003/0004 (docs/operators-guide.md §17 Troubleshooting); extended in A3FIX (evidence audit 3) with the Slack drift-notification band
 priority: medium
 area: quirk/cli/sensor_cmd.py (merge output), quirk/merge/scan.py (findings-less scoring), quirk/notify/payload.py + quirk/notify/channels/slack.py (drift band), quirk/intelligence/trends.py (false comment)
-status: pending
+status: completed
+completed: 2026-10-15
 resolves_phase: 228
 owner: XSURF-07
 ---
@@ -26,8 +27,8 @@ report way (`evaluate_endpoints` findings attached) -> `TLS certificate expired`
 
 The operators-guide now tells operators not to quote the merge band.
 
-- [ ] Either drop the band from the merge CLI output, or derive findings for the union (as the dashboard does) and pass them.
-- [ ] Add a test: a merged estate with an open CRITICAL must not print a band above the floor.
+- [x] Either drop the band from the merge CLI output, or derive findings for the union (as the dashboard does) and pass them.
+- [x] Add a test: a merged estate with an open CRITICAL must not print a band above the floor.
 
 ## Second surface: the Slack drift notification (added A3FIX, 2026-10-13)
 
@@ -48,10 +49,10 @@ isolated HOME/XDG): two sessions of 4 TLS endpoints, the current one with an exp
 the report way: `TLS certificate expired` CRITICAL, `32 POOR`, "1 open CRITICAL finding — score limited to 32
 (computed 93)".
 
-- [ ] Derive the drift band from a findings-aware score (shared fix with
+- [x] Derive the drift band from a findings-aware score (shared fix with
       `261013-doc224-trend-and-merge-scores-skip-consequence-ceilings`), or drop `score_band` from the Slack header.
-- [ ] Correct or delete the comment at `quirk/intelligence/trends.py:213-216`.
-- [ ] When fixed, update `docs/operators-guide.md` §17 Troubleshooting ("Two surfaces show a band computed without findings").
+- [x] Correct or delete the comment at `quirk/intelligence/trends.py:213-216`.
+- [x] When fixed, update `docs/operators-guide.md` §17 Troubleshooting ("Two surfaces show a band computed without findings").
 
 ## Feasibility & Effort
 
@@ -61,3 +62,9 @@ the report way: `TLS certificate expired` CRITICAL, `32 POOR`, "1 open CRITICAL 
 - (A3FIX) **CONFIRMED** for the Slack surface by the live dispatch probe and by `quirk/notify/payload.py:103,133`,
   `quirk/notify/channels/slack.py:95`, `quirk/intelligence/trends.py:217-219`. Effort **S** to drop the band from the Slack
   header; **M** if fixed together with the trend-score todo (findings per session).
+
+## Resolution (Phase 228, 2026-10-15)
+
+- Folded into XSURF-07: closed by the same commits as `261013-doc224-trend-and-merge-scores-skip-consequence-ceilings` (`5c98febb` sensor merge, `355a9332` drift band, `6e90fa52` dashboard).
+- Proof: `tests/test_merge_scan.py::test_merge_score_applies_critical_ceiling`, `tests/test_notify_dispatcher.py::test_drift_band_applies_ceiling`. UAT-228-05.
+- Docs: operators-guide troubleshooting entry updated in `ce1506b8`.

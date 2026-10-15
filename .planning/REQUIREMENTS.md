@@ -65,7 +65,7 @@ HORIZON prose:
 - [x] **XSURF-06**: Dashboard-only certificate/TLS findings on S/MIME, AD CS, Vault and database
       rows no longer move the dashboard's headline score, ceiling or lift badges away from the report
       (todo `261013-doc224-dashboard-only-findings-diverge-headline-and-lifts`).
-- [ ] **XSURF-07**: Trend timeline, multi-sensor merge and per-segment scores apply the CRITICAL/HIGH
+- [x] **XSURF-07**: Trend timeline, multi-sensor merge and per-segment scores apply the CRITICAL/HIGH
       consequence ceilings, the same as the headline score (todo
       `261013-doc224-trend-and-merge-scores-skip-consequence-ceilings`).
 - [ ] **XSURF-08**: A mail port that refused the connection is not counted as plaintext, so closed
@@ -164,7 +164,7 @@ Deferred from this milestone with an owner:
 | SCORE-09 | Phase 234 | Pending |
 | XSURF-05 | Phase 228 | Complete |
 | XSURF-06 | Phase 228 | Complete |
-| XSURF-07 | Phase 228 | Pending |
+| XSURF-07 | Phase 228 | Complete |
 | XSURF-08 | Phase 228 | Pending |
 | FIND-11 | Phase 229 | Pending |
 | FIND-12 | Phase 229 | Pending |
