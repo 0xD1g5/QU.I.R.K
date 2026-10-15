@@ -2,7 +2,9 @@
 
 PyPI renders the README outside the repository, so a repo-relative image path
 shows as a broken image there; the hero must use an absolute
-raw.githubusercontent.com URL (D-08). The PNG is a 2x-DPR capture of the
+raw.githubusercontent.com URL (D-08). The URL is pinned to the release tag
+(Phase 226 D-10) so the frozen PyPI page cannot change after upload; every
+version bump must move it. The PNG is a 2x-DPR capture of the
 executive summary, kept under 1 MiB (D-09). Regenerate it with
 ``python -m scripts.capture_readme_hero``.
 
@@ -14,13 +16,15 @@ capture sizes its viewport to the content, so height varies (approved: 2362).
 import re
 import shutil
 import struct
+import tomllib
 from pathlib import Path
 
 from tests.cli_helpers import run_fork_safe
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HERO_REL = "docs/images/dashboard-hero.png"
-RAW_HERO = "https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/main/" + HERO_REL
+VERSION = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+RAW_HERO = f"https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v{VERSION}/" + HERO_REL
 MAX_BYTES = 1_048_576
 
 
