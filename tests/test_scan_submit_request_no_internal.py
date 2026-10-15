@@ -116,18 +116,12 @@ def test_post_jobs_ignores_client_allow_internal_and_uses_server_config(monkeypa
     """
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
 
-    # Force the server-side config to allow_internal_targets=False.
-    class _FakeSecurity:
-        allow_internal_targets = False
-
-    class _FakeCfg:
-        security = _FakeSecurity()
-
-    def _fake_load(*args, **kwargs):
-        return _FakeCfg()
-
-    # The route's lazy import resolves at call time — patch the canonical name.
-    monkeypatch.setattr("quirk.config.load_config", _fake_load)
+    # Force the server-side config to allow_internal_targets=False. 225.1: jobs
+    # read the server config through load_server_security (QUIRK_CONFIG_PATH).
+    server_cfg = tmp_path / "server.yaml"
+    server_cfg.write_text("security:\n  allow_internal_targets: false\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(server_cfg))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
 
     _, tc, TestingSession = _app_with_db()
     response = tc.post(

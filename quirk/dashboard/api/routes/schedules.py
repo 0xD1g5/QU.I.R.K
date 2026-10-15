@@ -32,6 +32,7 @@ from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
+from quirk.cli.schedule_cmd import CHECK_IN_TARGET_SENTINEL
 from quirk.models import ScheduledRun, ScheduledScan
 from quirk.otics_cadence import floor_advisory
 
@@ -134,6 +135,31 @@ def _to_response(
     )
 
 
+def _enforce_trusted_target(target: str) -> None:
+    """225.1 / D-08: refuse a schedule target outside the server's trusted_targets.
+
+    An unreadable server config is a 503, never an empty (allow-all) list.
+    """
+    from quirk.util.server_config import load_server_security
+    from quirk.util.target_trust import is_target_trusted
+
+    sec = load_server_security()
+    if sec.error:
+        logger.error("Server security configuration could not be read: %s", sec.error)
+        raise HTTPException(status_code=503, detail=format_error("DASHBOARD-014"))
+    if not sec.trusted_targets:
+        return
+    result = is_target_trusted(target, sec.trusted_targets)
+    if not result.ok:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Target {result.redacted_preview!r} is not in the trusted-targets "
+                f"allowlist (security.trusted_targets in config.yaml)."
+            ),
+        )
+
+
 # ---------- Endpoints ----------
 
 @router.get("/schedules", response_model=ScheduleListResponse)
@@ -162,6 +188,7 @@ def create_schedule(
         if not (payload.target or "").strip():
             raise HTTPException(status_code=400, detail=format_error("SCHED-002"))
         _target = payload.target
+        _enforce_trusted_target(_target)
 
     row = ScheduledScan(
         name=payload.name,
@@ -199,6 +226,8 @@ def update_schedule(
 ) -> ScheduleResponse:
     """Toggle the enabled flag on a schedule."""
     row = _get_or_404(db, schedule_id)
+    if payload.enabled and not getattr(row, "check_in", False):
+        _enforce_trusted_target(row.target)
     row.enabled = payload.enabled
     db.commit()
     db.refresh(row)

@@ -123,6 +123,8 @@ the Phase 111 per-segment score/filter to be exercised end-to-end (Test 7 in `di
 ./lab.sh distributed up
 
 # Run enroll→push→merge end-to-end orchestration
+# (enrolls with --allow-internal-console --allow-insecure-console: the lab console is
+# plain HTTP on the isolated console-net docker network)
 ./lab.sh distributed e2e
 
 # Stop and remove distributed containers

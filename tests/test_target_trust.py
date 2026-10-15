@@ -88,3 +88,185 @@ def test_enforce_trusted_targets_unchanged_with_no_broker_targets():
         targets=SimpleNamespace(fqdns=[], cidrs=["10.0.0.0/24"]),
     )
     enforce_trusted_targets(cfg)  # must not raise; no connectors attr present
+
+
+# ---------------------------------------------------------------------------
+# Phase 225.1 / SECH-03 (D-07, D-26): include_ips + dispositioned connector hosts
+# ---------------------------------------------------------------------------
+import dataclasses
+
+from quirk.util import target_trust as _tt
+
+
+def _table():
+    return getattr(_tt, "CONNECTOR_HOST_FIELD_DISPOSITION", {})
+
+
+_CHECK_FIELDS = sorted(k for k, v in _table().items() if v == "check")
+
+
+def _cfg(trusted, connectors=None, include_ips=None):
+    targets = SimpleNamespace(fqdns=[], cidrs=[])
+    if include_ips is not None:
+        targets.include_ips = include_ips
+    return SimpleNamespace(
+        security=SimpleNamespace(trusted_targets=trusted),
+        targets=targets,
+        connectors=SimpleNamespace(**(connectors or {})),
+    )
+
+
+def test_include_ips_is_checked():
+    with pytest.raises(ValueError):
+        enforce_trusted_targets(_cfg(["127.0.0.1"], include_ips=["127.0.0.2"]))
+    enforce_trusted_targets(_cfg(["127.0.0.1"], include_ips=["127.0.0.1"]))
+
+
+def test_check_fields_not_empty():
+    assert len(_CHECK_FIELDS) >= 10
+
+
+@pytest.mark.parametrize("field_name", _CHECK_FIELDS)
+def test_untrusted_connector_field_refused_and_named(field_name):
+    value = "untrusted.invalid"
+    cfg = _cfg(["trusted.invalid"], {field_name: [value] if field_name.endswith("s") else value})
+    with pytest.raises(ValueError, match=field_name):
+        enforce_trusted_targets(cfg)
+
+
+@pytest.mark.parametrize("field_name", _CHECK_FIELDS)
+def test_trusted_connector_field_passes(field_name):
+    cfg = _cfg(["trusted.invalid"], {field_name: ["trusted.invalid"] if field_name.endswith("s") else "trusted.invalid"})
+    enforce_trusted_targets(cfg)
+
+
+def test_disabled_connector_still_checked():
+    cfg = _cfg(["t.example"], {"enable_jwt": False, "jwt_targets": ["https://evil.example/x"]})
+    with pytest.raises(ValueError, match="jwt_targets"):
+        enforce_trusted_targets(cfg)
+
+
+@pytest.mark.parametrize(
+    "raw,host",
+    [
+        ("https://idp.example/metadata", "idp.example"),
+        ("ldaps://ca.example:636", "ca.example"),
+        ("[2001:db8::5]:5671", "2001:db8::5"),
+        ("db.example:5432", "db.example"),
+        ({"host": "x"}, "x"),
+        ("bare.example", "bare.example"),
+    ],
+)
+def test_extract_host_shapes(raw, host):
+    assert _tt._extract_host(raw) == host
+
+
+def test_unparseable_checked_whole_and_fails_closed():
+    cfg = _cfg(["t.example"], {"saml_targets": ["not a host!!"]})
+    with pytest.raises(ValueError):
+        enforce_trusted_targets(cfg)
+
+
+def test_empty_allowlist_allows_connector_hosts():
+    enforce_trusted_targets(_cfg([], {"jwt_targets": ["evil.example"]}))
+
+
+@pytest.mark.parametrize(
+    "ref,host",
+    [
+        ("registry.internal:5000/app:1", "registry.internal"),
+        ("localhost/app", "localhost"),
+        ("ghcr.io/org/app", "ghcr.io"),
+        ("nginx:1.25", None),
+        ("library/nginx", None),
+    ],
+)
+def test_registry_host(ref, host):
+    assert _tt._registry_host(ref) == host
+
+
+def test_container_registry_host_checked():
+    with pytest.raises(ValueError, match="container_targets"):
+        enforce_trusted_targets(_cfg(["t.example"], {"container_targets": ["evil.example/app:1"]}))
+    enforce_trusted_targets(_cfg(["t.example"], {"container_targets": ["nginx:1.25"]}))
+
+
+def test_dnssec_dispositions():
+    t = _table()
+    assert t["dnssec_targets"] == "check"
+    assert t["dnssec_resolver"].startswith("exempt: ")
+
+
+def test_every_host_shaped_connector_field_is_dispositioned():
+    """Run-time walk of EVERY ConnectorsCfg field (no name-suffix filter): each
+    one is either a dispositioned host field or an explicit non-host field with
+    a reason, never both, and neither table names a field that does not exist."""
+    from quirk.config import ConnectorsCfg
+
+    names = [f.name for f in dataclasses.fields(ConnectorsCfg)]
+    print("ConnectorsCfg fields walked:", len(names))
+    assert len(names) >= 60, names
+    host = _table()
+    non_host = getattr(_tt, "CONNECTOR_NON_HOST_FIELDS", {})
+    unclassified = [n for n in names if n not in host and n not in non_host]
+    both = sorted(set(host) & set(non_host))
+    stale = sorted((set(host) | set(non_host)) - set(names))
+    bad = [
+        n for n, v in host.items()
+        if not (
+            v in ("check", "check-registry", "check-kubeconfig")
+            or (v.startswith("exempt: ") and v[8:].strip())
+        )
+    ]
+    no_reason = [n for n, v in non_host.items() if not str(v).strip()]
+    assert not unclassified, f"unclassified ConnectorsCfg fields: {unclassified}"
+    assert not both, f"classified as both host and non-host: {both}"
+    assert not stale, f"classification names fields ConnectorsCfg does not have: {stale}"
+    assert not bad, f"malformed dispositions: {bad}"
+    assert not no_reason, f"non-host fields without a reason: {no_reason}"
+
+
+def test_azure_keyvault_urls_hosts_are_checked():
+    assert _table()["azure_keyvault_urls"] == "check"
+    with pytest.raises(ValueError, match="azure_keyvault_urls"):
+        enforce_trusted_targets(
+            _cfg(["vault.example"], {"azure_keyvault_urls": ["https://elsewhere.example/"]})
+        )
+    enforce_trusted_targets(
+        _cfg(["vault.example"], {"azure_keyvault_urls": ["https://vault.example/"]})
+    )
+
+
+def _kubeconfig(tmp_path, *servers):
+    clusters = "".join(
+        f"- name: c{i}\n  cluster:\n    server: {srv}\n" for i, srv in enumerate(servers)
+    )
+    path = tmp_path / "kubeconfig"
+    path.write_text("apiVersion: v1\nkind: Config\nclusters:\n" + clusters)
+    return str(path)
+
+
+def test_kubeconfig_cluster_servers_are_checked(tmp_path):
+    assert _table()["k8s_kubeconfig"] == "check-kubeconfig"
+    good = _kubeconfig(tmp_path, "https://api.trusted.example:6443")
+    enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": good}))
+    mixed = _kubeconfig(tmp_path, "https://api.trusted.example:6443", "https://10.9.9.9:6443")
+    with pytest.raises(ValueError, match="k8s_kubeconfig"):
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": mixed}))
+
+
+@pytest.mark.parametrize("shape", ["missing", "directory", "not-yaml", "no-clusters"])
+def test_unusable_kubeconfig_fails_closed(tmp_path, shape):
+    path = tmp_path / "kc"
+    if shape == "directory":
+        path.mkdir()
+    elif shape == "not-yaml":
+        path.write_text("clusters: [unclosed\n")
+    elif shape == "no-clusters":
+        path.write_text("apiVersion: v1\nkind: Config\n")
+    with pytest.raises(ValueError, match="k8s_kubeconfig"):
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": str(path)}))
+
+
+def test_kubeconfig_not_read_when_allowlist_empty(tmp_path):
+    enforce_trusted_targets(_cfg([], {"k8s_kubeconfig": str(tmp_path / "absent")}))

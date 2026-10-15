@@ -301,3 +301,64 @@ def test_no_unprotected_mutating_routes(monkeypatch):
         "Schedules mutating routes missing require_auth:\n"
         + "\n".join(schedules_violations)
     )
+
+
+# --------------------------------------------------------------------------
+# 225.1-10 / D-08: schedules are checked against the server trusted_targets
+# --------------------------------------------------------------------------
+
+def _server_cfg(tmp_path, monkeypatch, body: str):
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text(body, encoding="utf-8")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    return cfg
+
+
+def test_create_schedule_untrusted_target_422(dashboard_client, tmp_path, monkeypatch):
+    _server_cfg(tmp_path, monkeypatch, "security:\n  trusted_targets: [127.0.0.1]\n")
+    payload = dict(_VALID_PAYLOAD, target="10.9.9.9")
+    r = dashboard_client.post("/api/schedules", json=payload)
+    assert r.status_code == 422, r.text
+    assert "trusted-targets" in r.text
+
+
+def test_create_schedule_trusted_target_201(dashboard_client, tmp_path, monkeypatch):
+    _server_cfg(tmp_path, monkeypatch, "security:\n  trusted_targets: [127.0.0.1]\n")
+    payload = dict(_VALID_PAYLOAD, target="127.0.0.1")
+    r = dashboard_client.post("/api/schedules", json=payload)
+    assert r.status_code == 201, r.text
+
+
+def test_create_checkin_schedule_skips_trust_check(dashboard_client, tmp_path, monkeypatch):
+    _server_cfg(tmp_path, monkeypatch, "security:\n  trusted_targets: [127.0.0.1]\n")
+    r = dashboard_client.post(
+        "/api/schedules",
+        json={"name": "ci-fleet", "cron_expr": "0 2 * * 1", "check_in": True},
+    )
+    assert r.status_code == 201, r.text
+
+
+def test_create_schedule_malformed_server_config_503(dashboard_client, tmp_path, monkeypatch):
+    _server_cfg(tmp_path, monkeypatch, "security: [unclosed\n")
+    r = dashboard_client.post("/api/schedules", json=_VALID_PAYLOAD)
+    assert r.status_code == 503, r.text
+    assert "DASHBOARD-014" in r.text
+
+
+def test_patch_enable_rechecks_stored_target(dashboard_client, tmp_path, monkeypatch):
+    from datetime import datetime
+    from quirk.dashboard.api.app import create_app  # noqa: F401
+    r = dashboard_client.post("/api/schedules", json=_VALID_PAYLOAD)
+    assert r.status_code == 201, r.text
+    sid = r.json()["id"]
+    assert dashboard_client.patch(
+        f"/api/schedules/{sid}", json={"enabled": False}
+    ).status_code == 200
+    _server_cfg(tmp_path, monkeypatch, "security:\n  trusted_targets: [127.0.0.1]\n")
+    r = dashboard_client.patch(f"/api/schedules/{sid}", json={"enabled": True})
+    assert r.status_code == 422, r.text
+    listing = dashboard_client.get("/api/schedules").json()["schedules"]
+    assert [s for s in listing if s["id"] == sid][0]["enabled"] is False
+    assert dashboard_client.patch(
+        f"/api/schedules/{sid}", json={"enabled": False}
+    ).status_code == 200

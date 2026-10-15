@@ -4,8 +4,9 @@ created: 2026-10-13
 source: Phase 224 GC3 sweep (ledger parts 224-12/224-13, docs/configuration.md security.trusted_targets)
 priority: high
 area: quirk/dashboard/api/routes/jobs.py (create_job), quirk/dashboard/api/routes/schedules.py, quirk/cli/scheduler_cmd.py
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-10-14
+resolves_phase: 225.1
 ---
 
 # `security.trusted_targets` is not applied to dashboard broker targets or to scheduled scans
@@ -31,10 +32,10 @@ Two gaps:
 
 docs/configuration.md now states both gaps.
 
-- [ ] create_job: also check `connectors_overlay['broker_targets']` hosts (reuse
+- [x] create_job: also check `connectors_overlay['broker_targets']` hosts (reuse
       `target_trust._broker_target_hosts`), or write the server's `trusted_targets` into the job YAML so
       run_scan enforces it.
-- [ ] Schedules: check the target at create/patch time against the server config, and/or have the
+- [x] Schedules: check the target at create/patch time against the server config, and/or have the
       scheduler fall back to the server config's `trusted_targets` when there is no `--scan-config`.
 
 ## Feasibility & Effort
@@ -47,3 +48,9 @@ docs/configuration.md now states both gaps.
   config the daemon trusts.
 - **Unknowns:** whether scheduled runs created before the fix should be re-validated.
 - **Spike:** no.
+
+## Resolution (225.1)
+
+- Gap 1 (broker targets): closed by 225.1-08 (every connector host field is checked, and dashboard jobs carry the server `trusted_targets`).
+- Gap 2 (schedules): closed by 225.1-10. `POST /api/schedules`, `PATCH enabled:true` and `quirk schedule add` check the server `trusted_targets`; recurring runs without `--scan-config` carry the server `trusted_targets` and `allow_internal_targets`.
+- Unknown resolved: schedules created earlier are re-validated when enabled again.

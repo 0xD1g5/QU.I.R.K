@@ -431,3 +431,144 @@ def test_fetch_spec_bytes_from_url_invalid_port_end_to_end_does_not_crash():
         )
     assert "hunter2" not in str(exc_info.value)
 
+
+
+# ---------------------------------------------------------------------------
+# Phase 225.1: the metadata check covers IPv4 addresses carried inside IPv6
+# forms, plus the Alibaba Cloud metadata address.
+# ---------------------------------------------------------------------------
+
+_EMBEDDED_AND_PROVIDER_URLS = [
+    ("http://[::ffff:169.254.169.254]/", "embedded_v4_mapped"),
+    ("http://[::ffff:a9fe:a9fe]/", "embedded_v4_mapped_hex"),
+    ("http://[2002:a9fe:a9fe::]/", "embedded_v4_6to4"),
+    ("http://[64:ff9b::a9fe:a9fe]/", "embedded_v4_nat64"),
+    ("http://100.100.100.200/", "provider_alibaba"),
+    ("http://[::ffff:100.100.100.200]/", "provider_alibaba_mapped"),
+    ("http://[::169.254.169.254]/", "embedded_v4_compatible"),
+    ("http://[::ffff:0:a9fe:a9fe]/", "embedded_v4_translated"),
+    ("http://[64:ff9b:1::a9fe:a9fe]/", "embedded_v4_nat64_local_96"),
+    ("http://[64:ff9b:1:a9fe:a9:fe00::]/", "embedded_v4_nat64_local_48"),
+    ("http://[64:ff9b:1:0:a9:fea9:fe00:0]/", "embedded_v4_nat64_local_64"),
+    ("http://[2001:0:4136:e378:8000:63bf:5601:5601]/", "embedded_v4_teredo_client"),
+]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [u for u, _ in _EMBEDDED_AND_PROVIDER_URLS],
+    ids=[i for _, i in _EMBEDDED_AND_PROVIDER_URLS],
+)
+def test_metadata_block_applies_to_embedded_v4_forms(url):
+    """The metadata check sees the address and any IPv4 address it carries."""
+    r = validate_external_url(url, allow_internal=True)
+    assert r.ok is False
+    assert r.reason == RC_METADATA_SERVICE_IP
+    # Without allow_internal the same forms are refused too (reason may vary
+    # with the Python patch level for the embedded forms).
+    assert validate_external_url(url, allow_internal=False).ok is False
+
+
+def test_metadata_block_provider_addresses():
+    """Alibaba's metadata IPv4 literal keeps the metadata reason either way."""
+    for allow in (True, False):
+        r = validate_external_url("http://100.100.100.200/", allow_internal=allow)
+        assert r.ok is False
+        assert r.reason == RC_METADATA_SERVICE_IP
+
+
+@patch("quirk.util.url_allowlist.socket.getaddrinfo")
+def test_metadata_block_applies_to_resolved_embedded_v4(mock_gai):
+    mock_gai.return_value = [_ai_v6("::ffff:169.254.169.254")]
+    r = validate_external_url("http://meta.example.test/", allow_internal=True)
+    assert r.ok is False
+    assert r.reason == RC_METADATA_SERVICE_IP
+
+
+def test_embedded_v4_forms_do_not_loosen_existing_verdicts():
+    """No loosening: embedded internal stays allowed only when internal is allowed."""
+    assert validate_external_url("http://[::ffff:10.0.0.5]/", allow_internal=True).ok is True
+    assert validate_external_url("http://[64:ff9b::808:808]/", allow_internal=False).ok is False
+
+
+@patch("quirk.util.url_allowlist.socket.getaddrinfo")
+def test_public_v6_verdict_unchanged(mock_gai):
+    mock_gai.return_value = [_ai_v6("2606:4700:4700::1111")]
+    assert validate_external_url("http://pub.example.test/").ok is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 225.1: the AUDIT-09 accepted-risk note is derived from source, not
+# hand-maintained. The pinning-caller set is regenerated at run time.
+# ---------------------------------------------------------------------------
+
+def _modules_constructing_pinned_adapter() -> set[str]:
+    """Modules under quirk/ with a real ``PinnedIPAdapter(`` call.
+
+    Uses tokenize so comments, docstrings and prose cannot satisfy the match.
+    """
+    import io
+    import tokenize
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    found: set[str] = set()
+    for path in sorted((root / "quirk").rglob("*.py")):
+        rel = path.relative_to(root).as_posix()
+        if rel == "quirk/util/pinned_adapter.py" or "__pycache__" in rel:
+            continue
+        toks = [
+            t for t in tokenize.generate_tokens(
+                io.StringIO(path.read_text(encoding="utf-8")).readline
+            )
+            if t.type not in (tokenize.COMMENT, tokenize.STRING, tokenize.NL,
+                              tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT)
+        ]
+        for a, b in zip(toks, toks[1:]):
+            if a.type == tokenize.NAME and a.string == "PinnedIPAdapter" \
+                    and b.type == tokenize.OP and b.string == "(":
+                found.add(rel)
+                break
+    return found
+
+
+def _doc_block(label: str) -> set[str]:
+    """Paths listed one-per-line under *label* in the module docstring."""
+    import re
+    from quirk.util import url_allowlist
+
+    doc = url_allowlist.__doc__ or ""
+    m = re.search(re.escape(label) + r"[ \t]*\n((?:[ \t]+quirk/\S+\.py[ \t]*\n)+)", doc)
+    assert m, f"module docstring has no '{label}' block"
+    return {ln.strip() for ln in m.group(1).splitlines() if ln.strip()}
+
+
+def test_accepted_risk_note_names_exactly_the_pinning_callers():
+    scanned = _modules_constructing_pinned_adapter()
+    assert len(scanned) >= 1, "scan found no PinnedIPAdapter callers (vacuous)"
+    named = _doc_block("Pinned callers:")
+    assert scanned == named, (
+        f"scanned={scanned!r} but the AUDIT-09 note names {named!r}"
+    )
+
+
+def test_accepted_risk_note_names_unpinned_ticketing_callers():
+    unpinned = _doc_block("Not pinned:")
+    assert "quirk/ticketing/jira.py" in unpinned
+    assert "quirk/ticketing/servicenow.py" in unpinned
+    assert not (unpinned & _modules_constructing_pinned_adapter())
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://[::808:808]/",
+        "http://[::ffff:0:808:808]/",
+        "http://[64:ff9b:1::808:808]/",
+        "http://[2001:0:4136:e378:8000:63bf:f7f7:f7f7]/",
+    ],
+)
+def test_embedded_v4_forms_with_public_v4_pass_when_internal_allowed(url):
+    """Positive control: the extra embedded forms add metadata candidates only;
+    with allow_internal they do not reject an address carrying a public IPv4."""
+    assert validate_external_url(url, allow_internal=True).ok is True

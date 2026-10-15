@@ -2,7 +2,7 @@
 
 > **Status (added 2026-10-13): historical design record.** This is the v5.4 (Phase 106) design
 > contract, kept as written. Its transport and security statements (sections 3 and 6) describe
-> the design, not the shipped behaviour: the shipped `POST /api/sensor/push` route authenticates
+> the design, not the shipped behaviour. The shipped `POST /api/sensor/push` route authenticates
 > each sensor with its own bearer token. For current behaviour see
 > [operators-guide.md §8](operators-guide.md#8-distributed-sensor-deployment).
 
@@ -67,8 +67,8 @@ flowchart LR
         S3["quirk sensor\nexport-results -> file"]
     end
 
-    S1 -- "HTTPS push\nzstd + HMAC" --> ING
-    S2 -- "HTTPS push\nzstd + HMAC" --> ING
+    S1 -- "HTTPS push\nzstd + HMAC value" --> ING
+    S2 -- "HTTPS push\nzstd + HMAC value" --> ING
     S3 -. "sneakernet file\n(import-results)" .-> ING
 
     subgraph Console["quirk console (FastAPI dashboard)"]
@@ -90,7 +90,7 @@ unified CBOM/score.
 
 ## 3. Wire Contract
 
-The sensor→console push carries a single signed, compressed JSON envelope. The console
+The sensor→console push carries a single compressed JSON envelope. The console
 ingest route, the air-gap `import-results` path, and the Phase 107 `sensor_pushes` table
 all consume the **same** schema.
 
@@ -138,15 +138,16 @@ in the stored `sensor_pushes` row and in rejection diagnostics.
 - **HTTPS** to the console ingest route.
 - **zstandard level-3** compression (already in the codebase) over the JSON body.
 - **httpx** client (already in the codebase; reused — no new HTTP dependency).
-- **Application-layer integrity header:** `X-Sensor-Signature: hmac-sha256=<hex>`.
-  The HMAC-SHA256 is computed over the request body with a per-sensor key derived from the
-  enrollment token. There is **NO mTLS / PKI** in v5.4 (D-04, §9) — integrity and sender
-  authenticity ride on the HMAC signature plus the bearer auth of §6.
+- **Application-layer header:** `X-Sensor-Signature: hmac-sha256=<hex>`.
+  The sensor computes an HMAC-SHA256 over the request body with a per-sensor key and attaches
+  it; the console reads the header and carries the value with the push. There is **NO
+  mTLS / PKI** in v5.4 (D-04, §9) — sender authentication rides on the bearer auth of §6
+  over TLS.
 
 ### 3.4 Air-gap carve-out (D-15)
 
 `quirk sensor export-results` writes the **IDENTICAL** payload — same `payload_id`, same
-`schema_version`, same `pushed_at`, same `findings`, same HMAC signature, same zstd
+`schema_version`, same `pushed_at`, same `findings`, same HMAC value, same zstd
 compression — to a file instead of pushing it over HTTPS. `quirk console import-results`
 reads that file and runs it through the **same ingest + dedup path**. Export is
 "push-to-file": one schema, one merge path. The only behavioral difference is the
@@ -165,7 +166,7 @@ sequenceDiagram
 
     Sensor->>Sensor: scan segment -> findings
     Sensor->>Sensor: build envelope (payload_id, pushed_at, ...)
-    Sensor->>Sensor: zstd compress + HMAC-SHA256 sign
+    Sensor->>Sensor: zstd compress + attach HMAC-SHA256 value
     Sensor->>Console: POST /ingest (X-Sensor-Signature, bearer)
     Console->>Console: require_auth (inherited at router level)
     alt body > 10 MB
@@ -232,7 +233,7 @@ at L100):
 - The token is **one-time-use** — consumed at enrollment, then marked spent. It is **NOT**
   time-windowed.
 - On enrollment, the sensor receives its `sensor_id` and the per-sensor key material used
-  to derive the `X-Sensor-Signature` HMAC.
+  to compute the `X-Sensor-Signature` HMAC value.
 
 ### Enrollment manifest field set (D-13) — feeds the Phase 107 `sensors` table
 

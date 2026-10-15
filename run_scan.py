@@ -54,7 +54,7 @@ from quirk.scanner.hardware_drift import (  # Phase 158 HWLC-15
     purge_stale_hardware_history,
     persist_and_reconcile,
 )
-from quirk.scanner.jwt_scanner import scan_jwt_targets
+from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED, scan_jwt_targets
 from quirk.scanner.container_scanner import scan_container_targets
 from quirk.scanner.source_scanner import scan_source_targets
 from quirk.scanner.aws_connector import scan_aws_targets
@@ -489,6 +489,21 @@ def _adcs_missing_extra(enable_adcs: bool, error_endpoints) -> bool:
         _emit_missing_extra_advisory("adcs_scanner", "adcs", error_endpoints)
         return True
     return False
+
+
+def _is_resumed_jwt_row(e) -> bool:
+    """Resume filter for the api stage's JWT bucket (225.1 SECH-05).
+
+    Keeps JWT rows plus the JWKS verify-disabled ADVISORY row so the
+    config_advisory finding survives a resumed scan.
+    """
+    proto = getattr(e, "protocol", "")
+    if proto == "JWT":
+        return True
+    return (
+        proto == "ADVISORY"
+        and getattr(e, "service_detail", "") == ADVISORY_JWKS_VERIFY_DISABLED
+    )
 
 
 def _is_privileged() -> Optional[bool]:
@@ -3134,7 +3149,7 @@ def main():
     # Phase 67 RESUME-01: skip api stage if already completed in a prior run.
     _api_protocols = ("JWT", "CONTAINER", "SOURCE", "ADVISORY", "OPENAPI")
     if _stage_completed(_completed_stages, "api"):
-        jwt_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "JWT"]
+        jwt_endpoints = [e for e in _resumed_endpoints if _is_resumed_jwt_row(e)]
         container_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "CONTAINER"]
         source_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "SOURCE"]
         openapi_endpoints = [e for e in _resumed_endpoints if getattr(e, "protocol", "") == "OPENAPI"]

@@ -39,6 +39,7 @@ except ImportError:
     OPENAPI_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.outbound_fetch import OutboundFetchRejected, fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import _redact_url_preview, validate_external_url
 
@@ -162,12 +163,35 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
             f"OpenAPI spec URL rejected ({vr.reason}): {vr.redacted_preview!r}"
         )
 
+    def _in_scope(hop_url: str) -> None:
+        host = (urlparse(hop_url).hostname or "").lower()
+        if not host or host not in allowed_hosts:
+            raise SpecParsingError(
+                f"OpenAPI spec URL is outside configured scan-target scope — "
+                f"URL fetch is only permitted for URLs whose host is in the targets list: "
+                f"{_redact_url_preview(hop_url)!r}"
+            )
+
     try:
-        resp = httpx.get(url, timeout=15, follow_redirects=True)
+        resp = fetch_validated(
+            url,
+            fetch=lambda u, h: httpx.get(u, timeout=15, follow_redirects=False, headers=h),
+            allow_internal=allow_internal,
+            extra_check=_in_scope,
+        )
         resp.raise_for_status()
-    except Exception as exc:
+    except SpecParsingError:
+        raise
+    except OutboundFetchRejected as exc:
         raise SpecParsingError(
-            f"Failed to fetch OpenAPI spec URL: {safe_str(exc)}"
+            f"OpenAPI spec URL rejected ({exc.reason}): {exc.preview!r}"
+        ) from exc
+    except Exception as exc:
+        detail = type(exc).__name__
+        if isinstance(exc, httpx.HTTPStatusError):
+            detail += f" HTTP {exc.response.status_code}"
+        raise SpecParsingError(
+            f"Failed to fetch OpenAPI spec URL ({detail}): {_redact_url_preview(url)!r}"
         ) from exc
 
     content = resp.content
@@ -362,10 +386,22 @@ def scan_openapi_spec(
     """
     _targets = cfg_targets or []
 
-    # Graceful degradation: missing optional dep → missing_extra endpoint, never raise
+    # Determine if input is a URL or a local file path
+    is_url = bool(path_or_url) and (
+        path_or_url.startswith("http://") or path_or_url.startswith("https://")
+    )
+
+    # Graceful degradation: missing optional dep → missing_extra endpoint, never raise.
+    # A URL is recorded without userinfo, query or fragment (D-10).
     if not OPENAPI_AVAILABLE:
+        if not path_or_url:
+            degraded_host = "unknown"
+        elif is_url:
+            degraded_host = _redact_url_preview(path_or_url, max_len=64)
+        else:
+            degraded_host = path_or_url[:64]
         return [CryptoEndpoint(
-            host=path_or_url[:64] if path_or_url else "unknown",
+            host=degraded_host,
             port=0,
             protocol="OPENAPI",
             service_detail="openapi-spec-validator not installed",
@@ -373,9 +409,6 @@ def scan_openapi_spec(
             scan_error_category="missing_extra",
             scanned_at=_scanned_at(),
         )]
-
-    # Determine if input is a URL or a local file path
-    is_url = path_or_url.startswith("http://") or path_or_url.startswith("https://")
 
     if is_url:
         raw_bytes = _fetch_spec_bytes_from_url(path_or_url, _targets, allow_internal=allow_internal)

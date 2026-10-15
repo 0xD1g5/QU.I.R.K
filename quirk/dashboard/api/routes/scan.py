@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db, _default_db_path
 from quirk.reports.coverage import load_scan_coverage
+from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner import hw_cve  # Phase 142 CVE-01: firmware CVE correlation
 # RVW-002: share the report engine's tri-state chain-verification logic rather
 # than reimplementing it here. Two implementations of 'did the chain verify?'
@@ -135,6 +136,33 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
     """
     now = datetime.now(tz=timezone.utc)
     findings: list[FindingItem] = []
+
+    # JWKS fetched with verification disabled (225.1 SECH-05, score-neutral)
+    if (ep.protocol or "").upper() == "ADVISORY" and (
+        ep.service_detail == ADVISORY_JWKS_VERIFY_DISABLED
+    ):
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="JWKS fetched with TLS certificate verification disabled",
+            protocol="ADVISORY",
+            description=(
+                "The JWKS was fetched with TLS certificate verification "
+                "disabled (allow_insecure_jwks), so the keys could have been "
+                "supplied by a network attacker."
+            ),
+            remediation=(
+                "Install a certificate the scanner trusts on the JWKS "
+                "endpoint and remove the allow_insecure_jwks setting."
+            ),
+            quantum_risk=None,
+            category="config_advisory",
+            source="jwt",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
 
     # Unencrypted HTTP
     if ep.protocol and ep.protocol.upper() == "HTTP":

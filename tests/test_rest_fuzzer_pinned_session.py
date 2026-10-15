@@ -136,3 +136,87 @@ def test_all_three_dispatch_sites_have_pinned_mount():
     # 3 dispatch mounts + the import line = 4 PinnedIPAdapter references; 3 session.mount calls.
     assert mount_count >= 3, f"expected >=3 session.mount sites, found {mount_count}"
     assert pinned_mounts >= 3, f"expected >=3 PinnedIPAdapter mounts, found {pinned_mounts}"
+
+
+# ---------------------------------------------------------------------------
+# Do not follow redirects (225.1 D-22): record the status, never follow.
+# ---------------------------------------------------------------------------
+
+
+def test_jwks_dispatch_does_not_follow_redirects():
+    from quirk.scanner.rest_fuzzer import _fetch_jwks_public_key_pem
+
+    session_mock = MagicMock()
+    resp = MagicMock()
+    resp.status_code = 302
+    session_mock.request.return_value = resp
+
+    with patch("quirk.scanner.rest_fuzzer.validate_external_url",
+               return_value=_ok_scope_with_ip()):
+        _fetch_jwks_public_key_pem("http://example.com", session_mock, allow_internal=False)
+
+    assert session_mock.request.call_count == 1
+    assert session_mock.request.call_args.kwargs.get("allow_redirects") is False
+
+
+def test_main_dispatch_does_not_follow_redirects_and_records_status():
+    from quirk.scanner.rest_fuzzer import run_fuzz_scan, SCHEMATHESIS_AVAILABLE
+
+    if not SCHEMATHESIS_AVAILABLE:
+        pytest.skip("schemathesis not installed")
+
+    session_mock = MagicMock()
+    resp = MagicMock()
+    resp.status_code = 302
+    session_mock.request.return_value = resp
+
+    cfg = MagicMock()
+    cfg.security = MagicMock()
+    cfg.security.allow_internal_targets = False
+
+    mock_case = MagicMock()
+    # transport-supplied True must not win
+    mock_case.as_transport_kwargs.return_value = {
+        "method": "GET",
+        "url": "http://example.com/probe",
+        "headers": {},
+        "cookies": {},
+        "params": {},
+        "allow_redirects": True,
+    }
+    mock_op = MagicMock()
+    mock_op.as_strategy.return_value.example.return_value = mock_case
+    from schemathesis.core.result import Ok as _SchemaOk
+    mock_result = _SchemaOk(mock_op)
+
+    with patch("quirk.scanner.rest_fuzzer.schemathesis") as mock_schema_mod, \
+         patch("quirk.scanner.rest_fuzzer.validate_external_url",
+               return_value=_ok_scope_with_ip()):
+        mock_schema = MagicMock()
+        mock_schema.include.return_value.get_all_operations.return_value = [mock_result]
+        mock_schema_mod.openapi.from_dict.return_value = mock_schema
+
+        run_fuzz_scan(
+            spec_dict={"openapi": "3.0.0"},
+            base_url="http://example.com",
+            cfg=cfg, budget=1,
+            prompt_fn=lambda _: "CONFIRM", is_tty=True,
+            _session=session_mock,
+        )
+
+    assert session_mock.request.call_count >= 1
+    for call in session_mock.request.call_args_list:
+        assert call.kwargs.get("allow_redirects") is False
+
+
+def test_every_session_request_site_sets_redirect_flag():
+    """Structural: exactly 3 dispatch sites, each with allow_redirects forced off."""
+    import quirk.scanner.rest_fuzzer as rf
+
+    src = inspect.getsource(rf)
+    import re
+    assert len(re.findall(r"= session\.request\(", src)) == 3
+    assert src.count("allow_redirects") >= 3
+    assert 'kwargs["allow_redirects"] = False' in src
+    assert 'alg_kwargs["allow_redirects"] = False' in src
+    assert "allow_redirects=False" in src

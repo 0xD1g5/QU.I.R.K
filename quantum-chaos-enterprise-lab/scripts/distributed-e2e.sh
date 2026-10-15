@@ -101,12 +101,15 @@ echo "  sensor-b enrolled (provisioning record written)."
 echo ""
 echo "--- Step 2: push (scan local target + push findings to console) ---"
 
+# The lab console listens on plain HTTP inside the isolated console-net docker
+# network, so enroll needs --allow-insecure-console for the non-loopback http:// URL.
 echo "  Configuring + pushing sensor-a..."
 ${DC} exec -T sensor-a \
   quirk sensor enroll "${CONSOLE_URL}" --segment segment-a \
   --sensor-id sensor-a \
   --api-token "${CONSOLE_SHARED_TOKEN}" \
-  --allow-internal-console
+  --allow-internal-console \
+  --allow-insecure-console
 ${DC} exec -T sensor-a \
   quirk sensor push --scan-config /quirk/sensor-config.yaml
 echo "  sensor-a push complete."
@@ -116,7 +119,8 @@ ${DC} exec -T sensor-b \
   quirk sensor enroll "${CONSOLE_URL}" --segment segment-b \
   --sensor-id sensor-b \
   --api-token "${CONSOLE_SHARED_TOKEN}" \
-  --allow-internal-console
+  --allow-internal-console \
+  --allow-insecure-console
 ${DC} exec -T sensor-b \
   quirk sensor push --scan-config /quirk/sensor-config.yaml
 echo "  sensor-b push complete."

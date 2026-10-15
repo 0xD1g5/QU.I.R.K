@@ -41,3 +41,7 @@ console_api_token: "REPLACE_WITH_ENROLLMENT_TOKEN"
 # Persisted from --allow-internal-console so subsequent 'sensor push' calls
 # can reach a console on a private/RFC1918 network without re-specifying the flag.
 allow_internal_console: false
+
+# Persisted from --allow-insecure-console: accept an http:// console_url for a
+# non-loopback host (isolated lab networks). Leave false when console_url is https://.
+allow_insecure_console: false

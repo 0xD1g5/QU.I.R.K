@@ -169,6 +169,10 @@ def _classify_target(target: str) -> str:
     return "fqdns"
 
 
+class ServerConfigUnreadable(Exception):
+    """The server config exists but cannot be read; a recurring run must not guess."""
+
+
 def _materialize_scan_config(
     schedule: ScheduledScan,
     scan_config_path: Optional[str],
@@ -195,6 +199,19 @@ def _materialize_scan_config(
             base: dict = yaml.safe_load(fh) or {}
     else:
         base = copy.deepcopy(_MINIMAL_SCAN_CONFIG)
+        # 225.1 / D-08: carry the server's consent settings into the generated
+        # config so run_scan's gate enforces them for the recurring run.
+        from quirk.util.server_config import load_server_security
+
+        sec = load_server_security()
+        if sec.error:
+            raise ServerConfigUnreadable(sec.error)
+        if sec.trusted_targets or sec.allow_internal_targets:
+            security = base.setdefault("security", {})
+            if sec.trusted_targets:
+                security["trusted_targets"] = list(sec.trusted_targets)
+            if sec.allow_internal_targets:
+                security["allow_internal_targets"] = True
 
     # Ensure required top-level sections exist (defensive merge for partial configs)
     for key, default in _MINIMAL_SCAN_CONFIG.items():
@@ -227,6 +244,17 @@ def _materialize_scan_config(
                 logging.getLogger(__name__).info(
                     suppression_log_line(schedule.name, schedule.cron_expr, removed, reason)
                 )
+
+    # 225.1 / D-08: recurring runs never use authenticated mode (credentials are
+    # ephemeral). Strip-and-log in case the file changed since startup.
+    _connectors = base.get("connectors")
+    if isinstance(_connectors, dict) and _connectors.get("enable_authenticated_mode"):
+        _connectors["enable_authenticated_mode"] = False
+        logging.getLogger(__name__).warning(
+            "Scheduled scan %s: connectors.enable_authenticated_mode stripped "
+            "(authenticated mode is not allowed for recurring scans)",
+            schedule.name,
+        )
 
     # Anchor output.directory to the scheduled output dir (SENSOR-05 Fix 1)
     base.setdefault("output", {})["directory"] = str(output_dir)
@@ -351,7 +379,17 @@ def _dispatch_schedule(
     # The generated file is passed as --config to run_scan so target + output
     # directory are both conveyed without widening run_scan.py's arg surface
     # with --target or --output (STAB-03 invariant).
-    generated_config = _materialize_scan_config(schedule, scan_config_path, output_dir)
+    try:
+        generated_config = _materialize_scan_config(schedule, scan_config_path, output_dir)
+    except ServerConfigUnreadable as _exc:
+        run.status = "failed"
+        run.completed_at = _utcnow_naive()
+        db.commit()
+        logging.getLogger(__name__).error(
+            "Scheduled scan %s skipped: server configuration could not be read (%s)",
+            schedule.name, _exc,
+        )
+        return run
 
     cmd = build_scan_argv(schedule, generated_config)
 
@@ -478,6 +516,14 @@ def run_scheduler(argv: list[str]) -> None:
     args = parser.parse_args(argv)
     db_path = _resolve_db_path(args.config)
     scan_config_path = args.scan_config
+
+    # 225.1 / D-08: the gate must check the config recurring runs load.
+    from quirk.cli.schedule_cmd import _config_has_authenticated_mode
+    from quirk.errors import format_error
+
+    if scan_config_path and _config_has_authenticated_mode(scan_config_path):
+        print(format_error("SCHED-AUTH-001"), file=sys.stderr)
+        sys.exit(2)
 
     # Ensure tables exist before first session (idempotent)
     init_db(db_path)

@@ -155,11 +155,12 @@ Three small operator-facing additions shipped in Phase 143:
   are viewing. See [`docs/report-interpretation.md`](report-interpretation.md) §11.
 - **`security.trusted_targets` scan-consent allowlist** — an opt-in list of exact hosts/IPs and
   CIDR ranges QUIRK is authorized to scan. Empty/absent = allow-all (backward compatible). The
-  two entry points check different things. The CLI checks the config's `targets.fqdns`,
-  `targets.cidrs` and `connectors.broker_targets` hosts, but not `targets.include_ips`, so an IP
-  listed there is scanned even when it is outside the allowlist. The dashboard's "New Scan" page
-  checks every form target against the server config's list, but not `broker_targets` entered in
-  the Connectors panel. See
+  two entry points check the same inputs. The CLI checks the config's `targets.fqdns`,
+  `targets.cidrs`, `targets.include_ips` and every host-naming `connectors.*` field (checked
+  whether or not that connector is enabled, and the explicit registry host of a container image
+  reference). The dashboard's "New Scan" page checks the form targets and the Connectors-panel
+  hosts against the server config's list, and writes that list into the job config so the scan
+  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. See
   [`docs/configuration.md`](configuration.md) § `security.trusted_targets`.
 - **Windows Authenticode signing (build mechanism, not yet activated)** — the
   `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
@@ -177,11 +178,12 @@ The dashboard's pre-existing `GET /api/config` endpoint returns only the active 
 not require the dashboard API token. The new `GET /api/config/effective` endpoint — added for the
 New Scan page's Effective config panel (§3.1.2) — **does require the dashboard API token** when
 `QUIRK_API_TOKEN` (or `security.api_token` in the server's config) is set, because it accepts caller-supplied form parameters (targets, profile,
-etc.). Keep the server's config file a complete, valid QUIRK config so its `security.api_token` is
-read. The endpoint returns the merged, redacted
-config those parameters would produce, with two differences from the job a submission writes: it
-always shows `security.allow_internal_targets: false` (a real job takes that value from the server's
-config file), and its `output.directory` is a temporary path rather than `output/jobs/<job id>`.
+etc.). A `security.api_token` is read from the server's config file even when the file holds only a
+`security:` section. The endpoint returns the merged, redacted
+config those parameters would produce, with two differences from the job a submission writes: its
+`output.directory` is a temporary path rather than `output/jobs/<job id>`, and credential values never
+reach it. It shows the server config's own `security.allow_internal_targets`, the value a real job takes. The preview receives credentials by name only: the New Scan page sends only the names of the credential fields you have filled, and the
+response marks each as `set` or `not set`.
 Treat it as an
 authenticated preview endpoint, not a public config-read endpoint. Credential fields in its
 response are always redacted to `•••• (set)` / `•••• (not set)` regardless of caller — there is no
@@ -283,7 +285,7 @@ The New Scan page in the dashboard has a collapsed "Effective config" panel abov
 button. Expanding it fetches `GET /api/config/effective` with your current form selections
 (targets, profile, calibration, nmap toggle, port scope, custom ports, vertical, and any Connectors
 or Advanced fields you touched) and previews the **config that submission would run with**, apart
-from the two fields §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
+from the output directory §2.4.1 lists — not the server's base config file, and not a static default. It re-fetches automatically as you
 change form fields while the panel stays open, and never fetches at all if you leave it collapsed.
 
 Two tabs render the same server response two ways:
@@ -302,8 +304,15 @@ never a real value, in either tab, and never inside an editable input. If you ev
 credential value in the Raw YAML tab, that is a redaction bypass and should be reported
 immediately.
 
+The preview shows `•••• (set)` for a credential field you have filled in on the New Scan form, even
+though the form's value never leaves the browser through this panel: the page sends only the
+field names, not the values, and the server marks each named credential as set. A field you have
+left empty shows the server's own state (its config file or environment).
+
 A failed fetch renders an "Effective config unavailable" notice without blocking scan submission —
-the panel is advisory-only and never gates the Run Scan button.
+the panel is advisory-only and never gates the Run Scan button. If the server's own config file
+cannot be read, the preview answers 503 (`DASHBOARD-014`) and shows this notice, and a submission
+is refused with the same code until the file is fixed.
 
 ### 3.1.3 Scan Coverage chips (OBS-02, Phase 192)
 
@@ -1065,7 +1074,7 @@ the connector rows.
 | Discovery | TCP port discovery before fingerprinting: nmap by default in the dashboard (its default Top 1000 scope forces nmap) and in the interactive wizard; built-in by default for a `--config` run unless `--discovery nmap` | `--discovery builtin\|nmap`, `--targets-file`, `targets.cidrs` | `nmap` binary (only when nmap discovery runs) | — |
 | TLS | TLS handshake, cert chain, ciphers, key sizes | `scan.ports_tls`, `scan.tls_designated_ports`, `scan.include_sni`, `timeouts.tls_seconds` | `sslyze` (core) | "TLS certificate expired" |
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
-| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS/verify-disabled` advisory when `allow_insecure_jwks` is on |
+| JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
 | Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
@@ -1161,9 +1170,11 @@ internal or dev endpoints that use self-signed or expired certificates. It is a
 - TLS certificate verification is disabled for JWKS fetches only (other scan phases
   are unaffected).
 - A `HIGH`-severity `ADVISORY` endpoint row (`ADVISORY_JWKS_VERIFY_DISABLED`, recorded as
-  `JWKS/verify-disabled`) is stored for every JWKS URL fetched. It does not become a
-  finding: neither the CLI findings evaluator nor the dashboard's findings produce one for
-  it, and the HTML report's Endpoint Inventory shows it only as an `ADVISORY` row for the
+  `JWKS/verify-disabled`) is stored for every JWKS URL fetched.
+- Each of those URLs also appears as a `HIGH` finding titled `JWKS fetched with TLS
+  certificate verification disabled`, on the CLI report and on the dashboard Findings
+  page. It is counted in the findings totals but does not change the readiness score.
+- The HTML report's Endpoint Inventory shows the row only as an `ADVISORY` row for the
   JWKS URL, without the label or the severity.
 - QUIRK remains a passive inventory tool — it does not rely on JWKS key material for
   any authentication decision, so a MITM on the JWKS URI cannot escalate privileges.
@@ -1520,7 +1531,7 @@ quantum-readiness score.)*
 Each sensor is a standard `pip install "quirk-scanner[all]"` deployment. Sensors
 communicate with the console over HTTPS (use an `https://` console URL) and authenticate each
 push with their own per-sensor token (§8.1.1). Each push also carries an HMAC-SHA256
-signature made with a key the sensor generates locally at enrollment.
+value made with a key the sensor generates locally at enrollment.
 
 ### 8.1 Provision the console
 
@@ -1544,7 +1555,9 @@ quirk serve --host 0.0.0.0 --port 8512
 > HTTPS reverse proxy and IP allowlist in front of it. Set `QUIRK_API_TOKEN` to a
 > strong random value before starting the server; `quirk serve` with neither this variable
 > nor a `security.api_token` in the config it reads (`QUIRK_CONFIG_PATH`, else
-> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing).
+> `./config.yaml`) runs with authentication disabled (appropriate only for local dev/testing). A config file that
+> exists but cannot be read or parsed stops `quirk serve` (exit code 2) and makes protected `/api/*` routes
+> answer 503 (`DASHBOARD-014`).
 >
 > As a guardrail, `quirk serve` **refuses to start** on a network-reachable
 > interface when neither token is configured, unless you pass `--insecure` to
@@ -1649,7 +1662,12 @@ into `sensor.yaml` by hand instead.
 `quirk sensor enroll` never contacts the console. It checks the console URL (the host
 must resolve; a private or loopback address needs `--allow-internal-console`, which is
 remembered in `sensor.yaml` for later pushes; a console URL on the cloud-metadata address
-`169.254.169.254` is refused), generates the sensor's HMAC key and writes `sensor.yaml`.
+`169.254.169.254` is refused). The console URL must use `https://` unless its host is loopback;
+pass `--allow-insecure-console` to accept `http://` for another host (isolated lab networks). The
+flag prints a warning and is remembered in `sensor.yaml` as `allow_insecure_console` (default
+`false`), and `quirk sensor push` applies the same rule to an existing `sensor.yaml`: re-enroll
+with an `https://` URL, or with the flag. `--allow-insecure-console` is separate from
+`--allow-internal-console` (scheme versus address range). `quirk sensor enroll` then generates the sensor's HMAC key and writes `sensor.yaml`.
 It also prints an "Enrollment
 token" of its own; that value is generated locally, stored nowhere and is not the push
 credential, so ignore it and use the token that `quirk console enroll` printed. Running
@@ -1680,7 +1698,7 @@ quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
 
 `quirk sensor push` runs a local scan using the target list in the scan config
 (`--scan-config` defaults to `config.yaml` in the current directory),
-serialises the findings into a zstd-compressed JSON envelope signed with the sensor's HMAC
+serialises the findings into a zstd-compressed JSON envelope carrying an HMAC value made with the sensor's HMAC
 key (the same payload `quirk sensor export-results` writes to a `.qpush` file, §8.6), and
 delivers it to the console over HTTPS. The console responds HTTP 200 on success. If the
 sensor was enrolled with `--allow-internal-console`, the local scan is also started with
@@ -1880,6 +1898,7 @@ binaries should build from source until Authenticode signing is implemented.
    | `-Segment` | `"windows"` | Network segment label written to the sensor config. |
    | `-Time` | `"03:00"` | Daily trigger time for the Scheduled Task (HH:MM format). |
    | `-AllowInternalConsole` | *(switch)* | Pass to allow the sensor to reach a console on a private/RFC1918 address (on-prem or lab). |
+   | `-AllowInsecureConsole` | *(switch)* | Pass to accept an `http://` console URL for a non-loopback host (isolated lab networks); passes `--allow-insecure-console` to enroll. |
 
    Example — production console:
 
@@ -3821,7 +3840,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk ticket` | Create tickets from scan findings (action `create`) | `create`, `--backend`, `--input`, `--output-dir` | CLI only |
 | `quirk ticket create` | Create Jira or ServiceNow tickets from the latest (or a named) findings file; per-finding delivery failures are recorded as failed and do not change the exit status, but an unreachable backend or a database without the audit table fails the run | `--backend`, `--input`, `--output-dir` | CLI only |
 | `quirk sensor` | Distributed sensor management | `enroll`, `push`, `export-results`, `merge` | Sensors page lists enrolled sensors (read-only); every action is CLI |
-| `quirk sensor enroll` | Write the sensor's local `sensor.yaml` (console URL, `sensor_id`, segment, push token, HMAC key); it does not contact the console | `console_url`, `--segment`, `--sensor-id`, `--api-token` | CLI only |
+| `quirk sensor enroll` | Write the sensor's local `sensor.yaml` (console URL, `sensor_id`, segment, push token, HMAC key); it does not contact the console | `console_url` (`https://`, or `http://` for loopback), `--segment`, `--sensor-id`, `--api-token`, `--allow-internal-console`, `--allow-insecure-console` | CLI only |
 | `quirk sensor push` | Run a local scan and push the results to the console | `--config`, `--scan-config` | Sending is CLI only; the console receives pushes at `POST /api/sensor/push` |
 | `quirk sensor export-results` | Export results to a .qpush file for air-gap transfer | `--config`, `--scan-config`, `--output` | CLI only |
 | `quirk sensor merge` | Merge sensor data into a unified CBOM and score (see section 8) | `--db`, `--stale-days` | Read-only: `GET /api/merge/latest` feeds the Executive page; the merge itself is CLI only |

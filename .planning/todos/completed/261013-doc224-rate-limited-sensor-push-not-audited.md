@@ -4,8 +4,9 @@ created: 2026-10-13
 source: Phase 224 GC3 (REST3) wording sweep; ledger rows DCL-CLOUDCONSOLE-0159, DCL-ADMIN-0156 (docs/deployment-cloud-console.md §7 Audit trail, docs/admin-guide.md §3.4)
 priority: low
 area: quirk/dashboard/api/middleware/rate_limit.py, quirk/dashboard/api/routes/sensor.py, quirk/models.py (IntegrationDelivery)
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-10-14
+resolves_phase: 225.1
 ---
 
 # Rate-limited sensor pushes leave no audit row, and push audit rows carry no sensor id or source address
@@ -32,3 +33,8 @@ request log has the address.
 - Effort **S/M**: the 429 audit is a small change in `rate_limit.py` (path check + row write needs a DB session in
   middleware, which it does not have today: **UNKNOWN** cost); the extra columns need an additive migration in
   `quirk/db.py`.
+
+
+## Resolution (225.1-13)
+
+Both the `rate_limited` audit row and the `client_ip` / `sensor_id` columns shipped; the D-12 cut option was not taken.

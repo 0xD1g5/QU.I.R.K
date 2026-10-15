@@ -25,8 +25,8 @@ T-109-07  safe_str(exc) on all error paths; fixed strings for 409/unknown-sensor
 T-109-08  IntegrationDelivery row written on EVERY attempt, committed outside ingest try.
 T-109-09  Sensor lookup before any persistence; unknown → 4xx + audit.
 T-109-10  UNIQUE constraint + rollback-first → 409 fixed string (never stringify exc).
-T-109-11  X-Sensor-Signature header read + structurally validated; carried as qpush_sig;
-          crypto verification deferred v5.5 (hmac_key column absent in Phase 107 schema).
+T-109-11  X-Sensor-Signature header read; its hmac-sha256=<hex> shape is checked and the
+          value is carried as qpush_sig metadata.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ _MAX_DECOMPRESS_BYTES = 20 * 1024 * 1024  # zstd cap (mirrors console_cmd.py D-0
 _ZSTD_MAX_WINDOW = 32 * 1024 * 1024
 _REPLAY_WINDOW = timedelta(minutes=15)    # pushed_at must be within ±15 min of received_at
 
-# X-Sensor-Signature structural prefix (T-109-11 — crypto verify deferred v5.5)
+# X-Sensor-Signature expected prefix (T-109-11)
 _SIG_PREFIX = "hmac-sha256="
 
 # ---------------------------------------------------------------------------
@@ -338,6 +338,9 @@ def _audit(
     scan_id: str,
     status: str,
     error_summary: str | None = None,
+    *,
+    client_ip: str | None = None,
+    sensor_id: str | None = None,
 ) -> None:
     """Write one IntegrationDelivery row for this push attempt.
 
@@ -359,12 +362,22 @@ def _audit(
         status=status,
         attempted_at=now,
         error_summary=error_summary,
+        client_ip=client_ip,
+        sensor_id=sensor_id,
     )
     db.add(row)
     try:
         db.commit()
     except Exception as exc:
         logger.warning("Audit row commit failed: %s", safe_str(exc))
+
+
+def _origin(request: Request) -> dict:
+    """Audit-row origin fields: source address, and sensor id once authenticated."""
+    return {
+        "client_ip": request.client.host if request.client else None,
+        "sensor_id": getattr(request.state, "sensor_id", None),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -394,17 +407,17 @@ async def sensor_push(
         except ValueError:
             cl_int = 0
         if cl_int > _BODY_LIMIT:
-            _audit(db, scan_id, "failed", "payload_too_large")
+            _audit(db, scan_id, "failed", "payload_too_large", **_origin(request))
             raise HTTPException(status_code=413, detail="Payload too large (10 MB limit)")
 
     body = await request.body()
     if len(body) > _BODY_LIMIT:
-        _audit(db, scan_id, "failed", "payload_too_large")
+        _audit(db, scan_id, "failed", "payload_too_large", **_origin(request))
         raise HTTPException(status_code=413, detail="Payload too large (10 MB limit)")
 
     # ------------------------------------------------------------------
-    # T-109-11 — X-Sensor-Signature: read + structural validate; carry as qpush_sig
-    # (crypto verify deferred v5.5 — hmac_key column absent from Phase 107 schema)
+    # T-109-11 — X-Sensor-Signature: read, check the hmac-sha256=<hex> shape,
+    # carry the value as qpush_sig metadata
     # ------------------------------------------------------------------
     qpush_sig: str | None = None
     raw_sig = request.headers.get("X-Sensor-Signature")
@@ -424,7 +437,7 @@ async def sensor_push(
         dctx = zstandard.ZstdDecompressor(max_window_size=_ZSTD_MAX_WINDOW)
         raw = dctx.stream_reader(body).read(_MAX_DECOMPRESS_BYTES + 1)
         if len(raw) > _MAX_DECOMPRESS_BYTES:
-            _audit(db, scan_id, "failed", "decompressed_payload_too_large")
+            _audit(db, scan_id, "failed", "decompressed_payload_too_large", **_origin(request))
             raise HTTPException(
                 status_code=413,
                 detail="Decompressed payload exceeds 20 MB limit",
@@ -432,7 +445,7 @@ async def sensor_push(
     except HTTPException:
         raise
     except Exception as exc:
-        _audit(db, scan_id, "failed", safe_str(exc))
+        _audit(db, scan_id, "failed", safe_str(exc), **_origin(request))
         raise HTTPException(status_code=400, detail="Body is not valid zstd-compressed data")
 
     # ------------------------------------------------------------------
@@ -442,7 +455,7 @@ async def sensor_push(
         envelope_dict = json.loads(raw.decode("utf-8"))
         envelope = PushEnvelope(**envelope_dict)
     except Exception as exc:
-        _audit(db, scan_id, "failed", safe_str(exc))
+        _audit(db, scan_id, "failed", safe_str(exc), **_origin(request))
         raise HTTPException(status_code=400, detail="Body could not be parsed as a push envelope")
 
     # Update scan_id to pushed_at once parsed (better traceability).
@@ -472,13 +485,13 @@ async def sensor_push(
         pass
 
     if pushed_at_dt is None:
-        _audit(db, scan_id, "failed", "unparseable_pushed_at")
+        _audit(db, scan_id, "failed", "unparseable_pushed_at", **_origin(request))
         raise HTTPException(status_code=422, detail="pushed_at is not a valid ISO-8601 timestamp")
 
     delta = abs(received_at - pushed_at_dt)
     if delta > _REPLAY_WINDOW:
         console_utc = received_at.strftime("%Y-%m-%dT%H:%M:%SZ")
-        _audit(db, scan_id, "failed", "replay_window_exceeded")
+        _audit(db, scan_id, "failed", "replay_window_exceeded", **_origin(request))
         raise HTTPException(
             status_code=422,
             detail={"error": "replay_window_exceeded", "console_utc": console_utc},
@@ -495,17 +508,17 @@ async def sensor_push(
     # (legacy data, token store corruption) before they reach the ingest path.
     if not _UUID_RE.match(token_sensor_id):
         db.rollback()
-        _audit(db, scan_id, "failed", "invalid_sensor_id_shape")
+        _audit(db, scan_id, "failed", "invalid_sensor_id_shape", **_origin(request))
         raise HTTPException(status_code=400, detail="Invalid sensor_id shape")
 
     sensor_row = db.query(Sensor).filter(Sensor.sensor_id == token_sensor_id).first()
     if sensor_row is None:
-        _audit(db, scan_id, "failed", "unknown_sensor_id")
+        _audit(db, scan_id, "failed", "unknown_sensor_id", **_origin(request))
         raise HTTPException(status_code=404, detail="Unknown sensor_id")
 
     # D-05: Envelope sensor_id mismatch check — token wins; body mismatch → 403
     if envelope.sensor_id != token_sensor_id:
-        _audit(db, scan_id, "failed", "sensor_id_mismatch")
+        _audit(db, scan_id, "failed", "sensor_id_mismatch", **_origin(request))
         raise HTTPException(status_code=403, detail="sensor_id mismatch: token does not match envelope")
 
     # ------------------------------------------------------------------
@@ -533,18 +546,18 @@ async def sensor_push(
         # T-109-10 — fixed string, never stringify exception (LEAK-02)
         # CR-01: call db.rollback() before _audit so the session is in a clean state
         db.rollback()
-        _audit(db, scan_id, "failed", "duplicate_payload_id")
+        _audit(db, scan_id, "failed", "duplicate_payload_id", **_origin(request))
         raise HTTPException(status_code=409, detail="Duplicate payload_id")
     except UnknownSensorError:
         # CR-02: FK race — sensor deleted between route SELECT and _ingest_envelope INSERT.
         # Catch explicitly so this returns 404, not 500 (bare except).
         db.rollback()
-        _audit(db, scan_id, "failed", "unknown_sensor_id")
+        _audit(db, scan_id, "failed", "unknown_sensor_id", **_origin(request))
         raise HTTPException(status_code=404, detail="Unknown sensor_id")
     except Exception as exc:
         # CR-01: db.rollback() before _audit to ensure clean session state
         db.rollback()
-        _audit(db, scan_id, "failed", safe_str(exc))
+        _audit(db, scan_id, "failed", safe_str(exc), **_origin(request))
         raise HTTPException(status_code=500, detail="Ingest failed")
 
     # ------------------------------------------------------------------
@@ -561,6 +574,7 @@ async def sensor_push(
         status="ok",
         attempted_at=now_audit,
         error_summary=None,
+        **_origin(request),
     )
     db.add(ok_row)
 
@@ -570,7 +584,7 @@ async def sensor_push(
     except Exception as exc:
         logger.warning("Final commit failed: %s", safe_str(exc))
         db.rollback()
-        _audit(db, scan_id, "failed", safe_str(exc))
+        _audit(db, scan_id, "failed", safe_str(exc), **_origin(request))
         raise HTTPException(status_code=500, detail="Ingest commit failed")
 
     # ------------------------------------------------------------------

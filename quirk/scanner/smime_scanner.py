@@ -29,9 +29,9 @@ from cryptography.x509 import (
     load_pem_x509_certificate,
 )
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
-
 from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
+from quirk.util.log_text import strip_control_chars
 from quirk.util.safe_exc import safe_str
 
 # Module-level logger (mirror saml_scanner / kerberos_scanner pattern)
@@ -254,7 +254,7 @@ def scan_smime_targets(
                     parsed = _parse_smime_cert(bytes(cert_bytes))
                     if parsed is None:
                         log.warning(
-                            "SMIME: cert parse failed for %s (%s)", user_dn, attr_name
+                            "SMIME: cert parse failed for %s (%s)", strip_control_chars(user_dn), attr_name
                         )
                         continue
 
@@ -264,7 +264,7 @@ def scan_smime_targets(
                         continue
 
                     detail = (
-                        f"{user_dn}|attr={attr_name}|serial={parsed['serial']}"
+                        f"{strip_control_chars(user_dn)}|attr={attr_name}|serial={parsed['serial']}"
                     )
                     if parsed.get("expired"):
                         detail += "|expired=true"
@@ -272,7 +272,7 @@ def scan_smime_targets(
                     scan_dict = dict(parsed)
                     scan_dict["reasons"] = reasons
                     scan_dict["attr"] = attr_name
-                    scan_dict["user_dn"] = user_dn
+                    scan_dict["user_dn"] = strip_control_chars(user_dn)
 
                     ep = CryptoEndpoint(
                         host=host,

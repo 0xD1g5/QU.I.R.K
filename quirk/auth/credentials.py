@@ -25,7 +25,7 @@ from quirk.util.targets import (
     RC_PATH_TRAVERSAL,
     RC_PATH_NOT_ALLOWED_PREFIX,
 )
-from quirk.util.safe_exc import safe_str
+from quirk.util.safe_exc import safe_str  # noqa: F401  (required by the credential-surface import gate)
 
 # D-14 enforcement note: NO imports from quirk.scanner.* below this line.
 # quirk.util.* imports (targets, safe_exc) are permitted and required.
@@ -137,7 +137,8 @@ class CredentialContext:
           - any name present in the environment (D-01): read and delete the env var
             (prevents subprocess inheritance, PITFALLS Pitfall 1)
           - Anything else: raise ValueError with reference-usage guidance (teach
-            the consultant the correct pattern; error text scrubbed via safe_str)
+            the consultant the correct pattern; the error names the scheme and
+            reference kind only, never the reference text)
 
         Precedence (D-02): prompt > env var > @file / flag-reference.
         Returns None when no scheme arg is supplied.
@@ -177,6 +178,9 @@ class CredentialContext:
         return None
 
 
+_FILE_REF_PLACEHOLDER = "<@file reference>"
+
+
 def _resolve_reference(scheme: str, ref: str, *, prompt: str) -> str:
     """Resolve a credential reference to the raw secret string.
 
@@ -206,10 +210,15 @@ def _resolve_reference(scheme: str, ref: str, *, prompt: str) -> str:
         _real = os.path.realpath(file_path)
         _cwd_real = os.path.realpath(os.getcwd())
         if not (_real.startswith(_cwd_real + os.sep) or _real == _cwd_real):
-            raise TargetFileError(file_path, RC_PATH_TRAVERSAL)
+            raise TargetFileError(_FILE_REF_PLACEHOLDER, RC_PATH_TRAVERSAL) from None
         if any(_real.startswith(p) for p in _BLOCKED_PREFIXES):
-            raise TargetFileError(file_path, RC_PATH_NOT_ALLOWED_PREFIX)
-        return load_targets_file(file_path).strip()
+            raise TargetFileError(_FILE_REF_PLACEHOLDER, RC_PATH_NOT_ALLOWED_PREFIX) from None
+        try:
+            return load_targets_file(file_path).strip()
+        except TargetFileError as exc:
+            raise TargetFileError(_FILE_REF_PLACEHOLDER, exc.reason) from None
+        except OSError as exc:
+            raise TargetFileError(_FILE_REF_PLACEHOLDER, type(exc).__name__) from None
 
     # 3. Env-var name → read and delete (prevents subprocess inheritance)
     if ref in os.environ:
@@ -217,15 +226,12 @@ def _resolve_reference(scheme: str, ref: str, *, prompt: str) -> str:
         del os.environ[ref]
         return raw
 
-    # 4. Nothing matched → the ref is not a known reference pattern.
-    #    Route through safe_str so an accidentally-inlined secret cannot
-    #    leak into the error text (LEAK-03).
-    _dummy_exc = ValueError(ref)
-    _scrubbed = safe_str(_dummy_exc)
+    # 4. Nothing matched: the message names only the scheme and the reference
+    #    kind; the reference text is never interpolated.
     raise ValueError(
-        f"Cannot resolve {scheme!r} credential reference {_scrubbed!r}. "
-        f"Pass one of: @<file-path> (e.g. @/path/to/token), "
-        f"an environment variable name containing the secret, "
-        f"or a bare flag (empty string) to trigger an interactive prompt. "
-        f"Do NOT pass the secret value directly on the command line."
+        f"Cannot resolve the {scheme!r} credential reference (kind: literal: "
+        f"not an @file path, not a set environment variable, not a bare flag). "
+        f"Pass one of: @<file-path>, the name of an environment variable that "
+        f"holds the secret, or a bare flag for an interactive prompt. "
+        f"Do not pass the secret value on the command line."
     )

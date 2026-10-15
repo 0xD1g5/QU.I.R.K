@@ -280,6 +280,50 @@ def test_severity_constituency_two_of_three_join_rows(tmp_path) -> None:
         assert severities == {"Weak signature algorithm in use", "Deprecated key exchange"}
 
 
+def test_score_neutral_high_finding_is_not_a_high_impact_constituent(tmp_path) -> None:
+    """D-25: a HIGH finding in a score-neutral category is real, but it is not
+    one of the high-impact item's constituents, so it never holds the item
+    open or shows up in its progress."""
+    from quirk.intelligence.evidence import SCORE_NEUTRAL_FINDING_CATEGORIES
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints = [_endpoint(f"neu{i}.example.com", 443, protocol="TLS") for i in range(2)]
+    neutral_category = sorted(SCORE_NEUTRAL_FINDING_CATEGORIES)[0]
+    findings = [
+        {
+            "host": "neu0.example.com",
+            "port": 443,
+            "title": "Weak signature algorithm in use",
+            "severity": "HIGH",
+            "recommendation": "n/a",
+        },
+        {
+            "host": "neu1.example.com",
+            "port": 443,
+            "title": "JWKS fetched with TLS certificate verification disabled",
+            "severity": "HIGH",
+            "category": neutral_category,
+            "recommendation": "n/a",
+        },
+    ]
+
+    persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+
+    with get_session(db_path) as session:
+        fp_rows = (
+            session.query(RemediationItemFingerprint)
+            .filter(
+                RemediationItemFingerprint.scan_run_id == SCAN_RUN_ID,
+                RemediationItemFingerprint.slug == "high-impact-findings",
+            )
+            .all()
+        )
+        assert {fp.finding_title for fp in fp_rows} == {"Weak signature algorithm in use"}
+        closed, total = item_progress(session, scan_run_id=SCAN_RUN_ID, slug="high-impact-findings")
+        assert total == 1
+
+
 def test_persist_never_writes_closed_literal_in_source() -> None:
     """Grep-style guard mirrored as a test: no literal "closed" anywhere.
 

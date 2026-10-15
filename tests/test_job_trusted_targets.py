@@ -46,28 +46,18 @@ def _app_with_db():
     return app, TestClient(app, raise_server_exceptions=False), TestingSession
 
 
-class _FakeSecurity:
-    allow_internal_targets = False
-    trusted_targets: list = []
+def _server_config(monkeypatch, tmp_path, trusted_targets, extra=""):
+    """Point the server config at a tmp YAML (225.1: jobs read it through
+    load_server_security, not a monkeypatched load_config)."""
+    import yaml
 
-
-class _FakeCfg:
-    security = _FakeSecurity()
-
-
-def _fake_load_config_factory(trusted_targets):
-    class _Security(_FakeSecurity):
-        pass
-
-    _Security.trusted_targets = trusted_targets
-
-    class _Cfg(_FakeCfg):
-        security = _Security()
-
-    def _fake_load(*args, **kwargs):
-        return _Cfg()
-
-    return _fake_load
+    path = tmp_path / "server.yaml"
+    path.write_text(
+        yaml.safe_dump({"security": {"trusted_targets": list(trusted_targets)}}) + extra
+    )
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    return path
 
 
 def _patch_probe_all_available(monkeypatch):
@@ -101,11 +91,9 @@ def _patch_probe_all_available(monkeypatch):
     )
 
 
-def test_post_jobs_rejects_target_outside_trusted_targets(monkeypatch):
+def test_post_jobs_rejects_target_outside_trusted_targets(monkeypatch, tmp_path):
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
-    monkeypatch.setattr(
-        "quirk.config.load_config", _fake_load_config_factory(["10.0.0.0/24"])
-    )
+    _server_config(monkeypatch, tmp_path, ["10.0.0.0/24"])
 
     _, tc, TestingSession = _app_with_db()
     response = tc.post(
@@ -121,10 +109,10 @@ def test_post_jobs_rejects_target_outside_trusted_targets(monkeypatch):
     db.close()
 
 
-def test_post_jobs_allows_when_trusted_targets_empty(monkeypatch):
+def test_post_jobs_allows_when_trusted_targets_empty(monkeypatch, tmp_path):
     _patch_probe_all_available(monkeypatch)
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
-    monkeypatch.setattr("quirk.config.load_config", _fake_load_config_factory([]))
+    _server_config(monkeypatch, tmp_path, [])
 
     _, tc, TestingSession = _app_with_db()
     response = tc.post(
@@ -140,12 +128,10 @@ def test_post_jobs_allows_when_trusted_targets_empty(monkeypatch):
     db.close()
 
 
-def test_post_jobs_allows_when_target_matches_trusted_targets(monkeypatch):
+def test_post_jobs_allows_when_target_matches_trusted_targets(monkeypatch, tmp_path):
     _patch_probe_all_available(monkeypatch)
     monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
-    monkeypatch.setattr(
-        "quirk.config.load_config", _fake_load_config_factory(["example.com"])
-    )
+    _server_config(monkeypatch, tmp_path, ["example.com"])
 
     _, tc, TestingSession = _app_with_db()
     response = tc.post(
@@ -159,3 +145,69 @@ def test_post_jobs_allows_when_target_matches_trusted_targets(monkeypatch):
     db = TestingSession()
     assert db.get(ScanJob, job_id) is not None
     db.close()
+
+
+def test_build_job_config_dict_carries_trusted_targets(tmp_path):
+    from quirk.dashboard.api.routes.jobs import build_job_config_dict
+
+    d = build_job_config_dict(tmp_path, "a.example", "x.db", "balanced", trusted_targets=["a.example"])
+    assert d["security"]["trusted_targets"] == ["a.example"]
+    for empty in (None, []):
+        d = build_job_config_dict(tmp_path, "a.example", "x.db", "balanced", trusted_targets=empty)
+        assert "trusted_targets" not in d["security"]
+
+
+def test_post_jobs_rejects_untrusted_overlay_host(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    _server_config(monkeypatch, tmp_path, ["127.0.0.1"])
+    _, tc, TestingSession = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "127.0.0.1", "connectors": {"broker_targets": ["10.9.9.9:5672"]}},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 422, response.text
+    assert "broker_targets" in response.text
+    db = TestingSession()
+    assert db.query(ScanJob).count() == 0
+    db.close()
+
+
+def test_post_jobs_trusted_overlay_host_writes_trusted_targets_to_yaml(monkeypatch, tmp_path):
+    import yaml
+
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    _server_config(monkeypatch, tmp_path, ["127.0.0.1"])
+    captured = {}
+
+    def spy_popen(cmd, *args, **kwargs):
+        with open(cmd[cmd.index("--config") + 1]) as fh:
+            captured["cfg"] = yaml.safe_load(fh)
+        return _FakeProc()
+
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", spy_popen)
+    _, tc, _S = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "127.0.0.1", "connectors": {"broker_targets": ["127.0.0.1:5672"]}},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 201, response.text
+    assert captured["cfg"]["security"]["trusted_targets"] == ["127.0.0.1"]
+
+
+def test_post_jobs_unreadable_server_config_is_503(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("security: [unclosed\n  - : :\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(bad))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc, TestingSession = _app_with_db()
+    response = tc.post(
+        "/api/jobs", json={"targets": "example.com"}, headers={"X-Quirk-Request": "1"}
+    )
+    assert response.status_code == 503, response.text
+    assert "DASHBOARD-014" in response.text

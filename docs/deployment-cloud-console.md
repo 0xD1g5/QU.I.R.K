@@ -307,8 +307,11 @@ sudo systemctl restart quirk-console
 **Audit trail:** every push attempt that reaches the push handler — success or
 rejection — writes an `IntegrationDelivery` row, including the `sensor_ip_not_allowed`
 reason when the IP allowlist blocks a source. A request the rate limiter refuses
-(more than 60 POSTs a minute from one address, HTTP 429) writes no row. The row
-holds the time, status and error summary, not the sensor ID or source address.
+(more than 60 POSTs a minute from one address, HTTP 429) writes a row with status
+`rate_limited` and the source address, at most once a minute per address (the next such row
+counts the refusals in between in its error summary). Every push row records the source address and,
+once the sensor is authenticated, its sensor ID, along with the time, status and error
+summary.
 
 ---
 

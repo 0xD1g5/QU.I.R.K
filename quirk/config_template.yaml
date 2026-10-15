@@ -175,7 +175,7 @@ connectors:
   # AWS SQS regions — repeatable; produces probes against sqs.{region}.amazonaws.com:443
   # broker_sqs_regions: []
   # -- Authenticated scanning mode (driven by credential CLI flags) --
-  enable_authenticated_mode: false  # off: not-a-connector - driven by the credential CLI flags; the scheduler rejects any recurring config where this is true
+  enable_authenticated_mode: false  # off: not-a-connector - driven by the credential CLI flags; the scheduler refuses to start when its --scan-config enables this, and strips it from each recurring run
   # -- SNMP hardware fingerprinting (Phase 133 / 139, optional, requires: pip install quirk[hw]) --
   enable_snmp: false  # off: requires-extra-install - needs quirk[hw] (pysnmp) plus a community string or v3 USM credentials configured below
   # snmp_community: "public"    # v1/v2c community string

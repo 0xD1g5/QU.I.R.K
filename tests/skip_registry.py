@@ -297,6 +297,7 @@ ALLOWED_SKIPS = [
     ("test_rest_fuzzer_dedup.py", "TestHttpCredsDedup.test_multi_path_http_creds_produces_single_finding", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_dedup.py", "TestDedupDoesNotCollapseDifferentTypes.test_hsts_and_http_creds_both_capped_individually_after_dedup", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_pinned_session.py", "test_main_dispatch_mounts_pinned_adapter", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
+    ("test_rest_fuzzer_pinned_session.py", "test_main_dispatch_does_not_follow_redirects_and_records_status", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_probes.py", "TestRawSocketProbePreventsSSRF.test_probe_skipped_when_url_rejected", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_probes.py", "TestRawProbeUsesPinnedIP.test_probe_receives_pinned_ip", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),
     ("test_rest_fuzzer_probes.py", "TestDispatchUsesAsTransportKwargs.test_dispatch_uses_as_transport_kwargs", "ci_extras_gap", "api extra absent from .[all]; schemathesis not installed"),

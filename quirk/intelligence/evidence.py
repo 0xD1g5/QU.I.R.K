@@ -114,6 +114,13 @@ def _finding_targets(findings: Iterable[Mapping[str, Any]], wanted_title: str) -
     return out
 
 
+# D-25: findings in these categories are real and are counted in
+# totals.findings and finding_severity_counts, but they do not feed the
+# readiness score, roadmap high-impact item or what-if lifts. Those read
+# scored_finding_severity_counts instead.
+SCORE_NEUTRAL_FINDING_CATEGORIES = frozenset({"config_advisory"})
+
+
 def build_evidence_summary(
     endpoints: Iterable[Any],
     findings: Optional[Iterable[Mapping[str, Any]]] = None,
@@ -521,6 +528,19 @@ def build_evidence_summary(
         "INFO": finding_severity_counter.get("INFO", 0),
     }
 
+    scored_counter = Counter(
+        str(f.get("severity") or "INFO").upper()
+        for f in finding_list
+        if not (
+            isinstance(f, Mapping)
+            and f.get("category") in SCORE_NEUTRAL_FINDING_CATEGORIES
+        )
+    )
+    scored_finding_severity_counts = {
+        k: scored_counter.get(k, 0)
+        for k in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")
+    }
+
     total_endpoints = len(endpoint_list)
     scan_error_rate = round((scan_error_count / total_endpoints), 4) if total_endpoints else 0.0
     tls_total = protocol_counts["TLS"]
@@ -555,6 +575,7 @@ def build_evidence_summary(
         "tls_enum_coverage_ratio": tls_enum_coverage_ratio,
         "tls_enum_coverage_pct": round(tls_enum_coverage_ratio * 100.0, 2),
         "finding_severity_counts": finding_severity_counts,
+        "scored_finding_severity_counts": scored_finding_severity_counts,
         "identity_weak_etype_count": identity_weak_etype_count,
         "saml_weak_signing_count": saml_weak_signing_count,
         "dnssec_weak_algo_count": dnssec_weak_algo_count,

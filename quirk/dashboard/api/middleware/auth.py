@@ -2,37 +2,21 @@
 from __future__ import annotations
 
 import hmac
-import os
+import logging
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from quirk.errors import format_error
+from quirk.util.server_config import TokenState, resolve_operator_token
+
+logger = logging.getLogger(__name__)
 
 
-def _get_configured_token() -> str:
-    """Priority: QUIRK_API_TOKEN env var -> security.api_token YAML field -> ''.
-
-    Returns empty string when auth is disabled (D-02).
-    Env var wins when both are set (D-01).
-    """
-    if val := os.environ.get("QUIRK_API_TOKEN"):
-        return val
-    # YAML fallback: import lazily to avoid circular import with app factory.
-    # WR-01: load_config requires a path argument — calling it bare always raised
-    # TypeError into the bare except, making this YAML branch dead code and silently
-    # disabling operator-configured api_token values. Resolve a real path first
-    # (same fix already applied to get_cors_origins() in quirk/config.py).
-    config_path = os.environ.get("QUIRK_CONFIG_PATH", "./config.yaml")
-    if not os.path.isfile(config_path):
-        return ""
-    try:
-        from quirk.config import load_config
-        cfg = load_config(config_path)
-        return cfg.security.api_token or ""
-    except Exception:
-        return ""
+def _resolve_token_state() -> TokenState:
+    """Patchable indirection over the shared strict reader."""
+    return resolve_operator_token()
 
 
 _bearer = HTTPBearer(auto_error=False)
@@ -50,7 +34,11 @@ def require_auth(
     Never reaches business logic on 401 (D-04).
     Token never logged (T-102-09).
     """
-    configured = _get_configured_token()
+    state = _resolve_token_state()
+    if state.error:
+        logger.error("Operator auth configuration could not be read: %s", state.error)
+        raise HTTPException(status_code=503, detail=format_error("DASHBOARD-014"))
+    configured = state.token
     if not configured:
         return  # D-02: auth disabled
 

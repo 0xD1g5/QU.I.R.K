@@ -329,9 +329,8 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
     The JSON header carries the HMAC-SHA256 signature embedded by export-results:
         {"hmac-sha256": "hmac-sha256=<hex>"}\\n
 
-    Phase 109 will perform cryptographic HMAC verification against the per-sensor
-    key stored in the console config.  Phase 108 reads and validates the structure
-    of the embedded signature field so the framing contract is established now.
+    The header is read, its field shape is checked, and the value is carried
+    as ``qpush_sig`` metadata.
 
     Air-gap carve-out (D-15): skip_replay_window=True — the ±15-min clock window
     check is omitted because file transit time is unbounded for sneakernet paths.
@@ -420,8 +419,8 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
 
     # Route to ingest entry point — Phase 108 stub (Phase 109 replaces the body)
     # skip_replay_window=True: air-gap carve-out per D-15
-    # qpush_sig is the embedded HMAC-SHA256 from the WR-03 framing header;
-    # Phase 109 will perform cryptographic verification against the stored key.
+    # qpush_sig is the embedded HMAC-SHA256 value from the WR-03 framing header,
+    # carried through as metadata.
     _ingest_envelope(envelope, config_path, skip_replay_window=True, qpush_sig=qpush_sig)
 
     # Success summary (SENSOR-04 operator confirmation of what was ingested).
@@ -494,8 +493,7 @@ def _ingest_envelope(
         Replay-window enforcement lives in the HTTPS route, not here.
     qpush_sig:
         HMAC-SHA256 signature string from WR-03 framing header (air-gap) or the
-        X-Sensor-Signature header (HTTPS path).  Carried as metadata; crypto
-        verification is deferred to v5.5 (T-109-11).
+        X-Sensor-Signature header (HTTPS path).  Carried as metadata (T-109-11).
     db:
         An injected SQLAlchemy Session (HTTPS path) or None (CLI path, which opens
         and closes its own session).  When injected the caller owns commit/rollback.

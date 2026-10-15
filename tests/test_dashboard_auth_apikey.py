@@ -107,10 +107,11 @@ def test_auth_disabled_passthrough(monkeypatch):
     # Patch load_config to return an object with no api_token so YAML path also resolves empty
     import quirk.dashboard.api.middleware.auth as auth_module
 
-    def _no_token():
-        return ""
+    from quirk.util.server_config import TokenState
 
-    monkeypatch.setattr(auth_module, "_get_configured_token", _no_token)
+    monkeypatch.setattr(
+        auth_module, "_resolve_token_state", lambda: TokenState("", None)
+    )
     _, tc = _app_with_db()
     response = tc.get("/api/scans")
     assert response.status_code != 401, (

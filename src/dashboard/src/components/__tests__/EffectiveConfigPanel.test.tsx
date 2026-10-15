@@ -240,4 +240,36 @@ describe("EffectiveConfigPanel", () => {
 
     expect(secondPath).not.toBe(firstPath)
   })
+  // Phase 225.1 (D-24): credential NAMES only, never values.
+  it("an empty credentialKeys prop adds no credential_keys segment", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    render(<EffectiveConfigPanel {...defaultProps()} credentialKeys={[]} />)
+    fireEvent.click(screen.getByText("Effective config"))
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    expect(mockFetchApi.mock.calls[0][0] as string).not.toContain("credential_keys")
+  })
+
+  it("a non-empty credentialKeys prop adds a sorted JSON credential_keys segment", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    render(<EffectiveConfigPanel {...defaultProps()} credentialKeys={["b_name", "a_name"]} />)
+    fireEvent.click(screen.getByText("Effective config"))
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    const calledPath = mockFetchApi.mock.calls[0][0] as string
+    expect(calledPath).toContain(
+      `credential_keys=${encodeURIComponent(JSON.stringify(["a_name", "b_name"]))}`,
+    )
+  })
+
+  it("the request URL carries the credential name and never its value", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse(BASE_RESPONSE))
+    const credentials: Record<string, string> = { vault_token: "s3cr3t-value-xyz", empty_one: "" }
+    const keys = Object.keys(credentials).filter((k) => credentials[k])
+    render(<EffectiveConfigPanel {...defaultProps()} credentialKeys={keys} />)
+    fireEvent.click(screen.getByText("Effective config"))
+    await waitFor(() => expect(mockFetchApi).toHaveBeenCalled())
+    const calledPath = decodeURIComponent(mockFetchApi.mock.calls[0][0] as string)
+    expect(calledPath).toContain("vault_token")
+    expect(calledPath).not.toContain("s3cr3t-value-xyz")
+    expect(calledPath).not.toContain("empty_one")
+  })
 })

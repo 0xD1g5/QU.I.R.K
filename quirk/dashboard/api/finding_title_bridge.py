@@ -132,6 +132,10 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # findings_evaluator.py:653-671, byte-identical title and condition.
     # identity.
     "TLS certificate issued by untrusted CA": "TLS certificate issued by untrusted CA",
+
+    # scan.py JWKS verify-disabled ADVISORY row and findings_evaluator.py emit
+    # the byte-identical title on the same service_detail marker. identity.
+    "JWKS fetched with TLS certificate verification disabled": "JWKS fetched with TLS certificate verification disabled",
 }
 
 # ---------------------------------------------------------------------------
@@ -189,7 +193,8 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
 #   "specific"      -- appears in some slug's REMEDIATION_CONSTITUENCY
 #                       "fingerprint" tuple; can reach a specific theme.
 #   "catchall-only" -- not in any fingerprint tuple, but the dashboard
-#                       finding's severity is HIGH/CRITICAL, so it can only
+#                       finding's severity is HIGH/CRITICAL (and its category
+#                       is not score-neutral), so it can only
 #                       ever constitute the "high-impact-findings" severity
 #                       catch-all (D-09: this IS rendered when it is the
 #                       finding's only theme).
@@ -219,6 +224,10 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # (scan.py:292-293), below the HIGH/CRITICAL catch-all threshold ->
     # constitutes no theme at all.
     "TLS certificate issued by untrusted CA": "unreachable",
+    # NOT in any fingerprint tuple. Dashboard severity is HIGH, but the
+    # category is config_advisory, which is score-neutral (D-25) and never
+    # constitutes the high-impact-findings catch-all -> no theme at all.
+    "JWKS fetched with TLS certificate verification disabled": "unreachable",
 }
 
 

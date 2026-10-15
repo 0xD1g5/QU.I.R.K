@@ -42,22 +42,6 @@ def _is_loopback_host(host: str) -> bool:
         return False
 
 
-def _operator_token_configured() -> bool:
-    """True when an operator API token is set (env var or config.yaml).
-
-    Mirrors the resolution used by the dashboard auth dependency so the
-    startup guardrail and the runtime auth check agree on whether the
-    operator/dashboard surface is protected.
-    """
-    try:
-        from quirk.dashboard.api.middleware.auth import _get_configured_token
-        return bool(_get_configured_token())
-    except Exception:
-        # Be conservative: if we cannot prove a token is configured, treat it
-        # as absent so the guardrail errs toward refusing an exposed bind.
-        return bool(os.environ.get("QUIRK_API_TOKEN"))
-
-
 def _forwarded_allow_ips() -> str:
     """Trusted-proxy source IPs for uvicorn's X-Forwarded-* handling.
 
@@ -104,7 +88,19 @@ def serve(
         print(format_error("INSTALL-002"), file=sys.stderr)
         sys.exit(1)
 
-    auth_on = _operator_token_configured()
+    from quirk.util.server_config import resolve_operator_token
+
+    token_state = resolve_operator_token()
+    if token_state.error:
+        print(
+            "REFUSING to start: the server configuration file could not be "
+            f"read ({token_state.error}).\n"
+            "Fix the YAML file, or run quirk doctor. (DASHBOARD-014)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    auth_on = bool(token_state.token)
     loopback = _is_loopback_host(host)
     trust_proxy = _forwarded_allow_ips()
 

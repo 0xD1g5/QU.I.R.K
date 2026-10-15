@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.25.0
-**Last Updated:** 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
+**Last Updated:** 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -32632,3 +32632,218 @@ wc -c < docs/images/dashboard-hero.png
 the README text contains the URL, never what the URL serves. Before merge the raw URL returns 200 for the OLD
 823452-byte image, so a 200 proves nothing. Owed post-merge and carried into Phase 226 REL-07, together with the
 github.com and PyPI render leg of UAT-85-08.
+
+## Series 225.1: Pre-release Security Hardening (Phase 225.1 — v5.27)
+
+**Last Updated:** 2026-10-14 (Phase 225.1 execution, plans 02-15). Eleven cases. Phase 225.1 tightened operator-token config loading, outbound URL validation and redirect handling, `trusted_targets` coverage for dashboard jobs and schedules, the sensor console URL scheme policy, error and log text, sensor push audit rows, and the JWKS verify-disabled finding. No version bump.
+
+
+### UAT-225.1-01: Operator-token config loading is strict
+
+**ID:** UAT-225.1-01
+**Title:** Operator-token config loading is strict
+**Maps to:** SECH-01
+
+**What to test:** The dashboard reads the operator token from the config file: an absent, empty or comment-only file means auth is off; a file holding only a `security` token enables auth; an unreadable or malformed file answers 503 on protected routes and `quirk serve` exits 2. `QUIRK_API_TOKEN` wins over the file, and `quirk token generate|rotate` states that precedence.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_auth_config_loading.py tests/test_token_cmd.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_auth_config_loading.py::test_security_only_file_enables_auth` and `tests/test_auth_config_loading.py::test_malformed_yaml_answers_503_and_logs_reason` and `tests/test_auth_config_loading.py::test_absent_file_means_auth_off` and `tests/test_auth_config_loading.py::test_serve_refuses_unreadable_config` and `tests/test_token_cmd.py::test_token_cmd_states_env_precedence_when_unset`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-02: Outbound URL validation covers every address form
+
+**ID:** UAT-225.1-02
+**Title:** Outbound URL validation covers every address form
+**Maps to:** SECH-02
+
+**What to test:** The metadata-address block applies to IPv4-embedded IPv6 forms and their resolved addresses, with the verdicts for ordinary public and private addresses unchanged.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_url_allowlist_ssrf.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_url_allowlist_ssrf.py::test_metadata_block_applies_to_embedded_v4_forms` and `tests/test_url_allowlist_ssrf.py::test_metadata_block_applies_to_resolved_embedded_v4` and `tests/test_url_allowlist_ssrf.py::test_embedded_v4_forms_do_not_loosen_existing_verdicts` and `tests/test_url_allowlist_ssrf.py::test_public_v6_verdict_unchanged`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-03: Redirect hops are validated or not followed
+
+**ID:** UAT-225.1-03
+**Title:** Redirect hops are validated or not followed
+**Maps to:** SECH-02
+
+**What to test:** The OpenAPI, SAML and JWKS fetches validate every redirect hop against the scope and metadata-address rules; the REST fuzzer records a redirect status instead of following it; the RabbitMQ management probe does not follow redirects.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_outbound_fetch.py tests/test_rest_fuzzer_pinned_session.py tests/test_broker_scanner_rabbitmq.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_outbound_fetch.py::test_openapi_hop_out_of_scope_rejected` and `tests/test_outbound_fetch.py::test_saml_metadata_hop_refused` and `tests/test_outbound_fetch.py::test_jwks_metadata_hop_refused` and `tests/test_rest_fuzzer_pinned_session.py::test_jwks_dispatch_does_not_follow_redirects` and `tests/test_rest_fuzzer_pinned_session.py::test_every_session_request_site_sets_redirect_flag` and `tests/test_broker_scanner_rabbitmq.py::test_mgmt_probe_does_not_follow_redirects`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing. The REST fuzzer's main-dispatch behavioural test in the same file is not cited: it needs the optional `schemathesis` extra and skips in the Linux Full Suite job, so the main and alg-confusion dispatch sites are covered here by the structural node, which runs in CI.
+
+### UAT-225.1-04: Sensor console URL scheme policy at enroll and push
+
+**ID:** UAT-225.1-04
+**Title:** Sensor console URL scheme policy at enroll and push
+**Maps to:** SECH-02
+
+**What to test:** `quirk sensor enroll` and `quirk sensor push` require an `https://` console URL for non-loopback hosts unless `--allow-insecure-console` is given; loopback hosts may use `http://`; the internal-console flag does not imply the insecure flag.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_sensor_cmd.py tests/test_hosts.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_sensor_cmd.py::test_enroll_refuses_non_loopback_http` and `tests/test_sensor_cmd.py::test_enroll_internal_flag_does_not_imply_insecure` and `tests/test_sensor_cmd.py::test_enroll_insecure_flag_warns_and_persists` and `tests/test_sensor_cmd.py::test_push_refuses_stored_non_loopback_http_before_client` and `tests/test_hosts.py::test_non_loopback_hosts_rejected`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-06: trusted_targets covers include_ips, connector hosts and dashboard jobs
+
+**ID:** UAT-225.1-06
+**Title:** trusted_targets covers include_ips, connector hosts and dashboard jobs
+**Maps to:** SECH-03
+
+**What to test:** `security.trusted_targets` is checked for `include_ips`, every host-shaped connector field, dashboard job targets and overlay hosts (HTTP 422 for an untrusted overlay host), and dashboard jobs carry the server allowlist into the job YAML.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_target_trust.py tests/test_job_trusted_targets.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_target_trust.py::test_include_ips_is_checked` and `tests/test_target_trust.py::test_untrusted_connector_field_refused_and_named` and `tests/test_target_trust.py::test_every_host_shaped_connector_field_is_dispositioned` and `tests/test_job_trusted_targets.py::test_post_jobs_rejects_untrusted_overlay_host` and `tests/test_job_trusted_targets.py::test_post_jobs_trusted_overlay_host_writes_trusted_targets_to_yaml`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-08: Schedules enforce trusted_targets and the authenticated-mode gate
+
+**ID:** UAT-225.1-08
+**Title:** Schedules enforce trusted_targets and the authenticated-mode gate
+**Maps to:** SECH-03
+
+**What to test:** Schedule create, enable and `schedule add` check the target against `trusted_targets`; the scheduler carries the server security section into each materialized run, refuses an authenticated-mode scan config, and skips a dispatch when the server config is unreadable.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_schedules_api.py tests/test_schedule_auth_reject.py tests/test_scheduler_cmd.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_schedules_api.py::test_create_schedule_untrusted_target_422` and `tests/test_schedules_api.py::test_patch_enable_rechecks_stored_target` and `tests/test_schedule_auth_reject.py::test_add_untrusted_target_exits_2` and `tests/test_scheduler_cmd.py::test_materialize_carries_server_security` and `tests/test_scheduler_cmd.py::test_run_scheduler_refuses_authenticated_scan_config`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-10: Effective Config preview shows the server setting and credential presence
+
+**ID:** UAT-225.1-10
+**Title:** Effective Config preview shows the server setting and credential presence
+**Maps to:** SECH-03
+
+**What to test:** The Effective Config preview reports the server's `allow_internal_targets` and marks which credential names the form has filled (set or not set), sending only the names and never a credential value.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_config_effective_route.py
+(cd src/dashboard && npx vitest run src/components/__tests__/EffectiveConfigPanel.test.tsx)
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_config_effective_route.py::test_preview_shows_server_allow_internal_targets` and `tests/test_config_effective_route.py::test_credential_keys_marks_name_set_without_echoing_value` and `src/dashboard/src/components/__tests__/EffectiveConfigPanel.test.tsx::"the request URL carries the credential name and never its value"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** The in-browser visual check is the manual row in 225.1-VALIDATION.
+
+### UAT-225.1-11: Error and log text for URL fetches, credential references and LDAP DNs
+
+**ID:** UAT-225.1-11
+**Title:** Error and log text for URL fetches, credential references and LDAP DNs
+**Maps to:** SECH-04
+
+**What to test:** A spec fetch error message carries no query value, SAML failure logs use the redacted URL preview, credential reference errors name only the scheme and reference kind, and control characters are stripped from certificate DNs in stored fields and log lines.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_outbound_fetch.py tests/test_codesign_scanner.py tests/test_log_text.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_outbound_fetch.py::test_openapi_fetch_error_message_has_no_query_value` and `tests/test_outbound_fetch.py::test_saml_failure_log_uses_redacted_preview` and `tests/test_codesign_scanner.py::test_dn_control_chars_stripped_from_stored_fields` and `tests/test_codesign_scanner.py::test_dn_control_chars_stripped_from_log_line` and `tests/test_log_text.py::test_strips_c0_del_and_c1`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** The credential reference message tests are listed in 225.1-12-SUMMARY.md and run in the same full suite; they are not cited by node here.
+
+### UAT-225.1-12: Sensor push audit rows record source address and sensor id
+
+**ID:** UAT-225.1-12
+**Title:** Sensor push audit rows record source address and sensor id
+**Maps to:** SECH-04
+
+**What to test:** Sensor push audit rows record the source address and sensor id, and a rate-limited push writes an audit row while a rate limit on another route writes none; an audit write failure still answers 429.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_sensor_push_rate_limit_audit.py tests/test_integration_deliveries_schema.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_sensor_push_rate_limit_audit.py::test_rate_limited_push_writes_audit_row` and `tests/test_sensor_push_rate_limit_audit.py::test_post_auth_rejection_and_ok_rows_record_sensor_id` and `tests/test_sensor_push_rate_limit_audit.py::test_rate_limit_on_other_route_writes_no_audit_row` and `tests/test_integration_deliveries_schema.py::test_integration_deliveries_audit_origin_columns`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-13: JWKS verify-disabled advisory is a HIGH finding with zero score impact
+
+**ID:** UAT-225.1-13
+**Title:** JWKS verify-disabled advisory is a HIGH finding with zero score impact
+**Maps to:** SECH-05
+
+**What to test:** The JWKS verify-disabled advisory is reported as one HIGH `config_advisory` finding on both the evaluator and dashboard pipelines, survives resume, and does not change the readiness score or the roadmap.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_jwks_advisory_finding.py tests/test_score_neutral_findings.py
+```
+
+**Pass Criteria:** All pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_jwks_advisory_finding.py::test_evaluator_emits_one_high_config_advisory` and `tests/test_jwks_advisory_finding.py::test_dashboard_pipeline_emits_one_high_config_advisory` and `tests/test_jwks_advisory_finding.py::test_resume_predicate_keeps_jwt_and_jwks_advisory_only` and `tests/test_jwks_advisory_finding.py::test_score_neutral_end_to_end_both_pipelines` and `tests/test_score_neutral_findings.py::test_p2_neutral_high_is_counted_but_does_not_move_score`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+### UAT-225.1-07: The URL allowlist accepted-risk note is derived from source
+
+**ID:** UAT-225.1-07
+**Title:** The URL allowlist accepted-risk note is derived from source
+**Maps to:** SECH-05
+
+**What to test:** The accepted-risk note in `url_allowlist.py` names exactly the callers that pin the resolved address and lists the callers that do not.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_url_allowlist_ssrf.py
+```
+
+**Pass Criteria:** Both pass.
+
+**Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_url_allowlist_ssrf.py::test_accepted_risk_note_names_exactly_the_pinning_callers` and `tests/test_url_allowlist_ssrf.py::test_accepted_risk_note_names_unpinned_ticketing_callers`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-14  **Tester:** automated
+**Notes:** Every cited node was collected and confirmed to resolve before citing.

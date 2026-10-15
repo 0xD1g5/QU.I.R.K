@@ -344,6 +344,8 @@ class IntegrationDelivery(Base):
     status        = Column(String(16), nullable=False)              # "ok" | "failed"
     attempted_at  = Column(DateTime,   nullable=False)
     error_summary = Column(Text,       nullable=True)               # safe_str(exc) — never raw exc
+    client_ip     = Column(String(64), nullable=True)               # source address of a sensor push
+    sensor_id     = Column(String(64), nullable=True)               # authenticated sensor id, once known
 
 
 class Sensor(Base):

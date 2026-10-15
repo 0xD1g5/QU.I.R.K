@@ -5,6 +5,7 @@ _enrich_rabbitmq_mgmt, and cloud probe hostname construction.
 
 All network calls are mocked — no live network required.
 """
+import contextlib
 import json
 import pytest
 from datetime import datetime, timezone
@@ -18,6 +19,16 @@ from quirk.scanner.broker_scanner import (
     _detect_amqp_plaintext,
     _enrich_rabbitmq_mgmt,
 )
+
+
+@contextlib.contextmanager
+def _patch_open(**kw):
+    """Intercept the no-redirect opener used by the RabbitMQ management probe."""
+    opener_open = MagicMock(**kw)
+    with patch("quirk.scanner.broker_scanner.urllib.request.build_opener") as bo:
+        bo.return_value.open = opener_open
+        yield opener_open
+
 
 # ---------------------------------------------------------------------------
 # sslyze enums — imported softly so test collection works when sslyze absent
@@ -218,7 +229,7 @@ def test_enrich_rabbitmq_mgmt_success():
     mock_urlopen = MagicMock()
     mock_urlopen.return_value.__enter__.return_value = mock_resp
 
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen", mock_urlopen):
+    with _patch_open(return_value=mock_urlopen.return_value):
         result = _enrich_rabbitmq_mgmt("rabbitmq.example.com", 15672)
 
     assert result["rabbitmq_version"] == "3.12.0", (
@@ -251,7 +262,7 @@ def test_enrich_rabbitmq_mgmt_401():
         fp=None,
     )
 
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen", side_effect=side_effect):
+    with _patch_open(side_effect=side_effect):
         result = _enrich_rabbitmq_mgmt("rabbitmq.example.com")
 
     assert result == {"mgmt_auth": "rejected_401"}, (
@@ -268,7 +279,7 @@ def test_enrich_rabbitmq_mgmt_connection_refused():
     import urllib.error
     side_effect = urllib.error.URLError(reason="Connection refused")
 
-    with patch("quirk.scanner.broker_scanner.urllib.request.urlopen", side_effect=side_effect):
+    with _patch_open(side_effect=side_effect):
         result = _enrich_rabbitmq_mgmt("rabbitmq.example.com")
 
     assert result == {}, f"Expected empty dict on connection failure, got {result!r}"
@@ -549,3 +560,69 @@ def test_session_start_propagation():
     assert ep.scanned_at == fixed_time.replace(tzinfo=None), (
         f"Expected scanned_at={fixed_time.replace(tzinfo=None)!r}, got {ep.scanned_at!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Do not follow redirects (225.1 D-22): loopback two-server controls
+# ---------------------------------------------------------------------------
+
+import http.server
+import threading
+
+
+class _Recorder(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.server.hits.append(dict(self.headers))
+        status, body, extra = self.server.reply
+        self.send_response(status)
+        for k, v in extra.items():
+            self.send_header(k, v)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):  # silence
+        pass
+
+
+@contextlib.contextmanager
+def _loopback_server(reply):
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _Recorder)
+    srv.hits = []
+    srv.reply = reply
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        yield srv
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        t.join(timeout=5)
+
+
+def test_mgmt_probe_does_not_follow_redirects(monkeypatch):
+    monkeypatch.setenv("QUIRK_TEST_MGMT_PW", "pw")
+    with _loopback_server((200, b"{}", {})) as b:
+        loc = f"http://127.0.0.1:{b.server_address[1]}/api/overview"
+        with _loopback_server((302, b"", {"Location": loc})) as a:
+            result = _enrich_rabbitmq_mgmt(
+                "127.0.0.1", a.server_address[1],
+                credentials={"user": "u", "pass_env": "QUIRK_TEST_MGMT_PW"},
+                allow_cleartext=True,
+            )
+        assert len(a.hits) == 1
+        assert b.hits == []
+    assert result == {}
+
+
+def test_mgmt_probe_loopback_200_still_returns_version():
+    body = b'{"rabbitmq_version": "3.13.1"}'
+    with _loopback_server((200, body, {"Content-Type": "application/json"})) as a:
+        result = _enrich_rabbitmq_mgmt("127.0.0.1", a.server_address[1], allow_cleartext=True)
+    assert result["rabbitmq_version"] == "3.13.1"
+
+
+def test_mgmt_probe_loopback_401_still_rejected():
+    with _loopback_server((401, b"", {})) as a:
+        result = _enrich_rabbitmq_mgmt("127.0.0.1", a.server_address[1], allow_cleartext=True)
+    assert result["mgmt_auth"] == "rejected_401"

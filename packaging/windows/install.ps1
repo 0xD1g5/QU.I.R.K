@@ -31,6 +31,10 @@
     When set, passes --allow-internal-console to sensor enroll so the sensor can reach
     a console on a private/RFC1918 network (on-prem/lab).
 
+.PARAMETER AllowInsecureConsole
+    When set, passes --allow-insecure-console to sensor enroll so the sensor accepts an
+    http:// console URL for a non-loopback host (isolated lab networks).
+
 .EXAMPLE
     .\install.ps1 -ConsoleUrl https://quirk.example.com -EnrollmentToken <token>
 
@@ -50,7 +54,9 @@ param(
 
     [string]$Time = "03:00",
 
-    [switch]$AllowInternalConsole
+    [switch]$AllowInternalConsole,
+
+    [switch]$AllowInsecureConsole
 )
 
 Set-StrictMode -Version Latest
@@ -140,6 +146,10 @@ $EnrollArgs = @(
 
 if ($AllowInternalConsole) {
     $EnrollArgs += "--allow-internal-console"
+}
+
+if ($AllowInsecureConsole) {
+    $EnrollArgs += "--allow-insecure-console"
 }
 
 & $ExePath @EnrollArgs

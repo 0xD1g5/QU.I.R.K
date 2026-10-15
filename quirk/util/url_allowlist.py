@@ -33,10 +33,24 @@ Residual risk — TOCTOU / DNS rebinding (accepted, Phase 120 T-120-04):
     (1) On-prem threat model: QUIRK targets operator-controlled networks; the operator
         administers both the network and the set of scan targets, reducing DNS-rebind
         attack surface compared to a multi-tenant SaaS deployment.
-    (2) Phase 123 SSRF-05 (PinnedIPAdapter): HTTP/HTTPS fetch callers receive
-        resolved_ip from ValidationResult and pin their connection via PinnedIPAdapter
-        (or equivalent), closing the requests/httpx TOCTOU window by forcing connect
-        to the validated IP rather than re-resolving.
+    (2) Phase 123 SSRF-05 (PinnedIPAdapter): only the callers listed below pin their
+        connection to the validated address (``ValidationResult.resolved_ip``), which
+        closes the requests TOCTOU window for them. The list is checked against the
+        source by tests/test_url_allowlist_ssrf.py, so it cannot drift silently.
+        Pinned callers:
+          quirk/scanner/rest_fuzzer.py
+        Every other ``validate_external_url`` caller connects by hostname and re-resolves
+        at connect time, so it is NOT pinned and carries the residual risk in (1):
+        Not pinned:
+          quirk/scanner/openapi_scanner.py
+          quirk/scanner/saml_scanner.py
+          quirk/scanner/jwt_scanner.py
+          quirk/cli/sensor_cmd.py
+          quirk/notify/channels/webhook.py
+          quirk/notify/channels/slack.py
+          quirk/siem/transport.py
+          quirk/ticketing/jira.py
+          quirk/ticketing/servicenow.py
     (3) smtplib compensating control: the SMTP notification path is operator-configured
         and protected by TLS certificate verification, which provides a compensating
         control against connect-time redirect to an attacker-controlled host.
@@ -101,7 +115,26 @@ RC_CONSOLE_ENDPOINT: Final[str] = "console_endpoint"  # SSRF-04 / D-01: reflecti
 _METADATA_IPS: frozenset[ipaddress.IPv4Address | ipaddress.IPv6Address] = frozenset({
     ipaddress.ip_address("169.254.169.254"),  # AWS / Azure IMDS, GCP
     ipaddress.ip_address("fd00:ec2::254"),    # AWS IMDS IPv6
+    ipaddress.ip_address("100.100.100.200"),  # Alibaba Cloud ECS instance metadata: https://www.alibabacloud.com/help/en/ecs/user-guide/view-instance-metadata
 })
+
+# RFC 6052 well-known NAT64 prefix; the low 32 bits carry an IPv4 address.
+_NAT64_WKP: Final = ipaddress.ip_network("64:ff9b::/96")
+# RFC 8215 local-use NAT64 prefix. Operators carve /48../96 sub-prefixes out
+# of it, so the IPv4 address sits at any RFC 6052 section 2.2 position.
+_NAT64_LOCAL: Final = ipaddress.ip_network("64:ff9b:1::/48")
+# IPv4-compatible (::/96, deprecated by RFC 4291) and IPv4-translated
+# (::ffff:0:0:0/96, RFC 2765) forms carry the IPv4 address in the low 32 bits.
+_V4_COMPATIBLE: Final = ipaddress.ip_network("::/96")
+_V4_TRANSLATED: Final = ipaddress.ip_network("::ffff:0:0:0/96")
+# RFC 6052 section 2.2 layouts: (prefix length, [(first bit, bit count), ...])
+# of the IPv4 address inside the 128-bit value; bits 64-71 are the u octet.
+_RFC6052_LAYOUTS: Final = (
+    (48, ((48, 16), (72, 16))),
+    (56, ((56, 8), (72, 24))),
+    (64, ((72, 32),)),
+    (96, ((96, 32),)),
+)
 
 # Cloud metadata service HOSTNAME aliases (Phase 120 SP-01).
 # Matched BEFORE DNS resolution so a hostile DNS can't return a non-metadata IP
@@ -219,6 +252,45 @@ def _get_console_endpoint() -> tuple[str | None, int | None]:
         return (None, None)
 
 
+def _bits(value: int, first: int, count: int) -> int:
+    return (value >> (128 - first - count)) & ((1 << count) - 1)
+
+
+def _embedded_ipv4s(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> list[ipaddress.IPv4Address]:
+    """Return every IPv4 address an IPv6 address may carry.
+
+    Covers IPv4-mapped (``::ffff:a.b.c.d``), IPv4-compatible (``::a.b.c.d``),
+    IPv4-translated (``::ffff:0:a.b.c.d``), 6to4 (``2002::/16``), Teredo
+    (server and client), the NAT64 well-known prefix (``64:ff9b::/96``) and
+    the NAT64 local-use prefix (``64:ff9b:1::/48``, every RFC 6052 layout).
+    Computed explicitly rather than via the stdlib's property delegation,
+    which varies by patch release.
+    """
+    if not isinstance(ip, ipaddress.IPv6Address):
+        return []
+    value = int(ip)
+    out: list[ipaddress.IPv4Address] = []
+    if ip.ipv4_mapped is not None:
+        out.append(ip.ipv4_mapped)
+    if ip.sixtofour is not None:
+        out.append(ip.sixtofour)
+    if ip.teredo is not None:
+        out.extend(ip.teredo)
+    if ip in _NAT64_WKP or ip in _V4_TRANSLATED:
+        out.append(ipaddress.IPv4Address(value & 0xFFFFFFFF))
+    if ip in _V4_COMPATIBLE and value > 1:
+        out.append(ipaddress.IPv4Address(value & 0xFFFFFFFF))
+    if ip in _NAT64_LOCAL:
+        for _plen, parts in _RFC6052_LAYOUTS:
+            v4 = 0
+            for first, count in parts:
+                v4 = (v4 << count) | _bits(value, first, count)
+            out.append(ipaddress.IPv4Address(v4))
+    return list(dict.fromkeys(out))
+
+
 def _classify_ip(
     ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
     url: str,
@@ -232,8 +304,12 @@ def _classify_ip(
     Metadata IPs and the console's own endpoint are ALWAYS rejected —
     ``allow_internal`` cannot bypass them.
     """
+    # The checks below look at the address itself and at any IPv4 address it
+    # carries; a hit on any candidate rejects. The raw address is never replaced.
+    candidates = [ip, *_embedded_ipv4s(ip)]
+
     # Metadata — always blocked.
-    if ip in _METADATA_IPS:
+    if any(c in _METADATA_IPS for c in candidates):
         return ValidationResult(False, RC_METADATA_SERVICE_IP, _redact_url_preview(url))
 
     # Console self-SSRF — always blocked (SSRF-04 / D-01), BEFORE the
@@ -254,7 +330,7 @@ def _classify_ip(
             console_ips.add(ipaddress.ip_address(console_host))
         except ValueError:
             pass
-        if ip in console_ips:
+        if any(c in console_ips for c in candidates):
             # Mirrors the metadata block's no-log, redacted-return style.
             return ValidationResult(False, RC_CONSOLE_ENDPOINT, _redact_url_preview(url))
 
@@ -262,11 +338,11 @@ def _classify_ip(
     if allow_internal:
         return None
 
-    if ip.is_loopback:
+    if any(c.is_loopback for c in candidates):
         return ValidationResult(False, RC_LOOPBACK, _redact_url_preview(url))
-    if ip.is_link_local:
+    if any(c.is_link_local for c in candidates):
         return ValidationResult(False, RC_LINK_LOCAL, _redact_url_preview(url))
-    if ip.is_private or ip.is_reserved:
+    if any(c.is_private or c.is_reserved for c in candidates):
         return ValidationResult(False, RC_INTERNAL_IP, _redact_url_preview(url))
     return None
 

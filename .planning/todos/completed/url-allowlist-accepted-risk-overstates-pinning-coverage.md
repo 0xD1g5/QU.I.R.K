@@ -4,7 +4,9 @@ created: 2026-09-22
 source: Phase 208 security audit (208-SECURITY.md) — found by deriving the caller set from source, not from a list
 priority: medium  # not high: the on-prem threat model in rationale (1) still holds and is the load-bearing reason; what is wrong is rationale (2)'s claimed breadth
 requirement: null
-resolves_phase: null
+resolves_phase: 225.1
+status: completed
+completed: 2026-10-14
 ---
 
 # `url_allowlist.py`'s AUDIT-09 accepted-risk note overstates its own PinnedIPAdapter coverage
@@ -64,3 +66,11 @@ Phase 208's COV-06 claim is **unaffected** — it asserts ordering (guard fires 
 
 Related: [[project_functional_review_findings_unverified]] (symptoms reliable, scope often wrong —
 reproduce before actioning).
+
+## Resolution (Phase 225.1, 2026-10-14)
+
+- [x] Option 1 honoured: the AUDIT-09 note now lists the one pinning caller
+  (`quirk/scanner/rest_fuzzer.py`) and the nine non-pinning callers by path, and
+  `tests/test_url_allowlist_ssrf.py::test_accepted_risk_note_names_exactly_the_pinning_callers`
+  re-derives the pinning set from source at test time (tokenize-based, minimum-count guard).
+- [ ] Option 2 (extend pinning) carried: out of scope for 225.1 (D-13), decide on its own evidence.

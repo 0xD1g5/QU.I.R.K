@@ -260,3 +260,97 @@ def test_invalid_port_scope_returns_422(monkeypatch):
 
     response = tc.get("/api/config/effective", params={"port_scope": "not-a-real-scope"})
     assert response.status_code == 422, response.text
+
+
+# ---------------------------------------------------------------------------
+# 225.1 / D-09, D-24 — preview truthfulness: allow_internal_targets + credential names
+# ---------------------------------------------------------------------------
+
+def _security_field(body, name):
+    sec = next(s for s in body["sections"] if s["name"] == "security")
+    return next(f for f in sec["fields"] if f["name"] == name)
+
+
+def test_preview_shows_server_allow_internal_targets(monkeypatch, tmp_path):
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text("security:\n  allow_internal_targets: true\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc = _app_with_db()
+    r = tc.get("/api/config/effective")
+    assert r.status_code == 200, r.text
+    assert _security_field(r.json(), "allow_internal_targets")["value"] is True
+
+
+def test_preview_allow_internal_false_without_server_config(monkeypatch, tmp_path):
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(tmp_path / "absent.yaml"))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc = _app_with_db()
+    r = tc.get("/api/config/effective")
+    assert r.status_code == 200, r.text
+    assert _security_field(r.json(), "allow_internal_targets")["value"] is False
+
+
+def test_preview_refuses_like_submit_when_server_config_unreadable(monkeypatch, tmp_path):
+    """With the token in the environment, auth passes, so the preview itself
+    must refuse an unreadable server config with the same 503 submit gives."""
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text("security:\n  allow_internal_targets: true\n bad: [\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    monkeypatch.setenv("QUIRK_API_TOKEN", "env-token")
+    hdr = {"Authorization": "Bearer env-token", "X-Quirk-Request": "1"}
+    _, tc = _app_with_db()
+    preview = tc.get("/api/config/effective", headers=hdr)
+    submit = tc.post("/api/jobs", json={"targets": "example.com"}, headers=hdr)
+    assert submit.status_code == 503 and "DASHBOARD-014" in submit.text
+    assert preview.status_code == 503, preview.text
+    assert "DASHBOARD-014" in preview.text
+
+
+def test_resolver_raises_on_unreadable_server_config(monkeypatch, tmp_path):
+    from quirk.util.server_config import ServerConfigError
+
+    cfg = tmp_path / "server.yaml"
+    cfg.write_text("- not a mapping\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
+    with pytest.raises(ServerConfigError):
+        resolve_effective_config(targets="example.com")
+
+
+def _no_server_cfg(monkeypatch, tmp_path):
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(tmp_path / "absent.yaml"))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    monkeypatch.delenv("QUIRK_PG_SCANNER_PASSWORD", raising=False)
+
+
+def test_credential_keys_marks_name_set_without_echoing_value(monkeypatch, tmp_path):
+    import json as _json
+
+    _no_server_cfg(monkeypatch, tmp_path)
+    _, tc = _app_with_db()
+    base = tc.get("/api/config/effective").json()
+    conn = next(s for s in base["sections"] if s["name"] == "connectors")
+    before = next(f for f in conn["fields"] if f["name"] == "pg_scanner_password")
+    assert before["credential_status"] == "not set"
+
+    r = tc.get(
+        "/api/config/effective",
+        params={"credential_keys": _json.dumps(["pg_scanner_password"])},
+    )
+    assert r.status_code == 200, r.text
+    conn = next(s for s in r.json()["sections"] if s["name"] == "connectors")
+    field = next(f for f in conn["fields"] if f["name"] == "pg_scanner_password")
+    assert field["credential_status"] == "set"
+    assert field["redacted"] is True
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ['["api_token"]', '["no_such_credential"]', '"notalist"', "not json", "[1]",
+     "[" + ",".join('"snmpv3:h%d:auth"' % i for i in range(65)) + "]"],
+)
+def test_credential_keys_invalid_is_422(monkeypatch, tmp_path, raw):
+    _no_server_cfg(monkeypatch, tmp_path)
+    _, tc = _app_with_db()
+    r = tc.get("/api/config/effective", params={"credential_keys": raw})
+    assert r.status_code == 422, r.text

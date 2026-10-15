@@ -51,6 +51,7 @@ def test_enroll_writes_sensor_yaml(tmp_path, monkeypatch):
         "hmac_key",
         "console_api_token",
         "allow_internal_console",  # CR-03: persisted so push honours it automatically
+        "allow_insecure_console",
     }
     assert required_keys == set(data.keys())
     assert data["console_url"] == "https://console.example"
@@ -268,7 +269,7 @@ def test_enroll_ssrf_guard_exits_nonzero(monkeypatch, capsys):
     from quirk.cli.sensor_cmd import _cmd_enroll
 
     class Args:
-        console_url = "http://192.168.1.1"
+        console_url = "https://192.168.1.1"
         segment = "dmz"
         engagement = None
         config = "/tmp/nonexistent/sensor.yaml"
@@ -303,6 +304,7 @@ def test_enroll_allow_internal_console_passes_rfc1918(tmp_path):
         config = str(sensor_yaml)
         api_token = "lab-token"
         allow_internal_console = True
+        allow_insecure_console = True
 
     with pytest.raises(SystemExit) as exc_info:
         _cmd_enroll(Args())
@@ -336,6 +338,7 @@ def test_enroll_allow_internal_console_persisted_for_push(tmp_path, monkeypatch)
         "hmac_key": hmac_key,
         "console_api_token": "lab-token",
         "allow_internal_console": True,
+        "allow_insecure_console": True,
     }
     sensor_yaml.write_text(_yaml.dump(cfg))
 
@@ -394,6 +397,70 @@ def test_enroll_allow_internal_console_persisted_for_push(tmp_path, monkeypatch)
         "push must call validate_external_url(allow_internal=True) when "
         "sensor.yaml has allow_internal_console: true"
     )
+
+
+def _enroll_args(url, config, **flags):
+    class Args:
+        console_url = url
+        segment = "seg"
+        engagement = None
+        api_token = "tok"
+        allow_internal_console = flags.get("internal", False)
+        allow_insecure_console = flags.get("insecure", False)
+
+    Args.config = str(config)
+    return Args()
+
+
+def test_enroll_refuses_non_loopback_http(tmp_path, capsys):
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    cfg = tmp_path / "sensor.yaml"
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_enroll(_enroll_args("http://example.com", cfg))
+    assert exc_info.value.code == 1
+    err = capsys.readouterr().err
+    assert "https://" in err and "--allow-insecure-console" in err
+    assert not cfg.exists()
+
+
+def test_enroll_internal_flag_does_not_imply_insecure(tmp_path):
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    cfg = tmp_path / "sensor.yaml"
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_enroll(_enroll_args("http://10.30.0.5:8512", cfg, internal=True))
+    assert exc_info.value.code == 1
+    assert not cfg.exists()
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1:8512", "https://console.example"])
+def test_enroll_accepts_loopback_http_and_https(tmp_path, url, monkeypatch):
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    ok = MagicMock()
+    ok.ok = True
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: ok)
+
+    cfg = tmp_path / "sensor.yaml"
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_enroll(_enroll_args(url, cfg))
+    assert exc_info.value.code == 0
+    assert yaml.safe_load(cfg.read_text())["allow_insecure_console"] is False
+
+
+def test_enroll_insecure_flag_warns_and_persists(tmp_path, capsys):
+    from quirk.cli.sensor_cmd import _cmd_enroll
+
+    cfg = tmp_path / "sensor.yaml"
+    with pytest.raises(SystemExit) as exc_info:
+        _cmd_enroll(
+            _enroll_args("http://10.30.0.5:8512", cfg, internal=True, insecure=True)
+        )
+    assert exc_info.value.code == 0
+    assert "WARNING" in capsys.readouterr().err
+    assert yaml.safe_load(cfg.read_text())["allow_insecure_console"] is True
 
 
 def test_enroll_atomic_write(tmp_path, monkeypatch):
@@ -1458,3 +1525,96 @@ def _make_mock_proc():
     mock_proc.returncode = 0
     mock_proc.communicate.return_value = (b"", b"")
     return mock_proc
+
+
+# ---------------------------------------------------------------------------
+# SECH-02: push applies the console URL scheme policy
+# ---------------------------------------------------------------------------
+
+
+def _write_push_cfg(tmp_path, url, **extra):
+    cfg = {
+        "console_url": url,
+        "sensor_id": str(uuid.uuid4()),
+        "segment": "seg",
+        "engagement": None,
+        "sensor_version": "5.4.0",
+        "hmac_key": os.urandom(32).hex(),
+        "console_api_token": "tok",
+        "allow_internal_console": True,
+    }
+    cfg.update(extra)
+    p = tmp_path / "sensor.yaml"
+    p.write_text(yaml.dump(cfg))
+    return p
+
+
+def _run_push(monkeypatch, tmp_path, sensor_yaml):
+    import tempfile
+
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+    from quirk.cli.sensor_cmd import _cmd_push
+
+    created = []
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            pass
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            created.append(kwargs)
+
+        def post(self, url, headers, content):
+            return FakeResponse()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            pass
+
+    monkeypatch.setattr("httpx.Client", FakeClient)
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: _make_mock_proc())
+    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+    monkeypatch.setattr(sensor_cmd_mod, "_flush_spool", lambda *a, **kw: None)
+
+    class Args:
+        config = str(sensor_yaml)
+        scan_config = "config.yaml"
+
+    with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setattr("tempfile.mkdtemp", lambda: td)
+        with pytest.raises(SystemExit) as exc_info:
+            _cmd_push(Args())
+    return exc_info.value.code, created
+
+
+def test_push_refuses_stored_non_loopback_http_before_client(tmp_path, monkeypatch, capsys):
+    p = _write_push_cfg(tmp_path, "http://10.30.0.5:8512")
+    code, created = _run_push(monkeypatch, tmp_path, p)
+    assert code == 1
+    assert created == [], "no HTTP client may be built for a refused console URL"
+    assert "--allow-insecure-console" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "url,extra",
+    [
+        ("http://10.30.0.5:8512", {"allow_insecure_console": True}),
+        ("http://127.0.0.1:8512", {}),
+        ("https://console.example", {}),
+    ],
+)
+def test_push_proceeds_when_scheme_policy_met(tmp_path, monkeypatch, url, extra):
+    import quirk.cli.sensor_cmd as sensor_cmd_mod
+
+    ok = MagicMock()
+    ok.ok = True
+    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: ok)
+    p = _write_push_cfg(tmp_path, url, **extra)
+    code, created = _run_push(monkeypatch, tmp_path, p)
+    assert code == 0
+    assert created, "client should be built when the scheme policy is met"

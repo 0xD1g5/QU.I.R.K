@@ -407,6 +407,7 @@ export function ScanNewPage() {
           customPorts={customPorts}
           connectors={connectors}
           advanced={advanced}
+          credentialKeys={Object.keys(credentials).filter((k) => credentials[k])}
         />
 
         {rejectionBanner && (

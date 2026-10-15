@@ -38,9 +38,9 @@ from cryptography.x509 import (
 from cryptography.x509.oid import ExtendedKeyUsageOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
-
 from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
+from quirk.util.log_text import strip_control_chars
 from quirk.util.safe_exc import safe_str
 
 # Module-level logger (mirror smime_scanner / adcs_scanner pattern)
@@ -324,7 +324,7 @@ def scan_codesign_from_ldap(
         if not base_dn:
             log.warning(
                 "CODESIGN: no search base for target %s (no realm; pass search_base=)",
-                safe_str(host),
+                strip_control_chars(host),
             )
             continue
 
@@ -333,7 +333,7 @@ def scan_codesign_from_ldap(
         except Exception as exc:
             log.warning(
                 "CODESIGN: bind/search failed for %s:%d: %s",
-                safe_str(host),
+                strip_control_chars(host),
                 port,
                 safe_str(exc),
             )
@@ -341,7 +341,7 @@ def scan_codesign_from_ldap(
                 host=host,
                 port=port,
                 protocol=CODE_SIGNING,
-                service_detail=f"codesign-unreachable|base={safe_str(base_dn)}",
+                service_detail=f"codesign-unreachable|base={strip_control_chars(base_dn)}",
                 scan_error=safe_str(exc),
                 scan_error_category="exception",
                 scanned_at=now,
@@ -368,7 +368,7 @@ def scan_codesign_from_ldap(
                     if parsed is None:
                         log.warning(
                             "CODESIGN: cert parse failed for %s (%s)",
-                            safe_str(user_dn),
+                            strip_control_chars(user_dn),
                             attr_name,
                         )
                         continue
@@ -386,7 +386,7 @@ def scan_codesign_from_ldap(
 
                     fp = parsed["fingerprint"]
                     detail = (
-                        f"{safe_str(user_dn)}"
+                        f"{strip_control_chars(user_dn)}"
                         f"|attr={attr_name}"
                         f"|serial={parsed['serial']}"
                         f"|fingerprint={fp}"
@@ -399,7 +399,7 @@ def scan_codesign_from_ldap(
                     scan_dict["fingerprint"] = fp
                     scan_dict["reasons"] = reasons
                     scan_dict["attr"] = attr_name
-                    scan_dict["user_dn"] = safe_str(user_dn)
+                    scan_dict["user_dn"] = strip_control_chars(user_dn)
 
                     ep = CryptoEndpoint(
                         host=host,

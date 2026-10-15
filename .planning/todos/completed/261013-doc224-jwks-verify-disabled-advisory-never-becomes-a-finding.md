@@ -4,8 +4,9 @@ created: 2026-10-13
 source: Phase 224 doc-claim ledger (DOC-04), gap closure GC3-OPS (fork C); ledger rows DCL-OPS-B-0004, DCL-OPS-A-1117, DCL-OPS-A-1118 (docs/operators-guide.md, JWT/API scanner "allow_insecure_jwks" security note)
 priority: medium
 area: quirk/engine/findings_evaluator.py (ADVISORY handling), quirk/dashboard/api/routes/scan.py (_derive_findings), quirk/reports/templates/report.html.j2 (Endpoint Inventory)
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-10-14
+resolves_phase: 225.1
 ---
 
 # The HIGH `JWKS/verify-disabled` advisory never becomes a finding on any surface
@@ -24,9 +25,9 @@ Also, on a resumed scan `run_scan.py:3137` reloads only `protocol == "JWT"` rows
 
 The doc now states this. A security override that disables TLS verification should be visible.
 
-- [ ] Emit a HIGH finding for `JWKS/verify-disabled` rows in `evaluate_endpoints` and `_derive_findings`.
-- [ ] Map its title in `COMPLIANCE_MAP` or `UNMAPPED_TITLES` (the title-join gate).
-- [ ] Keep ADVISORY rows on resume, or re-derive them.
+- [x] Emit a HIGH finding for `JWKS/verify-disabled` rows in `evaluate_endpoints` and `_derive_findings`.
+- [x] Map its title in `COMPLIANCE_MAP` or `UNMAPPED_TITLES` (the title-join gate).
+- [x] Keep ADVISORY rows on resume, or re-derive them.
 
 ## Feasibility & Effort
 

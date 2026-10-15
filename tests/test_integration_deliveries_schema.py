@@ -75,3 +75,32 @@ def test_integration_deliveries_idempotent(tmp_path: Path) -> None:
     db_path = str(tmp_path / "quirk_test.db")
     init_db(db_path)
     init_db(db_path)  # second call must not raise
+
+
+def test_integration_deliveries_audit_origin_columns(tmp_path: Path) -> None:
+    """Push audit rows carry the source address and sensor id (nullable)."""
+    db_path = str(tmp_path / "quirk_test.db")
+    init_db(db_path)
+    inspector = sa_inspect(get_engine(db_path))
+    col_map = {c["name"]: c for c in inspector.get_columns("integration_deliveries")}
+    assert {"client_ip", "sensor_id"} <= set(col_map)
+    assert col_map["client_ip"]["nullable"] and col_map["sensor_id"]["nullable"]
+
+
+def test_integration_deliveries_origin_columns_added_to_old_table(tmp_path: Path) -> None:
+    """An existing 7-column table gains client_ip / sensor_id through init_db."""
+    import sqlite3
+
+    db_path = str(tmp_path / "old.db")
+    con = sqlite3.connect(db_path)
+    con.execute(
+        "CREATE TABLE integration_deliveries (id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " scan_id VARCHAR(64) NOT NULL, finding_hash VARCHAR(64),"
+        " destination VARCHAR(64) NOT NULL, status VARCHAR(16) NOT NULL,"
+        " attempted_at DATETIME NOT NULL, error_summary TEXT)"
+    )
+    con.commit()
+    con.close()
+    init_db(db_path)
+    cols = {c["name"] for c in sa_inspect(get_engine(db_path)).get_columns("integration_deliveries")}
+    assert {"client_ip", "sensor_id"} <= cols

@@ -411,6 +411,8 @@ UNMAPPED_TITLES: FrozenSet[str] = frozenset({
     # Informational baseline — container has crypto library; no defect implied.
     # Canonical alias for findings_evaluator.py:266 f-string family.
     "Container image contains crypto library",
+    # Score-neutral configuration advisory (config_advisory); no control mapping.
+    "JWKS fetched with TLS certificate verification disabled",
 })
 
 

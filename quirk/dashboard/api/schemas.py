@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -893,6 +893,40 @@ _CONNECTOR_TIMEOUT_MIN = 1
 _CONNECTOR_TIMEOUT_MAX = 300
 
 
+def validate_credential_names(names: Iterable[str]) -> list:
+    """Allow-list credential NAMES (225.1 / D-09, D-24); values are never involved.
+
+    Shared by ``ScanSubmitRequest.credentials`` and the Effective Config
+    preview's names-only ``credential_keys`` so the two cannot disagree.
+    Rejects unknown names and ``api_token``; caps at 64 entries.
+    """
+    from quirk.config_redaction import CREDENTIAL_REGISTRY
+
+    names = list(names)
+    if len(names) > 64:
+        raise ValueError(
+            f"credentials payload has {len(names)} entries, more than the 64-entry cap"
+        )
+    allowed_names = {
+        entry.name for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"
+    }
+    # Phase 193 review CR-03: `username` added -- carries the USM username
+    # (identifier, not a secret; lands inline in the job YAML's
+    # snmp_v3_credentials fragment, never the subprocess env).
+    snmpv3_re = re.compile(r"^snmpv3:.+:(auth|priv|username)$")
+    unknown = []
+    for key in names:
+        if key == "api_token":
+            unknown.append(key)
+        elif key in allowed_names or key.startswith("broker:") or snmpv3_re.match(key):
+            continue
+        else:
+            unknown.append(key)
+    if unknown:
+        raise ValueError(f"Unknown credential key(s): {', '.join(sorted(unknown))}")
+    return names
+
+
 def validate_connectors_overlay(v: Optional[dict]) -> Optional[dict]:
     """Single implementation of connectors-overlay validation, shared by
     `ScanSubmitRequest.connectors` (submit, enforcement point a),
@@ -1206,8 +1240,6 @@ class ScanSubmitRequest(BaseModel):
         """
         if v is None:
             return v
-        from quirk.config_redaction import CREDENTIAL_REGISTRY
-
         if len(v) > 64:
             raise ValueError(
                 f"credentials payload has {len(v)} entries, more than the 64-entry cap"
@@ -1217,29 +1249,7 @@ class ScanSubmitRequest(BaseModel):
                 raise ValueError(
                     f"credential value for {key!r} exceeds the 4096-character cap"
                 )
-
-        allowed_names = {
-            entry.name for entry in CREDENTIAL_REGISTRY if entry.section == "connectors"
-        }
-        # Phase 193 review CR-03: `username` added — carries the USM
-        # username (identifier, not a secret; lands inline in the job YAML's
-        # snmp_v3_credentials fragment, never the subprocess env).
-        snmpv3_re = re.compile(r"^snmpv3:.+:(auth|priv|username)$")
-
-        unknown = []
-        for key in v:
-            if key == "api_token":
-                unknown.append(key)
-                continue
-            if key in allowed_names:
-                continue
-            if key.startswith("broker:"):
-                continue
-            if snmpv3_re.match(key):
-                continue
-            unknown.append(key)
-        if unknown:
-            raise ValueError(f"Unknown credential key(s): {', '.join(sorted(unknown))}")
+        validate_credential_names(v)
         return v
 
     @model_validator(mode="after")

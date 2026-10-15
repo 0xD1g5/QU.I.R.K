@@ -4,8 +4,9 @@ created: 2026-10-13
 source: Phase 224 doc-claim ledger (DOC-04), gap closure GC3-OPS (fork A); ledger rows DCL-OPS-A-0138, DCL-OPS-GC3A-0004..0006 (docs/operators-guide.md §2.4 security.trusted_targets)
 priority: high
 area: quirk/util/target_trust.py (enforce_trusted_targets), quirk/dashboard/api/routes/jobs.py (create_job trusted-targets check, build_job_config_dict security block)
-status: pending
-resolves_phase: null
+status: completed
+resolves_phase: 225.1
+completed: 2026-10-14
 ---
 
 # The CLI trusted_targets check skips `targets.include_ips`
@@ -30,9 +31,9 @@ todo is gap 1.
 
 The operators-guide now states both gaps. A consent control should not depend on which field a target is typed into.
 
-- [ ] Add `include_ips` (and every connector target list that names hosts) to `enforce_trusted_targets`.
-- [ ] Write the server's `trusted_targets` into the generated job config, or check connector targets in `create_job`.
-- [ ] Add tests for an `include_ips` and a dashboard `broker_targets` target outside the allowlist.
+- [x] Add `include_ips` (and every connector target list that names hosts) to `enforce_trusted_targets`.
+- [x] Write the server's `trusted_targets` into the generated job config, or check connector targets in `create_job`.
+- [x] Add tests for an `include_ips` and a dashboard `broker_targets` target outside the allowlist.
 
 ## Feasibility & Effort
 

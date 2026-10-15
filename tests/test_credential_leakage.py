@@ -438,3 +438,100 @@ def test_credential_context_buffer_zeroed_after_close() -> None:
     assert all(b == 0 for b in ctx._secret_buf), (
         "CredentialContext buffer not zeroed after close()"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 225.1 / SECH-04 (D-10): reference errors carry the scheme and the
+# reference kind only, never the reference text.
+# ---------------------------------------------------------------------------
+
+def _no_substring(text: str, value: str, n: int = 4) -> bool:
+    return not any(value[i:i + n] in text for i in range(len(value) - n + 1))
+
+
+def test_reference_error_names_kind_only() -> None:
+    from quirk.auth.credentials import _resolve_reference
+
+    ref = "hunter2-ZQXV9417-marker"
+    with pytest.raises(ValueError) as ei:
+        _resolve_reference("bearer", ref, prompt="x")
+    text = str(ei.value)
+    assert "bearer" in text and "literal" in text
+    assert ref not in text
+    assert _no_substring(text.replace("hunter2", ""), "ZQXV9417-marker")
+
+
+def test_file_reference_error_uses_placeholder(tmp_path, monkeypatch) -> None:
+    from quirk.auth.credentials import _resolve_reference
+    from quirk.util.targets import RC_PATH_TRAVERSAL, TargetFileError
+
+    monkeypatch.chdir(tmp_path)
+    marker = "ZQXV9417-missing-file"
+    with pytest.raises(TargetFileError) as ei:
+        _resolve_reference("bearer", "@" + marker, prompt="x")
+    assert "<@file reference>" in str(ei.value)
+    assert marker not in str(ei.value)
+    assert ei.value.__cause__ is None and ei.value.__suppress_context__
+
+    with pytest.raises(TargetFileError) as ei2:
+        _resolve_reference("bearer", "@../../ZQXV9417-up", prompt="x")
+    assert ei2.value.reason == RC_PATH_TRAVERSAL
+    assert "ZQXV9417" not in str(ei2.value)
+    assert "<@file reference>" in str(ei2.value)
+
+
+def test_valid_references_still_resolve(tmp_path, monkeypatch) -> None:
+    import os
+    from unittest import mock
+
+    from quirk.auth.credentials import _resolve_reference
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("_QUIRK_REF_OK_ENV", "value-from-env")
+    assert _resolve_reference("bearer", "_QUIRK_REF_OK_ENV", prompt="x") == "value-from-env"
+    assert "_QUIRK_REF_OK_ENV" not in os.environ
+    (tmp_path / "tok.txt").write_text("value-from-file\n")
+    assert _resolve_reference("bearer", "@tok.txt", prompt="x") == "value-from-file"
+    with mock.patch("getpass.getpass", return_value="typed"):
+        assert _resolve_reference("bearer", "", prompt="x") == "typed"
+
+
+_MINIMAL_CLI_CONFIG = """\
+assessment:
+  name: reference-error-test
+  data_classification: internal
+  report_owner: tests
+  timezone: UTC
+scan:
+  concurrency: 1
+  ports_tls: [443]
+targets:
+  fqdns: []
+  cidrs: []
+  include_ips: []
+  exclude_ips: []
+connectors: {}
+output:
+  directory: @OUT@
+  db_path: @DB@
+"""
+
+
+def test_cli_reference_error_output_omits_reference(tmp_path) -> None:
+    from tests.cli_helpers import run_cli
+
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        _MINIMAL_CLI_CONFIG.replace("@OUT@", str(tmp_path / "out")).replace(
+            "@DB@", str(tmp_path / "quirk.db")
+        ),
+        encoding="utf-8",
+    )
+    marker = "ZQXV9417cliref"
+    proc = run_cli(["--config", str(cfg), "--auth-bearer", marker], timeout=120)
+    assert proc.returncode != 0
+    # The run must actually reach the credential-reference error (D-17), not
+    # exit earlier for an unrelated reason.
+    assert "credential reference" in proc.stderr
+    assert "'bearer'" in proc.stderr
+    assert marker not in proc.stderr and marker not in proc.stdout

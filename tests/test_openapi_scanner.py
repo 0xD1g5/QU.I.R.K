@@ -266,6 +266,22 @@ def test_missing_extra_degrades():
     assert ep.protocol == "OPENAPI"
 
 
+def test_missing_extra_endpoint_host_keeps_only_scheme_host_path():
+    """The degraded endpoint for a spec URL records the URL without its
+    userinfo, query or fragment; a local path is recorded as given."""
+    import quirk.scanner.openapi_scanner as oas_mod
+
+    url = "https://user:pw-Q7X9@api.example/openapi.json?access_token=TOK-Q7X9#frag"
+    with patch.object(oas_mod, "OPENAPI_AVAILABLE", False):
+        (ep,) = oas_mod.scan_openapi_spec(url, cfg_targets=[])
+        (local,) = oas_mod.scan_openapi_spec("specs/some_spec.yaml", cfg_targets=[])
+    assert "Q7X9" not in ep.host
+    assert "access_token" not in ep.host and "frag" not in ep.host
+    assert ep.host.startswith("https://api.example/openapi.json")
+    assert len(ep.host) <= 64
+    assert local.host == "specs/some_spec.yaml"
+
+
 # ---------------------------------------------------------------------------
 # Test: openapi_plaintext_server_count evidence counter (SCORE-01)
 # ---------------------------------------------------------------------------
