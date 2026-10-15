@@ -483,3 +483,83 @@ def test_same_second_scanned_at_tie_returns_one_row_per_sensor(tmp_path):
         f"DIST-01: same-second tie must yield exactly ONE row per sensor (highest id), "
         f"got {len(sensor_rows)}. DIST-01 not yet fixed — subquery lacks id tiebreak."
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 (XSURF-07, D-10): merge score derives findings over the union
+# ---------------------------------------------------------------------------
+
+def _ceiling_endpoints():
+    """4 sensors, one TLS row each (one per sensor_id so the union keeps all);
+    sensor s0's cert is expired (CRITICAL)."""
+    eps = []
+    for i in range(4):
+        eps.append(_tls_ep(
+            host=f"h{i}.example", protocol="TLS", sensor_id=f"s{i}",
+            cert_not_after=datetime(2020, 1, 1) if i == 0 else None,
+            scanned_at=datetime(2026, 5, 25, 12, 0, 0),
+        ))
+    return eps
+
+
+def _ceiling_sensors():
+    return [_sensor(f"s{i}", datetime(2026, 5, 25, 12, 0, 0)) for i in range(4)]
+
+
+PINNED_MERGE_CEILING_SCORE = 27
+
+
+def test_merge_score_applies_critical_ceiling(tmp_path):
+    from quirk.db import get_session
+    from quirk.engine.findings_evaluator import derive_report_findings
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+    from quirk.merge.scan import merge_scan, _assemble_union
+
+    db_path, _ = _setup_real_db(tmp_path, _ceiling_endpoints(), _ceiling_sensors())
+    with get_session(db_path) as db:
+        union = _assemble_union(db)
+        assert len(union) == 4
+        result = merge_scan(db, stale_days=30)
+        expected = compute_readiness_score(
+            build_evidence_summary(union, derive_report_findings(union)),
+            profile="balanced",
+        )["score"]
+    assert result["score"] == expected
+    assert result["score"] <= 34
+    assert result["rating"] == "POOR"
+    assert result["score"] == PINNED_MERGE_CEILING_SCORE
+
+
+def test_merge_cli_prints_band_at_or_below_floor(tmp_path, capsys):
+    import argparse
+    import re
+
+    from quirk.cli.sensor_cmd import _cmd_merge
+
+    db_path, _ = _setup_real_db(tmp_path, _ceiling_endpoints(), _ceiling_sensors())
+    with pytest.raises(SystemExit) as exc:
+        _cmd_merge(argparse.Namespace(db=db_path, stale_days=30))
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    m = re.search(r"Score: (\d+) \((\w+)\)", out)
+    assert m, out
+    assert m.group(2) == "POOR"
+    assert int(m.group(1)) <= 34
+
+
+def test_merge_uses_supplied_deriver(tmp_path):
+    from quirk.db import get_session
+    from quirk.merge.scan import merge_scan
+
+    db_path, _ = _setup_real_db(tmp_path, _ceiling_endpoints(), _ceiling_sensors())
+    seen = []
+
+    def _deriver(eps):
+        seen.append(len(list(eps)))
+        return []
+
+    with get_session(db_path) as db:
+        result = merge_scan(db, stale_days=30, findings_deriver=_deriver)
+    assert seen == [4]
+    assert result["score"] > 34
