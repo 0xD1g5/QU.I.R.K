@@ -1,4 +1,4 @@
-"""Inclusion guard: ``pip install quirk[all]`` MUST pull jira.
+"""Inclusion guard: ``pip install 'quirk-scanner[all]'`` MUST pull jira.
 
 Phase 104 / TICKET-01 rationale
 ---------------------------------

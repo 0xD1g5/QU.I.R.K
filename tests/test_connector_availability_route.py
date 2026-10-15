@@ -106,7 +106,7 @@ def test_unavailable_entries_carry_install_hint(monkeypatch):
                 flag="enable_db",
                 available=False,
                 reason="optional extra 'db' is not installed",
-                install_hint="pip install quirk[db]",
+                install_hint="pip install 'quirk-scanner[db]'",
                 category="Database",
                 label="Database TLS (PostgreSQL/MySQL)",
             ),
@@ -119,7 +119,7 @@ def test_unavailable_entries_carry_install_hint(monkeypatch):
 
     response = tc.get("/api/connectors/availability")
     assert response.status_code == 200, response.text
-    assert "pip install quirk[db]" in response.text
+    assert "pip install 'quirk-scanner[db]'" in response.text
 
 
 def test_unavailable_count_matches(monkeypatch):

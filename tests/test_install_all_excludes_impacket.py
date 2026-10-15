@@ -1,4 +1,4 @@
-"""Regression test: ``pip install quirk[all]`` MUST NOT pull impacket.
+"""Regression test: ``pip install 'quirk-scanner[all]'`` MUST NOT pull impacket.
 
 Phase 45 / D-01 rationale
 -------------------------

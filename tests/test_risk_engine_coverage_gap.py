@@ -35,7 +35,7 @@ def test_advisory_row_becomes_coverage_gap_finding():
         host="kerberos_scanner",
         port=0,
         protocol="ADVISORY",
-        scan_error="Kerberos scanning skipped — run `pip install quirk[identity]` to enable",
+        scan_error="Kerberos scanning skipped — run `pip install 'quirk-scanner[identity]'` to enable",
         scan_error_category="missing_extra",
     )
     findings = evaluate_endpoints(_cfg(), [ep])
@@ -47,7 +47,7 @@ def test_advisory_row_becomes_coverage_gap_finding():
     assert f["severity"] == "INFO"
     assert f["host"] == "kerberos_scanner"
     assert f["port"] == 0
-    assert "pip install quirk[identity]" in f.get("recommendation", "")
+    assert "pip install 'quirk-scanner[identity]'" in f.get("recommendation", "")
 
     # Must NOT also produce the generic "Informational protocol observation" finding.
     titles = [x.get("title", "") for x in findings]

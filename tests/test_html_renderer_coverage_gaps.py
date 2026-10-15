@@ -35,7 +35,7 @@ def _render(tmp_path, findings):
     return open(out, encoding="utf-8").read()
 
 
-_GAP_REC = "Kerberos scanning skipped — install pip install quirk[identity] to enable"
+_GAP_REC = "Kerberos scanning skipped — install pip install 'quirk-scanner[identity]' to enable"
 
 
 def _gap_finding(host="kerberos_scanner", recommendation=_GAP_REC):
@@ -54,7 +54,12 @@ def test_coverage_gaps_section_renders(tmp_path):
     assert "<h2>Coverage Gaps</h2>" in html
     assert "kerberos_scanner" in html
     # Recommendation text rendered (fragment of install hint)
-    assert "pip install quirk[identity]" in html
+    # The renderer HTML-escapes the apostrophes (&#39;) around the package spec.
+    assert (
+        "pip install 'quirk-scanner[identity]'" in html
+        or "pip install &#39;quirk-scanner[identity]&#39;" in html
+    )
+    assert "pip install quirk[" not in html
 
 
 def test_coverage_gap_excluded_from_all_findings_table(tmp_path):

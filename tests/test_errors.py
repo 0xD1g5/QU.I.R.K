@@ -33,7 +33,7 @@ def test_format_error_wire_format():
     got = format_error("INSTALL-001")
     assert got == (
         "[QRK-INSTALL-001] Optional scanner package not installed. "
-        "Fix: Run `pip install quirk[<extra>]` to enable this scanner."
+        "Fix: Run `pip install 'quirk-scanner[<extra>]'` to enable this scanner."
     )
 
 

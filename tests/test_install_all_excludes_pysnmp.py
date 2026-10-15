@@ -1,4 +1,4 @@
-"""Regression test: ``pip install quirk[all]`` MUST NOT pull pysnmp or sysdescrparser.
+"""Regression test: ``pip install 'quirk-scanner[all]'`` MUST NOT pull pysnmp or sysdescrparser.
 
 Phase 133 / D-08 rationale
 --------------------------
