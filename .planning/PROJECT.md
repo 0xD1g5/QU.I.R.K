@@ -1,5 +1,37 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
+## Current Milestone: v5.28 Score & Finding Truth (opened 2026-10-15, Phases 227+)
+
+**Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
+The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
+scoring surfaces work.
+
+**Target features:**
+- **P2b scan-depth dilution (`999.120`, the anchor):** build a third measurement instrument first,
+  then choose the fix by measurement, re-measure the five-rung calibration ladder, and turn the
+  `xfail(strict=True)` P2b property test into a pass.
+- **Cross-surface score parity:** near-expiry certificate severity, dashboard-only findings,
+  consequence ceilings in trend and merge scores, and closed mail ports counted as plaintext.
+- **Finding and state correctness:** closure states, drift notifications that compare two real scan
+  runs, and `sensor merge` keeping each sensor's latest push.
+- **Findings that never fire:** the code-signing TLS-EKU path, Kerberos etype enumeration against
+  pre-auth KDCs, and `999.125` (JWKS credentials, `--auth-basic` encoding, `alg: none`).
+- **QRAMM fixes:** the compliance map refetches after Calculate Score, the scorecard gets a "Not
+  assessed" state, `quirk qramm` / `doctor` / `cve --help` work properly, and whether self-assessed
+  dimensions appear in the compliance map (Cause A) is decided in the phase discuss.
+- **Post-launch visible fixes:** serve the bundled `/fonts` (W15), unquoted install hints (`261015`),
+  the old-blue report wordmark (`261003`), and README links on PyPI (`261014`).
+- **Todo ownership:** every remaining `doc224` todo gets an owner so the todo -> owner gate polices it.
+
+**Operator scoping decisions (2026-10-15 kickoff):** the PM review recommended "Score & Finding Truth"
+(P2b anchor + the high-priority scoring/finding `doc224` defects + `999.125` + post-launch fixes +
+todo ownership), and the operator accepted it and added the QRAMM fixes. QRAMM Cause A is deferred to
+the phase discuss. Research was skipped because every item is a source-confirmed defect. Four
+high-priority `doc224` todos stay out of scope and get owners rather than fixes (Azure Key Vault keys,
+the Semgrep `p/cryptography` 404, the CMVP-refresh error hints, the Windows `install.ps1` sensor
+identity). `999.124` and `999.121` stay on the backlog. This milestone has no release phase: P2b
+rescales every ladder rung and must not share a phase with a tag (212 §8).
+
 ## Current State (updated 2026-10-15)
 
 **v5.27 Launch Readiness CLOSED and ARCHIVED 2026-10-15, and it SHIPPED as `v5.27.0`.** All 7
@@ -1796,7 +1828,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Brand palette B (Ink-violet accent on the current grounds), picked after viewing sketches rather than descriptions (2026-10-02) | Variant C, picked from a description, would have re-themed the grounds and reopened the 216–219 contrast ratchets | ✓ Good — no ratchet pair regressed; the lesson is to sketch before deciding on a visual |
 
 ---
-*Last updated: 2026-10-15 after the v5.27 Launch Readiness milestone*
+*Last updated: 2026-10-15 at the v5.28 Score & Finding Truth milestone open*
 
 ## Evolution
 

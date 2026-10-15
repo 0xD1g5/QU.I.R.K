@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.27
-milestone_name: Launch Readiness
-status: milestone_complete
-last_updated: "2026-10-15T20:00:00.000Z"
-last_activity: "2026-10-15 -- v5.27 CLOSED + ARCHIVED by hand: audit tech_debt 20/20 at main 53476765; shipped as tag v5.27.0 (PyPI + GitHub Releases); archives at .planning/milestones/v5.27-*, phases moved to v5.27-phases/, REQUIREMENTS.md removed. Next: /gsd-new-milestone (PM review first)"
+milestone: v5.28
+milestone_name: Score & Finding Truth
+status: planning
+last_updated: "2026-10-15T21:00:00.000Z"
+last_activity: "2026-10-15 -- v5.28 Score & Finding Truth OPENED (PM review: P2b anchor + high-priority doc224 scoring/finding defects + 999.125 + QRAMM fixes + post-launch fixes + doc224 todo ownership). Defining requirements on branch v528-open. STATE.md hand-edited from a pre-image (no state.milestone-switch)"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 75
-  completed_plans: 75
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -318,7 +318,7 @@ See: .planning/PROJECT.md (updated 2026-10-15)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.27 is closed and archived (2026-10-15), and it shipped as `v5.27.0`.** The social-launch gate is satisfied. Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Owed at that review: an owner for the 118 `doc224` product-defect todos (14 high), W15, and `999.120` (P2b, P1, operator-reserved), the v5.28 anchor. Surface `999.121` (GUI-first gaps), as the operator asked.
+**Current focus:** v5.28 Score & Finding Truth, opened 2026-10-15. Defining requirements, then the roadmap (phases continue from 227). *Superseded:* None — **v5.27 is closed and archived (2026-10-15), and it shipped as `v5.27.0`.** The social-launch gate is satisfied. Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Owed at that review: an owner for the 118 `doc224` product-defect todos (14 high), W15, and `999.120` (P2b, P1, operator-reserved), the v5.28 anchor. Surface `999.121` (GUI-first gaps), as the operator asked.
 
 *Superseded:* None — **v5.26 is closed and archived (2026-10-02).** Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Committed for v5.27 already: the claim-by-claim review of every user-facing doc that gates the social launch (HORIZON 2026-09-30 row). Live owners carried in: `999.118`, `999.119`, `999.120` (P1, operator-reserved).
 
@@ -1469,6 +1469,14 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
+Phase: Not started (defining requirements)
+Plan: —
+Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15, defining requirements. Phases
+continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
+correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
+Last activity: 2026-10-15. Milestone v5.28 started (hand-edited from a pre-image).
+
+**Prior position (v5.27 close, superseded 2026-10-15):**
 Phase: — (milestone v5.27 closed 2026-10-15; no phase open)
 Plan: —
 Status: v5.27 Launch Readiness CLOSED and ARCHIVED, and SHIPPED as tag `v5.27.0` (PyPI + GitHub
@@ -1775,7 +1783,14 @@ refactor: `theme-context.ts`/`theme-provider.tsx` extract the `"quirk-ui-theme"`
 Phases 217 and 218, not here — coupling instrument repair to pixel changes is what makes a red
 unattributable.
 
-## Next Cycle — define v5.27 requirements, create the roadmap, then `/gsd-discuss-phase 222`
+## Next Cycle — define v5.28 requirements, create the roadmap, then `/gsd-discuss-phase 227`
+
+v5.28 Score & Finding Truth opened 2026-10-15 after a PM review (HORIZON rationale row of that
+date). The P2b work (`999.120`) starts with a spike: a third measurement instrument must exist before
+a fix shape is chosen, and every calibration-ladder rung is re-measured after it. QRAMM Cause A
+(self-assessed dimensions in the compliance map) is an operator decision taken in that phase's discuss.
+
+### Superseded: Next Cycle — define v5.27 requirements, create the roadmap, then `/gsd-discuss-phase 222`
 
 v5.27 Launch Readiness opened 2026-10-02 after a PM review (HORIZON rationale row of that date).
 Phase 222 starts by refreshing PR #46 (brand identity v1) against `main` and merging it with CI green;
