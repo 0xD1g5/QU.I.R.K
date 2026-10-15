@@ -119,7 +119,7 @@ ordering among themselves beyond the dependencies stated below.
 
 ### Phases
 
-- [ ] **Phase 227: Todo Ownership Gate** - Every pending `doc224` todo names a live owner or is closed with evidence, and the todo -> owner gate fails on an ownerless one
+- [x] **Phase 227: Todo Ownership Gate** - Every pending `doc224` todo names a live owner or is closed with evidence, and the todo -> owner gate fails on an ownerless one
 - [ ] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
 - [ ] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
 - [ ] **Phase 230: Findings That Fire** - Code-signing EKU, Kerberos etype, JWKS auth, `--auth-basic` and `alg: none` detection work in real scans
@@ -142,15 +142,15 @@ ordering among themselves beyond the dependencies stated below.
 **Plans**: 9 plans (4 waves)
 
 Plans:
-- [ ] 227-01-PLAN.md — Live recount + D-13 closure triage; HORIZON rows 999.126-999.137, 999.119/121/125 edits, rationale-log row (wave 1)
-- [ ] 227-02-PLAN.md — Owners for the 13 requirement-named todos + 999.119/999.121 members; reused IDEA.md updates (wave 2)
-- [ ] 227-03-PLAN.md — Owners + IDEA.md for 999.126/999.127/999.128 (3 of the SC#2 highs) (wave 2)
-- [ ] 227-04-PLAN.md — Owner + IDEA.md for 999.129; D-02 frontmatter for 6 bare todos (wave 2)
-- [ ] 227-05-PLAN.md — Owners + IDEA.md for 999.130/999.131 (wave 2)
-- [ ] 227-06-PLAN.md — Owners + IDEA.md for 999.132/999.133/999.134 (wave 2)
-- [ ] 227-07-PLAN.md — Owners + IDEA.md for 999.135/999.136/999.137 (wave 2)
-- [ ] 227-08-PLAN.md — doc224 live-owner gate leg, fixture matrix, D-17 comment rewrite, mutation probes (wave 3)
-- [ ] 227-09-PLAN.md — UAT Series 227 + worklist regen, STATE obligation note, VALIDATION flip, Obsidian note + UAT vault sync (wave 4)
+- [x] 227-01-PLAN.md — Live recount + D-13 closure triage; HORIZON rows 999.126-999.137, 999.119/121/125 edits, rationale-log row (wave 1)
+- [x] 227-02-PLAN.md — Owners for the 13 requirement-named todos + 999.119/999.121 members; reused IDEA.md updates (wave 2)
+- [x] 227-03-PLAN.md — Owners + IDEA.md for 999.126/999.127/999.128 (3 of the SC#2 highs) (wave 2)
+- [x] 227-04-PLAN.md — Owner + IDEA.md for 999.129; D-02 frontmatter for 6 bare todos (wave 2)
+- [x] 227-05-PLAN.md — Owners + IDEA.md for 999.130/999.131 (wave 2)
+- [x] 227-06-PLAN.md — Owners + IDEA.md for 999.132/999.133/999.134 (wave 2)
+- [x] 227-07-PLAN.md — Owners + IDEA.md for 999.135/999.136/999.137 (wave 2)
+- [x] 227-08-PLAN.md — doc224 live-owner gate leg, fixture matrix, D-17 comment rewrite, mutation probes (wave 3)
+- [x] 227-09-PLAN.md — UAT Series 227 + worklist regen, STATE obligation note, VALIDATION flip, Obsidian note + UAT vault sync (wave 4)
 
 ### Phase 228: Cross-Surface Score Parity
 **Goal**: For the same scan, the dashboard and the CLI/HTML report show the same headline score, the same consequence ceilings and the same subscores, on every score surface (headline, trend, multi-sensor merge, per-segment).
@@ -241,7 +241,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 227. Todo Ownership Gate | 0/TBD | Not started | - |
+| 227. Todo Ownership Gate | 9/9 | Complete (verified passed 4/4 at efadfb56, SC#4 scope accepted as doc224-only by operator; code review 1 Critical + 3 Warning fixed in-phase (efadfb56); CI green, Python CI 38793570017 + Dashboard Quality 38793574456) | 2026-10-15 |
 | 228. Cross-Surface Score Parity | 0/TBD | Not started | - |
 | 229. Finding & State Correctness | 0/TBD | Not started | - |
 | 230. Findings That Fire | 0/TBD | Not started | - |

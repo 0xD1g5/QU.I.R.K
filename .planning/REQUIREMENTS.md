@@ -127,7 +127,7 @@ HORIZON prose:
 
 ### Todo ownership (OWN)
 
-- [ ] **OWN-01**: Every pending `doc224` todo names a live owner (a v5.28 requirement or a HORIZON
+- [x] **OWN-01**: Every pending `doc224` todo names a live owner (a v5.28 requirement or a HORIZON
       backlog row) or is closed with evidence, and the todo -> owner gate fails on a `doc224` todo
       with no owner. This includes the four high-priority todos outside this milestone's fixes: Azure
       Key Vault keys, the Semgrep `p/cryptography` 404, the CMVP-refresh error hints, and the Windows
@@ -182,4 +182,4 @@ Deferred from this milestone with an owner:
 | POLISH-02 | Phase 232 | Pending |
 | POLISH-03 | Phase 232 | Pending |
 | POLISH-04 | Phase 232 | Pending |
-| OWN-01 | Phase 227 | Pending |
+| OWN-01 | Phase 227 | Complete |

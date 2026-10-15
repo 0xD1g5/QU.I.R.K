@@ -4,13 +4,13 @@ milestone: v5.28
 milestone_name: Score & Finding Truth
 status: executing
 last_updated: "2026-10-15T23:00:00.000Z"
-last_activity: "2026-10-15 -- Phase 227 execution started (9 plans, 4 waves). STATE.md hand-edited (state.begin-phase corrupted it again: dropped last_activity + injected blank lines; restored from pre-image)"
+last_activity: "2026-10-15 -- Phase 227 complete (9/9 plans, verified passed 4/4 at efadfb56, CI green). STATE.md hand-edited from a pre-image; next /gsd-discuss-phase 228"
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 0
-  percent: 0
+  completed_plans: 9
+  percent: 13
 ---
 
 # Project State
@@ -1469,12 +1469,21 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 227 (Todo Ownership Gate) — EXECUTING
-Plan: 0 of 9 complete (4 waves: 01 | 02-07 | 08 | 09)
+Phase: 227 (Todo Ownership Gate) — COMPLETE 2026-10-15; next is Phase 228 (Cross-Surface Score Parity)
+Plan: 9 of 9 complete (verified passed 4/4 at efadfb56; CI green, Python CI 38793570017 + Dashboard Quality 38793574456)
 Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15; 23 requirements, roadmap approved. Phases
 continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
 correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
-Last activity: 2026-10-15. Phase 227 planned, 9 plans (hand-edited from a pre-image).
+Last activity: 2026-10-15. Phase 227 executed and closed (hand-edited from a pre-image; state.begin-phase
+corrupted STATE.md again at phase start and was restored, so no gsd-sdk state verb touched this close).
+
+Phase 227 carried items (operator accepted SC#4 as doc224-only on 2026-10-15): the POLISH-02/03/04 todos
+(`261015-install-hints-unquoted-and-guard-scope`, `261003-brand-identity-non-dashboard-residue`,
+`261014-readme-relative-links-dont-resolve-on-pypi`) take requirement owners when Phase 232 plans; two Phase 224
+todos without `doc224` in the filename (`261012-quirk-validate-rejects-its-own-intelligence-roadmap`,
+`261012-writer-schema-version-constant-is-dead`) stay outside the gate until the deferred all-todos follow-up.
+227-REVIEW WR-04 (requirement liveness reads the checkbox only) and IN-01..05 are open. The high Azure Key Vault
+todo's claim is unconfirmed (`_scan_keyvault_keys` constructs a `CryptoEndpoint`): 999.126 rates it LIKELY + spike.
 
 Standing obligation from Phase 227 (OWN-01): tests/test_backlog_reconciliation_gate.py::test_every_doc224_todo_has_a_live_owner goes red when a requirement that owns a doc224 todo is checked [x]. Phases 228-231 must therefore git mv the owned todo (XSURF-05..08, FIND-11..13, DETECT-01..05, QRAMM-20) to .planning/todos/completed/ with a Resolution section in the same change that checks the requirement. A milestone archive that replaces REQUIREMENTS.md turns still-pending requirement-owned todos UNRESOLVED, so re-home or close them first. HORIZON row 999.125 closes when Phase 230 closes.
 

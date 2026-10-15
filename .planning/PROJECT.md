@@ -34,6 +34,12 @@ rescales every ladder rung and must not share a phase with a tag (212 §8).
 
 ## Current State (updated 2026-10-15)
 
+**v5.28 Phase 227 (Todo Ownership Gate) complete 2026-10-15 — OWN-01 validated.** All 118 pending `doc224`
+todos name a live owner (13 v5.28 requirements; 105 open HORIZON rows: 999.119, 999.121 and new
+999.126-999.137), with zero closures from the live D-13 triage. `tests/test_backlog_reconciliation_gate.py`
+now fails on an ownerless, unquoted-`999.N`, closed-row or checked-requirement owner for any `*doc224*` todo.
+Next: Phase 228 (Cross-Surface Score Parity).
+
 **v5.27 Launch Readiness CLOSED and ARCHIVED 2026-10-15, and it SHIPPED as `v5.27.0`.** All 7
 phases complete (222–226, with 222.1 and 225.1 inserted), 75 plans, **20 of 20 requirements
 satisfied**. DOC-04 was accepted as scoped by operator override. `quirk-scanner` 5.27.0 is on PyPI
@@ -1828,7 +1834,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Brand palette B (Ink-violet accent on the current grounds), picked after viewing sketches rather than descriptions (2026-10-02) | Variant C, picked from a description, would have re-themed the grounds and reopened the 216–219 contrast ratchets | ✓ Good — no ratchet pair regressed; the lesson is to sketch before deciding on a visual |
 
 ---
-*Last updated: 2026-10-15 at the v5.28 Score & Finding Truth milestone open*
+*Last updated: 2026-10-15 after Phase 227 (Todo Ownership Gate)*
 
 ## Evolution
 
