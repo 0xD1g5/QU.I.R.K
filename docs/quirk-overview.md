@@ -113,7 +113,7 @@ The overall 0–100 score is computed over the subscores that had evidence to as
 
 ### Data at Rest and Data in Motion
 
-Connectors and scanners cover stored-data encryption (databases, S3 and Azure Blob object storage, Kubernetes, HashiCorp Vault) and in-transit TLS posture for email (SMTP, IMAP, POP3) and message brokers (Kafka, RabbitMQ, Redis); several of these need an optional extra (`[db]`, `[cloud]` or `[motion]`). Results from these surfaces feed the Data at Rest and Data in Motion subscores. Known issue: the default *standard* profile probes the seven mail ports on every TLS host, and a port that refuses the connection currently counts as missing STARTTLS or as plaintext, lowering Data in Motion even where no mail server runs.
+Connectors and scanners cover stored-data encryption (databases, S3 and Azure Blob object storage, Kubernetes, HashiCorp Vault) and in-transit TLS posture for email (SMTP, IMAP, POP3) and message brokers (Kafka, RabbitMQ, Redis); several of these need an optional extra (`[db]`, `[cloud]` or `[motion]`). Results from these surfaces feed the Data at Rest and Data in Motion subscores.
 
 ### Web Dashboard
 

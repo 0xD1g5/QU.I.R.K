@@ -25,8 +25,8 @@ The Quantum-Readiness Score is a single integer from 0 to 100. It summarizes you
 itself, not only the band: a scan with at least one open CRITICAL finding scores 34 or lower, which
 is `POOR`, and five or more score 25 or lower (see §3.6 for the ceilings). That holds for the
 headline score in the reports and on the dashboard's Executive page, scan history and Compare page.
-The trend timeline and the multi-sensor merge scores are computed without findings, so this
-ceiling never binds there (§3.6). On reports from before
+The same ceilings hold on the trend timeline, `/api/trends`, the multi-sensor merge and the
+per-segment scores (§3.6). On reports from before
 scoring v3 the same protection was a band-only floor, so an 89/100 score could read `FAIR` rather
 than `EXCELLENT` — see §19, "The Severity Floor," for both behaviours.
 
@@ -208,11 +208,12 @@ Executive Verdict and Export PDF carries a reason naming what capped it and disc
 figure — for example *"5 open CRITICAL findings — score limited to 20 (computed 81)"*. The trend
 timeline, scan history, Compare page and per-segment gauges show the number without a reason.
 
-**Not every dashboard score applies the finding ceilings.** The trend scores (`/api/trends` and
-`/api/trends/timeline`) and the multi-sensor merge scores (`/api/merge/latest`, including the
-per-segment gauges) are computed from the endpoints alone, without findings, so the CRITICAL and
-HIGH ceilings never bind there; only the no-hybrid cap at 84 does. In one test scan with a single
-expired certificate the headline score was 32 and the trend score 78.
+**Every dashboard score applies the finding ceilings.** The trend scores (`/api/trends` and
+`/api/trends/timeline`), the multi-sensor merge scores (`/api/merge/latest`, including the
+per-segment gauges), `quirk sensor merge`'s printed band and the Slack drift notification's band
+derive findings the same way the headline score does, so the CRITICAL and HIGH ceilings bind there
+too. Merge-run scores recorded before this release were computed without findings and are not
+recomputed. A history chart can therefore show a step at the release that introduced this.
 
 > **Client Conversation — Why the score dropped after an upgrade:**
 > "Your infrastructure didn't get worse and we didn't start grading harder for its own sake. The
@@ -390,12 +391,14 @@ days" actions (per-item badge only), the HTML and PDF reports, the DOCX report, 
 (per-item badge) and its Projected Score card (aggregate), and the print/export view.
 `tests/test_score_lift_cross_surface_numbers.py` checks that the CLI markdown, HTML, DOCX and
 dashboard roadmap numbers agree for one set of evidence scored with default weights. The
-dashboard can still show different numbers for the same scan in two cases. With
-`intelligence.calibration_overrides` set, the CLI, HTML/PDF and DOCX numbers apply
-them and the dashboard's roadmap numbers do not. And the dashboard derives some findings the
-scanner's report does not, for example a HIGH finding for an S/MIME certificate with an RSA-1024
-key. That can change the §3.6 ceiling, and with it the badges: in one test scan the report showed
-a score of 83 with no badges and the dashboard 68 with a `+15` badge.
+dashboard can still show different numbers for the same scan when
+`intelligence.calibration_overrides` is set: the CLI, HTML/PDF and DOCX numbers apply
+them and the dashboard's roadmap numbers do not. The dashboard now runs its TLS certificate checks
+only on TLS rows, as the report does, so certificate data on email, broker, code-signing, S/MIME,
+AD CS, Vault, cloud (AWS, Azure, GCP and Cloud SQL), JWT and OpenAPI rows no longer produces
+dashboard-only findings. Email, broker and code-signing rows are scored on both surfaces with the
+report's own findings. Two severity differences remain on shared titles (legacy TLS version and
+weak cipher suites, tracked under 999.132).
 
 **Precondition: the four-surface equality guarantee assumes unmodified templates (999.112).**
 The numeric-equality guarantee described above — the same badge and the same projected score on

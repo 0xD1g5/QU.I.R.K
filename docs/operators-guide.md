@@ -604,10 +604,10 @@ This agreement is regression-gated for a scan scored with the default calibratio
 the two pipelines can never diverge. If an operator observes the **headline score, a subscore, the
 CRITICAL count, or the certificate count** differing between a downloaded report and the
 dashboard's live view for the same scan, check first for the known causes of a score difference:
-the report contains an `"HTTP on TLS-designated port"` finding; the scan includes Kerberos, DNSSEC,
-S/MIME or AD CS rows, whose findings only the dashboard derives (the report pipeline evaluates SAML
-identity rows but not Kerberos or DNSSEC, and runs no certificate checks on S/MIME or AD CS rows); a
-certificate is within 30 days of expiry, which the dashboard rates HIGH and the report rates MEDIUM; the config sets
+the report contains an `"HTTP on TLS-designated port"` finding; the scan includes Kerberos or DNSSEC
+rows, whose findings only the dashboard derives (the report pipeline evaluates SAML identity rows
+but not Kerberos or DNSSEC); the scan has legacy-TLS or weak-cipher findings, which the dashboard
+rates HIGH where the report rates them lower or not at all (tracked under 999.132); the config sets
 `intelligence.calibration_overrides`, which the report applies and the dashboard does not; or the
 scan is an older one, because the dashboard's Executive view scores every scan, including an older
 one opened by scan id, with the profile recorded in the newest intelligence file in the output
@@ -3658,10 +3658,9 @@ If you still see `Report generation halted` on a current QU.I.R.K. version, that
 whose evidence was assembled without its findings list attached to the scoring call — verify you
 are running a version that includes Phase 184.4 (5.19.0 or later) and, if the error persists,
 capture the full evidence/findings payload for the scan and file it, since the report writers and
-the dashboard's scan views pass their findings to the scorer. Two surfaces show a band computed
-without findings: `quirk sensor merge` prints `Score: N (BAND)`, and the Slack drift notification's
-`Score Band:` header is mapped from the trend score. Both bands ignore open CRITICAL and HIGH
-findings (no severity floor and no consequence ceiling). Do not quote either.
+the dashboard's scan views pass their findings to the scorer. Since Phase 228,
+`quirk sensor merge`'s `Score: N (BAND)` and the Slack drift notification's `Score Band:` header
+apply the CRITICAL and HIGH consequence ceilings, like the headline score.
 
 ## 18. SPKI Fingerprint Capture and Key Reuse (Phase 191, SPKI-01/SPKI-02)
 
