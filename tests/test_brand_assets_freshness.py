@@ -15,6 +15,8 @@ Regenerate with:
     cp docs/brand/quirk-logo-dark.svg quirk/reports/assets/quirk-logo-dark.svg
     cp docs/brand/quirk-logo.svg src/dashboard/src/assets/brand/quirk-logo.svg
     cp docs/brand/quirk-favicon-dark.svg src/dashboard/public/favicon.svg
+    (the same build_brand_rasters run regenerates docs/brand/quirk-social-preview.png, the
+    GitHub social card: dark hero cropped to viewBox 0 50 1600 800, 1280x640)
     then: cd src/dashboard && npm run build (copies public/ into quirk/dashboard/static/)
 Do not hand-edit these files.
 
@@ -123,6 +125,32 @@ def test_report_logo_png_matches_fresh_render(tmp_path):
         assert (tmp_path / dst).read_bytes() == (REPO_ROOT / dst).read_bytes(), (
             f"{dst} is stale. Regenerate with: python -m scripts.build_brand_rasters"
         )
+
+
+def test_social_card_png_matches_fresh_render(tmp_path):
+    _require_renderer()
+    for src, dst, view_box, size in build_brand_rasters.CARD_TARGETS:
+        fresh = build_brand_rasters.render_card(REPO_ROOT / src, view_box, size)
+        committed = (REPO_ROOT / dst).read_bytes()
+        assert fresh == committed, (
+            f"{dst} is stale. Regenerate with: python -m scripts.build_brand_rasters"
+        )
+        assert struct.unpack(">II", committed[16:24]) == size
+        assert len(committed) < 1_048_576
+
+
+def test_social_card_render_includes_descriptor_text():
+    _require_renderer()
+    for src, _dst, view_box, size in build_brand_rasters.CARD_TARGETS:
+        svg = (REPO_ROOT / src).read_text(encoding="utf-8")
+        assert re.search(r"<text[\s\S]*?</text>", svg), "hero has no <text>; the test is vacuous"
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "stripped.svg"
+            p.write_text(re.sub(r"<text[\s\S]*?</text>", "", svg), encoding="utf-8")
+            without = build_brand_rasters.render_card(p, view_box, size)
+        assert build_brand_rasters.render_card(REPO_ROOT / src, view_box, size) != without
 
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"

@@ -19,6 +19,7 @@ is 600 dpi (above the 300 dpi floor).
 from __future__ import annotations
 
 import argparse
+import re
 import struct
 from pathlib import Path
 
@@ -34,6 +35,15 @@ TARGETS = [
 # (source svg, output ico, sizes). PNG-embedded ICO, stdlib struct only (Phase 223 D-10)
 ICO_TARGETS = [
     ("docs/brand/quirk-favicon-dark.svg", "src/dashboard/public/favicon.ico", (16, 32, 48)),
+]
+
+# Bundled font so resvg draws the hero descriptor <text> (skip_system_fonts drops it otherwise).
+FONT_FILES = [REPO_ROOT / "src/dashboard/public/fonts/JetBrainsMono[wght].ttf"]
+
+# (source svg, output png, viewBox crop, (width, height) px). GitHub social preview
+# card (Phase 226 D-12/D-20): dark hero cropped to 2:1, not padded or stretched.
+CARD_TARGETS = [
+    ("docs/brand/quirk-hero-dark.svg", "docs/brand/quirk-social-preview.png", "0 50 1600 800", (1280, 640)),
 ]
 
 
@@ -60,6 +70,22 @@ def render(src: Path, height: int) -> bytes:
     return bytes(resvg_py.svg_to_bytes(svg_path=str(src), height=height, skip_system_fonts=True))
 
 
+def render_card(src: Path, view_box: str, size: tuple[int, int]) -> bytes:
+    import resvg_py  # lazy: dev-only dependency
+
+    w, h = size
+    svg = Path(src).read_text(encoding="utf-8")
+    root = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{view_box}" width="{w}" height="{h}">'
+    svg = re.sub(r"<svg\b[^>]*>", lambda _m: root, svg, count=1)
+    return bytes(
+        resvg_py.svg_to_bytes(
+            svg_string=svg,
+            skip_system_fonts=True,
+            font_files=[str(p) for p in FONT_FILES],
+        )
+    )
+
+
 def render_all(out_root: Path = REPO_ROOT) -> list[Path]:
     written = []
     for src, dst, height in TARGETS:
@@ -71,6 +97,11 @@ def render_all(out_root: Path = REPO_ROOT) -> list[Path]:
         out = Path(out_root) / dst
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(pack_ico([(s, render(REPO_ROOT / src, s)) for s in sizes]))
+        written.append(out)
+    for src, dst, view_box, size in CARD_TARGETS:
+        out = Path(out_root) / dst
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(render_card(REPO_ROOT / src, view_box, size))
         written.append(out)
     return written
 
