@@ -117,7 +117,7 @@ PR #46) gates every other brand requirement, so it opens Phase 222.
 - [x] **Phase 224: Doc Claim Ledger & Verification** - Enumerate the user-facing doc set from the repo, extract every checkable claim, and verify each one by a method independent of the doc (completed 2026-10-13)
 - [x] **Phase 225: Doc Publication & Hero Retake** - Regenerate the master guide, sync the vault, and retake the README hero against the branded dashboard (completed 2026-10-14)
 - [x] **Phase 225.1: Pre-release security hardening** (INSERTED 2026-10-14) - Harden auth config loading, outbound URL validation, scan-consent coverage and error/log text before the v5.27.0 tag
-- [ ] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI
+- [x] **Phase 226: Release v5.27.0** - Bump to 5.27.0, compose the CHANGELOG section, tag, publish, and verify the install from PyPI (completed 2026-10-15)
 
 ### Phase Details
 
@@ -262,7 +262,7 @@ Plans:
 - [x] 225.1-16-PLAN.md — full suite, push, CITRUTH-03, PR, phase note
 
 ### Phase 226: Release v5.27.0
-**Goal**: A public user can install QU.I.R.K. 5.27.0 from PyPI and get the branded, doc-reviewed product, including the untagged v5.26 accessibility work, and the operator's launch gate is recorded as open.
+**Goal**: A public user can install QU.I.R.K. 5.27.0 from PyPI and get the branded, doc-reviewed product, including the untagged v5.26 accessibility work, and the operator's launch gate is recorded as satisfied.
 **Depends on**: Phase 225 (the tag must contain the reviewed docs and the new identity) and Phase 225.1 (the tag must contain the pre-release security hardening)
 **Requirements**: REL-05, REL-06, REL-07
 **Success Criteria** (what must be TRUE):
@@ -270,7 +270,7 @@ Plans:
   2. `CHANGELOG.md` has a `## [5.27.0]` section that moves the v5.26 and v5.27 entries out of `[Unreleased]`.
   3. Tag `v5.27.0` is pushed, and the `release.yml` run publishes to PyPI and GitHub Releases. The GitHub release body is composed from the `[5.27.0]` CHANGELOG section, not boilerplate.
   4. A clean venv that installs from PyPI reports `quirk --version` = 5.27.0, and the PyPI project page renders the README brand logo.
-  5. The launch gate is recorded as closed in `.planning/HORIZON.md` and `.planning/STATE.md`.
+  5. The launch gate is recorded as satisfied in `.planning/HORIZON.md` and `.planning/STATE.md`.
 **Plans**: 17 plans
 
 Plans:
@@ -302,7 +302,7 @@ Plans:
 | 224. Doc Claim Ledger & Verification | 18/18 | Complete (verified passed 5/5 at 38df9001 with 1 operator override, goal clause NOT MET AS WRITTEN: deep-doc residual 4.0% disclosed, HORIZON 999.123; CI green, Python CI 38457496020 + Dashboard Quality 38457500158; PR #56 merged at a8875830, gap-closure PR follows) | 2026-10-13 |
 | 225. Doc Publication & Hero Retake | 5/5 | Complete (verified passed 35/35 at 9fe5d31e; code review 2 Critical + 6 Warning fixed in-phase; CI green, Python CI 38509803397 + Dashboard Quality 38509803494; PR #58) | 2026-10-14 |
 | 225.1. Pre-release security hardening (INSERTED) | 16/16 | Complete (verified passed 6/6 at d489ad2f with operator sign-off on 3 review-fix behaviours + 1 visual check; code review 1 Critical + 10 Warning fixed in-phase; CI green, Python CI 38621425272 + Dashboard Quality 38621425671; PR #59) | 2026-10-14 |
-| 226. Release v5.27.0 | 17/17 | Executed — awaiting verification | - |
+| 226. Release v5.27.0 | 17/17 | Complete (verified passed 9/9 at 16f458c0; v5.27.0 tagged on 265ea2e8 and published to PyPI + GitHub Releases; 6 advisories published; CI green, Python CI 38750019861 + Dashboard Quality 38750090305; code review 0 Critical + 3 Warning filed as todo 261015) | 2026-10-15 |
 
 ## Previous Milestone: v5.26 Accessibility & Instrument Truth — development complete 2026-10-02 (untagged)
 

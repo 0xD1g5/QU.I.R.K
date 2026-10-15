@@ -122,7 +122,7 @@ Checked against live source at the milestone boundary (2026-10-02), not against 
       with the release body composed from the CHANGELOG section rather than boilerplate.
 - [x] **REL-07**: After publishing, a clean venv installed from PyPI reports `quirk --version` =
       5.27.0, and the PyPI project page renders the README logo. The launch gate is recorded as
-      closed in HORIZON.md and STATE.md.
+      satisfied in HORIZON.md and STATE.md.
 
 ### Pre-release security hardening (SECH)
 
