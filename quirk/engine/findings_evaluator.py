@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Tuple
 
 from quirk.compliance import COMPLIANCE_MAP, normalize_finding_title
@@ -276,6 +277,21 @@ def _error_category(desc: str) -> str:
     if ":" in desc:
         return desc.split(":", 1)[0].strip()
     return desc.strip()
+
+
+def runs_tls_certificate_checks(ep: Any) -> bool:
+    """True when ``ep`` is a row that gets TLS/certificate checks (Phase 228 D-05).
+
+    Exact-case ``== "TLS"`` on purpose: a case-variant protocol from a sensor
+    import must not widen the checks, and the report stays byte-identical.
+    Both pipelines must call this, never an inline ``== "TLS"`` copy.
+    """
+    return getattr(ep, "protocol", None) == "TLS"
+
+
+EMAIL_PROTOCOLS = frozenset({
+    "SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS", "POP3-STARTTLS", "POP3S",
+})
 
 
 def _has_legacy_tls_versions(ep: Any) -> bool:
@@ -574,7 +590,7 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 recommendation="Migrate management/application endpoints to HTTPS/TLS where feasible.",
             ))
 
-        if proto == "TLS":
+        if runs_tls_certificate_checks(e):
             if _has_legacy_tls_versions(e):
                 findings.append(_build_finding(
                     severity="LOW",
@@ -1294,3 +1310,35 @@ def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
                 ))
 
     return findings
+
+
+def evaluate_protocol_service_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Run the email, broker and code-signing evaluators with their partition.
+
+    The email and code-signing evaluators do not self-filter by protocol; the
+    broker evaluator does. This partition is shared by the report composer and
+    the dashboard (Phase 228 D-20).
+    """
+    eps = list(endpoints)
+    return (
+        evaluate_email_endpoints([e for e in eps if getattr(e, "protocol", "") in EMAIL_PROTOCOLS])
+        + evaluate_broker_endpoints(eps)
+        + evaluate_codesign_endpoints([e for e in eps if getattr(e, "protocol", "") == "CODE_SIGNING"])
+    )
+
+
+def derive_report_findings(endpoints, cfg=None) -> List[Dict[str, Any]]:
+    """The report headline finding composition (Phase 228 D-25).
+
+    Default deriver for the merge and notify paths (D-09). Limitation: with
+    ``cfg=None`` only WELL_KNOWN_TLS_PORTS are designated TLS ports (same class
+    as backlog 999.131).
+    """
+    eps = list(endpoints)
+    if cfg is None:
+        cfg = SimpleNamespace(scan=SimpleNamespace(tls_designated_ports=[]))
+    return (
+        evaluate_endpoints(cfg, eps)
+        + evaluate_protocol_service_endpoints(eps)
+        + evaluate_identity_endpoints(eps)
+    )
