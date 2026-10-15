@@ -6,6 +6,7 @@ priority: low
 area: quirk/errors.py (DASHBOARD-001), docs/error-codes.md (generated)
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # QRK-DASHBOARD-001 tells operators to send a header that does not exist

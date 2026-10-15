@@ -6,6 +6,7 @@ priority: medium
 area: quirk/compliance/__init__.py (COMPLIANCE_MAP / UNMAPPED_TITLES), tests/test_compliance_title_join.py
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # The compliance title-join gate is xfailed, and the orphan set has grown from 3 to 7

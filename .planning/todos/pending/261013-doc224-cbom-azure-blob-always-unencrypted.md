@@ -6,6 +6,7 @@ priority: medium
 area: quirk/cbom/builder.py (S3 / AZURE_BLOB branch), quirk/scanner/azure_connector.py (_scan_blob_encryption)
 status: pending
 resolves_phase: null
+owner: "999.126"
 ---
 
 # The CBOM marks every Azure Blob container "unencrypted" and never records AES-256 for it

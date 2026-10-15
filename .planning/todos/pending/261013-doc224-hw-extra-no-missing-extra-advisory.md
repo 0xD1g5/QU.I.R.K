@@ -6,6 +6,7 @@ priority: low
 area: quirk/util/optional_extra.py, quirk/scanner/snmp_scanner.py
 status: pending
 resolves_phase: null
+owner: "999.127"
 ---
 
 # `enable_snmp` without `[hw]` gives no `missing_extra` advisory

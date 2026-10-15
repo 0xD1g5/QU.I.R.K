@@ -6,6 +6,7 @@ priority: low
 area: quirk/scanner/gcp_connector.py, quirk/scanner/vault_connector.py, quirk/scanner/db_connector.py
 status: pending
 resolves_phase: null
+owner: "999.126"
 ---
 
 # Three connector docstrings/comments state permissions or defaults the code or the provider contradict

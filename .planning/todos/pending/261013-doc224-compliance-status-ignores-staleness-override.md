@@ -6,6 +6,7 @@ priority: low
 area: quirk/compliance/__init__.py (status_report / check_compliance_staleness)
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # `quirk compliance status` ignores `QUIRK_CI_STALENESS_OVERRIDE_DATE`

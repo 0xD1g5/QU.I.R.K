@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/components/ConnectorsPanel.tsx
 status: pending
 resolves_phase: null
+owner: "999.126"
 ---
 
 # The Connectors panel's "Azure Key Vault URLs" placeholder is not an Azure Key Vault URL

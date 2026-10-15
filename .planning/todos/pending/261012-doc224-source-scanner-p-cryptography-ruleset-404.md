@@ -6,6 +6,7 @@ priority: high
 area: quirk/scanner/source_scanner.py, README.md, docs/chaos-lab.md, quantum-chaos-enterprise-lab/expected_results_v3.md, quantum-chaos-enterprise-lab/expected_results_v4.md
 status: pending
 resolves_phase: null
+owner: "999.127"
 ---
 
 # The source scanner's `p/cryptography` Semgrep ruleset does not resolve at the registry

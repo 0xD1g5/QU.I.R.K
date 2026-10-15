@@ -6,6 +6,7 @@ priority: low
 area: run_scan.py (scan phase recorder), quirk/models.py SCAN_PHASE_SKIP_REASONS
 status: pending
 resolves_phase: null
+owner: "999.127"
 ---
 
 # `missing-credentials` is only ever recorded for the Vault token
