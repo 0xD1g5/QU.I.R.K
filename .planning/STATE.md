@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.28
 milestone_name: Score & Finding Truth
-status: planning
-last_updated: "2026-10-15T22:00:00.000Z"
-last_activity: "2026-10-15 -- Phase 227 context gathered (19 decisions D-01..D-19, recommend-and-lock); next /gsd-plan-phase 227. STATE.md hand-edited"
+status: executing
+last_updated: "2026-10-15T23:00:00.000Z"
+last_activity: "2026-10-15 -- Phase 227 planned (9 plans, 4 waves, checker passed iteration 2); next /gsd-execute-phase 227. STATE.md hand-edited (state.planned-phase corrupted it again; restored from pre-image)"
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 9
   completed_plans: 0
   percent: 0
 ---
@@ -1469,12 +1469,12 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 227 (Todo Ownership Gate) — not started; roadmap approved (8 phases, 227-234)
-Plan: —
+Phase: 227 (Todo Ownership Gate) — planned, ready to execute
+Plan: 0 of 9 (4 waves: 01 | 02-07 | 08 | 09)
 Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15; 23 requirements, roadmap approved. Phases
 continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
 correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
-Last activity: 2026-10-15. Milestone v5.28 started (hand-edited from a pre-image).
+Last activity: 2026-10-15. Phase 227 planned, 9 plans (hand-edited from a pre-image).
 
 **Prior position (v5.27 close, superseded 2026-10-15):**
 Phase: — (milestone v5.27 closed 2026-10-15; no phase open)
