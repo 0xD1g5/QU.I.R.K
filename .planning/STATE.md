@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.28
 milestone_name: Score & Finding Truth
 status: planning
-last_updated: "2026-10-15T21:00:00.000Z"
-last_activity: "2026-10-15 -- v5.28 roadmap approved: 8 phases (227-234), 23 requirements mapped; next /gsd-discuss-phase 227. STATE.md hand-edited from a pre-image"
+last_updated: "2026-10-15T22:00:00.000Z"
+last_activity: "2026-10-15 -- Phase 227 context gathered (19 decisions D-01..D-19, recommend-and-lock); next /gsd-plan-phase 227. STATE.md hand-edited"
 progress:
   total_phases: 8
   completed_phases: 0
@@ -3470,8 +3470,9 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: none. v5.27 is closed (2026-10-15), and its phase directories are now under
-`.planning/milestones/v5.27-phases/`. Start the next cycle with `/gsd-new-milestone`.
+Resume file: `.planning/phases/227-todo-ownership-gate/227-CONTEXT.md` (Phase 227 context gathered
+2026-10-15; next `/gsd-plan-phase 227`). v5.27's phase directories are under
+`.planning/milestones/v5.27-phases/`.
 
 Last session: 2026-10-15. **Merged #61, confirmed `main` CI, then closed v5.27 by hand.** The close
 re-derived every count from disk instead of reading it. The audit carried two open debug sessions,
