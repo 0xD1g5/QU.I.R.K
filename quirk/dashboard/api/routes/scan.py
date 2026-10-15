@@ -69,7 +69,7 @@ from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import _count_by_bucket
-from quirk.engine.findings_evaluator import evaluate_identity_endpoints
+from quirk.engine.findings_evaluator import evaluate_identity_endpoints, evaluate_protocol_service_endpoints
 from quirk.util.safe_exc import safe_str
 
 logger = logging.getLogger(__name__)
@@ -397,6 +397,50 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     _severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
     findings.sort(key=lambda f: _severity_order.get(f.severity, 99))
     return findings
+
+
+def derive_dashboard_finding_items(endpoints) -> list[FindingItem]:
+    """The ONE finding recipe behind every dashboard score (Phase 228 D-08).
+
+    Order: dashboard TLS findings, identity findings (D-23: /compare gets them
+    too), then the report's email/broker/code-signing findings (D-20: the report
+    evaluators are adopted, not new detection; same adapter shape as the Phase 210
+    SAML precedent, with the report's ``recommendation`` key mapped to
+    ``remediation``). Router-free: no FastAPI or DB use.
+    """
+    eps = list(endpoints)
+    findings = _derive_findings(eps)
+    for idf in _derive_identity_findings(eps):
+        findings.append(FindingItem(
+            host=idf.host,
+            port=idf.port,
+            severity=idf.severity,
+            title=idf.title,
+            protocol=idf.protocol,
+            description=idf.description,
+            remediation=idf.remediation,
+            quantum_risk=idf.quantum_risk,
+            source=idf.source,
+        ))
+    for d in evaluate_protocol_service_endpoints(eps):
+        findings.append(FindingItem(
+            host=d["host"],
+            port=d["port"],
+            severity=d["severity"],
+            title=d["title"],
+            protocol=d.get("protocol"),
+            description=d.get("description"),
+            remediation=d.get("recommendation"),
+            quantum_risk=d.get("quantum_risk"),
+            source=d.get("source"),
+        ))
+    return findings
+
+
+def derive_dashboard_scoring_findings(endpoints) -> list[dict]:
+    """``derive_dashboard_finding_items`` as plain dicts (the ``findings_deriver``
+    callable for trends/merge, Phase 228 D-08)."""
+    return [f.model_dump() for f in derive_dashboard_finding_items(endpoints)]
 
 
 def finding_by_id_and_title(
@@ -1332,20 +1376,7 @@ def lift_context_for_scan(db: Session, scan_run_id: Optional[str]) -> dict[str, 
         if not endpoints:
             return {}
 
-        findings = _derive_findings(endpoints)
-        identity_findings = _derive_identity_findings(endpoints)
-        for idf in identity_findings:
-            findings.append(FindingItem(
-                host=idf.host,
-                port=idf.port,
-                severity=idf.severity,
-                title=idf.title,
-                protocol=idf.protocol,
-                description=idf.description,
-                remediation=idf.remediation,
-                quantum_risk=idf.quantum_risk,
-                source=idf.source,
-            ))
+        findings = derive_dashboard_finding_items(endpoints)
 
         try:
             evidence = build_evidence_summary(endpoints, [f.model_dump() for f in findings])
@@ -1578,26 +1609,8 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         rating = ""
         rating_cap_reason = None
         if eps:
-            # D-07 (184.4): derive findings (including identity/IDENT-02/IDENT-04)
-            # the same way the correct sibling at :1571-1593 does, so this
-            # dashboard-history score sees the same CRITICAL severities the
-            # report would — excluding identity here would under-count
-            # CRITICALs on KERBEROS/SAML/DNSSEC endpoints and reproduce a
-            # second, narrower BACK-89 divergence.
-            session_findings = _derive_findings(eps)
-            session_identity_findings = _derive_identity_findings(eps)
-            for idf in session_identity_findings:
-                session_findings.append(FindingItem(
-                    host=idf.host,
-                    port=idf.port,
-                    severity=idf.severity,
-                    title=idf.title,
-                    protocol=idf.protocol,
-                    description=idf.description,
-                    remediation=idf.remediation,
-                    quantum_risk=idf.quantum_risk,
-                    source=idf.source,
-                ))
+            # Phase 228 D-08: one recipe for every dashboard score (184.4 D-07 lineage).
+            session_findings = derive_dashboard_finding_items(eps)
             evidence = build_evidence_summary(
                 eps, [f.model_dump() for f in session_findings]
             )
@@ -1841,24 +1854,11 @@ def get_latest_scan(
         raise HTTPException(status_code=404, detail=format_error("DASHBOARD-006"))
 
     # Derive findings first — needed by evidence summary
-    findings = _derive_findings(endpoints)
+    # Phase 228 D-08: one recipe (dashboard + identity + report service findings).
+    findings = derive_dashboard_finding_items(endpoints)
 
-    # Derive identity findings (IDENT-02 + IDENT-04)
+    # Identity findings stay separate for the identity tab (IDENT-02 + IDENT-04)
     identity_findings = _derive_identity_findings(endpoints)
-
-    # Per D-07: append identity findings as FindingItem to main findings list
-    for idf in identity_findings:
-        findings.append(FindingItem(
-            host=idf.host,
-            port=idf.port,
-            severity=idf.severity,
-            title=idf.title,
-            protocol=idf.protocol,
-            description=idf.description,
-            remediation=idf.remediation,
-            quantum_risk=idf.quantum_risk,
-            source=idf.source,
-        ))
 
     # Build evidence summary for intelligence functions
     try:
@@ -2121,10 +2121,9 @@ def compare_scans(
     # 184.4-07 (D-07): derive findings PER SIDE so each side's band reflects its
     # own severity — a shared or swapped findings list here would make the
     # comparison lie in a way a mere non-None check would not catch.
-    findings_a = _derive_findings(eps_a)
-    findings_b = _derive_findings(eps_b)
-    evidence_a = build_evidence_summary(eps_a, [f.model_dump() for f in findings_a])
-    evidence_b = build_evidence_summary(eps_b, [f.model_dump() for f in findings_b])
+    # Phase 228 D-23: /compare now includes identity + service findings too.
+    evidence_a = build_evidence_summary(eps_a, derive_dashboard_scoring_findings(eps_a))
+    evidence_b = build_evidence_summary(eps_b, derive_dashboard_scoring_findings(eps_b))
     sd_a = compute_readiness_score(evidence_a)
     sd_b = compute_readiness_score(evidence_b)
     # Phase 188 SCORE-06 / 188-04 Task 1 (RQ-3): sd_a["score"]/subscores may be
