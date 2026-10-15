@@ -94,7 +94,7 @@ def run_ticket(argv: list[str]) -> None:
     # ISEC-04: advisory + graceful skip if [tickets] not installed
     if not is_extra_available("tickets"):
         print(
-            "ERROR: Ticketing skipped — run `pip install quirk[tickets]` to enable.",
+            "ERROR: Ticketing skipped — run `pip install 'quirk-scanner[tickets]'` to enable.",
             file=sys.stderr,
         )
         sys.exit(2)

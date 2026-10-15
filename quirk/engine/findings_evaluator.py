@@ -474,7 +474,7 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 ),
                 recommendation=(
                     scan_err_msg or
-                    "Install the missing optional extra (pip install 'quirk[<extra>]') "
+                    "Install the missing optional extra (pip install 'quirk-scanner[<extra>]') "
                     "and re-run the scan to obtain coverage for this protocol."
                 ),
             )

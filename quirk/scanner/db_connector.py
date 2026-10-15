@@ -4,7 +4,7 @@ Detects:
 - PostgreSQL: server SSL enforcement via pg_stat_ssl and pg_has_role privilege check
 - MySQL/MariaDB: SSL session status via Ssl_cipher variable
 
-Optional deps: psycopg2-binary (pip install quirk[db]), PyMySQL (pip install quirk[db])
+Optional deps: psycopg2-binary (pip install 'quirk-scanner[db]'), PyMySQL (pip install 'quirk-scanner[db]')
 Module-level None assignments ensure test patching via unittest.mock.patch works correctly.
 """
 from __future__ import annotations

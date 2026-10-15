@@ -35,7 +35,7 @@ const FIXTURE = {
       category: "Database",
       available: false,
       reason: "optional extra 'db' is not installed",
-      install_hint: "pip install quirk[db]",
+      install_hint: "pip install 'quirk-scanner[db]'",
     },
     { flag: "enable_email", label: "Email / SMTP", category: "Email & Broker", available: true, reason: "", install_hint: "" },
     { flag: "enable_snmp", label: "SNMP Hardware Fingerprinting", category: "OT/ICS", available: true, reason: "", install_hint: "" },
@@ -105,7 +105,7 @@ describe("ConnectorsPanel", () => {
     const dbSwitch = screen.getByRole("switch", { name: "Database TLS (PostgreSQL/MySQL)" })
     expect(dbSwitch).toBeDisabled()
     expect(screen.getByText(/optional extra 'db' is not installed/)).toBeInTheDocument()
-    expect(screen.getByText(/pip install quirk\[db\]/)).toBeInTheDocument()
+    expect(screen.getByText(/pip install 'quirk-scanner\[db\]'/)).toBeInTheDocument()
   })
 
   it("shows a masked, not-saved credential input when a credentialed connector is turned ON, and removes it when turned OFF", async () => {

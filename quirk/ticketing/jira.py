@@ -55,7 +55,7 @@ class JiraChannel(TicketingChannel):
             from jira import JIRA  # noqa: PLC0415
         except ImportError as exc:
             raise ImportError(
-                "Jira ticketing skipped — run `pip install quirk[tickets]` to enable"
+                "Jira ticketing skipped — run `pip install 'quirk-scanner[tickets]'` to enable"
             ) from exc
 
         # SSRF guard at construction time, before any connection (ISEC-01).

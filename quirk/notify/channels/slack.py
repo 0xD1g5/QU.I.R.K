@@ -37,7 +37,7 @@ def send_slack(cfg, summary) -> None:
     if find_spec("slack_sdk") is None:
         logger.warning(
             "Slack notification skipped — slack_sdk not installed; "
-            "run `pip install quirk[notify]` to enable"
+            "run `pip install 'quirk-scanner[notify]'` to enable"
         )
         return
 

@@ -35,7 +35,7 @@ def test_missing_extra_advisory(capsys: pytest.CaptureFixture) -> None:
         assert exc_info.value.code == 2
 
     captured = capsys.readouterr()
-    assert "pip install quirk[tickets]" in captured.err
+    assert "pip install 'quirk-scanner[tickets]'" in captured.err
 
 
 # ---------------------------------------------------------------------------

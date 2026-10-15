@@ -84,7 +84,7 @@ def test_graceful_skip_missing_slack_sdk(monkeypatch, caplog):
         from quirk.notify.channels.slack import send_slack
         send_slack(cfg=_make_cfg(), summary=object())
 
-    assert "pip install quirk[notify]" in caplog.text
+    assert "pip install 'quirk-scanner[notify]'" in caplog.text
 
 
 # ---------------------------------------------------------------------------

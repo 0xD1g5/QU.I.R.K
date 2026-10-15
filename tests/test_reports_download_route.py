@@ -162,7 +162,7 @@ def test_manifest_docx_missing_extra_reason(tmp_path, monkeypatch):
     assert data["formats"]["docx"]["available"] is False
     assert (
         data["formats"]["docx"]["reason"]
-        == "DOCX requires the optional extra: pip install quirk[docx]"
+        == "DOCX requires the optional extra: pip install 'quirk-scanner[docx]'"
     )
 
 
