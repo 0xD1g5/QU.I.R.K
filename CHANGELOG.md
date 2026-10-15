@@ -73,12 +73,12 @@ hosts unless `--allow-insecure-console` is given, so re-enroll existing sensors 
 
 ### Security
 
-- Hardened the cloud-metadata address block in outbound URL validation, which now also applies to IPv4 addresses carried in IPv6 forms.
-- Hardened OpenAPI spec URL fetching: each redirect hop is re-validated against the scope and URL checks, and the REST fuzzer and the RabbitMQ management probe do not follow redirects.
-- Hardened OpenAPI spec fetch error text, which is now allow-listed.
-- Hardened credential-reference error text, which now names only the scheme and kind.
-- Hardened dashboard operator-auth configuration loading, so a config that cannot be read no longer leaves the dashboard unprotected.
-- Hardened the sensor enrollment console URL scheme policy: non-loopback consoles require `https://` unless `--allow-insecure-console` is given.
+- Hardened the cloud-metadata address block in outbound URL validation, which now also applies to IPv4 addresses carried in IPv6 forms. ([GHSA-76c3-3ffh-h7f5](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-76c3-3ffh-h7f5))
+- Hardened OpenAPI spec URL fetching: each redirect hop is re-validated against the scope and URL checks, and the REST fuzzer and the RabbitMQ management probe do not follow redirects. ([GHSA-fjhj-g6jr-64vf](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-fjhj-g6jr-64vf))
+- Hardened OpenAPI spec fetch error text, which is now allow-listed. ([GHSA-34m5-7cjv-2c7w](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-34m5-7cjv-2c7w))
+- Hardened credential-reference error text, which now names only the scheme and kind. ([GHSA-m9xr-qvjm-7rwg](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-m9xr-qvjm-7rwg))
+- Hardened dashboard operator-auth configuration loading, so a config that cannot be read no longer leaves the dashboard unprotected. ([GHSA-73cp-88p4-cqfw](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-73cp-88p4-cqfw))
+- Hardened the sensor enrollment console URL scheme policy: non-loopback consoles require `https://` unless `--allow-insecure-console` is given. ([GHSA-h98h-cpwc-2fr9](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-h98h-cpwc-2fr9))
 
 ### Documentation
 

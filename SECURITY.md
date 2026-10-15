@@ -98,9 +98,10 @@ above.
 
 ## Supported Versions
 
-The latest minor release line receives security fixes. The previous minor
-release line receives security-only fixes for 6 months after the next minor
-ships. Older lines do not receive fixes.
+Security fixes ship in the latest minor release line. They are not
+backported: the 5.25.x line received no patch for the issues fixed in 5.27.0.
+To receive security fixes, upgrade to the latest release. When a fix is not
+backported, the published advisory names the release to upgrade to.
 
 For the canonical version policy (semver commitments, EOL cadence, bump
 triggers) see [`docs/release-process.md`](docs/release-process.md).
