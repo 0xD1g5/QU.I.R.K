@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py, quirk/intelligence/evidence.py, quirk/intelligence/scoring.py
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # An "OpenSSL too old" advisory counts as a detected PQC-hybrid endpoint and lifts the "no PQC, no 100" ceiling

@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (run_check_in), quirk/scanner/hardware_scanner.py (check_in_fingerprint_devices)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # `--check-in` re-probe rows never pass through `assign_tier()` and are stored as `Tier N/A`

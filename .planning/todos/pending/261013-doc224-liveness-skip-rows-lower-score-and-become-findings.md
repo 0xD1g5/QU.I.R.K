@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/evidence.py (scan_error_count / rate), quirk/engine/findings_evaluator.py (generic scan_err branch)
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # Liveness pre-pass rows lower the readiness score and become INFO findings

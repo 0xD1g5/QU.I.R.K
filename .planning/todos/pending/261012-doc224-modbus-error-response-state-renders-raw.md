@@ -6,6 +6,7 @@ priority: low
 area: quirk/scanner/modbus_scanner.py, quirk/reports/html_renderer.py, quirk/reports/docx_renderer.py, src/dashboard/src/pages/hardware-badge-labels.ts
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # A Modbus device that answers with an error response renders as the raw string `aborted_error_response`

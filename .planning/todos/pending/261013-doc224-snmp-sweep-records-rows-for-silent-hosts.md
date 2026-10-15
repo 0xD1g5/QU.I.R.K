@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (bulk SNMP sweep result persistence), quirk/scanner/snmp_scanner.py (scan_snmp_targets)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # The SNMP sweep stores a "success" Unknown device row for hosts that never answered SNMP

@@ -6,6 +6,7 @@ priority: medium
 area: quirk/reports/html_renderer.py (render_hardware_section, render_pdf_report)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # PDF report prints the Hardware PQC Advisory section collapsed: heading only, no device table or caveats

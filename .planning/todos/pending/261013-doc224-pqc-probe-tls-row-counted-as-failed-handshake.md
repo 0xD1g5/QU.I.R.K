@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (PQC probe row), quirk/dashboard/api/routes/scan.py (excluded_cert_count)
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # PQC probe's extra TLS row is counted as a failed handshake and as an unfingerprinted key-reuse endpoint

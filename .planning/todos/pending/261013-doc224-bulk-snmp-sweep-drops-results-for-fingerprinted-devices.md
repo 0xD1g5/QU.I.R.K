@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (bulk SNMP sweep result application)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # Bulk SNMP sweep probes identified devices but discards the answer, so the SNMP column shows an em-dash

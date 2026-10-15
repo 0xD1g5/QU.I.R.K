@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/email_scanner.py (stdlib fallback), quirk/intelligence/evidence.py (coverage D-04), quirk/engine/findings_evaluator.py
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # An SMTP host that does not offer STARTTLS is recorded as a scan error, not as an assessed endpoint

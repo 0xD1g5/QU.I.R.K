@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (bulk SNMP sweep, SNMP-only HardwareDevice creation)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # Devices found only by the bulk SNMP sweep are stored as `Tier N/A` without `assign_tier()`

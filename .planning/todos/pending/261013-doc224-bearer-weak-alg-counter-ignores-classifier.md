@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/evidence.py (bearer_token_weak_alg_count)
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # Bearer-token "weak algorithm" counter counts every declared alg, including quantum-safe ML-DSA

@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/roadmap.py, quirk/intelligence/score_lift.py, quirk/intelligence/scoring.py
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # The legacy-TLS roadmap trigger and its score lift still key on LOW-severity counts, which scoring no longer reads

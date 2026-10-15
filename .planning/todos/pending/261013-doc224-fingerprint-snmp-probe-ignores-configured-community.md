@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/hardware_scanner.py (fingerprint Step 3)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # Hardware fingerprint SNMP probe always uses community "public", ignoring snmp_community / QUIRK_SNMP_COMMUNITY

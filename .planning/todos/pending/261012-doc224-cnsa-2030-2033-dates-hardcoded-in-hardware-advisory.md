@@ -6,6 +6,7 @@ priority: medium
 area: quirk/reports/html_renderer.py, quirk/dashboard/api/routes/scan.py, quirk/scanner/hardware_tier.py, quirk/reports/docx_renderer.py
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # Report and API code present "CNSA 2.0 deadline" years that no primary source in the repo supports
