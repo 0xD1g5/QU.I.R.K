@@ -6,6 +6,7 @@ priority: high
 area: quirk/intelligence/evidence.py (motion_email_* counters), quirk/scanner/email_scanner.py, quirk/engine/profiles.py
 status: pending
 resolves_phase: 228
+owner: XSURF-08
 ---
 
 # Closed mail ports lower the Data in Motion subscore on every default scan

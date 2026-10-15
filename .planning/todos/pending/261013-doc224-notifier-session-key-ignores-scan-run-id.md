@@ -6,6 +6,7 @@ priority: high
 area: quirk/notify/dispatcher.py (_find_two_sessions)
 status: pending
 resolves_phase: 229
+owner: FIND-12
 ---
 
 # Drift notifications compare a scan with itself

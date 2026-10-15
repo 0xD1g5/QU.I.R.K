@@ -6,6 +6,7 @@ priority: high
 area: quirk/scanner/codesign_scanner.py (scan_codesign_from_tls_endpoints), quirk/scanner/tls_scanner.py (tls_capabilities_json), tests/test_codesign_*.py
 status: pending
 resolves_phase: 230
+owner: DETECT-01
 ---
 
 # The code-signing TLS-EKU source never fires in a real scan; fixture-injected tests hide it

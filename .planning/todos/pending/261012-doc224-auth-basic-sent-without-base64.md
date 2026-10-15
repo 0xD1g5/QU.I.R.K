@@ -6,6 +6,7 @@ priority: medium
 area: quirk/auth/credentials.py
 status: pending
 resolves_phase: 230
+owner: DETECT-04
 ---
 
 # `--auth-basic` sends the resolved secret verbatim as `Authorization: Basic <secret>` (no base64)

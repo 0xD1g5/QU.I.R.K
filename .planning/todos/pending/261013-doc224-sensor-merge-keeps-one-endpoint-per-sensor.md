@@ -6,6 +6,7 @@ priority: high
 area: quirk/merge/scan.py (_assemble_union), quirk/dashboard/api/routes/merge.py (/api/merge/latest per-segment gauges)
 status: pending
 resolves_phase: 229
+owner: FIND-13
 ---
 
 # `sensor merge` keeps exactly one endpoint row per sensor, not the sensor's latest push

@@ -6,6 +6,7 @@ priority: high
 area: quirk/scanner/jwt_scanner.py
 status: pending
 resolves_phase: 230
+owner: DETECT-03
 ---
 
 # `--auth-*` credentials never reach the JWKS target

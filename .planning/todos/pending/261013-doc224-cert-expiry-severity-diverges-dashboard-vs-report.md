@@ -6,6 +6,7 @@ priority: high
 area: quirk/dashboard/api/routes/scan.py (findings_for_endpoint), quirk/engine/findings_evaluator.py
 status: pending
 resolves_phase: 228
+owner: XSURF-05
 ---
 
 # A certificate expiring within 30 days is HIGH on the dashboard and MEDIUM in the report

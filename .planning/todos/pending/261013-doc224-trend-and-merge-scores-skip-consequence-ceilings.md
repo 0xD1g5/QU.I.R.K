@@ -6,6 +6,7 @@ priority: high
 area: quirk/dashboard/api/routes/trends.py, quirk/intelligence/trends.py, quirk/dashboard/api/routes/merge.py, quirk/merge/scan.py
 status: pending
 resolves_phase: 228
+owner: XSURF-07
 ---
 
 # Trend timeline and multi-sensor merge scores ignore the CRITICAL/HIGH consequence ceilings

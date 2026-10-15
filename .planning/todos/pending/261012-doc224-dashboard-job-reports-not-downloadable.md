@@ -6,6 +6,7 @@ priority: medium
 area: quirk/dashboard/api/routes/reports.py, quirk/dashboard/api/routes/jobs.py, src/dashboard/src/pages/executive.tsx
 status: pending
 resolves_phase: null
+owner: "999.121"
 ---
 
 # GUI-first: report downloads on the home page cannot see reports from dashboard-started scans

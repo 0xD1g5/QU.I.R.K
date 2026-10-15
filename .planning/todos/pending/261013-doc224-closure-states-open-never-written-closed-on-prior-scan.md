@@ -6,6 +6,7 @@ priority: high
 area: quirk/intelligence/remediation_persist.py, quirk/intelligence/closure.py, quirk/intelligence/burndown.py, quirk/intelligence/scope_signature.py (_PROTOCOL_TO_FAMILY)
 status: pending
 resolves_phase: 229
+owner: FIND-11
 ---
 
 # Closure state model: `open` is never written, detected findings read `not_observed`, closures land on the prior scan, and plaintext HTTP can never close

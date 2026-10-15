@@ -6,6 +6,7 @@ priority: high
 area: quirk/dashboard/api/routes/scan.py (findings_for_endpoint/_derive_findings)
 status: pending
 resolves_phase: 228
+owner: XSURF-06
 ---
 
 # Dashboard-only findings move the dashboard headline score, ceiling and lift badges away from the report

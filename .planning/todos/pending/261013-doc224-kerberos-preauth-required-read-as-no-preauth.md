@@ -6,6 +6,7 @@ priority: high
 area: quirk/scanner/kerberos_scanner.py (_probe_kdc), tests/test_kerberos_scanner.py
 status: pending
 resolves_phase: 230
+owner: DETECT-02
 ---
 
 # Kerberos etype enumeration never runs against a KDC that requires pre-authentication

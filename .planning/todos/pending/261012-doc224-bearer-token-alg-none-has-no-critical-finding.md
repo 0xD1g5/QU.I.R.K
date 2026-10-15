@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py, quirk/intelligence/evidence.py, quirk/engine/findings_evaluator.py, quirk/cbom/classifier.py
 status: pending
 resolves_phase: 230
+owner: DETECT-05
 ---
 
 # A bearer token declaring `alg:none` produces no CRITICAL finding in a scan
