@@ -815,3 +815,126 @@ def test_xsurf0508_no_critical_cross_surface_parity():
         f"SC#2: high-impact-findings lift {lifts_b.get('high-impact-findings')!r}, "
         f"expected {_EXPECTED_XSURF0508_HIGH_IMPACT_LIFT!r}; all lifts {lifts_b}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 Plan 07 -- XSURF-07: every trend / timeline / merge / segment /
+# compare score equals the dashboard headline for the same scan.
+# ---------------------------------------------------------------------------
+
+_XSURF07_RUN_ID = "2026-10-15T12:00:00"
+
+# Headline for the XSURF-07 fixture (3 healthy + 1 expired-cert TLS row). The
+# expired cert is CRITICAL, so the consequence ceiling caps it at <= 34. Before
+# the fix trends/timeline/merge scored the same rows with NO findings and
+# showed ~78+ -- the surfaces disagreed with the headline by 40+ points, but a
+# bare a == b between two findings-less surfaces would never see it.
+_EXPECTED_XSURF07_HEADLINE = 32
+# seg-a holds the expired row; seg-b is healthy so it is NOT capped.
+_EXPECTED_XSURF07_SEG_A = 31
+_EXPECTED_XSURF07_SEG_B = 100
+# /compare side B (the XSURF-04 SAML-CRITICAL scan): identity findings must be
+# included (D-23), which caps it at 31 (the XSURF-04 headline after the 228-07 coverage rows; 32 before).
+_EXPECTED_XSURF07_COMPARE_B = 31
+
+
+def _xsurf07_seed(TestingSession):
+    db = TestingSession()
+    try:
+        # Whole-second scanned_at: the timeline lister truncates to ms and the
+        # session resolver matches scanned_at by equality, so a microsecond
+        # stamp would make the session invisible to /api/trends/timeline.
+        now = _datetime.now().replace(microsecond=0)
+        wall = _datetime.now(_timezone.utc)
+
+        def _ep(host, sensor, seg, not_after):
+            return _CryptoEndpoint(
+                scan_run_id=_XSURF07_RUN_ID, scanned_at=now,
+                host=host, port=443, protocol="TLS", segment=seg, sensor_id=sensor,
+                service_detail="pqc-hybrid-detected",
+                tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+                tls_weak_ciphers_present=False, tls_legacy_suites_present=False,
+                cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+                cert_not_after=not_after, cert_subject=f"CN={host}",
+                cert_issuer="CN=CA", tls_supported_versions="TLSv1.3",
+            )
+
+        good = wall + _timedelta(days=200)
+        # One endpoint per sensor_id so _assemble_union keeps every row,
+        # including the CRITICAL one (Pitfall 6; FIND-13 is Phase 229).
+        db.add(_ep("bad.example.com", "s1", "seg-a", wall - _timedelta(days=5)))
+        db.add(_ep("a1.example.com", "s2", "seg-a", good))
+        db.add(_ep("b1.example.com", "s3", "seg-b", good))
+        db.add(_ep("b2.example.com", "s4", "seg-b", good))
+        db.commit()
+        from quirk.models import MergeRun
+        db.add(MergeRun(
+            scan_id=_XSURF07_RUN_ID, merged_at=_datetime.now(),
+            score=90, endpoint_count=4, sensor_count=4,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_xsurf07_trend_merge_segment_scores_match_headline():
+    client, TestingSession = _xsurf04_make_client_and_session()
+    _xsurf07_seed(TestingSession)
+
+    head = client.get(f"/api/scan/latest?scan_id={_XSURF07_RUN_ID}").json()["score"]["score"]
+    assert head == _EXPECTED_XSURF07_HEADLINE and head <= 34, (
+        f"XSURF-07 VIOLATION: headline {head}, expected {_EXPECTED_XSURF07_HEADLINE} (<= 34)"
+    )
+
+    trends = client.get("/api/trends").json()
+    assert trends["current_score"] == head, (
+        f"XSURF-07 VIOLATION: /api/trends current_score {trends['current_score']} != headline {head}"
+    )
+
+    tl = client.get("/api/trends/timeline").json()["sessions"]
+    assert len(tl) == 1
+    # Closes the 228-06 gap: its timeline test only asserted <= 34.
+    assert tl[0]["score"] == head, (
+        f"XSURF-07 VIOLATION: timeline point {tl[0]['score']} != headline {head}"
+    )
+
+    scans = client.get("/api/scans").json()
+    assert len(scans) == 1 and scans[0]["score"] == head, (
+        f"XSURF-07 VIOLATION: /api/scans score {[s.get('score') for s in scans]} != headline {head}"
+    )
+
+    # /api/merge/latest overall is the LIVE recompute over the union, not MergeRun.score (90).
+    merge = client.get("/api/merge/latest").json()["merge"]
+    assert merge["score"] == head, (
+        f"XSURF-07 VIOLATION: merge overall {merge['score']} != headline {head}"
+    )
+    segs = merge["per_segment_scores"]
+    for seg, pinned in (("seg-a", _EXPECTED_XSURF07_SEG_A), ("seg-b", _EXPECTED_XSURF07_SEG_B)):
+        seg_head = client.get(
+            f"/api/scan/latest?scan_id={_XSURF07_RUN_ID}&segment={seg}"
+        ).json()["score"]["score"]
+        assert segs[seg] == seg_head == pinned, (
+            f"XSURF-07 VIOLATION: segment {seg} merge={segs[seg]} "
+            f"segment-filtered headline={seg_head} expected={pinned}"
+        )
+    assert segs["seg-a"] <= 34, "XSURF-07 VIOLATION: expired cert must cap its segment"
+
+
+def test_xsurf07_compare_includes_identity_findings():
+    """D-23: /compare derives identity findings, so each side equals its headline."""
+    client, TestingSession = _xsurf04_make_client_and_session()
+    _xsurf04_seed_scan_run(TestingSession, _XSURF04_RUN_ID)
+    _xsurf0508_seed_scan_run(TestingSession, _XSURF0508_RUN_ID)
+
+    head_b = client.get(f"/api/scan/latest?scan_id={_XSURF04_RUN_ID}").json()["score"]["score"]
+    head_a = client.get(f"/api/scan/latest?scan_id={_XSURF0508_RUN_ID}").json()["score"]["score"]
+    resp = client.get(f"/api/compare?a={_XSURF0508_RUN_ID}&b={_XSURF04_RUN_ID}")
+    assert resp.status_code == 200, resp.text[:300]
+    data = resp.json()
+    assert data["scan_b"]["score"] == head_b == _EXPECTED_XSURF07_COMPARE_B and head_b <= 34, (
+        f"XSURF-07 VIOLATION: /compare side B {data['scan_b']['score']} headline {head_b} "
+        f"expected {_EXPECTED_XSURF07_COMPARE_B} (<= 34)"
+    )
+    assert data["scan_a"]["score"] == head_a == _EXPECTED_XSURF0508_SCORE, (
+        f"XSURF-07 VIOLATION: /compare side A {data['scan_a']['score']} headline {head_a}"
+    )
