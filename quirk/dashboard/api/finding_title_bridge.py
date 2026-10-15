@@ -187,6 +187,52 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
+# SEVERITY_DIVERGENCES (Phase 228 D-03 / D-04 / D-22)
+#
+# Key: a dashboard title key/prefix whose literal severity, as emitted by
+# quirk/dashboard/api/routes/scan.py::findings_for_endpoint, does NOT match
+# the report side. Two kinds of key can appear here:
+#   * a BRIDGED key (DASHBOARD_TITLE_BRIDGE): the report severity is the one
+#     findings_evaluator.py emits for the CLI title AFTER _normalize_finding
+#     rewrites it;
+#   * an UNBRIDGED key (UNBRIDGED_DASHBOARD_TITLES) whose dashboard severity
+#     is HIGH or CRITICAL and so can move the consequence ceiling with no
+#     report counterpart (D-22).
+# Value: {"reason": <one sentence>, "todo": <filename in .planning/todos/pending/>}.
+#
+# Why it matters: the headline ceiling counts RAW severities, so any
+# mismatched pair moves the headline between surfaces (D-03). Each entry is
+# filed and owned, NOT fixed here (D-04, D-22); fixing one means deleting its
+# entry in the same change, and the gate fails if a stale entry stays.
+#
+# This dict is a disposition, not the safeguard.
+# tests/test_finding_title_bridge.py regenerates both generators' literal
+# severities from source with `ast` on every run and requires set equality
+# against this dict's keys (no gaps, no extras).
+# ---------------------------------------------------------------------------
+SEVERITY_DIVERGENCES: Dict[str, Dict[str, str]] = {
+    # Bridged. Dashboard emits HIGH (scan.py, `Legacy TLS version: ...`); the
+    # report emits LOW and _normalize_finding pins that title to LOW. The two
+    # conditions also differ (negotiated vs offered versions).
+    "Legacy TLS version: ": {
+        "reason": (
+            "Dashboard HIGH on the negotiated version vs report LOW on the "
+            "offered versions; operator chose to file rather than fix (D-04)."
+        ),
+        "todo": "261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md",
+    },
+    # Unbridged (D-22). Dashboard HIGH on ep.tls_weak_ciphers_present; no
+    # report finding fires on that column, so the report ceiling never sees it.
+    "Weak cipher suites enabled": {
+        "reason": (
+            "Dashboard HIGH on tls_weak_ciphers_present has no report "
+            "counterpart; one such endpoint scores 84 (report) vs 69 (dashboard)."
+        ),
+        "todo": "261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md",
+    },
+}
+
+# ---------------------------------------------------------------------------
 # BRIDGE_REACHABILITY (Task 3 / D-08 / D-09)
 #
 # CLI title (a DASHBOARD_TITLE_BRIDGE value) -> reachability classification:
