@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (checkpoint writes)
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # A CLI scan without `--db-path` writes no resume checkpoints, silently

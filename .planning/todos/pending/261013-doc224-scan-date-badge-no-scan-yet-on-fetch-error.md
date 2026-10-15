@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/components/ScanDateBadge.tsx
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # Sidebar scan-date badge says "No scan yet" when the scan list fails to load

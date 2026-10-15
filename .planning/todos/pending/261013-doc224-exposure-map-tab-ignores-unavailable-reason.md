@@ -6,6 +6,7 @@ priority: medium
 area: src/dashboard/src/pages/exposure-map.tsx
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # Exposure map tab shows the honest-absence empty state when the map computation failed

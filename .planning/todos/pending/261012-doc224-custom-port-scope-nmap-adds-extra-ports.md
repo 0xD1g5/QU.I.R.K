@@ -6,6 +6,7 @@ priority: low
 area: run_scan.py (nmap discovery port list), dashboard custom port scope
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # "Custom scope means exactly these ports" is false when nmap discovery is on

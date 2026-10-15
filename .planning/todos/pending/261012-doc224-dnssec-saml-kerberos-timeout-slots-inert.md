@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (DNSSEC, SAML, Kerberos phases), quirk/config.py (TimeoutsCfg)
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # scan.timeouts.dnssec_seconds / saml_seconds / kerberos_seconds are never read

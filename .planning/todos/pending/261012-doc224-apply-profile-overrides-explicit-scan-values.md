@@ -6,6 +6,7 @@ priority: medium
 area: quirk/engine/profiles.py (apply_profile, _set_if_default)
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # apply_profile replaces an explicit scan value that equals the profile's baseline default

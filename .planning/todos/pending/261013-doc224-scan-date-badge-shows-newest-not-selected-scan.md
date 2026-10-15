@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/components/ScanDateBadge.tsx, src/dashboard/src/hooks/useScanList.ts
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # The sidebar "Last scan" badge ignores the selected scan, never refreshes, and says "No scan yet" on a fetch error

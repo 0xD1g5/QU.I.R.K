@@ -6,6 +6,7 @@ priority: low
 area: run_scan.py (_fuzz_budget_exceeds_ceiling), quirk/scanner/rest_fuzzer.py (_resolve_budget)
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # `--fuzz-budget 0` or a negative value is accepted and fuzzes nothing

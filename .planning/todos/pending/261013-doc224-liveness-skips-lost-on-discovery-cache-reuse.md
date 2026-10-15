@@ -6,6 +6,7 @@ priority: low
 area: run_scan.py (discovery cache save/load around the nmap batch loop)
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # A `--cache --resume` rerun drops the original run's liveness-skipped hosts from its record

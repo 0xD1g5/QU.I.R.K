@@ -6,6 +6,7 @@ priority: medium
 area: quirk/notify/dispatcher.py (dispatch_hardware_lifecycle_notifications), quirk/notify/config.py (load_notifications_config)
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # Hardware lifecycle notifications ignore the scan's `--config`; only `QUIRK_CONFIG_PATH` enables them

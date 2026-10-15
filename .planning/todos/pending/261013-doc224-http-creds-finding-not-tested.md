@@ -6,6 +6,7 @@ priority: low
 area: quirk/scanner/rest_fuzzer.py
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # `http_creds` HIGH finding is raised without testing the endpoint

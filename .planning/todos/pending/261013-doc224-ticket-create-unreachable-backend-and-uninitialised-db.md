@@ -6,6 +6,7 @@ priority: low
 area: quirk/cli/ticket_cmd.py (channel construction, audit DB path)
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # `quirk ticket create` crashes on an unreachable backend and on a database without the audit table

@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/components/ConnectorsPanel.tsx (amber note text), quirk/dashboard/api/routes/jobs.py (_connectors_with_blank_credential_warnings)
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # Blank-credential warnings promise a skip that only Vault performs, and the server warning omits Vault

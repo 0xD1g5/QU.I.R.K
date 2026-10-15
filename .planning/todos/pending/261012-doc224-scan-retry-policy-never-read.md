@@ -6,6 +6,7 @@ priority: medium
 area: quirk/config.py (RetryCfg), every scanner
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # scan.retry (retry_count, backoff_base_seconds, backoff_max_seconds) is not read by any scanner

@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/components/ExecutiveVerdict.tsx
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # Executive Verdict says "(pre-v5.21 data)" for a scan that assessed no domain
