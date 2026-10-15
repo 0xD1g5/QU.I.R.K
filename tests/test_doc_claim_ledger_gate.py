@@ -105,14 +105,7 @@ FORBIDDEN_INSTALL_RE = re.compile(
     r"pip3?\s+install\s+(?:-[\w-]+\s+)*['\"]?(?:quirk|syft)(?![\w-])")
 # (path, verbatim substring of the line) -> why the line may quote a wrong
 # install command. Each entry must still match (see the stale-exemption test).
-WRONG_INSTALL_EXEMPTIONS: dict[tuple[str, str], str] = {
-    ("docs/report-interpretation.md",
-     "`DOCX requires the optional extra: pip install quirk[docx]`"): (
-        "verbatim quote of the dashboard's DOCX-unavailable message "
-        "(quirk/dashboard/api/routes/reports.py REASON_DOCX_EXTRA_MISSING); "
-        "the doc names quirk-scanner[docx] beside it; product defect tracked "
-        "in todo 261012-doc224-install-hints-name-wrong-pypi-package"),
-}
+WRONG_INSTALL_EXEMPTIONS: dict[tuple[str, str], str] = {}
 _RELEASED_HEADING_RE = re.compile(r"^## \[\d", re.MULTILINE)
 
 _SRC_EXT = r"(?:py|md|ts|tsx|js|yaml|yml|toml|json|jsonl|cfg|txt|sh|html|css|ini|rst)"

@@ -37,3 +37,7 @@ scans only classified user-facing docs, so this file passes unseen.
 - **Effort: S** (under an hour including the gate extension and a negative control).
 - **Unknowns:** whether any test pins the current template text byte-for-byte (`grep -rn config_template tests/`).
 - **Spike:** not needed.
+
+## Resolution
+
+Resolved in Phase 226 plans 04 and 06 (2026-10-14): runtime sites and quirk/config_template.yaml now name quirk-scanner; `git grep -nE "pip install ['"]?quirk\[" -- quirk run_scan.py` returns 0 lines; standing guard tests/test_install_hint_package_name.py.

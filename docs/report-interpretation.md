@@ -2260,9 +2260,8 @@ reasons you may see, quoted verbatim from the UI:
   `run-stats-*.json` and no `report-*.html`). This is the state a fresh install shows; it is not an
   error. A scan started from the dashboard does not clear it: those scans write their reports to
   `output/jobs/<job-id>/`, which these routes do not read.
-- `DOCX requires the optional extra: pip install quirk[docx]` — the server does not have the
-  `[docx]` optional extra installed. Every other format is unaffected. The message names the wrong
-  package: the extra belongs to `quirk-scanner`, so install `'quirk-scanner[docx]'` on the server.
+- `DOCX requires the optional extra: pip install 'quirk-scanner[docx]'` — the server does not have the
+  `[docx]` optional extra installed. Every other format is unaffected. Install `'quirk-scanner[docx]'` on the server.
 - `This format failed to render for the latest scan. Check server logs.` — the latest scan's
   report set exists, but this format's file is missing from it: it failed to render or was skipped
   (for example, PDF rendering requires Playwright, which can fail independently of everything else).
