@@ -6,6 +6,7 @@ priority: medium
 area: quirk/reports/writer.py (build_tech_markdown call)
 status: pending
 resolves_phase: null
+owner: "999.133"
 ---
 
 # CLI technical markdown never shows the Remediation Burndown section or a closure refusal

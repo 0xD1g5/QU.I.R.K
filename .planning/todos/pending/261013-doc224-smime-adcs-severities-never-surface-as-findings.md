@@ -6,6 +6,7 @@ priority: medium
 area: quirk/engine/findings_evaluator.py, quirk/dashboard/api/routes/scan.py (_derive_findings, _derive_identity_findings), quantum-chaos-enterprise-lab/expected_results_v4.md (smime, adcs sections)
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # S/MIME and AD CS weaknesses are rated but never listed as findings anywhere

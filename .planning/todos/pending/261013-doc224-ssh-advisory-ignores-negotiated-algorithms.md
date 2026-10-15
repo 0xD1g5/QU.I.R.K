@@ -6,6 +6,7 @@ priority: medium
 area: quirk/engine/findings_evaluator.py (evaluate_endpoints SSH branch)
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # "SSH quantum planning advisory" fires for every SSH service, whatever algorithms it offers

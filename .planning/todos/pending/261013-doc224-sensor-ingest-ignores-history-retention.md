@@ -6,6 +6,7 @@ priority: low
 area: quirk/cli/console_cmd.py (_ingest_envelope)
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # Sensor ingestion purges hardware history with the 180-day default

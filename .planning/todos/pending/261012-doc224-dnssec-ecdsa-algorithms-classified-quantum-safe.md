@@ -6,6 +6,7 @@ priority: medium
 area: quirk/cbom/classifier.py
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # DNSSEC ECDSA algorithms are rated NIST level 1 and 3, so the CBOM labels them quantum-safe

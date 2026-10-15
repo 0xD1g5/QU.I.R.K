@@ -6,6 +6,7 @@ priority: medium
 area: quirk/cli/sensor_cmd.py (merge output), quirk/merge/scan.py (findings-less scoring), quirk/notify/payload.py + quirk/notify/channels/slack.py (drift band), quirk/intelligence/trends.py (false comment)
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # `quirk sensor merge` and the Slack drift notification show a readiness band computed without findings

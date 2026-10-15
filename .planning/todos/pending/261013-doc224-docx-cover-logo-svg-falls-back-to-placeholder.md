@@ -6,6 +6,7 @@ priority: low
 area: quirk/reports/docx_renderer.py (cover logo)
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # An SVG branding logo shows on the HTML/PDF cover but falls back to the placeholder in DOCX

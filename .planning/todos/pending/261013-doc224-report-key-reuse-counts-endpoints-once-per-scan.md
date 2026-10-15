@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/key_reuse.py, quirk/reports/writer.py
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # Report Key Reuse counts rows across scans: one endpoint scanned twice forms a cluster of itself

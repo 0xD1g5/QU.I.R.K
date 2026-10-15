@@ -6,6 +6,7 @@ priority: medium
 area: quirk/dashboard/api/routes/trends.py (_list_session_timestamps_n, get_trends_timeline)
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # `/api/trends/timeline` shows one scan as several points

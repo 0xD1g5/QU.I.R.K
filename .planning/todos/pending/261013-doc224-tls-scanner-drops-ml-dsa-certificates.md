@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/tls_scanner.py (_scan_one_fallback, _pubkey_info), quantum-chaos-enterprise-lab/docker-compose.yml (oqs-nginx comment)
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # The TLS scanner turns an ML-DSA certificate into a scan error and records no key, signature or expiry

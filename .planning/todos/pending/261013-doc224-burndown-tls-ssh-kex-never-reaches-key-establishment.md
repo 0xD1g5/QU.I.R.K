@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/burndown.py
 status: pending
 resolves_phase: null
+owner: "999.133"
 ---
 
 # EO 14412 burndown never counts TLS or SSH findings against the key-establishment deadline

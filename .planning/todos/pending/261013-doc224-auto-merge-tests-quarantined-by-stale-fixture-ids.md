@@ -6,6 +6,7 @@ priority: medium
 area: tests/test_auto_merge_trigger.py
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # Auto-merge acceptance tests are quarantined xfail; the fix is a fixture rename and all 9 pass

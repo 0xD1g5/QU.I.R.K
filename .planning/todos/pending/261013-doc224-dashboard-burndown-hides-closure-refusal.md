@@ -6,6 +6,7 @@ priority: medium
 area: quirk/dashboard/api/routes/scan.py (_derive_closure_burndown), src/dashboard/src/pages/roadmap.tsx (Remediation Burndown block)
 status: pending
 resolves_phase: null
+owner: "999.133"
 ---
 
 # Dashboard Roadmap burndown shows a table, not the refusal, on a scan whose closure was refused

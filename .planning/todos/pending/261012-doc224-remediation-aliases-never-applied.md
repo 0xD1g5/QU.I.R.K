@@ -6,6 +6,7 @@ priority: medium
 area: quirk/config.py, quirk/intelligence/closure.py, quirk/intelligence/burndown.py
 status: pending
 resolves_phase: null
+owner: "999.133"
 ---
 
 # `remediation_aliases` is parsed into `AppConfig` but no code reads it

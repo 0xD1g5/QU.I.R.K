@@ -6,6 +6,7 @@ priority: low
 area: quirk/cli/sensor_cmd.py (_cmd_enroll)
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # `quirk sensor enroll` prints an "Enrollment token (shown once — save it now)" that nothing uses
