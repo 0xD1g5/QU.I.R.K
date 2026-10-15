@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v5.28
 milestone_name: Score & Finding Truth
 status: executing
-last_updated: "2026-10-15T23:00:00.000Z"
-last_activity: "2026-10-15 -- Phase 228 context gathered (228-CONTEXT.md, D-01..D-19, 1 todo folded). STATE.md hand-edited; next /gsd-plan-phase 228"
+last_updated: "2026-10-15T23:59:00.000Z"
+last_activity: "2026-10-15 -- Phase 228 planned (10 plans, 6 waves; research + patterns + checker passed after 1 revision; D-20..D-28 locked post-research, D-24 operator: SCORING_VERSION stays 3.0). STATE.md hand-edited; next /gsd-execute-phase 228"
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 9
+  total_plans: 19
   completed_plans: 9
   percent: 13
 ---
@@ -1469,8 +1469,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 227 (Todo Ownership Gate) — COMPLETE 2026-10-15; next is Phase 228 (Cross-Surface Score Parity)
-Plan: 9 of 9 complete (verified passed 4/4 at efadfb56; CI green, Python CI 38793570017 + Dashboard Quality 38793574456)
+Phase: 228 (Cross-Surface Score Parity) — PLANNED 2026-10-15, ready to execute (Phase 227 COMPLETE, verified passed 4/4 at efadfb56)
+Plan: 0 of 10 complete (6 waves; 228-09 is a non-autonomous operator visual checkpoint)
 Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15; 23 requirements, roadmap approved. Phases
 continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
 correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
