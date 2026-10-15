@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-12
+source: Phase 224 plan 08 (docs/upgrade-guide.md audit)
+priority: low
+area: run_scan.py (_resolve_db_path)
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
+
 # `quirk db migrate` without `--db` or `--config` silently creates and migrates an empty `./quirk.db`
 
 **Filed:** 2026-10-12 (Phase 224 plan 08, docs/upgrade-guide.md audit)
 **Priority:** P3 — operator trap; no data loss, but the command reports success against the wrong file
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P3 → low).
 
 ## What happens
 

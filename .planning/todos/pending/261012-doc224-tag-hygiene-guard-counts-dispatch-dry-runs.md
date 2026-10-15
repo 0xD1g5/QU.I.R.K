@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-13
+source: Phase 224 gap closure C (docs/release-process.md audit)
+priority: medium
+area: scripts/release_tag_hygiene.py
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
+
 # Release Tag Hygiene guard counts a `workflow_dispatch` dry run as a release run for the tag
 
 **Filed:** 2026-10-13 (Phase 224 gap closure C, docs/release-process.md audit)
 **Priority:** P2 — the guard exists to catch a tag that never produced a release, and a dry run silences it
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P2 → medium).
 
 ## What happens
 

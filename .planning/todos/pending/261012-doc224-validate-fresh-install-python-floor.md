@@ -6,6 +6,7 @@ priority: low
 area: scripts/validate-fresh-install.sh
 status: pending
 resolves_phase: null
+owner: "999.129"
 ---
 
 # `scripts/validate-fresh-install.sh` rejects Python 3.10 although the project floor is 3.10

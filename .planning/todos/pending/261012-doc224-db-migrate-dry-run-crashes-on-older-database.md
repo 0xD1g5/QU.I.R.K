@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-12
+source: Phase 224 plan 08 (docs/upgrade-guide.md audit)
+priority: medium
+area: quirk/db.py (run_additive_migration)
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
+
 # `quirk db migrate --dry-run` crashes with `NoSuchTableError` on a database from an older release
 
 **Filed:** 2026-10-12 (Phase 224 plan 08, docs/upgrade-guide.md audit)
 **Priority:** P2 — the dry-run is the upgrade guide's safety step and it fails on exactly the databases the guide is for
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P2 → medium).
 
 ## What happens
 

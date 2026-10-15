@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-13
+source: Phase 224 gap closure C (docs/deployment-cloud-console.md audit)
+priority: low
+area: deploy/cloud-init.yaml
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
+
 # `deploy/cloud-init.yaml` (and the manual path) run `pip3 install --break-system-packages`, which Ubuntu 22.04's pip rejects
 
 **Filed:** 2026-10-13 (Phase 224 gap closure C, docs/deployment-cloud-console.md audit)
 **Priority:** P3 — the documented cloud-init path fails at the install step on a still-supported Ubuntu LTS
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P3 → low).
 
 ## What happens
 
