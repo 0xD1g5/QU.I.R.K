@@ -165,8 +165,8 @@ Plans:
 **Plans**: 10 plans (6 waves)
 
 Plans:
-- [ ] 228-01-PLAN.md — Engine: shared TLS-check predicate + report finding composer; run_scan.py uses it (D-05, D-25) (wave 1)
-- [ ] 228-02-PLAN.md — Evidence: refused/timed-out mail ports skipped like CLOSED rows (XSURF-08, D-13/D-14/D-21) (wave 1)
+- [x] 228-01-PLAN.md — Engine: shared TLS-check predicate + report finding composer; run_scan.py uses it (D-05, D-25) (wave 1)
+- [x] 228-02-PLAN.md — Evidence: refused/timed-out mail ports skipped like CLOSED rows (XSURF-08, D-13/D-14/D-21) (wave 1)
 - [ ] 228-03-PLAN.md — Dashboard: near-expiry MEDIUM, TLS-only cert checks, one scoring-findings helper incl. /compare (D-01/D-05/D-08/D-20/D-23) (wave 2)
 - [ ] 228-05-PLAN.md — Trends + merge shared modules take a findings deriver; CLI merge and Slack band apply ceilings (D-09/D-10/D-11) (wave 2)
 - [ ] 228-04-PLAN.md — Severity-divergence AST gate + filed divergence todos, 999.132 body fix, sensor-merge fold (D-03/D-04/D-07/D-22) (wave 3)
