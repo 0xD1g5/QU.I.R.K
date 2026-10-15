@@ -171,7 +171,7 @@ Plans:
 - [x] 228-05-PLAN.md — Trends + merge shared modules take a findings deriver; CLI merge and Slack band apply ceilings (D-09/D-10/D-11) (wave 2)
 - [x] 228-04-PLAN.md — Severity-divergence AST gate + filed divergence todos, 999.132 body fix, sensor-merge fold (D-03/D-04/D-07/D-22) (wave 3)
 - [x] 228-06-PLAN.md — Dashboard trend/timeline/merge/auto-merge routes derive findings; findings-less gate rewrite (D-08/D-12/D-26) (wave 3)
-- [ ] 228-07-PLAN.md — Pinned API-level parity tests: no-CRITICAL scan, trend/merge/segment/compare (D-16/D-28) (wave 4)
+- [x] 228-07-PLAN.md — Pinned API-level parity tests: no-CRITICAL scan, trend/merge/segment/compare (D-16/D-28) (wave 4)
 - [ ] 228-08-PLAN.md — Docs, master-guide regen, chaos-lab, changelog fragment, vault sync (D-18/D-24/D-27) (wave 5)
 - [ ] 228-09-PLAN.md — Operator visual check on a scratch-DB dashboard (checkpoint) (wave 5)
 - [ ] 228-10-PLAN.md — UAT Series 228, D-19 todo closures with requirement flips, STATE, Obsidian (wave 6)
