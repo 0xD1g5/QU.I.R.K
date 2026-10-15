@@ -3807,8 +3807,8 @@ of them.
   are plain, visible text inputs — unlike the masked credential fields above, these are
   identifiers that land in the job's stored `config.yaml` in cleartext by design (D-04); only the
   matching password/token fields are masked and non-persisted.
-- **A field you have touched shows a small accent-coloured "Set" badge (teal in 5.25.0, violet in
-  later builds)** next to its label — the same visual language as the connector-level "Set" badge,
+- **A field you have touched shows a small accent-coloured "Set" badge (teal in 5.25.0, violet from
+  5.27.0)** next to its label — the same visual language as the connector-level "Set" badge,
   now also available per-field.
 - **Rejected values return a 422 naming the field**, at both submit and the Effective Config
   preview — e.g. an out-of-range timeout or a malformed cluster entry. At submit, an unavailable
@@ -4285,7 +4285,7 @@ quirk errors --dump-md > docs/error-codes.md
   badges in the Findings, CBOM and Certificates quantum-safety columns, kept white text. Muted
   label text is also very slightly lighter. The button and badge background colours were
   numerically unchanged — only the foreground text moved, to clear WCAG 2.1 AA contrast (teal
-  buttons: 2.81:1 → 6.06:1). This is a contrast fix, not a redesign. After 5.25.0 (unreleased),
+  buttons: 2.81:1 → 6.06:1). This is a contrast fix, not a redesign. From 5.27.0,
   the orange badges on Compare, Scan History, Hardware and Motion, and the green badges on
   Certificates and Hardware, also switched to dark text.
   Since Phase 222.1 the accent is Ink-violet (#af89f5 dark, #6933cc light) on the unchanged
