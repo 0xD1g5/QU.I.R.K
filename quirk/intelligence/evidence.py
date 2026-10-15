@@ -39,6 +39,32 @@ EVIDENCE_SCHEMA_VERSION = "1.2.0"
 # literal must be classified there before it can be trusted here.
 _NON_ASSET_PROTOCOLS = frozenset({"ADVISORY", "CLOSED"})
 
+# Phase 228 XSURF-08 (D-13/D-14/D-21). Sibling of quirk.engine.findings_evaluator.EMAIL_PROTOCOLS
+# (kept local: importing quirk.engine here risks an import cycle). A test pins this set
+# against email_scanner.EMAIL_PORTS so a new email label cannot escape the predicate.
+_EMAIL_PROBE_PROTOCOLS = frozenset({"SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS",
+                                    "POP3-STARTTLS", "POP3S"})
+_NO_RESPONSE_BLOCKERS = frozenset({"CONNECTION_REFUSED", "TIMEOUT"})
+
+
+def _is_unanswered_email_probe(ep) -> bool:
+    """True when a mail-port probe got no response at all (D-13/D-14/D-21).
+
+    The service never spoke, so the row says nothing about plaintext. Every TIMEOUT is
+    excluded because no persisted field separates a pre-banner from a post-banner timeout.
+    The scanner still persists the row as the probe record; for scoring it is treated like
+    CLOSED (excluded from coverage), so excluding it cannot raise the score by dilution.
+    A row that negotiated TLS (non-empty tls_version) is never unanswered.
+    """
+    proto = str(getattr(ep, "protocol", "") or "").upper()
+    if proto not in _EMAIL_PROBE_PROTOCOLS:
+        return False
+    blocker = str(getattr(ep, "tls_blocker_reason", "") or "")
+    if blocker not in _NO_RESPONSE_BLOCKERS:
+        return False
+    return not (getattr(ep, "tls_version", "") or "")
+
+
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
                   # closes cbom-intel-reports/IN-04 (Phase 77 D-10) — 6 scanner-emitted
@@ -233,6 +259,10 @@ def build_evidence_summary(
         port = int(getattr(ep, "port", 0) or 0)
 
         proto = str(getattr(ep, "protocol", "") or "").upper()
+        # Phase 228 XSURF-08 (D-13/D-21): refused / timed-out mail ports are skipped here,
+        # before every counter, so they tick neither protocol_counts, coverage, nor motion.
+        if _is_unanswered_email_probe(ep):
+            continue
         if proto in protocol_counts:
             protocol_counts[proto] += 1
 
@@ -486,8 +516,9 @@ def build_evidence_summary(
         elif proto in {"SMTP-STARTTLS", "IMAP-STARTTLS", "POP3-STARTTLS"}:
             tls_v = str(getattr(ep, "tls_version", "") or "")
             if not tls_v:
-                # A1 verified: email_scanner.py line 498 always sets ep.protocol = protocol_label
+                # A1 verified: email_scanner.py always sets ep.protocol = protocol_label
                 # even on STARTTLS failure; tls_version stays empty → ticks the counter.
+                # Refused/timed-out probes never reach here (skipped above, Phase 228).
                 motion_email_starttls_missing_count += 1
             else:
                 cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
@@ -504,8 +535,8 @@ def build_evidence_summary(
         elif proto in {"SMTPS", "IMAPS", "POP3S"}:
             tls_v = str(getattr(ep, "tls_version", "") or "")
             if not tls_v:
-                # A2 verified: email_scanner.py emits the endpoint even when implicit-TLS
-                # port is unresponsive (tls_blocker_reason set, tls_version empty).
+                # A2 verified: rows with an empty tls_version reaching here are answered-but-
+                # failed probes; refused/timed-out ports are skipped above (Phase 228).
                 motion_email_plaintext_count += 1
             else:
                 cipher = str(getattr(ep, "cipher_suite", "") or "").upper()

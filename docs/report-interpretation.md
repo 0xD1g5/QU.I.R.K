@@ -1366,10 +1366,11 @@ them) and would silently under-count any protocol missing from that list. The ru
   exactly what should lower coverage.
 - **Plaintext `HTTP` counts as assessed.** We successfully determined the endpoint uses no
   encryption at all — that is a completed assessment, not a gap in one.
-- **An email STARTTLS endpoint whose handshake never completed counts as assessed only when the
-  probe recorded no scan error** — for example, a refused connection, or a TCP connect that timed
-  out. A server that accepts the connection and then sends nothing records a scan error and is not
-  assessed. A server that answers but does not offer STARTTLS is also not assessed today: the probe records the mail
+- **A mail port that refused the connection or timed out before any TLS was negotiated is not
+  counted at all** — neither as assessed nor as an endpoint in the coverage ratio, the same as a
+  closed port, and it does not count as plaintext in the data-in-motion subscore. A server that
+  accepts the connection and then errors (for example, one that sends nothing) records a scan
+  error and is not assessed. A server that answers but does not offer STARTTLS is also not assessed today: the probe records the mail
   client's "STARTTLS extension not supported by server" error as a scan error, so the endpoint
   leaves the numerator like any other errored probe, produces only an INFO "Informational protocol
   observation" finding, and counts against the data-in-motion subscore as an email endpoint with
