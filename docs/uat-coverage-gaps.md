@@ -8,13 +8,13 @@ Every total below is computed by the generator at generation time from the live 
 
 ## Totals
 
-- Total case headings: 1021
-- Disposition counts: DEFERRED 41, FAIL 7, GAP 32, OBSOLETE 2, PASS 854, SKIP_OTHER 85
-- Open GAP (drainable) cases: 45
+- Total case headings: 1027
+- Disposition counts: DEFERRED 41, FAIL 7, GAP 31, OBSOLETE 2, PASS 861, SKIP_OTHER 85
+- Open GAP (drainable) cases: 44
 - Retired OBSOLETE cases (excluded from the open-GAP total below): 2
 - Series range observed: 1-999.84
 
-## Open GAP Worklist (45 cases, all series)
+## Open GAP Worklist (44 cases, all series)
 
 | Case ID | Series | Case Title | Coverage That Would Be Needed |
 |---|---|---|---|
@@ -62,7 +62,6 @@ Every total below is computed by the generator at generation time from the live 
 | UAT-217-07 | 217 | Certificates Safe/At Risk Badges Confirmed — The 30-89-Day Amber Expiry Text Leg Has No Fixture Row | no fixture row: covered by the automated D-09 guard |
 | UAT-217-08 | 217 | Findings/Trends Amber Badges Confirmed — No Chart-TLS (Blue) Badge Rows In The Canonical DB | no fixture row: covered by badge-contrast-guard + CI axe baselines |
 | UAT-221-06 | 221 | Loading-Leg Mutation Goes Red | no substitute coverage |
-| UAT-225-05 | 225 | The Raw URL Serves The New Hero Bytes After Merge | no substitute coverage; raw-URL byte equality is observable only after the PR merges to main, owed post-merge to Phase 226 REL-07 and the 225-05 STATE.md hand-off |
 
 ## Retired (OBSOLETE) -- 2 cases, excluded from the open-GAP total
 

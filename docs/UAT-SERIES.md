@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria; the UAT-1-02 Result is re-executed against the published PyPI build after the tag. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -767,8 +767,8 @@ Fill in **Date:** and **Tester:** fields with today's date and your initials.
 - Output matches format: `QU.I.R.K. v5.27.0`
 - Exit code 0
 
-**Result:** - [x] PASS (2026-09-10 live re-execution against the published 5.21.0 PyPI install, clean throwaway venv `/tmp/q5210-check` per 196-03-SUMMARY.md Task 3: `quirk --version` printed the matching 5.21.0-formatted version string, exit code 0, on the first install attempt — attempt count: 1, no CDN-lag failure text observed. This SUPERSEDES the prior 2026-09-07 PASS note, whose evidence was `QU.I.R.K. v5.19.0`, the same way that note superseded 2026-09-02's `v5.18.0` evidence. The interim "criteria bumped, re-execution lands in 196-05" note that Phase 196 Plan 02 added is closed by this entry and no longer reads as an open item. Phase 214, 2026-09-28: the Pass Criteria above were bumped to `QU.I.R.K. v5.25.0`; this existing PASS disposition and its 2026-09-10 published-5.21.0 evidence are NOT reopened — re-execution against a published 5.25.0 PyPI artifact is operator-reserved and post-tag. CORRECTED 2026-09-28, post-publish, Phase 214 continuation: this note previously ended “because Phase 214 deliberately does not push the `v5.25.0` tag”. The operator pushed the annotated `v5.25.0` tag the same day — run `36497076444`, event `push`, job `Publish to PyPI` = `success`, and PyPI now serves 5.25.0 — so that clause is false. The operator-reserved re-execution is therefore UNBLOCKED rather than unreachable, and is recorded as human-verification item 1 in `214-VERIFICATION.md`. This existing PASS disposition and its 2026-09-10 published-5.21.0 evidence are still NOT reopened.)  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-10  **Tester:** Automated (196-05 phase-close plan execution)
+**Result:** - [x] PASS (2026-10-15 live re-execution against the published 5.27.0 PyPI install, clean throwaway venv outside the repo created with python3.13: `pip install --no-cache-dir quirk-scanner==5.27.0` succeeded on the first attempt, attempt count: 1, and `quirk --version` printed `QU.I.R.K. v5.27.0`, exit code 0. This SUPERSEDES the 2026-09-10 published-5.21.0 evidence and the Phase 214 notes, which are closed by this entry. Source: Phase 226 plan 11 evidence, re-confirmed in plan 16)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** Automated (Phase 226 post-release plan 16)
 **Notes:** Version bumped to 5.21.0 in Phase 196 Plan 02 (`pyproject.toml` sole SoT;
 importlib.metadata derives it, which is why `pip install -e . --no-deps` must follow the bump).
 v5.21.0 ships both v5.20 (scoring v2) and v5.21 (dashboard parity, Quantum Exposure Map)
@@ -32627,8 +32627,8 @@ wc -c < docs/images/dashboard-hero.png
 
 **Pass Criteria:** HTTP 200 and the two byte counts are equal.
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (GAP — no substitute coverage; raw-URL byte equality is observable only after the PR merges to main, owed post-merge to Phase 226 REL-07 and the 225-05 STATE.md hand-off)
-**Date:** _____________  **Tester:** _____________
+**Result:** - [x] PASS (2026-10-15 Phase 226 plan 16 — post-tag check at the v5.27.0 tag: `curl -s -o /dev/null -L -w '%{http_code} %{size_download}' https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/images/dashboard-hero.png` returned 200 847815, equal to `git cat-file -s v5.27.0:docs/images/dashboard-hero.png` which is 847815, the Phase 225 retaken hero and not the old 823452-byte image. The main-URL leg returned 200 with the same size. Source: Phase 226 plan 11 evidence, re-run in plan 16)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
 **Notes:** Not DEFERRED to `tests/test_readme_hero.py::test_readme_hero_uses_absolute_raw_url`: that node only checks
 the README text contains the URL, never what the URL serves. Before merge the raw URL returns 200 for the OLD
 823452-byte image, so a 200 proves nothing. Owed post-merge and carried into Phase 226 REL-07, together with the
@@ -32848,3 +32848,121 @@ github.com and PyPI render leg of UAT-85-08.
 **Result:** - [x] PASS (2026-10-14 Phase 225.1 — covered by `tests/test_url_allowlist_ssrf.py::test_accepted_risk_note_names_exactly_the_pinning_callers` and `tests/test_url_allowlist_ssrf.py::test_accepted_risk_note_names_unpinned_ticketing_callers`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-14  **Tester:** automated
 **Notes:** Every cited node was collected and confirmed to resolve before citing.
+
+## Series 226: Release v5.27.0 (Phase 226 — v5.27)
+
+**Last Updated:** 2026-10-15 (Phase 226 post-release, plan 16). Six cases. v5.27.0 is tagged, published on PyPI and as a GitHub Release. All six PASS on live post-publish evidence recorded in Phase 226 plan 11. Version bump: 5.27.0.
+
+### UAT-226-01: Fresh-venv PyPI install reports 5.27.0
+
+**ID:** UAT-226-01
+**Title:** Fresh-venv PyPI install reports 5.27.0
+**Maps to:** REL-07
+
+**What to test:** A clean venv outside the repo installs `quirk-scanner==5.27.0` from PyPI and reports the release version.
+
+**Steps:**
+```
+python3.13 -m venv v && v/bin/pip install --no-cache-dir quirk-scanner==5.27.0
+v/bin/quirk --version
+```
+
+**Pass Criteria:** `quirk --version` prints `QU.I.R.K. v5.27.0`, exit code 0.
+
+**Result:** - [x] PASS (2026-10-15 fresh-venv install of `quirk-scanner==5.27.0` from PyPI succeeded on the first attempt and `quirk --version` printed `QU.I.R.K. v5.27.0`, exit code 0. Evidence: Phase 226 plan 11, section D-11a)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Evidence recorded in Phase 226 plan 11 and re-checked in plan 16.
+
+### UAT-226-02: The PyPI page renders the logo and hero
+
+**ID:** UAT-226-02
+**Title:** The PyPI page renders the logo and hero
+**Maps to:** REL-07
+
+**What to test:** The PyPI project page for 5.27.0 shows the brand logo and the dashboard hero.
+
+**Steps:**
+Open https://pypi.org/project/quirk-scanner/5.27.0/ in a browser.
+
+**Pass Criteria:** Logo and hero render; no broken images.
+
+**Result:** - [x] PASS (2026-10-15 operator replied verbatim: "approved and uploaded" covering the PyPI page check. Evidence: Phase 226 plan 11, section D-11c)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Evidence recorded in Phase 226 plan 11 and re-checked in plan 16.
+
+### UAT-226-03: The GitHub Release body is the CHANGELOG 5.27.0 section
+
+**ID:** UAT-226-03
+**Title:** The GitHub Release body is the CHANGELOG 5.27.0 section
+**Maps to:** REL-07
+
+**What to test:** The Release body begins with the CHANGELOG 5.27.0 section.
+
+**Steps:**
+```
+gh release view v5.27.0 --json body -q .body
+```
+
+**Pass Criteria:** The body starts with the CHANGELOG `[5.27.0]` section text.
+
+**Result:** - [x] PASS (2026-10-15 the Release body begins with the CHANGELOG 5.27.0 section, prefix check True, followed by the unsigned-binary notice only. Release workflow run 38729845181 concluded success. Evidence: Phase 226 plan 11, section D-11d)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Evidence recorded in Phase 226 plan 11 and re-checked in plan 16.
+
+### UAT-226-04: README images resolve at the release tag
+
+**ID:** UAT-226-04
+**Title:** README images resolve at the release tag
+**Maps to:** REL-07
+
+**What to test:** The three README image URLs pinned to the v5.27.0 tag return 200 at the tag-exact sizes.
+
+**Steps:**
+```
+curl -s -o /dev/null -L -w '%{http_code} %{size_download}' https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo.svg
+```
+Repeat for `docs/brand/quirk-logo-dark.svg` and `docs/images/dashboard-hero.png`.
+
+**Pass Criteria:** All three return 200 and the sizes equal `git cat-file -s v5.27.0:<path>`.
+
+**Result:** - [x] PASS (2026-10-15 curl returned 200 5572 for quirk-logo.svg, 200 5622 for quirk-logo-dark.svg and 200 847815 for dashboard-hero.png, each equal to the tag blob size — covered by `tests/test_readme_brand_logo.py::test_sources_one_dark_one_light`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Evidence recorded in Phase 226 plan 11 and re-checked in plan 16.
+
+### UAT-226-05: The social preview is set
+
+**ID:** UAT-226-05
+**Title:** The social preview is set
+**Maps to:** REL-07
+
+**What to test:** The repository uses a custom social preview image, and the committed card matches a fresh render.
+
+**Steps:**
+```
+gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomOpenGraphImage}}'
+```
+
+**Pass Criteria:** `usesCustomOpenGraphImage` is true.
+
+**Result:** - [x] PASS (2026-10-15 GraphQL returned usesCustomOpenGraphImage true after the operator upload — covered by `tests/test_brand_assets_freshness.py::test_social_card_png_matches_fresh_render`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Evidence recorded in Phase 226 plan 11 and re-checked in plan 16.
+
+### UAT-226-06: Runtime install hints name quirk-scanner
+
+**ID:** UAT-226-06
+**Title:** Runtime install hints name quirk-scanner
+**Maps to:** REL-07
+
+**What to test:** No product install hint tells a reader to install the wrong PyPI package.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_install_hint_package_name.py
+```
+
+**Pass Criteria:** The test passes.
+
+**Result:** - [x] PASS (2026-10-15 install hints in the product name quirk-scanner — covered by `tests/test_install_hint_package_name.py::test_no_wrong_package_install_hints_in_product`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Evidence recorded in Phase 226 plan 11 and re-checked in plan 16.
