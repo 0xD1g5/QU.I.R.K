@@ -59,7 +59,7 @@ HORIZON prose:
 
 ### Cross-surface score parity (XSURF)
 
-- [ ] **XSURF-05**: A certificate expiring within 30 days gets the same severity on the dashboard
+- [x] **XSURF-05**: A certificate expiring within 30 days gets the same severity on the dashboard
       and in the report, so the headline score matches on both surfaces (todo
       `261013-doc224-cert-expiry-severity-diverges-dashboard-vs-report`).
 - [ ] **XSURF-06**: Dashboard-only certificate/TLS findings on S/MIME, AD CS, Vault and database
@@ -162,7 +162,7 @@ Deferred from this milestone with an owner:
 |-------------|-------|--------|
 | SCORE-08 | Phase 233 | Pending |
 | SCORE-09 | Phase 234 | Pending |
-| XSURF-05 | Phase 228 | Pending |
+| XSURF-05 | Phase 228 | Complete |
 | XSURF-06 | Phase 228 | Pending |
 | XSURF-07 | Phase 228 | Pending |
 | XSURF-08 | Phase 228 | Pending |

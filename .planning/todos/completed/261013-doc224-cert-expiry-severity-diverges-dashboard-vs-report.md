@@ -4,7 +4,8 @@ created: 2026-10-13
 source: Phase 224 FD-README (front-door exhaustive pass, ledger rows DCL-README-0210, DCL-README-0219)
 priority: high
 area: quirk/dashboard/api/routes/scan.py (findings_for_endpoint), quirk/engine/findings_evaluator.py
-status: pending
+status: completed
+completed: 2026-10-15
 resolves_phase: 228
 owner: XSURF-05
 ---
@@ -33,7 +34,7 @@ the same directory). Probe scripts: `work/probes/fd-README-serve-findings-probe.
 `docs/operators-guide.md` §3.1 lists the known causes of a dashboard/report score difference and says "Any other
 divergence is a defect to file". This one is not in that list. The README now names it (DCL-README-0210).
 
-- [ ] Pick one severity for a certificate that expires within 30 days and use it on both paths (and align the titles,
+- [x] Pick one severity for a certificate that expires within 30 days and use it on both paths (and align the titles,
       which `quirk/compliance/__init__.py` FINGERPRINT_TITLE_ALIASES already has to bridge).
 - [ ] Extend `tests/test_cross_surface_parity.py` with a near-expiry TLS row so XSURF-04 covers it.
 - [ ] Then drop the clause from README.md "What's New" and, if listed there by then, from operators-guide.md §3.1.
@@ -46,3 +47,11 @@ divergence is a defect to file". This one is not in that list. The README now na
   `tests/test_score_lift_cross_surface_numbers.py` and any test that pins either title or severity.
 - Unknown: which severity is intended. The report-interpretation table rates "TLS certificate expired" CRITICAL; there
   is no documented decision for the expiring case. Product call, no spike needed.
+
+## Resolution (Phase 228, 2026-10-15)
+
+- Severity: a certificate expiring within 30 days is MEDIUM on both surfaces (D-01), `2cd1b90d` (dashboard) with the severity-divergence gate `7dfeb14a` (D-03) so a regression turns a test red.
+- Declined: aligning the titles. D-02 keeps the titles unchanged; `FINGERPRINT_TITLE_ALIASES` already bridges them and the score does not depend on the title.
+- Proof: `tests/test_finding_engine_parity.py::test_near_expiry_is_medium_on_both_surfaces`, `tests/test_finding_title_bridge.py::test_bridged_pair_severities_match_or_are_dispositioned`, `tests/test_cross_surface_parity.py::test_xsurf0508_no_critical_cross_surface_parity` (pinned parity run `ff1f638e`). UAT-228-01, -03, -08.
+- Docs: `ce1506b8`, changelog `19fe440a`.
+- Other severity divergences (legacy TLS, weak cipher suites, undersized ECDSA, container EOL) are filed as `261015-xsurf-*` todos owned by 999.132 (see 228-04-SUMMARY).
