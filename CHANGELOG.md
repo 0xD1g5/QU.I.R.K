@@ -8,7 +8,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
-## [5.27.0] - 2026-10-14
+## [5.27.0] - 2026-10-15
 
 This is the first release since 5.25.0. It carries the untagged **v5.26 Accessibility & Instrument
 Truth** and **v5.27 Launch Readiness** milestones: the contrast and keyboard accessibility drain,
