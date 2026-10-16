@@ -121,11 +121,60 @@ def test_import_results_path_stamps_payload_id(db, tmp_path) -> None:
     assert _rows(db) == [("ag0", sid, env["payload_id"])]
 
 
-def test_https_route_calls_ingest_envelope() -> None:
-    import quirk.dashboard.api.routes.sensor as sensor_routes
+def _https_push(env: dict):
+    """POST `env` through the real /api/sensor/push route (TestClient, per-test
+    in-memory DB, real per-sensor bearer token). Returns (response, Session)."""
+    from tests.test_sensor_ingest import (
+        _app_with_db,
+        _compress,
+        _seed_sensor as _seed_route_sensor,
+        _seed_token,
+    )
 
-    src = inspect.getsource(sensor_routes)
-    assert "_ingest_envelope(" in src
+    _, client, _engine, TestingSession = _app_with_db()
+    _seed_route_sensor(TestingSession, sensor_id=env["sensor_id"])
+    token = _seed_token(TestingSession, sensor_id=env["sensor_id"])
+    resp = client.post(
+        "/api/sensor/push",
+        content=_compress(env),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    return resp, TestingSession
+
+
+def test_https_push_stamps_every_endpoint_with_payload_id(monkeypatch) -> None:
+    """229-REVIEW WR-06: drive the HTTPS route itself and read push_payload_id
+    back. (This replaced a source grep for "_ingest_envelope(" that could not
+    fail if the route stopped stamping rows.)"""
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    env = _make_envelope(str(uuid.uuid4()), ["h0", "h1", "h2"])
+    resp, TestingSession = _https_push(env)
+    assert resp.status_code == 200, resp.text
+    session = TestingSession()
+    try:
+        rows = session.query(CryptoEndpoint).order_by(CryptoEndpoint.host).all()
+        assert [(r.host, r.sensor_id, r.push_payload_id) for r in rows] == [
+            (h, env["sensor_id"], env["payload_id"]) for h in ("h0", "h1", "h2")
+        ]
+    finally:
+        session.close()
+
+
+def test_https_push_rejects_blank_payload_id(monkeypatch) -> None:
+    """WR-02 on the HTTPS path: a blank payload_id is refused before ingest."""
+    from quirk.models import SensorPush
+
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    env = _make_envelope(str(uuid.uuid4()), ["h0"])
+    env["payload_id"] = ""
+    resp, TestingSession = _https_push(env)
+    assert resp.status_code == 400, resp.text
+    session = TestingSession()
+    try:
+        assert session.query(CryptoEndpoint).count() == 0
+        assert session.query(SensorPush).count() == 0
+    finally:
+        session.close()
 
 
 # ---------------------------------------------------------------------------
