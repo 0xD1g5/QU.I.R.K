@@ -121,7 +121,7 @@ ordering among themselves beyond the dependencies stated below.
 
 - [x] **Phase 227: Todo Ownership Gate** - Every pending `doc224` todo names a live owner or is closed with evidence, and the todo -> owner gate fails on an ownerless one
 - [x] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
-- [ ] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
+- [x] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
 - [ ] **Phase 230: Findings That Fire** - Code-signing EKU, Kerberos etype, JWKS auth, `--auth-basic` and `alg: none` detection work in real scans
 - [ ] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
 - [ ] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
@@ -269,7 +269,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 227. Todo Ownership Gate | 9/9 | Complete (verified passed 4/4 at efadfb56, SC#4 scope accepted as doc224-only by operator; code review 1 Critical + 3 Warning fixed in-phase (efadfb56); CI green, Python CI 38793570017 + Dashboard Quality 38793574456) | 2026-10-15 |
 | 228. Cross-Surface Score Parity | 10/10 | Complete (verified passed 5/5 at 0e25abca; code review 1 Critical + 1 Warning fixed in-phase (dab89ffc, 3b1d286c), WR-01..06 deferred to owned todos; CI green at 0e25abca, Python CI 38834562847 + Dashboard Quality 38834564861) | 2026-10-15 |
-| 229. Finding & State Correctness | 0/TBD | Not started | - |
+| 229. Finding & State Correctness | 12/12 | Complete (verified passed 10/10 at 1848635e after 5 verifier gaps closed in-phase (false-closure paths: co-resident rows, legacy chains x2, per-host evidence, blocked mail ports); 3-iteration code review; CI green, Python CI 38916184370 + Dashboard Quality 38916187404) | 2026-10-16 |
 | 230. Findings That Fire | 0/TBD | Not started | - |
 | 231. QRAMM Scoring Surfaces | 0/TBD | Not started | - |
 | 232. Post-Launch Visible Fixes | 0/TBD | Not started | - |
