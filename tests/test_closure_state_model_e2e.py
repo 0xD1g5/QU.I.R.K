@@ -328,6 +328,26 @@ def test_tls_finding_on_unknown_row_refused_in_deep_mode(db):
     assert _fp_states(db, S1, TLS_SLUG, host="h7") == ["open"]
 
 
+def test_failed_snapshot_never_reads_as_every_finding_gone(db, monkeypatch):
+    """CR-02: scan 2's remediation snapshot fails (the writer swallows the error),
+    so scan 2 has no fingerprint rows at all. Without a guard, clause (e) holds for
+    every prior fingerprint and all 8 hosts close although nothing was fixed."""
+    import quirk.intelligence.remediation_persist as persist_mod
+
+    _http_scan1(db)
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("simulated snapshot failure")
+
+    monkeypatch.setattr(persist_mod, "build_phased_roadmap", _boom)
+    counters = _run_scan(db, S2, 1, [http_ep(i) for i in range(N)])
+    assert counters["closed"] == 0, counters
+    assert counters["refused_missing_snapshot"] == 1, counters
+    assert _fp_states(db, S1, HTTP_SLUG) == ["open"] * N
+    assert _fp_states(db, S2, HTTP_SLUG) == []
+    assert _count(db, RemediationClosureEvent) == 0
+
+
 def test_unmapped_protocol_http_restfuzz_refused(db):
     """D-20: prior {HTTP, REST_FUZZ} at h7:80 has an unmapped protocol -> refuse."""
     _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [rest_fuzz_ep(7)])

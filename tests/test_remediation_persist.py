@@ -498,3 +498,46 @@ def test_rerun_does_not_reset_resurfaced_state(tmp_path) -> None:
             .one()
         )
         assert item.state == "resurfaced"
+
+
+# ---------------------------------------------------------------------------
+# 229-REVIEW CR-02: a failed snapshot is distinguishable from a clean scan,
+# and run_scan.py gates closure on it.
+# ---------------------------------------------------------------------------
+
+
+def test_persist_failure_reports_failed_flag(tmp_path, monkeypatch) -> None:
+    import quirk.intelligence.remediation_persist as mod
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints, findings = _eight_plaintext_endpoints_and_findings()
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("simulated snapshot failure")
+
+    monkeypatch.setattr(mod, "build_phased_roadmap", _boom)
+    counters = persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+    assert counters.get("failed") == 1
+    with get_session(db_path) as session:
+        assert session.query(RemediationItem).count() == 0
+
+
+def test_clean_persist_has_no_failed_flag(tmp_path) -> None:
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints, findings = _eight_plaintext_endpoints_and_findings()
+    counters = persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+    assert "failed" not in counters
+
+
+def test_run_scan_skips_closure_when_snapshot_failed() -> None:
+    """The closure_verify block must consult the persist failure flag BEFORE it
+    calls compute_closure."""
+    import run_scan
+
+    source = inspect.getsource(run_scan.main)
+    closure_idx = source.index('"closure_verify"')
+    gate_idx = source.index('_remediation_counters.get("failed")', closure_idx)
+    call_idx = source.index("compute_closure(cfg.output.db_path", closure_idx)
+    assert closure_idx < gate_idx < call_idx

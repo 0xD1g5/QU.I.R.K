@@ -152,6 +152,7 @@ _COUNTER_KEYS: Tuple[str, ...] = (
     "refused_scope_mismatch",
     "refused_probe",
     "refused_absent_endpoint",
+    "refused_missing_snapshot",
     "unchanged",
 )
 
@@ -373,6 +374,20 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 .all()
             }
             current_fingerprints = set(current_fp_rows.keys())
+
+            # 229-REVIEW CR-02: no RemediationItem and no fingerprint row on the
+            # current scan means its remediation snapshot was never written (a
+            # successful persist always writes the governance items). Missing
+            # current rows must never read as "every prior fingerprint is gone"
+            # (clause (e)) - refuse the whole computation instead.
+            if not current_items and not current_fp_rows:
+                logger.warning(
+                    "closure: refused - no remediation snapshot persisted for "
+                    "scan_run_id=%s",
+                    scan_run_id,
+                )
+                counters["refused_missing_snapshot"] = 1
+                return counters
 
             prior_rows = (
                 session.query(RemediationItemFingerprint)

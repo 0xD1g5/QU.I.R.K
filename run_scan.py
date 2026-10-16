@@ -4119,6 +4119,8 @@ def main():
     # surface reads populated tables. Import is lazy so a partial install
     # cannot break run_scan.py at import time, matching write_reports'
     # collaborator-import style. Advisory bookkeeping: must never fail a scan.
+    # 229-REVIEW CR-02: read by the closure_verify gate below.
+    _remediation_counters: Dict[str, int] = {}
     with _phase_timer(run_stats, "remediation_persist") as _remediation_timer:
         if not scan_run_id or not cfg.output.db_path:
             # Phase 173 D-02: no phantom timings_sec key for a phase that did
@@ -4180,6 +4182,15 @@ def main():
             # Phase 173 D-02: no phantom timings_sec key for a phase that did
             # no real work.
             _closure_timer.mark_skipped()
+        elif _remediation_counters.get("failed"):
+            # 229-REVIEW CR-02: the remediation snapshot failed, so this scan
+            # has no fingerprint rows. Closure would read that as "every prior
+            # finding is gone" and publish closures nobody observed.
+            _closure_timer.mark_skipped()
+            logger.warning(
+                "closure_verify: skipped - remediation snapshot failed for scan_run_id=%s",
+                scan_run_id,
+            )
         else:
             try:
                 from quirk.intelligence.closure import compute_closure

@@ -126,6 +126,11 @@ def _seed_two_scans(
         persist_remediation_snapshot(db_path, PRIOR_SCAN_ID, endpoints, [dict(FINDING)])
     if include_current_fingerprint:
         persist_remediation_snapshot(db_path, CURRENT_SCAN_ID, endpoints, [dict(FINDING)])
+    else:
+        # The current scan's snapshot still runs when the finding is gone (the
+        # writer then writes only the not_observed governance items). Without it
+        # closure refuses with refused_missing_snapshot (229-REVIEW CR-02).
+        persist_remediation_snapshot(db_path, CURRENT_SCAN_ID, endpoints, [])
     with get_session(db_path) as session:
         if not include_items:
             # The writer also writes the item; drop it where a test wants fingerprints only.
@@ -140,6 +145,13 @@ def _seed_two_scans(
         session.commit()
 
     return db_path
+
+
+def _persist_clean_snapshot(db_path, scan_run_id):
+    """The production writer for a scan in which the finding is gone."""
+    persist_remediation_snapshot(
+        db_path, scan_run_id, [CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL)], []
+    )
 
 
 def _fp_row(session, *, scan_run_id=PRIOR_SCAN_ID, slug=SLUG, finding_fingerprint=FINGERPRINT):
@@ -610,6 +622,7 @@ def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
         _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
         session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
         session.commit()
+    _persist_clean_snapshot(db_path, scan2)  # CR-02: the fixed scan's snapshot ran
     counters2 = compute_closure(db_path, scan2)
     assert counters2["closed"] == 1
 
@@ -642,6 +655,7 @@ def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
         _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
         session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
         session.commit()
+    _persist_clean_snapshot(db_path, scan4)  # CR-02: the fixed scan's snapshot ran
     counters4 = compute_closure(db_path, scan4)
     assert counters4["reclosed"] == 1
 
@@ -875,6 +889,7 @@ def test_resurfaced_event_survives_a_database_reopen(tmp_path):
         _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
         session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
         session.commit()
+    _persist_clean_snapshot(db_path, scan2)  # CR-02: the fixed scan's snapshot ran
     compute_closure(db_path, scan2)
 
     with get_session(db_path) as session:
@@ -899,6 +914,7 @@ def test_resurfaced_event_survives_a_database_reopen(tmp_path):
         _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
         session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
         session.commit()
+    _persist_clean_snapshot(db_path, scan4)  # CR-02: the fixed scan's snapshot ran
     compute_closure(db_path, scan4)
 
     # Close every prior session and open a FRESH one — the durability claim is that
