@@ -80,7 +80,7 @@ HORIZON prose:
       `261013-doc224-closure-states-open-never-written-closed-on-prior-scan`).
 - [x] **FIND-12**: Drift notifications compare the two newest scan runs, never a scan with itself
       (todo `261013-doc224-notifier-session-key-ignores-scan-run-id`).
-- [ ] **FIND-13**: `sensor merge` and `/api/merge/latest` keep every endpoint from each sensor's
+- [x] **FIND-13**: `sensor merge` and `/api/merge/latest` keep every endpoint from each sensor's
       latest push, not one row per sensor (todo `261013-doc224-sensor-merge-keeps-one-endpoint-per-sensor`).
 
 ### Findings that never fire (DETECT)
@@ -168,7 +168,7 @@ Deferred from this milestone with an owner:
 | XSURF-08 | Phase 228 | Complete |
 | FIND-11 | Phase 229 | Complete |
 | FIND-12 | Phase 229 | Complete |
-| FIND-13 | Phase 229 | Pending |
+| FIND-13 | Phase 229 | Complete |
 | DETECT-01 | Phase 230 | Pending |
 | DETECT-02 | Phase 230 | Pending |
 | DETECT-03 | Phase 230 | Pending |
