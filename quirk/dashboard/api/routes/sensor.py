@@ -318,7 +318,9 @@ class PushEnvelope(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    payload_id: str
+    # 229-REVIEW WR-02: a blank id is unmatchable as the merge's latest-push key
+    # and, being UNIQUE, would 409 every later blank push. 64 = column width.
+    payload_id: str = Field(min_length=1, max_length=64, pattern=r"\S")
     pushed_at: str
     schema_version: str
     sensor_version: str

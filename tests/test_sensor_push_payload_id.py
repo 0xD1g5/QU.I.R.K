@@ -126,3 +126,76 @@ def test_https_route_calls_ingest_envelope() -> None:
 
     src = inspect.getsource(sensor_routes)
     assert "_ingest_envelope(" in src
+
+
+# ---------------------------------------------------------------------------
+# 229-REVIEW WR-02: a blank payload_id can never become an unmatchable merge key.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad", ["", "   ", "x" * 65, None])
+def test_ingest_rejects_blank_or_overlong_payload_id(db, bad) -> None:
+    from quirk.models import SensorPush
+
+    sid = str(uuid.uuid4())
+    _seed_sensor(db, sid)
+    env = _make_envelope(sid, ["h0"])
+    env["payload_id"] = bad
+    # The own-session (CLI) path converts the ValueError to SystemExit(1).
+    with pytest.raises((ValueError, SystemExit)):
+        _ingest_envelope(env, config_path="", skip_replay_window=True)
+    assert _rows(db) == []
+    with get_session(db) as session:
+        assert session.query(SensorPush).count() == 0
+
+
+@pytest.mark.parametrize("bad", ["", "   ", "x" * 65])
+def test_push_envelope_model_rejects_blank_or_overlong_payload_id(bad) -> None:
+    from pydantic import ValidationError
+
+    from quirk.dashboard.api.routes.sensor import PushEnvelope
+
+    env = _make_envelope(str(uuid.uuid4()), ["h0"])
+    env["payload_id"] = bad
+    with pytest.raises(ValidationError):
+        PushEnvelope(**env)
+    env["payload_id"] = str(uuid.uuid4())
+    assert PushEnvelope(**env).payload_id == env["payload_id"]
+
+
+def test_import_results_rejects_blank_payload_id(db, tmp_path, capsys) -> None:
+    from quirk.cli.console_cmd import _cmd_import_results
+
+    sid = str(uuid.uuid4())
+    _seed_sensor(db, sid, segment="air-gap")
+    env = _make_envelope(sid, ["ag0"], segment="air-gap")
+    env["payload_id"] = ""
+    qpush = tmp_path / "x.qpush"
+    qpush.write_bytes(
+        zstandard.ZstdCompressor(level=3).compress(json.dumps(env).encode("utf-8"))
+    )
+
+    class Args:
+        file = str(qpush)
+        config = "config.yaml"
+
+    with pytest.raises(SystemExit):
+        _cmd_import_results(Args())
+    assert "payload_id" in capsys.readouterr().err
+    assert _rows(db) == []
+
+
+def test_stamped_key_always_equals_the_sensor_push_key(db) -> None:
+    """The merge selects rows on push_payload_id == SensorPush.payload_id; the two
+    are written from one value with no normalisation in between."""
+    from quirk.models import SensorPush
+
+    src = inspect.getsource(_ingest_envelope)
+    assert "push_payload_id=payload_id or None" not in src
+    sid = str(uuid.uuid4())
+    _seed_sensor(db, sid)
+    env = _make_envelope(sid, ["h0", "h1"])
+    _ingest_envelope(env, config_path="", skip_replay_window=True)
+    with get_session(db) as session:
+        push_key = session.query(SensorPush.payload_id).filter_by(sensor_id=sid).scalar()
+    assert {r[2] for r in _rows(db)} == {push_key}
