@@ -186,7 +186,7 @@ Plans:
   2. With three or more scan runs in the database, the drift notification compares the two newest distinct scan runs and never compares a scan run with itself.
   3. After two sensors each push a multi-endpoint scan, `quirk sensor merge` and `GET /api/merge/latest` both return every endpoint from each sensor's latest push, not one row per sensor.
   4. The three owning todos (`261013-doc224-closure-states-...`, `-notifier-session-key-ignores-scan-run-id`, `-sensor-merge-keeps-one-endpoint-per-sensor`) are closed with their commits cited.
-**Plans**: 10 plans (6 waves)
+**Plans**: 11 plans (7 waves)
 
 Plans:
 - [ ] 229-01-PLAN.md — Writer: detected remediation rows written `open`, counter-only items stay `not_observed` (D-01/D-02/D-23) (wave 1)
@@ -198,7 +198,8 @@ Plans:
 - [ ] 229-04-PLAN.md — End-to-end closure state model on production writers: HTTP fast, TLS deep/fast, guardrail negatives (D-06/D-07) (wave 3)
 - [ ] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
 - [ ] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
-- [ ] 229-10-PLAN.md — UAT Series 229, D-17 todo closures with requirement flips, full suite vs main, VALIDATION, Obsidian (wave 6)
+- [ ] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
+- [ ] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
 
 ### Phase 230: Findings That Fire
 **Goal**: Detection paths that exist in the code but never fire in a real scan now produce their findings, each proven by a test that exercises the real capture or the real wire rather than an injected fixture.
