@@ -3487,7 +3487,8 @@ A finding closes only when all of the following hold:
 - Every probe that reported that host:port has a live row at that same host:port in this scan. A
   probe that is healthy elsewhere in the scan does not count. One timed-out, refused,
   unreachable or errored row at the host:port blocks closure for every finding there, even when a
-  SAML or JWT probe answered. Placeholder rows are not evidence of a recheck.
+  SAML or JWT probe answered. A mail port that timed out or refused the connection counts the
+  same way. Placeholder rows are not evidence of a recheck.
 - No row at that host:port is a service the scan could not identify, such as the `UNKNOWN` row
   written when the HTTP probe times out. One such row blocks closure for every finding at that
   host:port, even when another probe there, such as SAML or JWT, answered normally.

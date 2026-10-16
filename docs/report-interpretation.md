@@ -1316,7 +1316,8 @@ that data. The item slug is the correlation key back to the report's roadmap and
   the analysis state change. That is the state model changing, not the estate.
 - **Every probe that reported a finding's host:port must have a live row there,** and a probe
   that is healthy elsewhere in the scan does not count. A timed-out, refused or errored row at
-  the host:port never closes a finding, and neither does a placeholder row. A finding does not
+  the host:port never closes a finding, and neither does a placeholder row. This includes a
+  mail port that timed out or refused the connection. A finding does not
   close while any row at its host:port is a service the scan could not identify (`UNKNOWN`),
   even if another probe there, such as SAML or JWT, answered. A scan that reused cached fingerprint
   results does not count as a recheck, and TLS findings close only on deep TLS scans. The live
