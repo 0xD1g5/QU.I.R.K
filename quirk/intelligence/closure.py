@@ -141,7 +141,6 @@ COMPARABILITY_REASONS: Tuple[str, ...] = (
     "scope_mismatch",
 )
 
-_HEALTHY_STATUS = "healthy"
 _CLOSED_STATE = "closed"
 # WR-03: a refused candidate is carried onto the current scan in the documented
 # undetected state, never a new literal.
@@ -224,25 +223,6 @@ def scans_are_comparable(
         return False, "scope_mismatch"
 
     return True, "comparable"
-
-
-def probe_family_status(probe_health: Dict[str, Any], protocol: Optional[str]) -> str:
-    """Resolve `protocol` to its probe family's status, or "not_run" (D-26).
-
-    "not_run" is returned when the protocol is None, unclaimed by any family
-    (``family_for_protocol`` returns None), or absent from the health blob. Treating an
-    unclassified protocol as healthy would let a finding on it close on absence alone —
-    treating it as not_run makes it resolve to not_observed, the honest under-claim.
-    """
-    if not protocol:
-        return "not_run"
-    family = family_for_protocol(protocol)
-    if family is None:
-        return "not_run"
-    entry = probe_health.get(family)
-    if not entry:
-        return "not_run"
-    return entry.get("status", "not_run")
 
 
 def _load_probe_health(current_sig: Optional[ScanScopeSignature]) -> Dict[str, Any]:
