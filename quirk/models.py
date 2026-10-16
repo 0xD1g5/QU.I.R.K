@@ -99,6 +99,11 @@ class CryptoEndpoint(Base):
     # ==========================
     sensor_id = Column(String(255), nullable=True)   # NULL = implicit local sensor; NO FK (D-03)
     segment   = Column(String(255), nullable=True)
+    # Phase 229 FIND-13 D-12: SensorPush.payload_id of the push that delivered
+    # this row; NULL for local CLI scans and sensor rows ingested before Phase 229.
+    # No FK (mirrors sensor_id D-03); no index (additive-only, _ensure_columns
+    # does not create indexes).
+    push_payload_id = Column(String(64), nullable=True)
 
     # RVW-003: stored scan-session identity. Set to the run's `started_utc`
     # ISO timestamp — the same value ScanJob.scan_run_id and

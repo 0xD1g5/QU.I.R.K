@@ -34,6 +34,7 @@ from quirk.db import (
     _PHASE54_QRAMM_ANSWER_COLUMNS,
     _PHASE146_SCANJOB_COLUMNS,
     _PHASE191_COLUMNS,
+    _PHASE229_COLUMNS,
     _SAFE_COL_TYPE_RE,
     _V43_COLUMNS,
     _ensure_columns,
@@ -479,3 +480,44 @@ def test_phase191_spki_fingerprint_migration_idempotent(tmp_path: Path) -> None:
     ]
     assert len(spki_results) == 1
     assert spki_results[0].status == "already-present"
+
+
+# ---------------------------------------------------------------------------
+# Phase 229 FIND-13 D-12: push_payload_id column on crypto_endpoints.
+# ---------------------------------------------------------------------------
+
+
+def test_phase229_push_payload_id_column_registered() -> None:
+    assert _PHASE229_COLUMNS == (("push_payload_id", "VARCHAR(64)"),)
+    assert ("crypto_endpoints", _PHASE229_COLUMNS) in _ADDITIVE_MIGRATIONS
+
+
+def test_phase229_push_payload_id_migration_idempotent(tmp_path: Path) -> None:
+    import sqlite3
+
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "p229.db"
+    init_db(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("ALTER TABLE crypto_endpoints DROP COLUMN push_payload_id")
+        conn.commit()
+    finally:
+        conn.close()
+
+    engine = get_engine(str(db_path))
+    cols = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    assert "push_payload_id" not in cols
+
+    run_additive_migration(engine, dry_run=False)
+    cols = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    assert "push_payload_id" in cols
+
+    results = run_additive_migration(engine, dry_run=False)
+    rows = [
+        r for r in results
+        if r.table == "crypto_endpoints" and r.column == "push_payload_id"
+    ]
+    assert len(rows) == 1
+    assert rows[0].status == "already-present"

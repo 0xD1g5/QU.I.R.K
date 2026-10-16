@@ -228,6 +228,10 @@ _PHASE191_COLUMNS: tuple[tuple[str, str], ...] = (
     ("cert_spki_fingerprint", "VARCHAR(64)"),
 )
 
+# Phase 229 FIND-13 D-12: the SensorPush.payload_id of the push that delivered
+# the row. NULL for local scans and pre-Phase-229 sensor rows.
+_PHASE229_COLUMNS: tuple[tuple[str, str], ...] = (("push_payload_id", "VARCHAR(64)"),)
+
 
 def _ensure_columns(
     engine,
@@ -299,6 +303,7 @@ _ADDITIVE_MIGRATIONS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
     ("scheduled_scans",  _PHASE162_SCHEDULE_COLUMNS),         # Phase 162 HWLC-20
     ("scan_scope_signatures", _PHASE180_SCOPE_SIGNATURE_COLUMNS),  # Phase 180 D-13
     ("crypto_endpoints", _PHASE191_COLUMNS),  # Phase 191 SPKI-01
+    ("crypto_endpoints", _PHASE229_COLUMNS),  # Phase 229 FIND-13 D-12
     ("integration_deliveries", _PHASE2251_DELIVERY_COLUMNS),  # Phase 225.1 D-12
 )
 
