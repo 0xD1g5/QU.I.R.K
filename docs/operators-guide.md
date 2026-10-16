@@ -3466,11 +3466,17 @@ case is a missing badge or an empty burndown block, not a broken page.
   The earlier scan's record of that finding is also marked closed, so the earlier scan's burndown
   reads the closure as well once the later scan has run. Closed rows are not carried forward: a
   third scan that rechecks the same estate counts only its own rows, which show no closure.
+  When a finding closes on a later scan, after a scan that could not recheck it, the scan that
+  detected it is marked closed too, and its roadmap item closes once all of that item's findings
+  have closed. If every finding of the item is then closed and the closing scan has no item of
+  its own, the closing scan gets a closed item, so its CBOM VEX entry reads `resolved`.
+  A finding that had resurfaced and closes this way is recorded as reclosed.
 - **`not_observed`** — nothing was verified. Counter-only roadmap items use it, and so do scans
   stored before this release, which keep their detected findings as Not Verified and are not
   rewritten. A finding that a scan could not recheck, for example because its port timed out, is
-  also written to that scan as `not_observed`. It stays in that scan's burndown, and the next scan
-  that does recheck it can still close it.
+  also written to that scan as `not_observed`. It stays in that scan's burndown, and a later scan
+  that rechecks it can usually still close it. The exceptions are listed under "Known limitations"
+  below.
 - **`resurfaced`** — written to the current scan's record when a finding whose most recent earlier
   record is `closed` is detected again. It is counted as open-like for reporting, but reported as
   its own line rather than folded into `open`, and its closure history is retained.
@@ -3479,9 +3485,10 @@ A finding closes only when all of the following hold:
 
 - The current scan has the same scope as the prior one (see §15).
 - The current scan has an endpoint at that host:port, and at least one of the rows there is live.
-  A timed-out, refused, unreachable, placeholder or errored row is not a recheck, and neither is a
-  row whose service the scan could not identify, such as the `UNKNOWN` row written when the HTTP
-  probe times out.
+  A timed-out, refused, unreachable, placeholder or errored row is not a recheck.
+- No row at that host:port is a service the scan could not identify, such as the `UNKNOWN` row
+  written when the HTTP probe times out. One such row blocks closure for every finding at that
+  host:port, even when another probe there, such as SAML or JWT, answered normally.
 - Every probe family that originally reported that host:port was rechecked in this scan. A run
   that reused cached fingerprint results does not count as a recheck.
 - The current scan's remediation record was written. If writing it failed, closure is skipped for
@@ -3498,9 +3505,9 @@ to show a TLS finding is gone, so it leaves the finding open (tracked in HORIZON
 Two cases are deliberate under-claims, listed here side by side so the reason is not a surprise:
 
 - A port that serves both HTTP and SAML closes only when both probes recheck it.
-- A finding at a host:port where a probe with no recheck signal also reported, such as the REST
-  fuzzer, OpenAPI, Vault, AD CS, Kubernetes or cloud connectors, does not close, because that
-  probe cannot be shown to have rechecked the port. This also covers a host:port that reported
+- A finding at a host:port where a probe with no recheck signal also reported, in the prior scan
+  or the current one, such as the REST fuzzer, OpenAPI, Vault, AD CS, Kubernetes or cloud
+  connectors, does not close, because that probe cannot be shown to have rechecked the port. This also covers a host:port that reported
   HTTP together with the REST fuzzer.
 
 The same plaintext HTTP finding can count under two remediation items (`plaintext-http-exposure`
@@ -3511,6 +3518,25 @@ because plain HTTP carries no algorithm. Do not add the item rows together.
 decommissioned, because the target list shrank, because a segment of the network was unreachable —
 is not evidence anything was fixed. Closure requires the current scan to have positively rechecked
 that specific host:port and found the finding gone, not merely to have not seen it.
+
+### Known limitations
+
+These cases can leave a fixed finding reading `not_observed` when it could have closed. None of
+them can mark a finding closed that is not fixed.
+
+- **A different service in between.** Suppose one scan cannot recheck a plaintext HTTP finding,
+  for example because the HTTP probe timed out, and by the next scan the port has moved to TLS.
+  Closure then judges the finding by the services the scan just before saw at that port, not by
+  the HTTP probe that raised it. In fast mode that is the TLS probe, which does not recheck, so the
+  finding stays `not_observed` on every later scan. The same happens when a scan reused cached
+  fingerprint results while the port moved to TLS.
+- **A scan whose closure was refused as a whole.** If closure is not computed for a scan, for
+  example because its scope differs from the prior scan or its remediation record failed to
+  write, that scan carries no pending findings forward. Findings it did not detect, including
+  ones that were `not_observed` before it, drop out of later scans' burndowns and can no longer
+  close.
+- **An endpoint that leaves service.** A finding at a host:port that stops answering is carried
+  as `not_observed` on every later scan. There is no action to retire it yet.
 
 ### Why an item reads `not_observed` — troubleshooting
 
@@ -3533,8 +3559,10 @@ is one of:
   one probe family silently produced no usable evidence — probe health is asserted positively per
   family, never inferred from a clean exit.
 - **No endpoint was rechecked at that host:port.** The current scan simply did not touch that
-  address this run, or every row there was a timeout, refusal, placeholder, error, or a service
-  the scan could not identify (`UNKNOWN`).
+  address this run, every row there was a timeout, refusal, placeholder or error, or one of the
+  rows there is a service the scan could not identify (`UNKNOWN`).
+- **It is one of the known limitations above.** For example, the port changed service while the
+  finding was waiting to be rechecked, or a scan in between had its closure refused as a whole.
 - **The scan reused cached fingerprint results.** A cached run does not count as a recheck.
 - **It is a TLS finding and the scan ran in fast mode.** Only deep TLS scans can close TLS
   findings (HORIZON 999.138).
