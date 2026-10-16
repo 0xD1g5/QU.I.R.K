@@ -2598,9 +2598,12 @@ def main():
             fp = fingerprint_service(host, port, timeout=fp_timeout)
             return {"host": host, "port": port, "is_open": fp.is_open, "proto": fp.proto, "detail": fp.detail}
 
-        with _phase_timer(run_stats, "fingerprinting"):
+        with _phase_timer(run_stats, "fingerprinting") as _fp_timer:
             fp_results: List[Dict[str, Any]] = []
             if fp_cached:
+                # Phase 229 D-22: a cached fingerprint is not a recheck; write
+                # no timing key so the http probe family resolves to not_run.
+                _fp_timer.mark_skipped()
                 logger.stamp(f"♻️ Using cached fingerprint results ({fp_key})")
                 fp_results = fp_cached.get("fingerprints", [])
             else:
