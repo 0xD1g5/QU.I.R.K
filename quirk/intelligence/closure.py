@@ -644,6 +644,20 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     _carry_forward(row)
                     continue
                 prior_set = {p for p in prior_raw if p not in NON_ASSET_PROTOCOLS}
+                # 229-VERIFICATION residual gap (FIND-11): an empty probe-family
+                # basis (a legacy-origin carried chain, or a prior scan that saw
+                # only non-asset rows here) never falls back to the CURRENT scan's
+                # protocols - that would let a co-resident SAML/JWT row stand in for
+                # the probe that raised the finding. Refuse and carry forward for a
+                # carried row. The direct path (an open/resurfaced row whose prior
+                # scan detected it from an asset row here) keeps the fallback: the
+                # production writer never persists such a row without that
+                # endpoint, and seeded fixtures in test_closure_verification.py
+                # rely on it.
+                if row.state == _NOT_OBSERVED_STATE and not prior_set:
+                    counters["refused_probe"] += 1
+                    _carry_forward(row)
+                    continue
                 check_protocols = prior_set or current_asset.get(
                     endpoint_key, live_protocols
                 )
