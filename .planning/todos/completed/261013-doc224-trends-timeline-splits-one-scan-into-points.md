@@ -4,7 +4,8 @@ created: 2026-10-13
 source: Phase 224 GC2 re-audit (ledger rows DCL-INTELSCHEMA-0037, -0075, -0144; docs/intelligence-schema.md Trends Timeline)
 priority: medium
 area: quirk/dashboard/api/routes/trends.py (_list_session_timestamps_n, get_trends_timeline)
-status: pending
+status: completed
+completed: 2026-10-15
 resolves_phase: null
 owner: "999.134"
 ---
@@ -28,10 +29,10 @@ than it says.
 `docs/intelligence-schema.md` now documents the real behaviour (millisecond points, not scans); revert that caveat
 if this is fixed.
 
-- [ ] Make `_list_session_timestamps_n` key by `scan_run_id` with the legacy millisecond fallback, exactly as
+- [x] Make `_list_session_timestamps_n` key by `scan_run_id` with the legacy millisecond fallback, exactly as
       `_list_session_timestamps` does (or share one helper with a limit parameter).
-- [ ] Test: one scan with rows at two different milliseconds yields one timeline point; two scans yield two.
-- [ ] Update the Trends Timeline section of `docs/intelligence-schema.md`.
+- [x] Test: one scan with rows at two different milliseconds yields one timeline point; two scans yield two.
+- [x] Update the Trends Timeline section of `docs/intelligence-schema.md`.
 
 ## Feasibility & Effort
 
@@ -53,4 +54,10 @@ matches no row. Phase 228's XSURF-07 fixture (`tests/test_cross_surface_parity.p
 `test_xsurf07_trend_merge_segment_scores_match_headline`) uses a whole-second stamp to avoid it. The fix
 above (key by `scan_run_id`, millisecond fallback only for legacy rows) closes both symptoms.
 
-- [ ] Test: a scan whose rows carry microsecond `scanned_at` yields exactly one timeline point.
+- [x] Test: a scan whose rows carry microsecond `scanned_at` yields exactly one timeline point.
+
+## Resolution (Phase 229, 2026-10-15)
+
+Absorbed sibling of FIND-12 (owner was "999.134"), fixed by the same change (D-09). Fix commit `7729d6ba` (229-05): the timeline lister keys by `scan_run_id` with the millisecond fallback for legacy rows, so one scan is one point and a microsecond-stamped scan resolves to a point. Docs: `35aba8f9` (Trends Timeline section of `docs/intelligence-schema.md`).
+
+Proving node (UAT-229-07): `tests/test_dashboard_trends.py::test_trends_timeline_one_point_per_scan_run_microsecond_stamps`.

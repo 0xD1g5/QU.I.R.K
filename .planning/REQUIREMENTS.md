@@ -78,7 +78,7 @@ HORIZON prose:
       finding is written `open` (not read as `not_observed`), a closure lands on the scan that
       observed it closed (not the prior scan), and plaintext HTTP can close (todo
       `261013-doc224-closure-states-open-never-written-closed-on-prior-scan`).
-- [ ] **FIND-12**: Drift notifications compare the two newest scan runs, never a scan with itself
+- [x] **FIND-12**: Drift notifications compare the two newest scan runs, never a scan with itself
       (todo `261013-doc224-notifier-session-key-ignores-scan-run-id`).
 - [ ] **FIND-13**: `sensor merge` and `/api/merge/latest` keep every endpoint from each sensor's
       latest push, not one row per sensor (todo `261013-doc224-sensor-merge-keeps-one-endpoint-per-sensor`).
@@ -167,7 +167,7 @@ Deferred from this milestone with an owner:
 | XSURF-07 | Phase 228 | Complete |
 | XSURF-08 | Phase 228 | Complete |
 | FIND-11 | Phase 229 | Complete |
-| FIND-12 | Phase 229 | Pending |
+| FIND-12 | Phase 229 | Complete |
 | FIND-13 | Phase 229 | Pending |
 | DETECT-01 | Phase 230 | Pending |
 | DETECT-02 | Phase 230 | Pending |
