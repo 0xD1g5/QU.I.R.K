@@ -658,6 +658,17 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     counters["refused_probe"] += 1
                     _carry_forward(row)
                     continue
+                # 229-VERIFICATION residual gap 2 (FIND-11): a carried row with NO
+                # detecting open/resurfaced row anywhere in its history is a
+                # pre-release (D-04) legacy row. Its basis can only come from an
+                # intermediate scan (e.g. one that saw just a co-resident SAML/JWT
+                # row), never the probe that raised the finding, so it is refused
+                # regardless of basis until a re-detection writes a real ``open``
+                # row.
+                if row.state == _NOT_OBSERVED_STATE and detected is None:
+                    counters["refused_probe"] += 1
+                    _carry_forward(row)
+                    continue
                 check_protocols = prior_set or current_asset.get(
                     endpoint_key, live_protocols
                 )
