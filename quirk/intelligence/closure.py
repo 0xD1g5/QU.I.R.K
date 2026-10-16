@@ -430,12 +430,14 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # be rechecked. Families come from the PRIOR scan's protocols at this
                 # host:port (D-05); fall back to the current error-free asset ones
                 # (classified or not). A protocol with no probe family can never be
-                # shown rechecked, so it refuses (never dropped from the set).
-                prior_set = {
-                    p
-                    for p in prior_protocols_at.get(endpoint_key, set())
-                    if p and p not in NON_ASSET_PROTOCOLS
-                }
+                # shown rechecked, so it refuses (never dropped from the set). A
+                # NULL/empty prior protocol is unmapped too: it refuses rather than
+                # falling through to the current protocols (229-REVIEW WR-05).
+                prior_raw = prior_protocols_at.get(endpoint_key, set())
+                if any(not p for p in prior_raw):
+                    counters["refused_probe"] += 1
+                    continue
+                prior_set = {p for p in prior_raw if p not in NON_ASSET_PROTOCOLS}
                 check_protocols = prior_set or current_asset.get(
                     endpoint_key, live_protocols
                 )

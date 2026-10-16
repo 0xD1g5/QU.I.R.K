@@ -1205,6 +1205,22 @@ def test_unmapped_protocol_refuses(tmp_path, prior, current, health):
     _assert_not_closed(db_path, counters)
 
 
+@pytest.mark.parametrize("prior", [[None], [None, "HTTP"], [""]], ids=["null", "null-and-http", "empty"])
+def test_null_prior_protocol_refuses_not_dropped(tmp_path, prior):
+    """229-REVIEW WR-05: a prior row whose protocol was never classified is
+    unmapped. It must refuse, not be dropped so the current TLS row's healthy
+    family decides (the pre-D-05 behaviour)."""
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(
+        tmp_path, prior_protocols=prior, current_rows=[("TLS", None, None)],
+        health=_health(http="healthy", tls="healthy"),
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["refused_probe"] == 1
+    _assert_not_closed(db_path, counters)
+
+
 def test_advisory_prior_row_is_ignored_not_unmapped(tmp_path):
     from quirk.intelligence.closure import compute_closure
 
