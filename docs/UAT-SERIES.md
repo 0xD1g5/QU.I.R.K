@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -33170,3 +33170,219 @@ gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomO
 **Result:** - [x] PASS (2026-10-15 operator reply "approved" after comparing the scratch-DB dashboard, score 73 GOOD with cap reason, lifts and near-expiry MEDIUM, against the report-side printout — see 228-09-SUMMARY.md)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-15  **Tester:** operator
 **Notes:** Operator reply, verbatim: "approved". Scratch DB only; the canonical quirk-output/quirk.db was never served. Server stopped afterwards (curl returned 000).
+
+## Series 229: Finding & State Correctness (Phase 229 — v5.28)
+
+**Last Updated:** 2026-10-15 (Phase 229). Ten cases. Detected findings now persist as open, closure is recorded on the observing scan, drift notifications and the trend timeline group by scan run, and sensor merge keeps every endpoint of each sensor's latest push. All PASS on observed local runs.
+
+### UAT-229-01: Detected findings are stored and read back as open, VEX exploitable
+
+**ID:** UAT-229-01
+**Title:** Detected findings are stored and read back as open, VEX exploitable
+**Maps to:** FIND-11
+
+**What to test:** A first scan writes detected remediation rows as open (not not_observed) and the CBOM VEX state reads exploitable; counter-only items stay not_observed.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_closure_state_model_e2e.py::test_scan1_detected_rows_are_open_and_vex_exploitable \
+  tests/test_remediation_persist.py::test_detected_and_default_state_constants \
+  tests/test_remediation_persist.py::test_detected_fingerprint_rows_and_item_are_written_open \
+  tests/test_remediation_persist.py::test_counter_only_fingerprint_item_stays_not_observed
+```
+
+**Pass Criteria:** The run reports 4 passed.
+
+**Result:** - [x] PASS (2026-10-15 4 passed — covered by `tests/test_closure_state_model_e2e.py::test_scan1_detected_rows_are_open_and_vex_exploitable` and `tests/test_remediation_persist.py::test_detected_and_default_state_constants` and `tests/test_remediation_persist.py::test_detected_fingerprint_rows_and_item_are_written_open` and `tests/test_remediation_persist.py::test_counter_only_fingerprint_item_stays_not_observed`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Written by plan 229-01 (D-01/D-23).
+
+### UAT-229-02: A plaintext-HTTP fix closes on the scan that observed it, fast TLS mode, including the last remaining endpoint
+
+**ID:** UAT-229-02
+**Title:** A plaintext-HTTP fix closes on the scan that observed it, fast TLS mode, including the last remaining endpoint
+**Maps to:** FIND-11
+
+**What to test:** With one of eight plaintext HTTP hosts fixed, and then all of them, the closure is recorded on the observing scan in fast TLS mode.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_closure_state_model_e2e.py::test_http_fast_mode_one_fixed_closes_on_scan2 \
+  tests/test_closure_state_model_e2e.py::test_http_all_fixed_closes_every_host
+```
+
+**Pass Criteria:** The run reports 2 passed.
+
+**Result:** - [x] PASS (2026-10-15 2 passed — covered by `tests/test_closure_state_model_e2e.py::test_http_fast_mode_one_fixed_closes_on_scan2` and `tests/test_closure_state_model_e2e.py::test_http_all_fixed_closes_every_host`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Plans 229-02 and 229-03 (D-03/D-05/D-20/D-21).
+
+### UAT-229-03: Timeouts, placeholders, errored rows and cached fingerprint runs never close a finding
+
+**ID:** UAT-229-03
+**Title:** Timeouts, placeholders, errored rows and cached fingerprint runs never close a finding
+**Maps to:** FIND-11
+
+**What to test:** Every guardrail negative refuses closure and writes no closed row; an unmapped protocol is refused; a cached fingerprint run is not a recheck.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_closure_state_model_e2e.py::test_guardrail_negatives_refuse_and_write_no_closed_row \
+  tests/test_closure_state_model_e2e.py::test_unmapped_protocol_http_restfuzz_refused \
+  tests/test_fingerprint_cache_recheck.py::test_phase_timer_mark_skipped_writes_no_key \
+  tests/test_fingerprint_cache_recheck.py::test_cache_hit_branch_calls_mark_skipped_on_bound_timer \
+  tests/test_fingerprint_cache_recheck.py::test_missing_fingerprinting_key_resolves_http_not_run
+```
+
+**Pass Criteria:** The run reports 9 passed.
+
+**Result:** - [x] PASS (2026-10-15 9 passed — covered by `tests/test_closure_state_model_e2e.py::test_guardrail_negatives_refuse_and_write_no_closed_row` and `tests/test_closure_state_model_e2e.py::test_unmapped_protocol_http_restfuzz_refused` and `tests/test_fingerprint_cache_recheck.py::test_phase_timer_mark_skipped_writes_no_key` and `tests/test_fingerprint_cache_recheck.py::test_cache_hit_branch_calls_mark_skipped_on_bound_timer` and `tests/test_fingerprint_cache_recheck.py::test_missing_fingerprinting_key_resolves_http_not_run`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** The parametrized node expands to every guardrail case.
+
+### UAT-229-04: TLS findings close on deep scans and are refused on fast scans
+
+**ID:** UAT-229-04
+**Title:** TLS findings close on deep scans and are refused on fast scans
+**Maps to:** FIND-11
+
+**What to test:** A fixed TLS host closes in deep mode and is refused in fast mode. The fast-mode limit is documented and filed as HORIZON 999.138.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_closure_state_model_e2e.py::test_tls_deep_mode_closes_fixed_host \
+  tests/test_closure_state_model_e2e.py::test_tls_fast_mode_refuses_fixed_host
+```
+
+**Pass Criteria:** The run reports 2 passed.
+
+**Result:** - [x] PASS (2026-10-15 2 passed — covered by `tests/test_closure_state_model_e2e.py::test_tls_deep_mode_closes_fixed_host` and `tests/test_closure_state_model_e2e.py::test_tls_fast_mode_refuses_fixed_host`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Documented limit, not a defect; owner 999.138.
+
+### UAT-229-05: Closure re-runs and later scans write no duplicate closures and the resurface chain is intact
+
+**ID:** UAT-229-05
+**Title:** Closure re-runs and later scans write no duplicate closures and the resurface chain is intact
+**Maps to:** FIND-11
+
+**What to test:** Re-running closure is idempotent in rows and events, a third scan does not recount a closure, and a closed item that resurfaces can close again with history retained.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_closure_state_model_e2e.py::test_rerun_is_idempotent_in_rows_and_events \
+  tests/test_closure_state_model_e2e.py::test_third_scan_does_not_recount_closure \
+  tests/test_closure_verification.py::test_resurfaced_can_close_again_and_history_is_retained
+```
+
+**Pass Criteria:** The run reports 3 passed.
+
+**Result:** - [x] PASS (2026-10-15 3 passed — covered by `tests/test_closure_state_model_e2e.py::test_rerun_is_idempotent_in_rows_and_events` and `tests/test_closure_state_model_e2e.py::test_third_scan_does_not_recount_closure` and `tests/test_closure_verification.py::test_resurfaced_can_close_again_and_history_is_retained`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Idempotency on production writers.
+
+### UAT-229-06: With three or more scan runs the drift notification compares the two newest distinct runs and loads both
+
+**ID:** UAT-229-06
+**Title:** With three or more scan runs the drift notification compares the two newest distinct runs and loads both
+**Maps to:** FIND-12
+
+**What to test:** Sessions are keyed by scan run id, so microsecond-adjacent runs are distinct and the two newest distinct runs are compared; legacy NULL-run rows stay distinct.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_notify_session_identity.py::test_probe_two_runs_microsecond_timestamps_fires \
+  tests/test_notify_session_identity.py::test_three_runs_compare_two_newest_distinct \
+  tests/test_notify_session_identity.py::test_legacy_null_run_rows_in_distinct_ms_stay_distinct \
+  tests/test_notify_session_identity.py::test_import_hygiene_no_fastapi_or_pydantic
+```
+
+**Pass Criteria:** The run reports 4 passed.
+
+**Result:** - [x] PASS (2026-10-15 4 passed — covered by `tests/test_notify_session_identity.py::test_probe_two_runs_microsecond_timestamps_fires` and `tests/test_notify_session_identity.py::test_three_runs_compare_two_newest_distinct` and `tests/test_notify_session_identity.py::test_legacy_null_run_rows_in_distinct_ms_stay_distinct` and `tests/test_notify_session_identity.py::test_import_hygiene_no_fastapi_or_pydantic`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Plan 229-05 (D-08/D-10).
+
+### UAT-229-07: The trend timeline shows one point per scan run
+
+**ID:** UAT-229-07
+**Title:** The trend timeline shows one point per scan run
+**Maps to:** FIND-12
+
+**What to test:** Two scan runs with microsecond-adjacent stamps produce two timeline points, not one split per timestamp.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_dashboard_trends.py::test_trends_timeline_one_point_per_scan_run_microsecond_stamps
+```
+
+**Pass Criteria:** The run reports 1 passed.
+
+**Result:** - [x] PASS (2026-10-15 1 passed — covered by `tests/test_dashboard_trends.py::test_trends_timeline_one_point_per_scan_run_microsecond_stamps`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Absorbs the trends-timeline sibling todo (D-09).
+
+### UAT-229-08: quirk sensor merge keeps every endpoint of each sensor's latest push
+
+**ID:** UAT-229-08
+**Title:** quirk sensor merge keeps every endpoint of each sensor's latest push
+**Maps to:** FIND-13
+
+**What to test:** Merging one or two sensors keeps every endpoint of each sensor's latest push, replacing the old one-endpoint-per-sensor behaviour.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_sensor_merge_all_endpoints.py::test_one_sensor_qpush_three_hosts_merges_all_three \
+  tests/test_sensor_merge_all_endpoints.py::test_two_sensors_multi_endpoint_cli_merge \
+  tests/test_merge_scan.py
+```
+
+**Pass Criteria:** The run reports 21 passed.
+
+**Result:** - [x] PASS (2026-10-15 21 passed — covered by `tests/test_sensor_merge_all_endpoints.py::test_one_sensor_qpush_three_hosts_merges_all_three` and `tests/test_sensor_merge_all_endpoints.py::test_two_sensors_multi_endpoint_cli_merge` and `tests/test_merge_scan.py`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Plans 229-06 and 229-07; tests/test_merge_scan.py was rewritten.
+
+### UAT-229-09: GET /api/merge/latest per-segment scores use every endpoint of the latest push
+
+**ID:** UAT-229-09
+**Title:** GET /api/merge/latest per-segment scores use every endpoint of the latest push
+**Maps to:** FIND-13
+
+**What to test:** Per-segment scores equal an independent computation over all five endpoints and differ from the single-highest-id-row score.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_dashboard_merge_latest.py::test_per_segment_scores_use_every_endpoint_of_latest_push
+```
+
+**Pass Criteria:** The run reports 1 passed.
+
+**Result:** - [x] PASS (2026-10-15 1 passed — covered by `tests/test_dashboard_merge_latest.py::test_per_segment_scores_use_every_endpoint_of_latest_push`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Plan 229-07 Task 2.
+
+### UAT-229-10: Push identity column is additive and stamped on ingest
+
+**ID:** UAT-229-10
+**Title:** Push identity column is additive and stamped on ingest
+**Maps to:** FIND-13
+
+**What to test:** crypto_endpoints.push_payload_id is registered as an additive migration, is idempotent, and ingest stamps every endpoint with its payload id.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_db_migrations.py::test_phase229_push_payload_id_column_registered \
+  tests/test_db_migrations.py::test_phase229_push_payload_id_migration_idempotent \
+  tests/test_sensor_push_payload_id.py::test_ingest_stamps_every_endpoint_with_payload_id \
+  tests/test_sensor_push_payload_id.py::test_two_pushes_are_not_cross_tagged \
+  tests/test_sensor_push_payload_id.py::test_duplicate_payload_writes_no_extra_rows \
+  tests/test_sensor_push_payload_id.py::test_import_results_path_stamps_payload_id \
+  tests/test_sensor_push_payload_id.py::test_https_route_calls_ingest_envelope
+```
+
+**Pass Criteria:** The run reports 7 passed.
+
+**Result:** - [x] PASS (2026-10-15 7 passed — covered by `tests/test_db_migrations.py::test_phase229_push_payload_id_column_registered` and `tests/test_db_migrations.py::test_phase229_push_payload_id_migration_idempotent` and `tests/test_sensor_push_payload_id.py::test_ingest_stamps_every_endpoint_with_payload_id` and `tests/test_sensor_push_payload_id.py::test_two_pushes_are_not_cross_tagged` and `tests/test_sensor_push_payload_id.py::test_duplicate_payload_writes_no_extra_rows` and `tests/test_sensor_push_payload_id.py::test_import_results_path_stamps_payload_id` and `tests/test_sensor_push_payload_id.py::test_https_route_calls_ingest_envelope`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-15  **Tester:** automated
+**Notes:** Plan 229-06 (D-12).
