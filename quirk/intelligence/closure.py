@@ -30,9 +30,14 @@ host:port whose current rows are all non-live (CLOSED/ADVISORY protocol, scan_er
 set, or a protocol no probe family classifies, e.g. UNKNOWN after a probe timeout) is
 refused (``refused_probe``), and so is one carrying ANY unclassified asset row beside a
 classified one (229-REVIEW iteration-2 CR-01). Clause (d) takes the families of the PRIOR scan's
-protocols at that host:port (fallback: the live current protocols) and requires ALL to be
-rechecked through ``probe_family_rechecked`` (``http`` also accepts ``no_targets``); any
-protocol with no probe family refuses. A closure is also written on the CURRENT scan
+protocols at that host:port (fallback: the live current protocols) and requires, PER HOST:PORT
+(229-VERIFICATION gap 1, plan 229-12), that EACH family have a LIVE row at that same host:port
+in the current scan and be rechecked through ``probe_family_rechecked``; a family healthy
+elsewhere in the scan is not enough, and any CLOSED row or scan_error row at the host:port
+refuses it. A plaintext-HTTP family closes only on a live HTTP row or on a live
+fingerprint-stage re-identification (``_FINGERPRINT_RECLASS_PROTOCOLS``: TLS/SSH) whose
+family was not live at that host:port in the DETECTING scan (``_host_port_rechecked``); a
+co-resident SAML/JWT row is not reclassification. Any protocol with no probe family refuses. A closure is also written on the CURRENT scan
 (closed fingerprint row, plus a closed item when none exists) so every current-scan
 reader sees it (D-03). A REFUSED candidate is carried onto the current scan as a
 ``not_observed`` fingerprint row, so the next scan can still close it and burndown
@@ -150,6 +155,12 @@ _CLOSED_STATE = "closed"
 # undetected state, never a new literal.
 _NOT_OBSERVED_STATE = DEFAULT_ITEM_STATE
 _TWO_SIDED_REASON = "two_sided_verified"
+# 229-VERIFICATION gap 1: protocols the fingerprint stage emits for an open port, other
+# than HTTP (the finding's own family) and UNKNOWN (unclassified). A live row of one of
+# these is the evidence that the port was re-identified (the HTTP -> TLS move).
+# tests/test_closure_verification.py pins this set against quirk/scanner/fingerprint.py
+# at run time, so it cannot drift silently.
+_FINGERPRINT_RECLASS_PROTOCOLS = frozenset({"SSH", "TLS"})
 _RESURFACE_REASON = "detected_after_closure"
 
 _COUNTER_KEYS: Tuple[str, ...] = (
@@ -321,6 +332,62 @@ def _detection_protocols(
     }
 
 
+def _live_families_at(session: Any, scan_run_id: str, host: Any, port: Any) -> set:
+    """Families LIVE at host:port in ``scan_run_id`` (same definition of live as the
+    current-scan loop: a real asset, no scan_error, a protocol some probe classifies)."""
+    fams = set()
+    for ep in (
+        session.query(CryptoEndpoint)
+        .filter(
+            CryptoEndpoint.scan_run_id == scan_run_id,
+            CryptoEndpoint.host == host,
+            CryptoEndpoint.port == port,
+        )
+        .all()
+    ):
+        if (
+            ep.protocol
+            and ep.protocol not in NON_ASSET_PROTOCOLS
+            and ep.scan_error is None
+        ):
+            fam = family_for_protocol(ep.protocol)
+            if fam is not None:
+                fams.add(fam)
+    return fams
+
+
+def _host_port_rechecked(
+    prior_families: set,
+    reclass_baseline: set,
+    live_families_at_k: set,
+    live_protocols_at_k: set,
+    probe_health: Dict[str, Any],
+) -> bool:
+    """Per host:port recheck decision (229-VERIFICATION gap 1, D-20/D-05/D-21).
+
+    Every family that reported the host:port must have a LIVE row there now and be
+    rechecked. ``http`` alone may instead be satisfied by positive reclassification:
+    a live row whose protocol is in ``_FINGERPRINT_RECLASS_PROTOCOLS`` and whose family
+    was not live at the host:port in the detecting scan (``reclass_baseline``).
+    An empty family set is never vacuously rechecked.
+    """
+    if not prior_families:
+        return False
+    for fam in prior_families:
+        if not probe_family_rechecked(probe_health, fam):
+            return False
+        if fam in live_families_at_k:
+            continue
+        if fam == "http" and any(
+            p in _FINGERPRINT_RECLASS_PROTOCOLS
+            and family_for_protocol(p) not in reclass_baseline
+            for p in live_protocols_at_k
+        ):
+            continue
+        return False
+    return True
+
+
 def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
     """Compute two-sided closure for `scan_run_id` against its selected prior scan.
 
@@ -387,6 +454,15 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             current_live: Dict[Tuple[Any, Any], set] = defaultdict(set)
             current_asset: Dict[Tuple[Any, Any], set] = defaultdict(set)
             current_unclassified: set = set()
+            # 229-VERIFICATION gap 1: `current_failed` = host:ports with a CLOSED row
+            # or any asset row carrying scan_error (a probe there failed). ADVISORY
+            # rows are deliberately NOT included: they are heterogeneous annotations
+            # (JWKS-verify-disabled, broker cleartext, target-unreached), not probe
+            # outcomes, and the per-family rule already refuses when the finding's own
+            # family has no live row. `current_live_families` is the per-host family
+            # set that rule is checked against.
+            current_failed: set = set()
+            current_live_families: Dict[Tuple[Any, Any], set] = defaultdict(set)
             for ep in (
                 session.query(CryptoEndpoint)
                 .filter(CryptoEndpoint.scan_run_id == scan_run_id)
@@ -394,6 +470,10 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             ):
                 key = (ep.host, ep.port)
                 current_present[key].add(ep.protocol)
+                if ep.protocol == "CLOSED" or (
+                    ep.protocol not in NON_ASSET_PROTOCOLS and ep.scan_error is not None
+                ):
+                    current_failed.add(key)
                 if (
                     ep.protocol not in NON_ASSET_PROTOCOLS
                     and family_for_protocol(ep.protocol) is None
@@ -407,13 +487,26 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     current_asset[key].add(ep.protocol)
                     if family_for_protocol(ep.protocol) is not None:
                         current_live[key].add(ep.protocol)
+                        current_live_families[key].add(family_for_protocol(ep.protocol))
             prior_protocols_at: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            # Reclassification baseline for a direct (non-carried) row: the families
+            # LIVE at the host:port in the adjacent prior (= detecting) scan.
+            prior_live_families: Dict[Tuple[Any, Any], set] = defaultdict(set)
             for ep in (
                 session.query(CryptoEndpoint)
                 .filter(CryptoEndpoint.scan_run_id == prior_scan_run_id)
                 .all()
             ):
                 prior_protocols_at[(ep.host, ep.port)].add(ep.protocol)
+                if (
+                    ep.protocol
+                    and ep.protocol not in NON_ASSET_PROTOCOLS
+                    and ep.scan_error is None
+                    and family_for_protocol(ep.protocol) is not None
+                ):
+                    prior_live_families[(ep.host, ep.port)].add(
+                        family_for_protocol(ep.protocol)
+                    )
             current_items: Dict[str, RemediationItem] = {
                 it.slug: it
                 for it in session.query(RemediationItem)
@@ -515,7 +608,13 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # where ANY asset row is unclassified, even beside a classified
                 # one (229-REVIEW iteration-2 CR-01).
                 live_protocols = current_live.get(endpoint_key, set())
-                if not live_protocols or endpoint_key in current_unclassified:
+                # 229-VERIFICATION gap 1: nor is one carrying a CLOSED or scan_error
+                # row (a probe there failed), even beside a live co-resident row.
+                if (
+                    not live_protocols
+                    or endpoint_key in current_unclassified
+                    or endpoint_key in current_failed
+                ):
                     counters["refused_probe"] += 1
                     _carry_forward(row)
                     continue
@@ -533,11 +632,13 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     if row.state == _NOT_OBSERVED_STATE
                     else None
                 )
-                if not (prior_raw - NON_ASSET_PROTOCOLS) and row.state == _NOT_OBSERVED_STATE:
-                    # WR-03: a carried-forward row's adjacent prior scan did not
-                    # observe this host:port (that is why it was refused there), so
-                    # resolve the families from the scan that DETECTED it instead.
-                    prior_raw = _detection_protocols(session, detected, row) or prior_raw
+                if row.state == _NOT_OBSERVED_STATE:
+                    # WR-03: a carried-forward row's adjacent prior scan may not have
+                    # observed this host:port, or saw only a co-resident row while
+                    # the finding's own probe failed (that is why it was refused
+                    # there). ALWAYS union the scan that DETECTED it, so a dropped
+                    # family cannot be forgotten (229-VERIFICATION gap 1, D-20).
+                    prior_raw = set(prior_raw) | _detection_protocols(session, detected, row)
                 if any(not p for p in prior_raw):
                     counters["refused_probe"] += 1
                     _carry_forward(row)
@@ -547,8 +648,25 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     endpoint_key, live_protocols
                 )
                 families = [family_for_protocol(p) for p in check_protocols]
-                if any(f is None for f in families) or not all(
-                    probe_family_rechecked(probe_health, f) for f in families
+                family_set = set(families)
+                # Reclassification baseline = families LIVE at host:port in the
+                # DETECTING scan, never the prior/intermediate union (W1): the union
+                # only decides which families must be rechecked. A carried row with no
+                # detecting row (legacy D-04) uses the full set: the stricter choice.
+                if row.state != _NOT_OBSERVED_STATE:
+                    reclass_baseline = prior_live_families.get(endpoint_key, set())
+                elif detected is not None:
+                    reclass_baseline = _live_families_at(
+                        session, detected.scan_run_id, row.host, row.port
+                    )
+                else:
+                    reclass_baseline = family_set
+                if any(f is None for f in families) or not _host_port_rechecked(
+                    family_set,
+                    reclass_baseline,
+                    current_live_families.get(endpoint_key, set()),
+                    live_protocols,
+                    probe_health,
                 ):
                     counters["refused_probe"] += 1
                     _carry_forward(row)
