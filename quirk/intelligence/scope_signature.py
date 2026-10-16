@@ -89,6 +89,9 @@ logger = logging.getLogger(__name__)
 # Phase 180 can refuse to compare signatures written under different field
 # sets rather than silently comparing incomplete records (T-179-15).
 # 2.0.0 (Phase 180 D-13c): target_set_digest added — see module docstring.
+# Probe-health families live in probe_health_json, which is outside
+# _DIGEST_FIELDS, so adding a family (e.g. "http", Phase 229 D-05) does NOT
+# bump this version (D-22).
 SCOPE_SIGNATURE_VERSION = "2.0.0"
 
 # Exactly the fields the digest is computed over. probe_health_json is
@@ -256,6 +259,11 @@ class _FamilySpec:
         tls family: cfg.scan.tls_enum_mode must be "deep" for
         tls_capabilities_json to ever be populated at all — non-deep TLS is
         not_run, not a degraded probe.
+    no_targets_is_recheck: Phase 229 D-21. Default False. Only a family whose
+        fixed endpoint is positively reclassified as ANOTHER protocol (HTTP
+        becoming TLS after a redirect/upgrade fix) may treat zero remaining
+        targets as a recheck. Safe only together with the closure live-row
+        guard (plan 229-03). Read via probe_family_rechecked().
     """
 
     enable_attr: Optional[str]
@@ -263,6 +271,7 @@ class _FamilySpec:
     timing_key: str
     protocols: FrozenSet[str]
     disabled_extra: Optional[Callable[[Any], bool]] = None
+    no_targets_is_recheck: bool = False
 
 
 # Populated from the two verified tables in the plan's <interfaces> section
@@ -288,6 +297,15 @@ _FAMILY_SPEC: Dict[str, _FamilySpec] = {
         evidence_field="ssh_audit_json",
         timing_key="ssh_scanning",
         protocols=frozenset({"SSH"}),
+    ),
+    # Phase 229 D-05: plaintext HTTP. Always on; the fingerprint stage sets
+    # service_detail to the status line for HTTP endpoints.
+    "http": _FamilySpec(
+        enable_attr=None,
+        evidence_field="service_detail",
+        timing_key="fingerprinting",
+        protocols=frozenset({"HTTP"}),
+        no_targets_is_recheck=True,
     ),
     "jwt": _FamilySpec(
         enable_attr="enable_jwt",
@@ -391,6 +409,27 @@ def family_for_protocol(protocol: str) -> Optional[str]:
     import with no deprecation contract.
     """
     return _PROTOCOL_TO_FAMILY.get(protocol)
+
+
+def probe_family_rechecked(probe_health: Dict[str, Any], family: Optional[str]) -> bool:
+    """Phase 229 D-21: PUBLIC predicate - did `family` genuinely re-probe?
+
+    True when the family's status is "healthy", or "no_targets" for a family
+    whose spec opts in via no_targets_is_recheck (only "http"). False for
+    not_run, unhealthy, an unknown family, or a missing entry.
+    """
+    spec = _FAMILY_SPEC.get(family) if family else None
+    if spec is None:
+        return False
+    entry = (probe_health or {}).get(family)
+    if not isinstance(entry, dict):
+        return False
+    status = entry.get("status")
+    if status == "healthy":
+        return True
+    if status == "no_targets":
+        return spec.no_targets_is_recheck
+    return False
 
 
 def assess_probe_health(

@@ -23,7 +23,9 @@ from quirk.intelligence.scope_signature import (
     assess_probe_health,
     build_scope_signature,
     compute_signature_digest,
+    family_for_protocol,
     persist_scope_signature,
+    probe_family_rechecked,
 )
 from quirk.models import CryptoEndpoint, ScanScopeSignature, Sensor
 
@@ -604,3 +606,67 @@ def test_run_scan_call_site_ordering_remediation_persist_then_scope_signature_th
 
     source = inspect.getsource(run_scan.main)
     assert source.index("remediation_persist") < source.index("scope_signature") < source.index('"reporting"')
+
+
+# ---------------------------------------------------------------------------
+# Phase 229 plan 02: http family + opt-in no_targets recheck (FIND-11)
+# ---------------------------------------------------------------------------
+
+# Computed once on the pre-change tree (before the http family was added).
+_GOLDEN_SIG = {
+    "signature_version": "2.0.0",
+    "port_scope": "common",
+    "profile": "standard",
+    "extras_present": ["a"],
+    "credentials_present": ["b"],
+    "sensor_set": ["tls"],
+    "target_set_digest": "x" * 64,
+}
+_GOLDEN_DIGEST = "d1b07f37d9874b7ab9f0ad52579269a6376d9196b2229cecf72d19142ea78977"
+
+
+def test_http_family_maps_and_is_always_on():
+    assert family_for_protocol("HTTP") == "http"
+    spec = _FAMILY_SPEC["http"]
+    assert spec.protocols == frozenset({"HTTP"})
+    assert spec.evidence_field == "service_detail"
+    assert spec.timing_key == "fingerprinting"
+    assert spec.enable_attr is None
+
+
+def _http_eps(n, detail="HTTP/1.1 200 OK"):
+    return [
+        CryptoEndpoint(host=f"h{i}.example.com", port=80, protocol="HTTP", service_detail=detail)
+        for i in range(n)
+    ]
+
+
+def test_http_health_healthy_no_targets_not_run():
+    cfg = _cfg()
+    stats = _run_stats_with_timing("fingerprinting")
+    assert assess_probe_health(cfg, _http_eps(2), stats)["http"]["status"] == "healthy"
+    assert assess_probe_health(cfg, [], stats)["http"]["status"] == "no_targets"
+    assert assess_probe_health(cfg, _http_eps(2), {"timings_sec": {}})["http"]["status"] == "not_run"
+
+
+def test_probe_family_rechecked_rules():
+    assert probe_family_rechecked({"http": {"status": "no_targets"}}, "http") is True
+    assert probe_family_rechecked({"tls": {"status": "no_targets"}}, "tls") is False
+    for fam in _FAMILY_SPEC:
+        assert probe_family_rechecked({fam: {"status": "healthy"}}, fam) is True
+        for bad in ("not_run", "unhealthy"):
+            assert probe_family_rechecked({fam: {"status": bad}}, fam) is False
+    assert probe_family_rechecked({}, "http") is False
+    assert probe_family_rechecked({"http": {"status": "healthy"}}, None) is False
+    assert probe_family_rechecked({"zzz": {"status": "healthy"}}, "zzz") is False
+
+
+def test_only_http_opts_into_no_targets_recheck():
+    assert {f for f, s in _FAMILY_SPEC.items() if s.no_targets_is_recheck} == {"http"}
+
+
+def test_version_and_golden_digest_unchanged_by_family_add():
+    import quirk.intelligence.scope_signature as mod
+
+    assert mod.SCOPE_SIGNATURE_VERSION == "2.0.0"
+    assert compute_signature_digest(_GOLDEN_SIG) == _GOLDEN_DIGEST
