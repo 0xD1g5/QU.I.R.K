@@ -105,17 +105,35 @@ def openapi_ep(i, sid=None, port=443):
     return CryptoEndpoint(host=f"h{i}", port=port, protocol="OPENAPI", scan_run_id=sid)
 
 
-def _cfg(tls_mode):
+def saml_ep(i, sid=None, port=80):
+    """A SAML metadata fetch over ``http://`` lands on port 80
+    (``saml_scanner.py``), beside the HTTP row at the same host:port."""
+    return CryptoEndpoint(
+        host=f"h{i}", port=port, protocol="SAML", cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048, saml_scan_json=json.dumps({"signing_certs": [1]}),
+        scan_run_id=sid,
+    )
+
+
+def jwt_ep(i, sid=None, port=80):
+    return CryptoEndpoint(
+        host=f"h{i}", port=port, protocol="JWT", jwt_scan_json=json.dumps({"alg": "RS256"}),
+        scan_run_id=sid,
+    )
+
+
+def _cfg(tls_mode, connectors=None):
     return SimpleNamespace(
         scan=SimpleNamespace(tls_enum_mode=tls_mode, tls_designated_ports=[]),
-        connectors=SimpleNamespace(),
+        connectors=SimpleNamespace(**(connectors or {})),
     )
 
 
 # ---------------------------------------------------------------------------
 # the pipeline-order helper
 # ---------------------------------------------------------------------------
-def _run_scan(db_path, sid, order, endpoints, *, tls_mode="fast", timings=None):
+def _run_scan(db_path, sid, order, endpoints, *, tls_mode="fast", timings=None,
+              connectors=None):
     """One scan in pipeline order. ``endpoints`` is a list of unsaved rows."""
     timings = FAST_TIMINGS if timings is None else timings
     with get_session(db_path) as s:
@@ -128,7 +146,8 @@ def _run_scan(db_path, sid, order, endpoints, *, tls_mode="fast", timings=None):
         s.expunge_all()
     findings = derive_report_findings(endpoints)
     persist_remediation_snapshot(db_path, sid, endpoints, findings)
-    health = assess_probe_health(_cfg(tls_mode), endpoints, {"timings_sec": timings})
+    health = assess_probe_health(
+        _cfg(tls_mode, connectors), endpoints, {"timings_sec": timings})
     with get_session(db_path) as s:
         s.add(ScanScopeSignature(
             scan_run_id=sid, signature_version=SCOPE_SIGNATURE_VERSION, digest="same",
@@ -383,6 +402,39 @@ def test_tls_finding_on_unknown_row_refused_in_deep_mode(db):
     assert counters["closed"] == 0, counters
     assert counters["refused_probe"] >= 1, counters
     assert _fp_states(db, S1, TLS_SLUG, host="h7") == ["open"]
+
+
+_CORESIDENT = {
+    "saml": dict(ep=saml_ep, connectors={"enable_saml": True},
+                 timing={"saml_scanning": 1.0}),
+    "jwt": dict(ep=jwt_ep, connectors={"enable_jwt": True},
+                timing={"jwt_scanning": 1.0}),
+}
+
+
+@pytest.mark.parametrize("family", sorted(_CORESIDENT))
+def test_unknown_row_beside_classified_row_refuses(db, family):
+    """229-REVIEW iteration-2 CR-01: h7:80 carries HTTP plus a classified SAML/JWT
+    row on scan 1. On scan 2 the HTTP probe times out (UNKNOWN) while the
+    co-resident probe succeeds. The classified row used to satisfy the live-row
+    guard, so the plaintext-HTTP finding closed and VEX read RESOLVED for a
+    service that is still plaintext. An unclassified row at the host:port means
+    a probe there failed to classify it: the whole host:port is not rechecked."""
+    spec = _CORESIDENT[family]
+    timings = dict(FAST_TIMINGS, **spec["timing"])
+    kw = dict(timings=timings, connectors=spec["connectors"])
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [spec["ep"](7)], **kw)
+    eps = [http_ep(i) for i in range(7)] + [unknown_ep(7), spec["ep"](7)]
+    counters = _run_scan(db, S2, 1, eps, **kw)
+    # Not vacuous: both families really are healthy on scan 2.
+    assert _probe_status(db, S2, "http") == "healthy"
+    assert _probe_status(db, S2, family) == "healthy"
+    assert counters["closed"] == 0, counters
+    assert counters["refused_probe"] >= 1, counters
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+    assert _count_closed(db) == 0
+    assert _vex_for(db, S2, HTTP_SLUG) != "RESOLVED"
 
 
 def test_failed_snapshot_never_reads_as_every_finding_gone(db, monkeypatch):

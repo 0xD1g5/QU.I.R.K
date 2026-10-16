@@ -28,7 +28,8 @@ the honest outcome, not a clean baseline to compare against.
 Phase 229 (FIND-11) refinements: clauses (c)/(d) work on protocol SETS per host:port. A
 host:port whose current rows are all non-live (CLOSED/ADVISORY protocol, scan_error
 set, or a protocol no probe family classifies, e.g. UNKNOWN after a probe timeout) is
-refused (``refused_probe``). Clause (d) takes the families of the PRIOR scan's
+refused (``refused_probe``), and so is one carrying ANY unclassified asset row beside a
+classified one (229-REVIEW iteration-2 CR-01). Clause (d) takes the families of the PRIOR scan's
 protocols at that host:port (fallback: the live current protocols) and requires ALL to be
 rechecked through ``probe_family_rechecked`` (``http`` also accepts ``no_targets``); any
 protocol with no probe family refuses. A closure is also written on the CURRENT scan
@@ -362,9 +363,16 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             # `current_asset` keeps every error-free asset protocol (classified or
             # not) for clause (d)'s no-prior-row fallback, so an unclassified
             # protocol there still refuses rather than being filtered away.
+            # `current_unclassified` (229-REVIEW iteration-2 CR-01): host:ports
+            # with ANY asset row (not CLOSED/ADVISORY) whose protocol no probe
+            # family classifies. A probe there failed to classify the service
+            # (e.g. the HTTP probe timed out to UNKNOWN beside a healthy SAML or
+            # JWT row), so the whole host:port is not rechecked, whatever other
+            # classified rows it carries.
             current_present: Dict[Tuple[Any, Any], set] = defaultdict(set)
             current_live: Dict[Tuple[Any, Any], set] = defaultdict(set)
             current_asset: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            current_unclassified: set = set()
             for ep in (
                 session.query(CryptoEndpoint)
                 .filter(CryptoEndpoint.scan_run_id == scan_run_id)
@@ -372,6 +380,11 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             ):
                 key = (ep.host, ep.port)
                 current_present[key].add(ep.protocol)
+                if (
+                    ep.protocol not in NON_ASSET_PROTOCOLS
+                    and family_for_protocol(ep.protocol) is None
+                ):
+                    current_unclassified.add(key)
                 if (
                     ep.protocol
                     and ep.protocol not in NON_ASSET_PROTOCOLS
@@ -480,9 +493,11 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
 
                 # Clause (c'): a row exists but none is LIVE (timeout/refused CLOSED
                 # row, ADVISORY placeholder, scan_error set, or an unclassified
-                # protocol such as UNKNOWN) - not a recheck.
+                # protocol such as UNKNOWN) - not a recheck. Nor is a host:port
+                # where ANY asset row is unclassified, even beside a classified
+                # one (229-REVIEW iteration-2 CR-01).
                 live_protocols = current_live.get(endpoint_key, set())
-                if not live_protocols:
+                if not live_protocols or endpoint_key in current_unclassified:
                     counters["refused_probe"] += 1
                     _carry_forward(row)
                     continue
