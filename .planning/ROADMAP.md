@@ -198,7 +198,7 @@ Plans:
 - [x] 229-04-PLAN.md — End-to-end closure state model on production writers: HTTP fast, TLS deep/fast, guardrail negatives (D-06/D-07) (wave 3)
 - [x] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
 - [x] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
-- [ ] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
+- [x] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
 - [ ] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
 
 ### Phase 230: Findings That Fire
