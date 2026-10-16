@@ -120,7 +120,7 @@ ordering among themselves beyond the dependencies stated below.
 ### Phases
 
 - [x] **Phase 227: Todo Ownership Gate** - Every pending `doc224` todo names a live owner or is closed with evidence, and the todo -> owner gate fails on an ownerless one
-- [ ] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
+- [x] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
 - [ ] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
 - [ ] **Phase 230: Findings That Fire** - Code-signing EKU, Kerberos etype, JWKS auth, `--auth-basic` and `alg: none` detection work in real scans
 - [ ] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
@@ -174,7 +174,7 @@ Plans:
 - [x] 228-07-PLAN.md — Pinned API-level parity tests: no-CRITICAL scan, trend/merge/segment/compare (D-16/D-28) (wave 4)
 - [x] 228-08-PLAN.md — Docs, master-guide regen, chaos-lab, changelog fragment, vault sync (D-18/D-24/D-27) (wave 5)
 - [x] 228-09-PLAN.md — Operator visual check on a scratch-DB dashboard (checkpoint) (wave 5)
-- [ ] 228-10-PLAN.md — UAT Series 228, D-19 todo closures with requirement flips, STATE, Obsidian (wave 6)
+- [x] 228-10-PLAN.md — UAT Series 228, D-19 todo closures with requirement flips, STATE, Obsidian (wave 6)
 **UI hint**: yes
 
 ### Phase 229: Finding & State Correctness
@@ -254,7 +254,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 227. Todo Ownership Gate | 9/9 | Complete (verified passed 4/4 at efadfb56, SC#4 scope accepted as doc224-only by operator; code review 1 Critical + 3 Warning fixed in-phase (efadfb56); CI green, Python CI 38793570017 + Dashboard Quality 38793574456) | 2026-10-15 |
-| 228. Cross-Surface Score Parity | 0/TBD | Not started | - |
+| 228. Cross-Surface Score Parity | 10/10 | Complete (verified passed 5/5 at 0e25abca; code review 1 Critical + 1 Warning fixed in-phase (dab89ffc, 3b1d286c), WR-01..06 deferred to owned todos; CI green at 0e25abca, Python CI 38834562847 + Dashboard Quality 38834564861) | 2026-10-15 |
 | 229. Finding & State Correctness | 0/TBD | Not started | - |
 | 230. Findings That Fire | 0/TBD | Not started | - |
 | 231. QRAMM Scoring Surfaces | 0/TBD | Not started | - |

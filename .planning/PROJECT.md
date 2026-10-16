@@ -40,6 +40,12 @@ todos name a live owner (13 v5.28 requirements; 105 open HORIZON rows: 999.119, 
 now fails on an ownerless, unquoted-`999.N`, closed-row or checked-requirement owner for any `*doc224*` todo.
 Next: Phase 228 (Cross-Surface Score Parity).
 
+**v5.28 Phase 228 (Cross-Surface Score Parity) complete 2026-10-15 — XSURF-05..08 validated.** Near-expiry
+certificates are MEDIUM on both surfaces, certificate/TLS checks run only on TLS rows, trend, timeline, merge,
+per-segment and compare scores apply consequence ceilings, and refused or timed-out mail ports are not scored.
+The dashboard and report pipelines still diverge on Kerberos/DNSSEC, legacy TLS and weak-cipher classes
+(999.132); the phase does not claim they always agree. Next: Phase 229 (Finding & State Correctness).
+
 **v5.27 Launch Readiness CLOSED and ARCHIVED 2026-10-15, and it SHIPPED as `v5.27.0`.** All 7
 phases complete (222–226, with 222.1 and 225.1 inserted), 75 plans, **20 of 20 requirements
 satisfied**. DOC-04 was accepted as scoped by operator override. `quirk-scanner` 5.27.0 is on PyPI
@@ -1834,7 +1840,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Brand palette B (Ink-violet accent on the current grounds), picked after viewing sketches rather than descriptions (2026-10-02) | Variant C, picked from a description, would have re-themed the grounds and reopened the 216–219 contrast ratchets | ✓ Good — no ratchet pair regressed; the lesson is to sketch before deciding on a visual |
 
 ---
-*Last updated: 2026-10-15 after Phase 227 (Todo Ownership Gate)*
+*Last updated: 2026-10-15 after Phase 228 (Cross-Surface Score Parity)*
 
 ## Evolution
 

@@ -4,13 +4,13 @@ milestone: v5.28
 milestone_name: Score & Finding Truth
 status: executing
 last_updated: "2026-10-15T23:59:00.000Z"
-last_activity: "2026-10-15 -- Phase 228 executed (10 of 10 plans; XSURF-05..08 checked, 5 todos closed, UAT Series 228 8/8 PASS); awaiting verifier and CITRUTH-03 before the phase-close commit. STATE.md hand-edited"
+last_activity: "2026-10-15 -- Phase 228 complete (10/10 plans, verified passed 5/5 at 0e25abca, CI green). STATE.md hand-edited from a pre-image; next /gsd-discuss-phase 229"
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 19
   completed_plans: 19
-  percent: 13
+  percent: 25
 ---
 
 # Project State
@@ -1469,12 +1469,12 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 228 (Cross-Surface Score Parity) — EXECUTED 2026-10-15, 10 of 10 plans; awaiting verification and CITRUTH-03 (push, dispatch Python CI and Dashboard Quality, `scripts/branch_ci_state.py --compare-main` exit 0) before the phase-close commit. Next: Phase 229 (FIND-13 builds on the D-10 union derivation). Phase 227 COMPLETE, verified passed 4/4 at efadfb56.
-Plan: 10 of 10 complete (XSURF-05..08 checked in REQUIREMENTS.md, one commit each with its todo; the ROADMAP phase line is deliberately unflipped)
+Phase: 228 (Cross-Surface Score Parity) — COMPLETE 2026-10-15; next is Phase 229 (Finding & State Correctness; FIND-13 builds on the D-10 union derivation). Phase 227 COMPLETE, verified passed 4/4 at efadfb56.
+Plan: 10 of 10 complete (verified passed 5/5 at 0e25abca; CI green at 0e25abca, Python CI 38834562847 + Dashboard Quality 38834564861; code review CR-01 + WR-07 fixed, WR-01..06 deferred to owned todos in 999.131/132/134/136/137)
 Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15; 23 requirements, roadmap approved. Phases
 continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
 correctness, QRAMM fixes, post-launch visible fixes, and doc224 todo ownership.
-Last activity: 2026-10-15. Phase 228 executed (hand-edited from a pre-image; no gsd-sdk state verb used). Prior: Phase 227 executed and closed (hand-edited from a pre-image; state.begin-phase
+Last activity: 2026-10-15. Phase 228 executed and closed (hand-edited from a pre-image; no gsd-sdk state verb used). Prior: Phase 227 executed and closed (hand-edited from a pre-image; state.begin-phase
 corrupted STATE.md again at phase start and was restored, so no gsd-sdk state verb touched this close).
 
 Phase 227 carried items (operator accepted SC#4 as doc224-only on 2026-10-15): the POLISH-02/03/04 todos
