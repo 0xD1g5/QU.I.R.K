@@ -1302,6 +1302,28 @@ items, not vulnerabilities in the CycloneDX-source sense — the CycloneDX 1.6 s
 item's slug, a description, and the analysis block above) is fully legal without fabricating any of
 that data. The item slug is the correlation key back to the report's roadmap and burndown sections.
 
+### How open, closed and Not Verified read on a report
+
+- **A finding the scan detected is Open** and its VEX entry is `exploitable`. Earlier releases
+  showed detected findings as Not Verified (`in_triage`).
+- **A closure appears on the report of the scan that observed it.** The CBOM entry for the item
+  is `resolved` only when every instance of that item is closed; while any instance is still
+  open the item stays `exploitable`.
+- **Not Verified (`in_triage`) means nothing was checked.** Reports for scans stored before this
+  release keep their Not Verified rows; they are not rewritten.
+- **Comparing old and new CBOMs.** A CBOM regenerated for an old scan still shows `in_triage`,
+  while a new scan of the same estate shows `exploitable`, so a comparison of the two will show
+  the analysis state change. That is the state model changing, not the estate.
+- **Timed-out, refused, placeholder and errored rows never close a finding,** a scan that reused
+  cached fingerprint results does not count as a recheck, and TLS findings close only on deep TLS
+  scans.
+- **Burndown counts the rows of the scan being reported.** In a test with eight plaintext
+  hosts, one of which was moved to HTTPS, the next scan's burndown read 14 open and 2 closed
+  (each plaintext finding counts under two remediation items, so these figures are not host
+  counts; plaintext HTTP carries no algorithm and so lands in the `unmapped` bucket). The earlier scan's burndown then read the same closure, 14 open and 2 closed, where
+  before the later scan it read 16 open and 0 closed. A third scan that rechecked the estate
+  read 14 open and 0 closed, because closed rows are not carried forward.
+
 ### When closure was not computed
 
 If there is no comparable prior scan, or the current scan's scope does not match the prior scan closely enough, closure is
