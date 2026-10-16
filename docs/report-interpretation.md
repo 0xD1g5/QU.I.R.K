@@ -1325,8 +1325,8 @@ that data. The item slug is the correlation key back to the report's roadmap and
   once every finding of its remediation item has closed, that item's VEX entry reads `resolved`
   as on any other closure. Some fixed findings stay Not Verified instead;
   `docs/operators-guide.md` §16 "Known limitations" lists the cases.
-  Findings carried from scans recorded before this release need a probe-identified basis before
-  they can close; they stay `not_observed` until re-detected or rechecked.
+  Findings carried from scans recorded before this release stay `not_observed` until a scan
+  detects them again; after that the normal closure rules apply.
 - **Burndown counts the rows of the scan being reported.** In a test with eight plaintext
   hosts, one of which was moved to HTTPS, the next scan's burndown read 14 open and 2 closed
   (each plaintext finding counts under two remediation items, so these figures are not host
