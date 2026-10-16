@@ -577,3 +577,167 @@ def _count_closed(db_path, exclude=None):
         if exclude:
             q = q.filter(RemediationItemFingerprint.scan_run_id != exclude)
         return q.count()
+
+
+# ---------------------------------------------------------------------------
+# Plan 229-12: per-host:port recheck (229-VERIFICATION gap 1)
+# ---------------------------------------------------------------------------
+_GAP_KW = dict(
+    timings=dict(FAST_TIMINGS, saml_scanning=1.0, jwt_scanning=1.0),
+    connectors={"enable_saml": True, "enable_jwt": True},
+)
+_CO_EP = {"saml": saml_ep, "jwt": jwt_ep}
+
+
+@pytest.mark.parametrize("h7", ["scan_error", "closed_timeout", "absent"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_finding_probe_failed_beside_live_coresident_refuses_tls_deep(db, co, h7):
+    """229-VERIFICATION gap 1 (D-20): h7:443 carries a legacy-TLS finding beside a
+    live SAML/JWT row. On scan 2 the TLS probe at h7 errored, timed out or left no
+    row, while the co-resident probe answered and tls is healthy elsewhere. The
+    live co-resident row used to satisfy the guard and the finding closed, a false
+    closure: the finding's own probe never rechecked that host:port."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)] + [ep(7, port=443)],
+              tls_mode="deep", **_GAP_KW)
+    eps = [tls_ep(i, port=443, legacy=True) for i in range(7)] + [ep(7, port=443)]
+    if h7 == "scan_error":
+        eps.append(tls_ep(7, port=443, legacy=True, scan_error="handshake failed"))
+    elif h7 == "closed_timeout":
+        eps.append(closed_ep(7, "TIMEOUT", port=443))
+    c = _run_scan(db, S2, 1, eps, tls_mode="deep", **_GAP_KW)
+    assert c["closed"] == 0 and c["reclosed"] == 0 and c["refused_probe"] >= 1, c
+    assert _probe_status(db, S2, "tls") == "healthy"
+    assert _probe_status(db, S2, co) == "healthy"
+    assert _fp_states(db, S1, TLS_SLUG, host="h7") == ["open"]
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+    assert _count(db, RemediationClosureEvent) == 0
+    assert _vex_for(db, S2, TLS_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("h7", ["closed_timeout", "absent"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_finding_probe_failed_beside_live_coresident_refuses_http(db, co, h7):
+    """229-VERIFICATION gap 1 (D-20): h7:80 carries a plaintext-HTTP finding beside a
+    live SAML/JWT row. On scan 2 the HTTP probe at h7 timed out or left no row while
+    the co-resident probe answered. A SAML/JWT row is not evidence the port stopped
+    serving plaintext, so closing is a false closure."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [ep(7)], **_GAP_KW)
+    eps = [http_ep(i) for i in range(7)] + [ep(7)]
+    if h7 == "closed_timeout":
+        eps.append(closed_ep(7, "TIMEOUT"))
+    c = _run_scan(db, S2, 1, eps, **_GAP_KW)
+    assert c["closed"] == 0 and c["refused_probe"] >= 1, c
+    assert _probe_status(db, S2, "http") == "healthy"
+    assert _probe_status(db, S2, co) == "healthy"
+    for slug in (HTTP_SLUG, "high-impact-findings"):
+        assert _fp_states(db, S1, slug, host="h7") == ["open"]
+        assert _fp_states(db, S2, slug, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+    assert _count(db, RemediationClosureEvent) == 0
+    assert _vex_for(db, S2, HTTP_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_carried_finding_with_coresident_only_refuses(db, co):
+    """229-VERIFICATION gap 1 x WR-03 (D-20): scan 2 refuses h7 (HTTP timed out) and
+    carries it. Scan 3 has only the co-resident SAML/JWT row at h7:80, HTTP absent.
+    The carried path must judge the finding by the families of the detecting scan
+    too, so the lost HTTP family cannot be forgotten and the finding must not close."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [ep(7)], **_GAP_KW)
+    c2 = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT"), ep(7)],
+                   **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+    assert _count_closed(db) == 0
+    assert _count(db, RemediationClosureEvent) == 0
+
+
+def test_coresident_negatives_advisory_and_carried_without_saml_refuse(db):
+    """Adversarial shapes (229-12 checker). (1) h7:80 has SAML plus an ADVISORY
+    placeholder and no HTTP row: a placeholder is not recheck evidence. (2) A carried
+    HTTP finding whose port later answers TLS with the SAML row gone: the saml family
+    that reported the port in the detecting scan is not live, so no closure."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    c = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [saml_ep(7), advisory_ep(7)],
+                  **_GAP_KW)
+    assert c["closed"] == 0, c
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+    # Second shape, on its own database: carried, then TLS without SAML.
+    # (S2 above already carried h7; S3 answers TLS with SAML gone.)
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+
+
+def test_carried_then_tls_without_saml_refuses_after_timeout(db):
+    """Negative C shape then TLS with SAML gone (HTTP timed out on scan 2)."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT"), saml_ep(7)],
+              **_GAP_KW)
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _count_closed(db) == 0
+
+
+def test_moved_to_tls_beside_coresident_closes(db):
+    """Positive controls P1/P2 (genuine closure, 229-12). P1: h7:80 moved from
+    HTTP to TLS and SAML still answers there, so the fingerprint stage re-identified
+    the port. P2: a legacy-TLS finding fixed in deep mode beside a live SAML row."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    c = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
+    assert c["closed"] == 2, c
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+
+
+def test_tls_deep_fixed_beside_coresident_closes(db):
+    """Positive control P2 (229-12): TLS deep fixed host beside live SAML closes."""
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)] + [saml_ep(7, port=443)],
+              tls_mode="deep", **_GAP_KW)
+    c = _run_scan(db, S2, 1,
+                  [tls_ep(i, port=443, legacy=True) for i in range(7)]
+                  + [tls_ep(7, port=443), saml_ep(7, port=443)],
+                  tls_mode="deep", **_GAP_KW)
+    assert c["closed"] >= 1, c
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["closed"]
+
+
+def test_carried_moved_to_tls_beside_coresident_closes(db):
+    """P3 (229-12, fail-first): carried HTTP finding, then the port answers TLS beside
+    SAML on scan 3. Genuine closure. RED at HEAD 00446a92 because scan 2 already
+    false-closed h7 (HTTP timed out beside SAML), leaving scan 3 nothing to close."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    c2 = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT"), saml_ep(7)],
+                   **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
+    assert c3["closed"] == 2, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["closed"]
+
+
+def test_mid_migration_tls_error_then_live_tls_closes(db):
+    """P4 (W1): HTTP on scan 1, TLS with scan_error on scan 2 (refused, carried),
+    live deep TLS on scan 3. A genuine migration. The reclassification baseline is
+    the DETECTING scan's live families, so the errored TLS row on scan 2 does not make
+    TLS 'not new' and the finding closes on scan 3."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)])
+    c2 = _run_scan(db, S2, 1,
+                   [http_ep(i) for i in range(7)] + [tls_ep(7, scan_error="handshake failed")],
+                   tls_mode="deep")
+    assert c2["closed"] == 0, c2
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)], tls_mode="deep")
+    assert c3["closed"] == 2, c3
+    for sid in (S3, S2, S1):
+        assert _fp_states(db, sid, HTTP_SLUG, host="h7") == ["closed"], sid

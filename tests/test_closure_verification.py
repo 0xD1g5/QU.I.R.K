@@ -1229,3 +1229,34 @@ def test_advisory_prior_row_is_ignored_not_unmapped(tmp_path):
         health=_health(http="healthy"),
     )
     assert compute_closure(db_path, CURRENT_SCAN_ID)["closed"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Plan 229-12: per-host:port recheck helper and fingerprint pin
+# ---------------------------------------------------------------------------
+def test_fingerprint_reclass_protocols_pinned_to_fingerprint_source():
+    """T-229-12-03: ``_FINGERPRINT_RECLASS_PROTOCOLS`` is re-derived from
+    quirk/scanner/fingerprint.py at run time, never trusted as a hand-written list.
+    ``fingerprint_service`` emits SSH/TLS/HTTP/UNKNOWN for an open port; the
+    reclassification set is that minus HTTP (the finding's own family) and UNKNOWN
+    (unclassified)."""
+    from quirk.intelligence import closure
+
+    src = Path(inspect.getsourcefile(__import__("quirk.scanner.fingerprint", fromlist=["x"]))).read_text(
+        encoding="utf-8")
+    emitted = set(re.findall(r'Fingerprint\(\s*True\s*,\s*"([A-Z_]+)"', src))
+    assert emitted and "HTTP" in emitted, emitted
+    assert emitted - {"HTTP", "UNKNOWN"} == set(closure._FINGERPRINT_RECLASS_PROTOCOLS)
+
+
+def test_host_port_rechecked_pure_cases():
+    """T-229-12-04 (W4): the pure per-host decision. An empty family set is never
+    vacuously 'all rechecked'."""
+    from quirk.intelligence.closure import _host_port_rechecked
+
+    healthy = {f: {"status": "healthy"} for f in ("http", "tls", "ssh", "saml", "jwt")}
+    assert _host_port_rechecked(set(), set(), {"http", "tls", "saml"}, {"HTTP", "TLS", "SAML"}, healthy) is False
+    assert _host_port_rechecked({"saml"}, set(), {"saml"}, {"SAML"}, healthy) is True
+    assert _host_port_rechecked({"http", "saml"}, set(), {"saml"}, {"SAML"}, healthy) is False
+    assert _host_port_rechecked({"http"}, {"http"}, {"tls"}, {"TLS"}, healthy) is True
+    assert _host_port_rechecked({"http"}, {"http", "tls"}, {"tls"}, {"TLS"}, healthy) is False
