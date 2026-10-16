@@ -37,6 +37,7 @@ from quirk.intelligence.evidence import (
 )
 from quirk.intelligence.remediation import (
     DEFAULT_ITEM_STATE,
+    DETECTED_ITEM_STATE,
     REMEDIATION_CONSTITUENCY,
     slug_for_title,
 )
@@ -131,6 +132,7 @@ def _upsert_item(
     phase: str,
     priority: Optional[int],
     constituency: str,
+    state: str,
 ) -> RemediationItem:
     row = (
         session.query(RemediationItem)
@@ -158,7 +160,9 @@ def _upsert_item(
         phase=phase,
         priority=priority,
         constituency=constituency,
-        state=DEFAULT_ITEM_STATE,  # D-12: never write the closed state here.
+        # D-12: never write the closed state here. `state` applies to the
+        # insert only; the idempotent branch above never touches it.
+        state=state,
         first_seen_scan_run_id=first_seen,
         created_at=datetime.now(timezone.utc),
     )
@@ -236,6 +240,11 @@ def persist_remediation_snapshot(
                 kind, constituency_titles = REMEDIATION_CONSTITUENCY.get(
                     slug, ("evidence_only", ())
                 )
+                constituents = _select_constituent_findings(
+                    kind, constituency_titles, finding_list
+                )
+                # D-23: state follows whether constituents were detected, not
+                # the item kind (counter-driven items can have none).
                 row = _upsert_item(
                     session,
                     slug=slug,
@@ -244,12 +253,12 @@ def persist_remediation_snapshot(
                     phase=item.get("phase"),
                     priority=_SLUG_PRIORITY.get(slug),
                     constituency=kind,
+                    state=(
+                        DETECTED_ITEM_STATE if constituents else DEFAULT_ITEM_STATE
+                    ),
                 )
                 counters["items"] += 1
 
-                constituents = _select_constituent_findings(
-                    kind, constituency_titles, finding_list
-                )
                 if not constituents:
                     continue
 
@@ -270,7 +279,10 @@ def persist_remediation_snapshot(
                             host=finding.get("host"),
                             port=finding.get("port"),
                             finding_title=finding.get("title"),
-                            state=DEFAULT_ITEM_STATE,  # D-12: never write the closed state here.
+                            # Rows exist only for detected findings (the
+                            # `if not constituents: continue` guard above), so
+                            # `open` cannot imply remediation (D-12).
+                            state=DETECTED_ITEM_STATE,
                             observed_at=datetime.now(timezone.utc),
                         )
                     )

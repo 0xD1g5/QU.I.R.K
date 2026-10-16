@@ -125,7 +125,8 @@ REMEDIATION_CONSTITUENCY: Dict[str, Tuple[str, Tuple[str, ...]]] = {
 # signal that remediation regressed, which is precisely the fact a client
 # attestation needs. A scope-signature mismatch can never produce
 # `resurfaced` either — the same hard refusal that governs closure:
-# comparing incomparable scans yields `not_observed` in both directions.
+# incomparability refuses the closure/resurface TRANSITION only (D-02); the
+# current scan's detected rows stay `open`.
 #
 # The transition itself (deciding an item is newly `closed`, newly
 # `resurfaced`, or `reclosed` after a resurface) is NEVER decided here — that
@@ -134,6 +135,10 @@ REMEDIATION_CONSTITUENCY: Dict[str, Tuple[str, Tuple[str, ...]]] = {
 # ---------------------------------------------------------------------------
 ITEM_STATES: Tuple[str, ...] = ("open", "closed", "not_observed", "resurfaced")
 DEFAULT_ITEM_STATE = "not_observed"
+# D-01/D-23: written only for rows backed by a detected constituent finding.
+# DEFAULT_ITEM_STATE remains the undetected default (counter-driven roadmap
+# items with zero constituents, and every evidence_only item).
+DETECTED_ITEM_STATE = "open"
 RESURFACED_STATE = "resurfaced"
 
 # D-21: a named constant, not an inline `in ("open", "resurfaced")` at each
