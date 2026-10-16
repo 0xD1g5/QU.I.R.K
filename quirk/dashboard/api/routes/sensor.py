@@ -227,7 +227,6 @@ def run_auto_merge(db_path: str, config_path: str) -> None:
     """
     from quirk.db import get_session, init_db
     from quirk.merge.scan import merge_scan
-    from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
 
     # Mirror _cmd_merge exactly (D-02)
     init_db(db_path)
@@ -242,12 +241,10 @@ def run_auto_merge(db_path: str, config_path: str) -> None:
                 if latest_push is not None and latest_push <= latest_merge.merged_at:
                     return  # already covered — no-op (D-05)
 
-            # D-12: reuse merge_scan(); Phase 228 D-09 passes the dashboard deriver
-            result = merge_scan(
-                db,
-                output_dir=output_dir,
-                findings_deriver=derive_dashboard_scoring_findings,
-            )
+            # D-12: reuse merge_scan() exactly as _cmd_merge does. No findings_deriver:
+            # MergeRun.score must not depend on which entry point ran the merge
+            # (228-REVIEW CR-01); /api/merge/latest recomputes its displayed score live.
+            result = merge_scan(db, output_dir=output_dir)
             # get_session commit-on-exit persists MergeRun (merge_scan used flush)
 
             # D-10: success audit row in SAME session (Pitfall 6)

@@ -563,3 +563,61 @@ def test_merge_uses_supplied_deriver(tmp_path):
         result = merge_scan(db, stale_days=30, findings_deriver=_deriver)
     assert seen == [4]
     assert result["score"] > 34
+
+
+def _divergent_union_endpoints():
+    """3 healthy TLS rows plus one Kerberos weak-etype row: the dashboard and report
+    pipelines disagree on this union (the Kerberos finding is dashboard-only)."""
+    eps = [
+        _tls_ep(host=f"h{i}.example", protocol="TLS", sensor_id=f"s{i}",
+                scanned_at=datetime(2026, 5, 25, 12, 0, 0))
+        for i in range(3)
+    ]
+    eps.append(_tls_ep(
+        host="dc.example", port=88, protocol="KERBEROS", sensor_id="s3",
+        tls_version=None, cipher_suite=None, cert_pubkey_alg="rc4-hmac",
+        cert_pubkey_size=None, cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        service_detail="etype:23:rc4-hmac:CRITICAL",
+        scanned_at=datetime(2026, 5, 25, 12, 0, 0),
+    ))
+    return eps
+
+
+def test_persisted_merge_score_is_independent_of_entry_point(tmp_path):
+    """228-REVIEW CR-01: `quirk sensor merge` and the dashboard auto-merge persist the
+    same MergeRun.score for the same union (run_auto_merge mirrors _cmd_merge, D-02)."""
+    import argparse
+
+    from quirk.cli.sensor_cmd import _cmd_merge
+    from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
+    from quirk.dashboard.api.routes.sensor import run_auto_merge
+    from quirk.db import get_session
+    from quirk.engine.findings_evaluator import derive_report_findings
+    from quirk.merge.scan import _assemble_union
+
+    cli_dir, auto_dir = tmp_path / "cli", tmp_path / "auto"
+    cli_dir.mkdir()
+    auto_dir.mkdir()
+    cli_db, _ = _setup_real_db(cli_dir, _divergent_union_endpoints(), _ceiling_sensors())
+    auto_db, _ = _setup_real_db(auto_dir, _divergent_union_endpoints(), _ceiling_sensors())
+
+    # Non-vacuity: the two pipelines must disagree on this union, or the test proves nothing.
+    with get_session(cli_db) as db:
+        union = _assemble_union(db)
+        dash = compute_readiness_score(
+            build_evidence_summary(union, derive_dashboard_scoring_findings(union)))["score"]
+        rep = compute_readiness_score(
+            build_evidence_summary(union, derive_report_findings(union)))["score"]
+    assert dash != rep
+
+    with pytest.raises(SystemExit):
+        _cmd_merge(argparse.Namespace(db=cli_db, stale_days=30))
+    run_auto_merge(auto_db, str(tmp_path / "absent-config.yaml"))
+
+    scores = []
+    for path in (cli_db, auto_db):
+        with get_session(path) as db:
+            row = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
+            assert row is not None, f"no MergeRun persisted in {path}"
+            scores.append(row.score)
+    assert scores[0] == scores[1] == rep
