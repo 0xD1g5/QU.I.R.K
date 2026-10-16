@@ -186,7 +186,19 @@ Plans:
   2. With three or more scan runs in the database, the drift notification compares the two newest distinct scan runs and never compares a scan run with itself.
   3. After two sensors each push a multi-endpoint scan, `quirk sensor merge` and `GET /api/merge/latest` both return every endpoint from each sensor's latest push, not one row per sensor.
   4. The three owning todos (`261013-doc224-closure-states-...`, `-notifier-session-key-ignores-scan-run-id`, `-sensor-merge-keeps-one-endpoint-per-sensor`) are closed with their commits cited.
-**Plans**: TBD
+**Plans**: 10 plans (6 waves)
+
+Plans:
+- [ ] 229-01-PLAN.md — Writer: detected remediation rows written `open`, counter-only items stay `not_observed` (D-01/D-02/D-23) (wave 1)
+- [ ] 229-02-PLAN.md — `http` probe family, opt-in `no_targets` recheck, cached fingerprint is not a recheck (D-05/D-21/D-22) (wave 1)
+- [ ] 229-05-PLAN.md — Shared `list_session_timestamps`; notifier and trend timeline key sessions by scan run (FIND-12, D-08..D-11/D-25) (wave 1)
+- [ ] 229-06-PLAN.md — `crypto_endpoints.push_payload_id` additive column, stamped at ingest (FIND-13, D-12/D-19) (wave 1)
+- [ ] 229-03-PLAN.md — Closure: protocol-set live-row guard, prior-protocol families, closed rows on the observing scan (D-03/D-05/D-20/D-07) (wave 2)
+- [ ] 229-07-PLAN.md — Merge union keeps every endpoint of each sensor's latest push; CLI + API proof (FIND-13, D-13/D-14/D-15) (wave 2)
+- [ ] 229-04-PLAN.md — End-to-end closure state model on production writers: HTTP fast, TLS deep/fast, guardrail negatives (D-06/D-07) (wave 3)
+- [ ] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
+- [ ] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
+- [ ] 229-10-PLAN.md — UAT Series 229, D-17 todo closures with requirement flips, full suite vs main, VALIDATION, Obsidian (wave 6)
 
 ### Phase 230: Findings That Fire
 **Goal**: Detection paths that exist in the code but never fire in a real scan now produce their findings, each proven by a test that exercises the real capture or the real wire rather than an injected fixture.
