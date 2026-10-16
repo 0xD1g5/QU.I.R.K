@@ -189,10 +189,10 @@ Plans:
 **Plans**: 11 plans (7 waves)
 
 Plans:
-- [ ] 229-01-PLAN.md — Writer: detected remediation rows written `open`, counter-only items stay `not_observed` (D-01/D-02/D-23) (wave 1)
-- [ ] 229-02-PLAN.md — `http` probe family, opt-in `no_targets` recheck, cached fingerprint is not a recheck (D-05/D-21/D-22) (wave 1)
-- [ ] 229-05-PLAN.md — Shared `list_session_timestamps`; notifier and trend timeline key sessions by scan run (FIND-12, D-08..D-11/D-25) (wave 1)
-- [ ] 229-06-PLAN.md — `crypto_endpoints.push_payload_id` additive column, stamped at ingest (FIND-13, D-12/D-19) (wave 1)
+- [x] 229-01-PLAN.md — Writer: detected remediation rows written `open`, counter-only items stay `not_observed` (D-01/D-02/D-23) (wave 1)
+- [x] 229-02-PLAN.md — `http` probe family, opt-in `no_targets` recheck, cached fingerprint is not a recheck (D-05/D-21/D-22) (wave 1)
+- [x] 229-05-PLAN.md — Shared `list_session_timestamps`; notifier and trend timeline key sessions by scan run (FIND-12, D-08..D-11/D-25) (wave 1)
+- [x] 229-06-PLAN.md — `crypto_endpoints.push_payload_id` additive column, stamped at ingest (FIND-13, D-12/D-19) (wave 1)
 - [ ] 229-03-PLAN.md — Closure: protocol-set live-row guard, prior-protocol families, closed rows on the observing scan (D-03/D-05/D-20/D-07) (wave 2)
 - [ ] 229-07-PLAN.md — Merge union keeps every endpoint of each sensor's latest push; CLI + API proof (FIND-13, D-13/D-14/D-15) (wave 2)
 - [ ] 229-04-PLAN.md — End-to-end closure state model on production writers: HTTP fast, TLS deep/fast, guardrail negatives (D-06/D-07) (wave 3)
