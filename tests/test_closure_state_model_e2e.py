@@ -903,3 +903,75 @@ def test_evidence_http_reclassified_to_tls_without_caps_still_closes(db):
     c = _http_scan2(db)
     assert c["closed"] >= 1, c
     assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+
+
+# ---------------------------------------------------------------------------
+# 229-12 email follow-up (FIND-11): a blocked mail port is a failed recheck.
+# email_scanner keeps the protocol label and sets only tls_blocker_reason on a
+# timed-out / refused port (no CLOSED protocol, no scan_error), and the host-level
+# email_scan_json rides the lowest-port row whatever its outcome.
+# ---------------------------------------------------------------------------
+EMAIL_KW = dict(timings=dict(FAST_TIMINGS, email_scanning=1.0),
+                connectors={"enable_email": True})
+
+
+def _smtp_ep(i, *, healthy=True, reason=None):
+    ep = CryptoEndpoint(host=f"m{i}", port=25, protocol="SMTP-STARTTLS",
+                        service_detail="SMTP-STARTTLS:25")
+    if reason:
+        ep.tls_blocker_reason = reason
+        ep.email_scan_json = json.dumps(
+            {"host": f"m{i}", "ports": [{"port": 25, "tls_blocker_reason": reason}]})
+        return ep
+    ep.email_scan_json = json.dumps({"host": f"m{i}", "ports": [{"port": 25}]})
+    if healthy:
+        ep.tls_version = "TLSv1.2"
+        ep.cipher_suite = "TLS_RSA_WITH_AES_128_CBC_SHA"
+        ep.tls_pfs_supported = False
+    else:  # fixed: modern TLS, PFS
+        ep.tls_version = "TLSv1.3"
+        ep.cipher_suite = "TLS_AES_256_GCM_SHA384"
+        ep.tls_pfs_supported = True
+    return ep
+
+
+def _m7_states(db, sid):
+    with get_session(db) as s:
+        return sorted((r.slug, r.state) for r in
+                      s.query(RemediationItemFingerprint).filter_by(scan_run_id=sid, host="m7"))
+
+
+def _assert_email_refused(db, sid, c):
+    assert c["closed"] == 0, c
+    states = _m7_states(db, sid)
+    assert states and all(st != "closed" for _, st in states), states
+    for slug in {slug for slug, _ in states}:
+        assert _vex_for(db, sid, slug) != "RESOLVED", slug
+
+
+@pytest.mark.parametrize("reason", ["TIMEOUT", "CONNECTION_REFUSED"])
+def test_email_blocked_port_direct_refuses(db, reason):
+    _run_scan(db, S1, 0, [_smtp_ep(i) for i in range(N)], **EMAIL_KW)
+    assert _m7_states(db, S1), "vacuous: no fingerprint rows for m7"
+    c = _run_scan(db, S2, 1, [_smtp_ep(i) for i in range(7)]
+                  + [_smtp_ep(7, reason=reason)], **EMAIL_KW)
+    _assert_email_refused(db, S2, c)
+
+
+@pytest.mark.parametrize("reason", ["TIMEOUT", "CONNECTION_REFUSED"])
+def test_email_blocked_port_carried_refuses(db, reason):
+    _run_scan(db, S1, 0, [_smtp_ep(i) for i in range(N)], **EMAIL_KW)
+    _run_scan(db, S2, 1, [_smtp_ep(i) for i in range(7)]
+              + [CryptoEndpoint(host="m7", port=25, protocol="CLOSED", scan_error="TIMEOUT")],
+              **EMAIL_KW)
+    c = _run_scan(db, S3, 2, [_smtp_ep(i) for i in range(7)]
+                  + [_smtp_ep(7, reason=reason)], **EMAIL_KW)
+    _assert_email_refused(db, S3, c)
+
+
+def test_email_genuinely_rechecked_port_closes(db):
+    _run_scan(db, S1, 0, [_smtp_ep(i) for i in range(N)], **EMAIL_KW)
+    c = _run_scan(db, S2, 1, [_smtp_ep(i) for i in range(7)]
+                  + [_smtp_ep(7, healthy=False)], **EMAIL_KW)
+    assert c["closed"] >= 1, c
+    assert "closed" in [st for _, st in _m7_states(db, S2)]
