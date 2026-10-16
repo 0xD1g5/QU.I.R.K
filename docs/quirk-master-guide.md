@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,510 lines, in reading order.
+Five guides, 7,521 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -6874,8 +6874,10 @@ case is a missing badge or an empty burndown block, not a broken page.
 A finding closes only when all of the following hold:
 
 - The current scan has the same scope as the prior one (see §15).
-- The current scan has an endpoint at that host:port, and at least one of the rows there is live.
-  A timed-out, refused, unreachable, placeholder or errored row is not a recheck.
+- Every probe that reported that host:port has a live row at that same host:port in this scan. A
+  probe that is healthy elsewhere in the scan does not count. One timed-out, refused,
+  unreachable or errored row at the host:port blocks closure for every finding there, even when a
+  SAML or JWT probe answered. Placeholder rows are not evidence of a recheck.
 - No row at that host:port is a service the scan could not identify, such as the `UNKNOWN` row
   written when the HTTP probe times out. One such row blocks closure for every finding at that
   host:port, even when another probe there, such as SAML or JWT, answered normally.
@@ -6884,8 +6886,17 @@ A finding closes only when all of the following hold:
 - The current scan's remediation record was written. If writing it failed, closure is skipped for
   that scan, because a missing record cannot be told apart from every finding being gone.
 
-Plaintext HTTP findings close when the port now serves something else, for example TLS after the
-port is moved to HTTPS, and also when no plaintext HTTP endpoint remains anywhere in the scan.
+Plaintext HTTP findings close when the scan's service identification now reports at that port a
+service, TLS or SSH, that was not there when the finding was detected, for example TLS after the
+port is moved to HTTPS. That still holds after an intermediate scan whose TLS check failed. A
+live plaintext HTTP row at the port also counts as a recheck. No plaintext endpoint remaining
+elsewhere in the scan counts as an HTTP recheck only together with one of these. A SAML or JWT
+row at the port is not evidence that the port stopped serving plaintext.
+
+A finding that a scan could not recheck is carried forward as `not_observed` and judged on the
+next scan by every probe that reported its port, in the scan that detected it and in the scan in
+between.
+
 In a test of eight plaintext hosts with one moved to HTTPS, the next scan read 7 open and 1
 closed for that item, and when all eight were fixed it read 8 closed.
 
@@ -6895,6 +6906,8 @@ to show a TLS finding is gone, so it leaves the finding open (tracked in HORIZON
 Two cases are deliberate under-claims, listed here side by side so the reason is not a surprise:
 
 - A port that serves both HTTP and SAML closes only when both probes recheck it.
+- An errored or timed-out row from any probe at a port blocks every finding there.
+- A port whose HTTP probe returned nothing while only SAML or JWT answered stays `not_observed`.
 - A finding at a host:port where a probe with no recheck signal also reported, in the prior scan
   or the current one, such as the REST fuzzer, OpenAPI, Vault, AD CS, Kubernetes or cloud
   connectors, does not close, because that probe cannot be shown to have rechecked the port. This also covers a host:port that reported
@@ -6914,12 +6927,10 @@ that specific host:port and found the finding gone, not merely to have not seen 
 These cases can leave a fixed finding reading `not_observed` when it could have closed. None of
 them can mark a finding closed that is not fixed.
 
-- **A different service in between.** Suppose one scan cannot recheck a plaintext HTTP finding,
-  for example because the HTTP probe timed out, and by the next scan the port has moved to TLS.
-  Closure then judges the finding by the services the scan just before saw at that port, not by
-  the HTTP probe that raised it. In fast mode that is the TLS probe, which does not recheck, so the
-  finding stays `not_observed` on every later scan. The same happens when a scan reused cached
-  fingerprint results while the port moved to TLS.
+- **Cached fingerprint results.** A scan that reused cached fingerprint results did not recheck
+  the port, so a plaintext HTTP finding whose port moved to TLS in that scan stays `not_observed`.
+  If a scan could not recheck a plaintext HTTP finding because the HTTP probe timed out, and the
+  next scan finds the port on TLS, the finding closes: it is judged by the scan that detected it.
 - **A scan whose closure was refused as a whole.** If closure is not computed for a scan, for
   example because its scope differs from the prior scan or its remediation record failed to
   write, that scan carries no pending findings forward. Findings it did not detect, including
