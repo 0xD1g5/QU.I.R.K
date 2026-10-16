@@ -486,7 +486,14 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             ):
                 key = (ep.host, ep.port)
                 current_present[key].add(ep.protocol)
-                if ep.protocol == "CLOSED" or (
+                # 229-12 (FIND-11 email): email_scanner records a timed-out/refused
+                # mail port by keeping its protocol label and setting only
+                # tls_blocker_reason (no CLOSED protocol, no scan_error). Surveyed
+                # values: email TIMEOUT / CONNECTION_REFUSED (failures) and tls_scanner's
+                # categories, which always co-occur with scan_error. None marks a
+                # successful probe, so ANY non-empty value is a failed row.
+                _blocked = bool(ep.tls_blocker_reason) and ep.protocol not in NON_ASSET_PROTOCOLS
+                if ep.protocol == "CLOSED" or _blocked or (
                     ep.protocol not in NON_ASSET_PROTOCOLS and ep.scan_error is not None
                 ):
                     current_failed.add(key)
@@ -499,6 +506,7 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     ep.protocol
                     and ep.protocol not in NON_ASSET_PROTOCOLS
                     and ep.scan_error is None
+                    and not ep.tls_blocker_reason
                 ):
                     current_asset[key].add(ep.protocol)
                     if family_for_protocol(ep.protocol) is not None:
