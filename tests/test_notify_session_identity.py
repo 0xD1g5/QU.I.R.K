@@ -14,7 +14,11 @@ import pytest
 from sqlalchemy.orm import sessionmaker
 
 from quirk.db import init_db
-from quirk.intelligence.trends import _fetch_session_endpoints, compute_trend_report
+from quirk.intelligence.trends import (
+    _fetch_session_endpoints,
+    compute_trend_report,
+    list_session_timestamps,
+)
 from quirk.models import CryptoEndpoint
 from quirk.notify.dispatcher import _find_two_sessions, should_notify
 
@@ -83,6 +87,31 @@ def test_legacy_null_run_rows_in_distinct_ms_stay_distinct(db):
     current, previous = _find_two_sessions(db)
     assert current is not None and previous is not None
     assert current != previous
+
+
+def test_legacy_sessions_fetch_disjoint_endpoint_sets(db):
+    """229-REVIEW WR-04: rows at .000500 and .001200 sit in adjacent millisecond
+    buckets. Each legacy session must fetch only its own bucket; a window of
+    [target_ts, target_ts + 1ms) put `b` in both sessions."""
+    base = datetime(2026, 5, 10, 12, 0, 0)
+    db.add(_ep(base + timedelta(microseconds=500), None, "a.example"))
+    db.add(_ep(base + timedelta(microseconds=1200), None, "b.example"))
+    db.add(_ep(base + timedelta(microseconds=1900), None, "c.example"))
+    db.commit()
+    sessions = list_session_timestamps(db)
+    assert len(sessions) == 2
+    fetched = [sorted(e.host for e in _fetch_session_endpoints(db, ts)) for ts in sessions]
+    assert fetched == [["b.example", "c.example"], ["a.example"]]
+
+
+def test_legacy_null_run_rows_fetch_their_own_endpoints(db):
+    """WR-06: the distinct-ms legacy case also has to load the right rows."""
+    db.add(_ep(datetime(2026, 5, 10, 12, 0, 0, 100000), None, "x.example"))
+    db.add(_ep(datetime(2026, 5, 10, 12, 0, 0, 200000), None, "y.example"))
+    db.commit()
+    current, previous = _find_two_sessions(db)
+    assert [e.host for e in _fetch_session_endpoints(db, current)] == ["y.example"]
+    assert [e.host for e in _fetch_session_endpoints(db, previous)] == ["x.example"]
 
 
 def test_import_hygiene_no_fastapi_or_pydantic():

@@ -155,11 +155,15 @@ def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEnd
     stage (often one endpoint) of a scan, and score deltas were computed between
     two slices of the *same* scan.
 
-    Rows written before `scan_run_id` existed keep the old behaviour: SQLite's
-    strftime('%f') produces 3-digit millisecond precision, not microseconds, and
-    target_ts is millisecond-aligned, so the 1ms window is wide enough to capture
-    sub-ms components while keeping two scans 100ms apart distinct (CR-05 fix).
-    Excludes NULL scanned_at rows (D-13) via explicit filter.
+    Rows written before `scan_run_id` existed (and sensor-origin rows) are
+    grouped by millisecond bucket, exactly as `list_session_timestamps` keys
+    them. `target_ts` is that bucket's real earliest stamp, which is NOT
+    millisecond-aligned, so the window is the bucket containing it -
+    [floor_ms(target_ts), floor_ms(target_ts) + 1ms) - never
+    [target_ts, target_ts + 1ms), which reached into the next bucket and put
+    its rows in two sessions (229-REVIEW WR-04). Two scans in different
+    milliseconds stay distinct (CR-05). Excludes NULL scanned_at rows (D-13)
+    via explicit filter.
     """
     # closes cbom-intel-reports/IN-03 (Phase 77 D-09) — yield_per(1000) streaming
     # replaces .all() materialization; SQLAlchemy idiomatic chunk size per Discretion.
@@ -178,11 +182,12 @@ def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEnd
             .yield_per(1000)
         )
 
+    bucket_lo = target_ts.replace(microsecond=(target_ts.microsecond // 1000) * 1000)
     streamed = (
         db.query(CryptoEndpoint)
         .filter(
-            CryptoEndpoint.scanned_at >= target_ts,
-            CryptoEndpoint.scanned_at < target_ts + timedelta(milliseconds=1),
+            CryptoEndpoint.scanned_at >= bucket_lo,
+            CryptoEndpoint.scanned_at < bucket_lo + timedelta(milliseconds=1),
             CryptoEndpoint.scanned_at.isnot(None),
             CryptoEndpoint.scan_run_id.is_(None),
         )
