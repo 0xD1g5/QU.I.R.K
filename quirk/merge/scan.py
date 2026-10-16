@@ -1,7 +1,7 @@
 """quirk.merge.scan — Cross-sensor merge pipeline (Phase 110 MERGE-01/02/04/05).
 
-merge_scan() assembles the union of latest-push-per-sensor CryptoEndpoint rows
-plus NULL-sensor local rows, runs the canonical engine chain (build_evidence_summary →
+merge_scan() assembles the union of every CryptoEndpoint row of each sensor's
+latest push (FIND-13, Phase 229) plus NULL-sensor local rows, runs the canonical engine chain (build_evidence_summary →
 compute_readiness_score → build_cbom) exactly ONCE over the full union (Option A),
 computes a coverage_warning from Sensor push recency, and persists the merged
 result as a MergeRun row — without rewriting the source endpoints' scanned_at.
@@ -24,7 +24,7 @@ from quirk.cbom.writer import write_cbom_files
 logger = logging.getLogger(__name__)
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
-from quirk.models import CryptoEndpoint, MergeRun, Sensor
+from quirk.models import CryptoEndpoint, MergeRun, Sensor, SensorPush
 
 FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 
@@ -108,38 +108,77 @@ def _assemble_union(
     db: Session,
 ) -> List[CryptoEndpoint]:
     """Assemble the union of:
-    1. Latest-push-per-sensor rows (func.max(scanned_at) per non-null sensor_id).
-    2. NULL-sensor local rows within SESSION_BRACKET of the latest local scanned_at.
+    1. Every row of each sensor's latest push (FIND-13, D-13): the SensorPush
+       with max received_at (tie: max id) names a payload_id, and rows are
+       selected on sensor_id AND push_payload_id. A sensor with no tagged rows
+       (legacy, pre-Phase-229 ingest) falls back to rows within _SESSION_BRACKET
+       of its max scanned_at. A latest push with zero endpoints yields zero rows.
+       "Latest" is the last-ingested push, so an out-of-order air-gap import
+       counts as latest (documented limitation).
+    2. NULL-sensor local rows within _SESSION_BRACKET of the latest local scanned_at.
 
-    Source rows are returned read-only — scanned_at is never mutated (MERGE-05).
+    Order is deterministic: sensors sorted, rows by CryptoEndpoint.id, local rows
+    after (CD-05). Source rows are returned read-only (MERGE-05).
     """
     union: List[CryptoEndpoint] = []
 
     # --- Part 1: Latest push per enrolled sensor ----------------------------
-    # Subquery: (sensor_id, max(scanned_at), max(id)) for rows with a non-null sensor_id.
-    # MAX(id) is a secondary tiebreak: when two rows share the same scanned_at,
-    # only the highest-id row is selected — guarantees exactly one row per sensor.
-    sub = (
-        db.query(
-            CryptoEndpoint.sensor_id,
-            func.max(CryptoEndpoint.scanned_at).label("max_ts"),
-            func.max(CryptoEndpoint.id).label("max_id"),
+    latest: Dict[str, str] = {}
+    for sid, pid in (
+        db.query(SensorPush.sensor_id, SensorPush.payload_id)
+        .order_by(SensorPush.sensor_id, SensorPush.received_at, SensorPush.id)
+        .all()
+    ):
+        latest[sid] = pid  # last wins
+
+    tagged_sensors = {
+        r[0]
+        for r in db.query(CryptoEndpoint.sensor_id)
+        .filter(
+            CryptoEndpoint.sensor_id.isnot(None),
+            CryptoEndpoint.push_payload_id.isnot(None),
         )
+        .distinct()
+        .all()
+    }
+    all_sensors = sorted(
+        r[0]
+        for r in db.query(CryptoEndpoint.sensor_id)
         .filter(CryptoEndpoint.sensor_id.isnot(None))
-        .group_by(CryptoEndpoint.sensor_id)
-        .subquery()
-    )
-    sensor_eps: List[CryptoEndpoint] = (
-        db.query(CryptoEndpoint)
-        .join(
-            sub,
-            (CryptoEndpoint.sensor_id == sub.c.sensor_id)
-            & (CryptoEndpoint.scanned_at == sub.c.max_ts)
-            & (CryptoEndpoint.id == sub.c.max_id),
-        )
+        .distinct()
         .all()
     )
-    union.extend(sensor_eps)
+    for sid in all_sensors:
+        if sid in tagged_sensors:
+            pid = latest.get(sid)
+            if pid is None:
+                continue
+            rows = (
+                db.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.sensor_id == sid,
+                    CryptoEndpoint.push_payload_id == pid,
+                )
+                .order_by(CryptoEndpoint.id)
+                .all()
+            )
+        else:
+            max_ts = (
+                db.query(func.max(CryptoEndpoint.scanned_at))
+                .filter(CryptoEndpoint.sensor_id == sid)
+                .scalar()
+            )
+            rows = (
+                db.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.sensor_id == sid,
+                    CryptoEndpoint.scanned_at >= max_ts - _SESSION_BRACKET,
+                    CryptoEndpoint.scanned_at <= max_ts,
+                )
+                .order_by(CryptoEndpoint.id)
+                .all()
+            )
+        union.extend(rows)
 
     # --- Part 2: NULL-sensor local rows (SESSION_BRACKET window) ------------
     latest_local_ts = (
@@ -155,6 +194,7 @@ def _assemble_union(
                 CryptoEndpoint.scanned_at >= latest_local_ts - _SESSION_BRACKET,
                 CryptoEndpoint.scanned_at <= latest_local_ts,
             )
+            .order_by(CryptoEndpoint.id)
             .all()
         )
         union.extend(local_eps)

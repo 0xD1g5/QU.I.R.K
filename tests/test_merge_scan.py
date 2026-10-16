@@ -454,35 +454,92 @@ def test_cbom_paths_none_without_output_dir(tmp_path):
 # DIST-01 / CD-05 (Phase 125): same-second scanned_at tiebreak
 # ---------------------------------------------------------------------------
 
-def test_same_second_scanned_at_tie_returns_one_row_per_sensor(tmp_path):
-    """DIST-01: when two rows for the same sensor share the same scanned_at,
-    _collect_union_endpoints must return exactly ONE row per sensor (highest id).
-
-    RED: currently the subquery JOIN on scanned_at == max_ts returns ALL rows
-    with the same max_ts — both tie candidates appear in the union, producing
-    non-deterministic merged CBOM content on repeated runs.
-    """
+def _union_rows(tmp_path, eps, sensors, pushes):
+    """Seed Sensor, SensorPush and endpoint rows; return [(sensor_id, host, id)] twice."""
+    from quirk.models import SensorPush
     from quirk.merge.scan import _assemble_union
     from quirk.db import get_session
 
-    T = datetime(2026, 6, 1, 12, 0, 0)  # same-second tie
+    db_path, _ = _setup_real_db(tmp_path, [], sensors)
+    with get_session(db_path) as db:
+        for sid, pid, rec in pushes:
+            db.add(SensorPush(payload_id=pid, sensor_id=sid, received_at=rec))
+        db.commit()
+        for ep in eps:
+            db.add(ep)
+        db.commit()
+    out = []
+    with get_session(db_path) as db:
+        for _ in range(2):
+            out.append([(e.sensor_id, e.host, e.id) for e in _assemble_union(db)])
+    return out
 
+
+def _tag(host, sid, pid, T):
+    return _tls_ep(host=host, sensor_id=sid, push_payload_id=pid, scanned_at=T)
+
+
+def test_union_keeps_every_endpoint_of_latest_push(tmp_path):
+    """FIND-13 (D-13): all hosts of the latest push kept, older push excluded;
+    two calls return the identical ordered list (CD-05 determinism)."""
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [_tag("x", "s1", "p1", T), _tag("y", "s1", "p1", T)] + [
+        _tag(h, "s1", "p2", T + timedelta(hours=1)) for h in ("a", "b", "c")
+    ]
+    first, second = _union_rows(
+        tmp_path, eps, [_sensor("s1", T)],
+        [("s1", "p1", T), ("s1", "p2", T + timedelta(hours=1))],
+    )
+    assert sorted(h for _, h, _ in first) == ["a", "b", "c"]
+    assert first == second
+    assert [i for _, _, i in first] == sorted(i for _, _, i in first)
+
+
+def test_same_received_at_resolves_to_higher_pushid(tmp_path):
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [_tag("old", "s1", "p1", T), _tag("new", "s1", "p2", T)]
+    first, _ = _union_rows(
+        tmp_path, eps, [_sensor("s1", T)], [("s1", "p1", T), ("s1", "p2", T)],
+    )
+    assert [h for _, h, _ in first] == ["new"]
+
+
+def test_empty_latest_push_contributes_zero_rows(tmp_path):
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [_tag("old", "s1", "p1", T)]
+    first, _ = _union_rows(
+        tmp_path, eps, [_sensor("s1", T)],
+        [("s1", "p1", T), ("s1", "p2", T + timedelta(hours=1))],
+    )
+    assert first == []
+
+
+def test_legacy_sensor_same_second_rows_all_kept(tmp_path):
+    """Untagged (pre-Phase-229) rows fall back to the session bracket; the old
+    DIST-01 same-second shape now keeps all rows, in stable id order."""
+    T = datetime(2026, 6, 1, 12, 0, 0)
     eps = [
         _tls_ep(host="host-a.example", sensor_id="s1", scanned_at=T),
-        _tls_ep(host="host-b.example", sensor_id="s1", scanned_at=T),  # same sensor, same ts
+        _tls_ep(host="host-b.example", sensor_id="s1", scanned_at=T),
+        _tls_ep(host="stale.example", sensor_id="s1", scanned_at=T - timedelta(hours=2)),
     ]
-    db_path, _ = _setup_real_db(tmp_path, eps, sensors=[
-        _sensor("s1", last_push_at=T, cadence_minutes=60)
-    ])
+    first, second = _union_rows(tmp_path, eps, [_sensor("s1", T)], [])
+    assert [h for _, h, _ in first] == ["host-a.example", "host-b.example"]
+    assert first == second
 
-    with get_session(db_path) as db:
-        union = _assemble_union(db)
 
-    sensor_rows = [ep for ep in union if ep.sensor_id == "s1"]
-    assert len(sensor_rows) == 1, (
-        f"DIST-01: same-second tie must yield exactly ONE row per sensor (highest id), "
-        f"got {len(sensor_rows)}. DIST-01 not yet fixed — subquery lacks id tiebreak."
+def test_forged_tag_does_not_leak_across_sensors(tmp_path):
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [
+        _tag("s1-real", "s1", "p1", T),
+        _tag("s2-forged", "s2", "p1", T),  # s2 row carrying s1's payload id
+        _tag("s2-real", "s2", "p2", T),
+    ]
+    first, _ = _union_rows(
+        tmp_path, eps, [_sensor("s1", T), _sensor("s2", T)],
+        [("s1", "p1", T), ("s2", "p2", T)],
     )
+    assert [(s, h) for s, h, _ in first] == [("s1", "s1-real"), ("s2", "s2-real")]
 
 
 # ---------------------------------------------------------------------------
