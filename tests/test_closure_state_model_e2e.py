@@ -486,6 +486,27 @@ def test_carried_closure_flips_detecting_row_when_slug_still_open(db):
     assert _items(db, S3, HTTP_SLUG) == ["open"]
 
 
+def test_resurfaced_then_carried_then_closed_emits_reclosed(db):
+    """229-REVIEW iteration-2 WR-04 (D-30): closed on scan 2, resurfaced on scan 3,
+    refused on scan 4 (carried as not_observed), fixed on scan 5. The event must
+    be ``reclosed``, so the earlier regression stays legible, not ``closed``."""
+    base = [http_ep(i) for i in range(7)]
+    _http_scan1(db)
+    _run_scan(db, S2, 1, base + [tls_ep(7)])
+    _run_scan(db, S3, 2, [http_ep(i) for i in range(N)])
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["resurfaced"]
+    _run_scan(db, "scan-e2e-4", 3, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    assert _fp_states(db, "scan-e2e-4", HTTP_SLUG, host="h7") == ["not_observed"]
+    counters = _run_scan(db, "scan-e2e-5", 4, [http_ep(i) for i in range(7)] + [tls_ep(7)])
+    assert counters["reclosed"] == 2, counters
+    assert counters["closed"] == 0, counters
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+    with get_session(db) as s:
+        events = s.query(RemediationClosureEvent).filter_by(slug=HTTP_SLUG).order_by(
+            RemediationClosureEvent.id).all()
+        assert [e.event_type for e in events] == ["closed", "resurfaced", "reclosed"]
+
+
 def test_failed_snapshot_never_reads_as_every_finding_gone(db, monkeypatch):
     """CR-02: scan 2's remediation snapshot fails (the writer swallows the error),
     so scan 2 has no fingerprint rows at all. Without a guard, clause (e) holds for

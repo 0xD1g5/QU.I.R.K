@@ -559,9 +559,16 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # ("closed" — no fifth ITEM_STATES member), but the EVENT
                 # written is "reclosed" so the earlier regression stays
                 # legible in the retained event sequence.
+                # 229-REVIEW iteration-2 WR-04: a carried (not_observed) row keeps
+                # the lineage of the scan that detected it - if that detection was
+                # a resurface, this closure is a reclose. from_state stays the
+                # flipped row's own state.
                 from_state = row.state
+                lineage_state = detected.state if detected is not None else from_state
                 row.state = _CLOSED_STATE
-                event_type = "reclosed" if from_state == RESURFACED_STATE else "closed"
+                event_type = (
+                    "reclosed" if lineage_state == RESURFACED_STATE else "closed"
+                )
                 _write_closure_event(
                     session,
                     slug=row.slug,
