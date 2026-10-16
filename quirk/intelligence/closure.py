@@ -37,7 +37,10 @@ protocol with no probe family refuses. A closure is also written on the CURRENT 
 reader sees it (D-03). A REFUSED candidate is carried onto the current scan as a
 ``not_observed`` fingerprint row, so the next scan can still close it and burndown
 keeps counting it; for such a row, clause (d) takes its families from the scan that
-last DETECTED it (229-REVIEW WR-03). The whole computation refuses
+last DETECTED it (229-REVIEW WR-03). When such a row closes, the detecting row (and,
+once all its constituents are closed, that scan's item) flips to ``closed`` too, and
+the current scan gets a closed item when it has none, exactly as on the direct path
+(229-REVIEW iteration-2 WR-03). The whole computation refuses
 (``refused_missing_snapshot``) when the current scan has no remediation rows at all
 (229-REVIEW CR-02).
 
@@ -270,16 +273,16 @@ def _write_closure_event(
     )
 
 
-def _detection_protocols(
+def _detection_row(
     session: Any, row: RemediationItemFingerprint, current_scan_run_id: str
-) -> set:
-    """Protocols at ``row``'s host:port in the latest scan that DETECTED it.
+) -> Optional[RemediationItemFingerprint]:
+    """The latest OPEN_LIKE row for ``row``'s fingerprint on an earlier scan.
 
-    Used only for a carried-forward ``not_observed`` row (229-REVIEW WR-03) whose
-    adjacent prior scan has no asset row at that host:port. Returns an empty set
-    when no detecting scan or endpoint row is found (callers then fall back).
+    For a carried-forward ``not_observed`` row this is the row of the scan that
+    last DETECTED the finding (229-REVIEW WR-03). Legacy pre-release
+    ``not_observed`` rows (D-04) find none, because OPEN_LIKE excludes them.
     """
-    detected = (
+    return (
         session.query(RemediationItemFingerprint)
         .filter(
             RemediationItemFingerprint.slug == row.slug,
@@ -293,6 +296,17 @@ def _detection_protocols(
         )
         .first()
     )
+
+
+def _detection_protocols(
+    session: Any, detected: Optional[RemediationItemFingerprint], row: RemediationItemFingerprint
+) -> set:
+    """Protocols at ``row``'s host:port in the scan of ``detected``.
+
+    Used only for a carried-forward ``not_observed`` row (229-REVIEW WR-03) whose
+    adjacent prior scan has no asset row at that host:port. Returns an empty set
+    when no detecting scan or endpoint row is found (callers then fall back).
+    """
     if detected is None:
         return set()
     return {
@@ -437,6 +451,10 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             # IN-02: current-scan rows this computation inserts, per slug, so a
             # closed item inserted in the rollup can be linked back to them.
             inserted_rows: Dict[str, list] = defaultdict(list)
+            # WR-03: slugs with a row closed by THIS computation, and the
+            # detecting scans whose rows a carried closure flipped, per slug.
+            closed_slugs: set = set()
+            detecting_scans: Dict[str, set] = defaultdict(set)
 
             def _carry_forward(prior_row: RemediationItemFingerprint) -> None:
                 """229-REVIEW WR-03: a refused candidate stays a candidate.
@@ -510,11 +528,16 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # NULL/empty prior protocol is unmapped too: it refuses rather than
                 # falling through to the current protocols (229-REVIEW WR-05).
                 prior_raw = prior_protocols_at.get(endpoint_key, set())
+                detected = (
+                    _detection_row(session, row, scan_run_id)
+                    if row.state == _NOT_OBSERVED_STATE
+                    else None
+                )
                 if not (prior_raw - NON_ASSET_PROTOCOLS) and row.state == _NOT_OBSERVED_STATE:
                     # WR-03: a carried-forward row's adjacent prior scan did not
                     # observe this host:port (that is why it was refused there), so
                     # resolve the families from the scan that DETECTED it instead.
-                    prior_raw = _detection_protocols(session, row, scan_run_id) or prior_raw
+                    prior_raw = _detection_protocols(session, detected, row) or prior_raw
                 if any(not p for p in prior_raw):
                     counters["refused_probe"] += 1
                     _carry_forward(row)
@@ -551,6 +574,14 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     reason=_TWO_SIDED_REASON,
                 )
                 counters[event_type] += 1
+                closed_slugs.add(row.slug)
+                # 229-REVIEW iteration-2 WR-03: closing a carried row also flips
+                # the row of the scan that DETECTED the finding, so history reads
+                # the same as on the direct path (where the adjacent prior row IS
+                # the detecting row). Its item is rolled up below.
+                if detected is not None:
+                    detected.state = _CLOSED_STATE
+                    detecting_scans[row.slug].add(detected.scan_run_id)
                 # D-03: record the closure on the scan that observed it. Clause (e)
                 # guarantees this fingerprint is absent from the current scan, so the
                 # (scan_run_id, slug, finding_fingerprint) unique key cannot collide.
@@ -621,6 +652,11 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             # has at least one constituent fingerprint (at the prior scan) and EVERY
             # one of them is now closed. evidence_only items have zero constituent
             # fingerprints by construction and are correctly never touched here.
+            # 229-REVIEW iteration-2 WR-03: the same rule applies to the item of
+            # each detecting scan a carried closure flipped a row on, and the
+            # current-scan closed item no longer depends on the ADJACENT prior
+            # scan having an item (a carried slug often has none there).
+            session.flush()
             for slug in touched_slugs:
                 item = (
                     session.query(RemediationItem)
@@ -630,39 +666,93 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     )
                     .one_or_none()
                 )
-                if item is None or item.state == _CLOSED_STATE:
-                    continue
-
                 constituent_states = [
                     r.state
                     for r in prior_rows
                     if r.slug == slug
                 ]
-                if constituent_states and all(
+                all_closed = bool(constituent_states) and all(
                     s == _CLOSED_STATE for s in constituent_states
-                ):
+                )
+                item_flipped = False
+                if item is not None and item.state != _CLOSED_STATE and all_closed:
                     item.state = _CLOSED_STATE
-                    counters["items_closed"] += 1
-                    # D-03: a current-scan closed item so VEX reads RESOLVED; an
-                    # existing current item is never flipped.
-                    if slug not in current_items:
-                        closed_item = RemediationItem(
-                            slug=slug,
-                            scan_run_id=scan_run_id,
-                            title=item.title,
-                            phase=item.phase,
-                            priority=item.priority,
-                            constituency=item.constituency,
-                            state=_CLOSED_STATE,
-                            first_seen_scan_run_id=item.first_seen_scan_run_id,
-                            created_at=datetime.now(timezone.utc),
+                    item_flipped = True
+
+                template = item
+                for detect_scan in sorted(detecting_scans.get(slug, ())):
+                    detect_item = (
+                        session.query(RemediationItem)
+                        .filter(
+                            RemediationItem.slug == slug,
+                            RemediationItem.scan_run_id == detect_scan,
                         )
-                        session.add(closed_item)
-                        # IN-02: link the rows inserted beside it.
-                        session.flush()
-                        for inserted in inserted_rows.get(slug, ()):
-                            if inserted.remediation_item_id is None:
-                                inserted.remediation_item_id = closed_item.id
+                        .one_or_none()
+                    )
+                    if detect_item is None:
+                        continue
+                    if template is None:
+                        template = detect_item
+                    if detect_item.state == _CLOSED_STATE:
+                        continue
+                    detect_states = [
+                        r.state
+                        for r in session.query(RemediationItemFingerprint)
+                        .filter(
+                            RemediationItemFingerprint.slug == slug,
+                            RemediationItemFingerprint.scan_run_id == detect_scan,
+                        )
+                        .all()
+                    ]
+                    if detect_states and all(s == _CLOSED_STATE for s in detect_states):
+                        detect_item.state = _CLOSED_STATE
+                        item_flipped = True
+                if item_flipped:
+                    counters["items_closed"] += 1
+
+                # D-03: a current-scan closed item so VEX reads RESOLVED; an
+                # existing current item is never flipped. Written only when this
+                # computation closed something for the slug (or flipped its item),
+                # so a re-run or an already-closed history writes nothing new.
+                if (
+                    not all_closed
+                    or slug in current_items
+                    or not (item_flipped or slug in closed_slugs)
+                ):
+                    continue
+                if template is None:
+                    template = (
+                        session.query(RemediationItem)
+                        .filter(
+                            RemediationItem.slug == slug,
+                            RemediationItem.scan_run_id != scan_run_id,
+                        )
+                        .order_by(
+                            RemediationItem.created_at.desc(),
+                            RemediationItem.id.desc(),
+                        )
+                        .first()
+                    )
+                if template is None:
+                    continue
+                closed_item = RemediationItem(
+                    slug=slug,
+                    scan_run_id=scan_run_id,
+                    title=template.title,
+                    phase=template.phase,
+                    priority=template.priority,
+                    constituency=template.constituency,
+                    state=_CLOSED_STATE,
+                    first_seen_scan_run_id=template.first_seen_scan_run_id,
+                    created_at=datetime.now(timezone.utc),
+                )
+                session.add(closed_item)
+                current_items[slug] = closed_item
+                # IN-02: link the rows inserted beside it.
+                session.flush()
+                for inserted in inserted_rows.get(slug, ()):
+                    if inserted.remediation_item_id is None:
+                        inserted.remediation_item_id = closed_item.id
 
             session.commit()
         return counters

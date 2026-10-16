@@ -437,6 +437,55 @@ def test_unknown_row_beside_classified_row_refuses(db, family):
     assert _vex_for(db, S2, HTTP_SLUG) != "RESOLVED"
 
 
+def _items(db_path, sid, slug):
+    with get_session(db_path) as s:
+        return [i.state for i in s.query(RemediationItem).filter_by(scan_run_id=sid, slug=slug)]
+
+
+@pytest.mark.parametrize("slug", [HTTP_SLUG, "high-impact-findings"])
+def test_carried_closure_matches_direct_path_and_resolves_vex(db, slug):
+    """229-REVIEW iteration-2 WR-03: scan 2 fixes h0..h6 and times out on h7
+    (refused, carried as not_observed), so scan 2 writes no item for the slug.
+    Scan 3 finds h7 fixed. The carried closure must leave history as the direct
+    path does: the detecting scan-1 row and (all constituents now closed) the
+    scan-1 item flip to closed, and scan 3 gets a closed item so VEX reads
+    RESOLVED. Before the fix scan 3 had no item and scan 1 stayed open."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [tls_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    assert _items(db, S2, slug) == []
+    assert _fp_states(db, S2, slug, host="h7") == ["not_observed"]
+    counters = _run_scan(db, S3, 2, [tls_ep(i) for i in range(N)])
+    assert counters["closed"] == 2, counters
+    assert _fp_states(db, S3, slug) == ["closed"]
+    assert _fp_states(db, S2, slug, host="h7") == ["closed"]
+    assert _fp_states(db, S1, slug) == ["closed"] * N
+    assert _items(db, S1, slug) == ["closed"]
+    assert _items(db, S3, slug) == ["closed"]
+    assert _vex_for(db, S3, slug) == "RESOLVED"
+    with get_session(db) as s:
+        item = s.query(RemediationItem).filter_by(scan_run_id=S3, slug=slug).one()
+        rows = s.query(RemediationItemFingerprint).filter_by(scan_run_id=S3, slug=slug).all()
+        assert [r.remediation_item_id for r in rows] == [item.id]
+    # Idempotent: a re-run writes no new row, item or event.
+    models = (RemediationItemFingerprint, RemediationItem, RemediationClosureEvent)
+    before = tuple(_count(db, m) for m in models)
+    compute_closure(db, S3)
+    assert tuple(_count(db, m) for m in models) == before
+
+
+def test_carried_closure_flips_detecting_row_when_slug_still_open(db):
+    """WR-03, the shape where scan 3 already has an item (h0..h6 still HTTP):
+    the scan-1 detecting row for h7 flips to closed as on the direct path, and
+    the scan-1 item stays open because h0..h6 are still open there."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)])
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S1, HTTP_SLUG) == ["closed"] + ["open"] * 7
+    assert _items(db, S1, HTTP_SLUG) == ["open"]
+    assert _items(db, S3, HTTP_SLUG) == ["open"]
+
+
 def test_failed_snapshot_never_reads_as_every_finding_gone(db, monkeypatch):
     """CR-02: scan 2's remediation snapshot fails (the writer swallows the error),
     so scan 2 has no fingerprint rows at all. Without a guard, clause (e) holds for
