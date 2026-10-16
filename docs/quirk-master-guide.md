@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,475 lines, in reading order.
+Five guides, 7,482 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -6858,7 +6858,9 @@ case is a missing badge or an empty burndown block, not a broken page.
   third scan that rechecks the same estate counts only its own rows, which show no closure.
 - **`not_observed`** — nothing was verified. Counter-only roadmap items use it, and so do scans
   stored before this release, which keep their detected findings as Not Verified and are not
-  rewritten.
+  rewritten. A finding that a scan could not recheck, for example because its port timed out, is
+  also written to that scan as `not_observed`. It stays in that scan's burndown, and the next scan
+  that does recheck it can still close it.
 - **`resurfaced`** — written to the current scan's record when a finding whose most recent earlier
   record is `closed` is detected again. It is counted as open-like for reporting, but reported as
   its own line rather than folded into `open`, and its closure history is retained.
@@ -6867,9 +6869,13 @@ A finding closes only when all of the following hold:
 
 - The current scan has the same scope as the prior one (see §15).
 - The current scan has an endpoint at that host:port, and at least one of the rows there is live.
-  A timed-out, refused, unreachable, placeholder or errored row is not a recheck.
+  A timed-out, refused, unreachable, placeholder or errored row is not a recheck, and neither is a
+  row whose service the scan could not identify, such as the `UNKNOWN` row written when the HTTP
+  probe times out.
 - Every probe family that originally reported that host:port was rechecked in this scan. A run
   that reused cached fingerprint results does not count as a recheck.
+- The current scan's remediation record was written. If writing it failed, closure is skipped for
+  that scan, because a missing record cannot be told apart from every finding being gone.
 
 Plaintext HTTP findings close when the port now serves something else, for example TLS after the
 port is moved to HTTPS, and also when no plaintext HTTP endpoint remains anywhere in the scan.
@@ -6917,7 +6923,8 @@ is one of:
   one probe family silently produced no usable evidence — probe health is asserted positively per
   family, never inferred from a clean exit.
 - **No endpoint was rechecked at that host:port.** The current scan simply did not touch that
-  address this run, or every row there was a timeout, refusal, placeholder or error.
+  address this run, or every row there was a timeout, refusal, placeholder, error, or a service
+  the scan could not identify (`UNKNOWN`).
 - **The scan reused cached fingerprint results.** A cached run does not count as a recheck.
 - **It is a TLS finding and the scan ran in fast mode.** Only deep TLS scans can close TLS
   findings (HORIZON 999.138).

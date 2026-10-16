@@ -1314,9 +1314,11 @@ that data. The item slug is the correlation key back to the report's roadmap and
 - **Comparing old and new CBOMs.** A CBOM regenerated for an old scan still shows `in_triage`,
   while a new scan of the same estate shows `exploitable`, so a comparison of the two will show
   the analysis state change. That is the state model changing, not the estate.
-- **Timed-out, refused, placeholder and errored rows never close a finding,** a scan that reused
-  cached fingerprint results does not count as a recheck, and TLS findings close only on deep TLS
-  scans.
+- **Timed-out, refused, placeholder and errored rows never close a finding,** nor does a row
+  whose service the scan could not identify (`UNKNOWN`). A scan that reused cached fingerprint
+  results does not count as a recheck, and TLS findings close only on deep TLS scans.
+- **A finding the scan could not recheck stays on its report as Not Verified,** rather than
+  dropping out of the burndown, and a later scan that rechecks it can still close it.
 - **Burndown counts the rows of the scan being reported.** In a test with eight plaintext
   hosts, one of which was moved to HTTPS, the next scan's burndown read 14 open and 2 closed
   (each plaintext finding counts under two remediation items, so these figures are not host
