@@ -833,3 +833,73 @@ def test_legacy_chain_redetected_then_fixed_closes(db):
     c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
     assert c3["closed"] >= 1, c3
     assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+
+
+# ---------------------------------------------------------------------------
+# 229-12 (FIND-11): a family is rechecked at a host:port only with THAT row's
+# evidence. Family health is estate-wide; a sslyze-fallback TLS row (live,
+# error-free, no tls_capabilities_json) must not close a legacy-TLS finding.
+# ---------------------------------------------------------------------------
+def _fallback_tls_ep(i, *, versions=True):
+    ep = tls_ep(i, port=443, legacy=False, caps=False)
+    if not versions:
+        ep.tls_supported_versions = None
+    return ep
+
+
+def _assert_no_false_tls_closure(db, sid, counters, host="h7"):
+    assert counters["closed"] == 0, counters
+    assert counters["refused_probe"] >= 1, counters
+    assert "closed" not in _fp_states(db, sid, TLS_SLUG, host=host)
+    assert _probe_status(db, sid, "tls") == "healthy"
+    assert _vex_for(db, sid, TLS_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("versions", [True, False])
+def test_evidence_direct_deep_tls_fallback_row_refuses(db, versions):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    eps = [tls_ep(i, port=443, legacy=True) for i in range(7)] + [
+        _fallback_tls_ep(7, versions=versions)]
+    c = _run_scan(db, S2, 1, eps, tls_mode="deep")
+    _assert_no_false_tls_closure(db, S2, c)
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]
+
+
+def test_evidence_carried_deep_tls_fallback_row_refuses(db):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    _run_scan(db, S2, 1, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+              + [closed_ep(7, "TIMEOUT", port=443)], tls_mode="deep")
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]
+    c = _run_scan(db, S3, 2, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+                  + [_fallback_tls_ep(7)], tls_mode="deep")
+    _assert_no_false_tls_closure(db, S3, c)
+    assert _fp_states(db, S3, TLS_SLUG, host="h7") == ["not_observed"]
+
+
+def test_evidence_deep_tls_full_evidence_still_closes_on_carried_path(db):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    _run_scan(db, S2, 1, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+              + [closed_ep(7, "TIMEOUT", port=443)], tls_mode="deep")
+    c = _run_scan(db, S3, 2, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+                  + [tls_ep(7, port=443, legacy=False)], tls_mode="deep")
+    assert c["closed"] >= 1, c
+    assert _fp_states(db, S3, TLS_SLUG, host="h7") == ["closed"]
+
+
+def test_evidence_http_row_without_service_detail_refuses(db):
+    """The finding's own HTTP row still answers at h7 but carries no
+    service_detail evidence: not a recheck, even though http is healthy."""
+    _http_scan1(db)
+    bare = CryptoEndpoint(host="h7", port=80, protocol="HTTP")
+    c = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [bare])
+    assert c["closed"] == 0, c
+    assert "closed" not in _fp_states(db, S2, HTTP_SLUG, host="h7")
+
+
+def test_evidence_http_reclassified_to_tls_without_caps_still_closes(db):
+    """The reclassification rule is untouched: a live TLS row from a fast-mode
+    reclassification closes the plaintext-HTTP finding with no TLS evidence."""
+    _http_scan1(db)
+    c = _http_scan2(db)
+    assert c["closed"] >= 1, c
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
