@@ -64,22 +64,49 @@ def _fixture():
     ]
 
 
-def _old_composition(cfg, eps):
-    """The pre-Phase-228 run_scan.py five-call composition (the oracle)."""
-    email = [e for e in eps if e.protocol in ("SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS",
-                                              "IMAPS", "POP3-STARTTLS", "POP3S")]
-    codesign = [e for e in eps if e.protocol == "CODE_SIGNING"]
-    saml = [e for e in eps if e.protocol == "SAML"]
-    findings = evaluate_endpoints(cfg, eps)
+def _scanner_outputs():
+    """Each scanner's own return list, shaped the way run_scan.py@814c6639 held them
+    (email_endpoints, all_broker_eps, codesign_endpoints, saml_endpoints), plus the
+    rows that land only in ``endpoints``: TLS/vault inventory and the ERROR/ADVISORY
+    rows that _wrapped_phase/_emit_missing_extra_advisory append to error_endpoints."""
+    from quirk.scanner import email_scanner
+
+    by_proto = {}
+    for ep in _fixture():
+        by_proto.setdefault(ep.protocol, []).append(ep)
+    # The email scanner emits exactly its EMAIL_PORTS labels (pinned below).
+    email = [ep for label in {row[1] for row in email_scanner.EMAIL_PORTS}
+             for ep in by_proto.pop(label, [])]
+    broker = by_proto.pop("KAFKA-PLAIN", []) + by_proto.pop("KAFKA-TLS", [])
+    codesign = by_proto.pop("CODE_SIGNING", [])
+    saml = by_proto.pop("SAML", [])
+    errors = [
+        _ep("ERROR", host="broker_scanner", port=0, scan_error="boom",
+            scan_error_category="exception"),
+        _ep("ADVISORY", host="smime_scanner", port=0,
+            scan_error="optional extra [adcs] not installed",
+            scan_error_category="missing_extra"),
+    ]
+    rest = [ep for eps in by_proto.values() for ep in eps]
+    return email, broker, codesign, saml, rest, errors
+
+
+def _old_composition(cfg):
+    """The pre-Phase-228 run_scan.py five-call composition (the oracle), fed the OLD
+    inputs: scanner-specific lists, not a re-derived protocol partition (228-REVIEW
+    WR-07). ``endpoints`` is their concatenation plus error rows, as at run_scan.py:4068."""
+    email, broker, codesign, saml, rest, errors = _scanner_outputs()
+    endpoints = rest + email + broker + codesign + saml + errors
+    findings = evaluate_endpoints(cfg, endpoints)
     for extra in (
         evaluate_email_endpoints(email),
-        evaluate_broker_endpoints(eps),
+        evaluate_broker_endpoints(broker),
         evaluate_codesign_endpoints(codesign),
         evaluate_identity_endpoints(saml),
     ):
         if extra:
             findings = (findings or []) + extra
-    return findings
+    return endpoints, findings
 
 
 @pytest.mark.parametrize("proto,expected", [
@@ -120,10 +147,11 @@ def test_partition_routes_broker_and_codesign():
 
 
 def test_composer_equals_old_five_call_composition():
+    """Mutation-checked: widening EMAIL_PROTOCOLS to TLS rows turns this red. The
+    codesign partition is pinned by test_partition_routes_broker_and_codesign."""
     cfg = _cfg()
-    eps = _fixture()
-    new = derive_report_findings(eps, cfg)
-    old = _old_composition(cfg, eps)
+    endpoints, old = _old_composition(cfg)
+    new = derive_report_findings(endpoints, cfg)
     assert len(new) > 4  # non-vacuous
     assert _titles(new) == _titles(old)
 
