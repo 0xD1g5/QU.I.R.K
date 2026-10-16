@@ -25,8 +25,18 @@ comparable-by-default — this honours ``persist_scope_signature``'s docstring
 respect: a scan that crashed before producing a signature leaves no row at all, which is
 the honest outcome, not a clean baseline to compare against.
 
+Phase 229 (FIND-11) refinements: clauses (c)/(d) work on protocol SETS per host:port. A
+host:port whose current rows are all non-live (CLOSED/ADVISORY protocol, or scan_error
+set) is refused (``refused_probe``). Clause (d) takes the families of the PRIOR scan's
+protocols at that host:port (fallback: the live current protocols) and requires ALL to be
+rechecked through ``probe_family_rechecked`` (``http`` also accepts ``no_targets``); any
+protocol with no probe family refuses. A closure is also written on the CURRENT scan
+(closed fingerprint row, plus a closed item when none exists) so every current-scan
+reader sees it (D-03).
+
 Prior-scan selection deliberately does NOT use
-``quirk/dashboard/api/routes/trends.py::_list_session_timestamps``. That helper folds
+``quirk/dashboard/api/routes/trends.py::_list_session_timestamps`` (nor its Phase 229
+successor ``quirk.intelligence.trends.list_session_timestamps``). That helper folds
 NULL-``scan_run_id`` (sensor-origin) rows into session grouping via a millisecond-
 timestamp fallback key — precisely the sensor-origin population Phase 179 excluded from
 scope-signature coverage (179-CONTEXT.md Sensor-Origin Coverage). Reusing it here would
@@ -81,6 +91,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
@@ -93,7 +104,12 @@ from quirk.intelligence.remediation import (
     OPEN_LIKE_STATES,
     RESURFACED_STATE,
 )
-from quirk.intelligence.scope_signature import SCOPE_SIGNATURE_VERSION, family_for_protocol
+from quirk.intelligence.evidence import NON_ASSET_PROTOCOLS
+from quirk.intelligence.scope_signature import (
+    SCOPE_SIGNATURE_VERSION,
+    family_for_protocol,
+    probe_family_rechecked,
+)
 from quirk.models import (
     CryptoEndpoint,
     RemediationClosureEvent,
@@ -305,10 +321,36 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             )
             probe_health = _load_probe_health(current_sig)
 
-            current_endpoints: Dict[Tuple[Any, Any], Optional[str]] = {
-                (row.host, row.port): row.protocol
-                for row in session.query(CryptoEndpoint)
+            # D-20: protocol SETS per host:port (a last-row-wins dict misjudged real
+            # multi-protocol host:ports). `current_present` answers clause (c) (any row
+            # at all); `current_live` answers the live-row guard: a recheck needs a row
+            # that is a real asset (not CLOSED/ADVISORY) and carries no scan_error.
+            current_present: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            current_live: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            for ep in (
+                session.query(CryptoEndpoint)
                 .filter(CryptoEndpoint.scan_run_id == scan_run_id)
+                .all()
+            ):
+                key = (ep.host, ep.port)
+                current_present[key].add(ep.protocol)
+                if (
+                    ep.protocol
+                    and ep.protocol not in NON_ASSET_PROTOCOLS
+                    and ep.scan_error is None
+                ):
+                    current_live[key].add(ep.protocol)
+            prior_protocols_at: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            for ep in (
+                session.query(CryptoEndpoint)
+                .filter(CryptoEndpoint.scan_run_id == prior_scan_run_id)
+                .all()
+            ):
+                prior_protocols_at[(ep.host, ep.port)].add(ep.protocol)
+            current_items: Dict[str, RemediationItem] = {
+                it.slug: it
+                for it in session.query(RemediationItem)
+                .filter(RemediationItem.scan_run_id == scan_run_id)
                 .all()
             }
             current_fp_rows: Dict[Tuple[Any, Any], RemediationItemFingerprint] = {
@@ -344,14 +386,32 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # this row's host:port. Absence alone is never sufficient (the
                 # Qualys guardrail).
                 endpoint_key = (row.host, row.port)
-                if endpoint_key not in current_endpoints:
+                if endpoint_key not in current_present:
                     counters["refused_absent_endpoint"] += 1
                     continue
 
-                # Clause (d): that endpoint's protocol family must be HEALTHY.
-                protocol = current_endpoints[endpoint_key]
-                status = probe_family_status(probe_health, protocol)
-                if status != _HEALTHY_STATUS:
+                # Clause (c'): a row exists but none is LIVE (timeout/refused CLOSED
+                # row, ADVISORY placeholder, or scan_error set) - not a recheck.
+                live_protocols = current_live.get(endpoint_key, set())
+                if not live_protocols:
+                    counters["refused_probe"] += 1
+                    continue
+
+                # Clause (d): the probe family(ies) that raised the finding must ALL
+                # be rechecked. Families come from the PRIOR scan's protocols at this
+                # host:port (D-05); fall back to the live current ones. A protocol
+                # with no probe family can never be shown rechecked, so it refuses
+                # (never dropped from the set).
+                prior_set = {
+                    p
+                    for p in prior_protocols_at.get(endpoint_key, set())
+                    if p and p not in NON_ASSET_PROTOCOLS
+                }
+                check_protocols = prior_set or live_protocols
+                families = [family_for_protocol(p) for p in check_protocols]
+                if any(f is None for f in families) or not all(
+                    probe_family_rechecked(probe_health, f) for f in families
+                ):
                     counters["refused_probe"] += 1
                     continue
 
@@ -375,6 +435,23 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     reason=_TWO_SIDED_REASON,
                 )
                 counters[event_type] += 1
+                # D-03: record the closure on the scan that observed it. Clause (e)
+                # guarantees this fingerprint is absent from the current scan, so the
+                # (scan_run_id, slug, finding_fingerprint) unique key cannot collide.
+                cur_item = current_items.get(row.slug)
+                session.add(
+                    RemediationItemFingerprint(
+                        remediation_item_id=cur_item.id if cur_item is not None else None,
+                        slug=row.slug,
+                        scan_run_id=scan_run_id,
+                        finding_fingerprint=row.finding_fingerprint,
+                        host=row.host,
+                        port=row.port,
+                        finding_title=row.finding_title,
+                        state=_CLOSED_STATE,
+                        observed_at=datetime.now(timezone.utc),
+                    )
+                )
 
             # CLOSE-02 (D-29): resurface detection. Evaluated on the CURRENT
             # scan's OWN fingerprint rows (a fresh row exists only when the
@@ -450,6 +527,22 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 ):
                     item.state = _CLOSED_STATE
                     counters["items_closed"] += 1
+                    # D-03: a current-scan closed item so VEX reads RESOLVED; an
+                    # existing current item is never flipped.
+                    if slug not in current_items:
+                        session.add(
+                            RemediationItem(
+                                slug=slug,
+                                scan_run_id=scan_run_id,
+                                title=item.title,
+                                phase=item.phase,
+                                priority=item.priority,
+                                constituency=item.constituency,
+                                state=_CLOSED_STATE,
+                                first_seen_scan_run_id=item.first_seen_scan_run_id,
+                                created_at=datetime.now(timezone.utc),
+                            )
+                        )
 
             session.commit()
         return counters

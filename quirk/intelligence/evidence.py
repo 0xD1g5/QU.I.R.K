@@ -38,6 +38,8 @@ EVIDENCE_SCHEMA_VERSION = "1.2.0"
 # tests/test_evidence_protocol_disposition.py, not by this comment — a new protocol
 # literal must be classified there before it can be trusted here.
 _NON_ASSET_PROTOCOLS = frozenset({"ADVISORY", "CLOSED"})
+# Phase 229 D-20: public name for the closure live-row guard (the private name stays).
+NON_ASSET_PROTOCOLS = _NON_ASSET_PROTOCOLS
 
 # Phase 228 XSURF-08 (D-13/D-14/D-21). Sibling of quirk.engine.findings_evaluator.EMAIL_PROTOCOLS
 # (kept local: importing quirk.engine here risks an import cycle). A test pins this set
