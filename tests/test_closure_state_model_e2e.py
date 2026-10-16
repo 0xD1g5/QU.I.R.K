@@ -741,3 +741,29 @@ def test_mid_migration_tls_error_then_live_tls_closes(db):
     assert c3["closed"] == 2, c3
     for sid in (S3, S2, S1):
         assert _fp_states(db, sid, HTTP_SLUG, host="h7") == ["closed"], sid
+
+
+@pytest.mark.parametrize("s2_h7", ["absent", "closed_timeout"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_legacy_origin_carried_chain_refuses_on_empty_probe_basis(db, co, s2_h7):
+    """229-VERIFICATION residual gap (FIND-11, fail-first): the chain starts at a
+    pre-release scan whose rows read not_observed (D-04), so no open/resurfaced
+    detecting row exists. Scan 2 saw nothing live at h7:80 and scan 3 only a live
+    SAML/JWT row. The finding's own (HTTP) probe never answered, so there is no
+    probe-identified basis and the finding must stay not_observed, never close."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [ep(7)], **_GAP_KW)
+    with get_session(db) as s:
+        for r in s.query(RemediationItemFingerprint).filter_by(scan_run_id=S1).all():
+            r.state = "not_observed"
+        s.commit()
+    s2 = [http_ep(i) for i in range(7)]
+    if s2_h7 == "closed_timeout":
+        s2.append(closed_ep(7, "TIMEOUT"))
+    c2 = _run_scan(db, S2, 1, s2, **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _count_closed(db) == 0
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _vex_for(db, S3, HTTP_SLUG) != "RESOLVED"
