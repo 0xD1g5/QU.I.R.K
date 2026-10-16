@@ -4,11 +4,11 @@ milestone: v5.28
 milestone_name: Score & Finding Truth
 status: executing
 last_updated: "2026-10-15T23:59:00.000Z"
-last_activity: "2026-10-15 -- Phase 228 complete (10/10 plans, verified passed 5/5 at 0e25abca, CI green). STATE.md hand-edited from a pre-image; next /gsd-discuss-phase 229"
+last_activity: "2026-10-15 -- Phase 229 planned (11 plans, 7 waves; plan-check passed after 1 revision). STATE.md hand-edited from a pre-image; next execute 229"
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 19
+  total_plans: 30
   completed_plans: 19
   percent: 25
 ---
@@ -1469,7 +1469,7 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 228 (Cross-Surface Score Parity) — COMPLETE 2026-10-15; next is Phase 229 (Finding & State Correctness; FIND-13 builds on the D-10 union derivation). Phase 227 COMPLETE, verified passed 4/4 at efadfb56.
+Phase: 229 (Finding & State Correctness) — PLANNED 2026-10-15 (11 plans, 7 waves; CONTEXT D-01..D-25, two operator flags resolved), executing next. Phase 228 COMPLETE 2026-10-15. Phase 227 COMPLETE, verified passed 4/4 at efadfb56.
 Plan: 10 of 10 complete (verified passed 5/5 at 0e25abca; CI green at 0e25abca, Python CI 38834562847 + Dashboard Quality 38834564861; code review CR-01 + WR-07 fixed, WR-01..06 deferred to owned todos in 999.131/132/134/136/137)
 Status: Milestone v5.28 Score & Finding Truth opened 2026-10-15; 23 requirements, roadmap approved. Phases
 continue from 227. Theme: P2b scan-depth dilution (anchor), cross-surface score and finding
