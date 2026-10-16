@@ -33,7 +33,12 @@ protocols at that host:port (fallback: the live current protocols) and requires 
 rechecked through ``probe_family_rechecked`` (``http`` also accepts ``no_targets``); any
 protocol with no probe family refuses. A closure is also written on the CURRENT scan
 (closed fingerprint row, plus a closed item when none exists) so every current-scan
-reader sees it (D-03).
+reader sees it (D-03). A REFUSED candidate is carried onto the current scan as a
+``not_observed`` fingerprint row, so the next scan can still close it and burndown
+keeps counting it; for such a row, clause (d) takes its families from the scan that
+last DETECTED it (229-REVIEW WR-03). The whole computation refuses
+(``refused_missing_snapshot``) when the current scan has no remediation rows at all
+(229-REVIEW CR-02).
 
 Prior-scan selection deliberately does NOT use
 ``quirk/dashboard/api/routes/trends.py::_list_session_timestamps`` (nor its Phase 229
@@ -101,6 +106,7 @@ from sqlalchemy import func
 from quirk.db import get_session
 from quirk.intelligence.remediation import (
     CLOSURE_EVENT_TYPES,
+    DEFAULT_ITEM_STATE,
     ITEM_STATES,
     OPEN_LIKE_STATES,
     RESURFACED_STATE,
@@ -137,6 +143,9 @@ COMPARABILITY_REASONS: Tuple[str, ...] = (
 
 _HEALTHY_STATUS = "healthy"
 _CLOSED_STATE = "closed"
+# WR-03: a refused candidate is carried onto the current scan in the documented
+# undetected state, never a new literal.
+_NOT_OBSERVED_STATE = DEFAULT_ITEM_STATE
 _TWO_SIDED_REASON = "two_sided_verified"
 _RESURFACE_REASON = "detected_after_closure"
 
@@ -280,6 +289,43 @@ def _write_closure_event(
     )
 
 
+def _detection_protocols(
+    session: Any, row: RemediationItemFingerprint, current_scan_run_id: str
+) -> set:
+    """Protocols at ``row``'s host:port in the latest scan that DETECTED it.
+
+    Used only for a carried-forward ``not_observed`` row (229-REVIEW WR-03) whose
+    adjacent prior scan has no asset row at that host:port. Returns an empty set
+    when no detecting scan or endpoint row is found (callers then fall back).
+    """
+    detected = (
+        session.query(RemediationItemFingerprint)
+        .filter(
+            RemediationItemFingerprint.slug == row.slug,
+            RemediationItemFingerprint.finding_fingerprint == row.finding_fingerprint,
+            RemediationItemFingerprint.state.in_(OPEN_LIKE_STATES),
+            RemediationItemFingerprint.scan_run_id != current_scan_run_id,
+        )
+        .order_by(
+            RemediationItemFingerprint.observed_at.desc(),
+            RemediationItemFingerprint.id.desc(),
+        )
+        .first()
+    )
+    if detected is None:
+        return set()
+    return {
+        ep.protocol
+        for ep in session.query(CryptoEndpoint)
+        .filter(
+            CryptoEndpoint.scan_run_id == detected.scan_run_id,
+            CryptoEndpoint.host == row.host,
+            CryptoEndpoint.port == row.port,
+        )
+        .all()
+    }
+
+
 def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
     """Compute two-sided closure for `scan_run_id` against its selected prior scan.
 
@@ -395,6 +441,35 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 .all()
             )
 
+            def _carry_forward(prior_row: RemediationItemFingerprint) -> None:
+                """229-REVIEW WR-03: a refused candidate stays a candidate.
+
+                A refusal is "not verified this scan", not "gone". Without a
+                current-scan row the next scan's closure (which reads only its
+                adjacent prior scan) would never see this fingerprint again, so it
+                could never close and would drop out of every later burndown. Copy
+                it onto the current scan as ``not_observed``. Clause (e) makes the
+                key absent here; a re-run sees the copy and leaves it alone.
+                """
+                key = (prior_row.slug, prior_row.finding_fingerprint)
+                if key in current_fingerprints:
+                    return
+                current_fingerprints.add(key)
+                cur_item = current_items.get(prior_row.slug)
+                session.add(
+                    RemediationItemFingerprint(
+                        remediation_item_id=cur_item.id if cur_item is not None else None,
+                        slug=prior_row.slug,
+                        scan_run_id=scan_run_id,
+                        finding_fingerprint=prior_row.finding_fingerprint,
+                        host=prior_row.host,
+                        port=prior_row.port,
+                        finding_title=prior_row.finding_title,
+                        state=_NOT_OBSERVED_STATE,
+                        observed_at=datetime.now(timezone.utc),
+                    )
+                )
+
             touched_slugs = set()
             for row in prior_rows:
                 touched_slugs.add(row.slug)
@@ -416,6 +491,7 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 endpoint_key = (row.host, row.port)
                 if endpoint_key not in current_present:
                     counters["refused_absent_endpoint"] += 1
+                    _carry_forward(row)
                     continue
 
                 # Clause (c'): a row exists but none is LIVE (timeout/refused CLOSED
@@ -424,6 +500,7 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 live_protocols = current_live.get(endpoint_key, set())
                 if not live_protocols:
                     counters["refused_probe"] += 1
+                    _carry_forward(row)
                     continue
 
                 # Clause (d): the probe family(ies) that raised the finding must ALL
@@ -434,8 +511,14 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # NULL/empty prior protocol is unmapped too: it refuses rather than
                 # falling through to the current protocols (229-REVIEW WR-05).
                 prior_raw = prior_protocols_at.get(endpoint_key, set())
+                if not (prior_raw - NON_ASSET_PROTOCOLS) and row.state == _NOT_OBSERVED_STATE:
+                    # WR-03: a carried-forward row's adjacent prior scan did not
+                    # observe this host:port (that is why it was refused there), so
+                    # resolve the families from the scan that DETECTED it instead.
+                    prior_raw = _detection_protocols(session, row, scan_run_id) or prior_raw
                 if any(not p for p in prior_raw):
                     counters["refused_probe"] += 1
+                    _carry_forward(row)
                     continue
                 prior_set = {p for p in prior_raw if p not in NON_ASSET_PROTOCOLS}
                 check_protocols = prior_set or current_asset.get(
@@ -446,6 +529,7 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     probe_family_rechecked(probe_health, f) for f in families
                 ):
                     counters["refused_probe"] += 1
+                    _carry_forward(row)
                     continue
 
                 # All five clauses hold — close it. D-30: a fingerprint whose

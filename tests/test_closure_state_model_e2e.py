@@ -285,14 +285,67 @@ _NEGATIVES = {
 
 @pytest.mark.parametrize("case", sorted(_NEGATIVES))
 def test_guardrail_negatives_refuse_and_write_no_closed_row(db, case):
+    """A refusal writes no closed row anywhere, and (229-REVIEW WR-03) carries
+    the unverified finding onto scan 2 as ``not_observed``. This test used to pin
+    ``h7 == []`` on scan 2, which asserted the defect: the finding left scan 2's
+    burndown (7 per slug, not 8) and could never close on a later scan."""
     spec = _NEGATIVES[case]
     _http_scan1(db)
     eps = [http_ep(i) for i in range(7)] + [spec["h7"]()]
     counters = _run_scan(db, S2, 1, eps, timings=spec.get("timings"))
     assert counters["refused_probe"] >= 1, counters
     assert counters["closed"] == 0
-    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == []
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _fp_states(db, S2, HTTP_SLUG) == ["not_observed"] + ["open"] * 7
     assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+    # 8 findings per slug x 2 slugs (Pitfall 3): h7 is not_observed in each, so
+    # it stays in scan 2's burndown. (The UNKNOWN case adds h7's own finding as
+    # one more open row, so `open` is not pinned across cases.)
+    burn = _burn(db, S2)["unmapped"]
+    assert (burn["closed"], burn["not_observed"]) == (0, 2)
+    if case != "unknown-open-not-tls":
+        assert burn["open"] == 14
+
+
+def test_refused_on_scan2_still_closes_on_scan3(db):
+    """WR-03: scan 2's probe of h7 times out (refused, carried as not_observed);
+    scan 3 rechecks h7 healthily and finds it fixed (TLS) -> it closes on scan 3,
+    and the carried scan-2 row is the one flipped (the idempotency key)."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    counters = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)])
+    assert counters["closed"] == 2, counters  # h7 in both slugs
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S3, HTTP_SLUG) == ["closed"] + ["open"] * 7
+    with get_session(db) as s:
+        events = s.query(RemediationClosureEvent).filter_by(
+            scan_run_id=S3, slug=HTTP_SLUG, event_type="closed").all()
+        assert [(e.from_state, e.prior_scan_run_id) for e in events] == [("not_observed", S2)]
+    # A re-run of scan 3's closure writes nothing new.
+    before = tuple(_count(db, m) for m in (RemediationItemFingerprint, RemediationClosureEvent))
+    compute_closure(db, S3)
+    assert tuple(_count(db, m) for m in (RemediationItemFingerprint, RemediationClosureEvent)) == before
+
+
+def test_absent_endpoint_refusal_is_carried_forward(db):
+    """WR-03, the refused_absent_endpoint path: h7 does not answer at all on
+    scan 2, so it is carried as not_observed rather than dropped."""
+    _http_scan1(db)
+    counters = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)])
+    assert counters["refused_absent_endpoint"] >= 1, counters
+    assert counters["closed"] == 0
+    assert _fp_states(db, S2, HTTP_SLUG) == ["not_observed"] + ["open"] * 7
+
+
+def test_carried_not_observed_row_is_not_resurfaced_when_detected_again(db):
+    """WR-03 x CLOSE-02: a carried ``not_observed`` row is not a closure, so a
+    finding detected again on scan 3 is plain ``open``, never ``resurfaced``."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    counters = _run_scan(db, S3, 2, [http_ep(i) for i in range(N)])
+    assert counters["resurfaced"] == 0
+    assert _fp_states(db, S3, HTTP_SLUG) == ["open"] * N
 
 
 def _probe_status(db_path, sid, family):
@@ -355,7 +408,7 @@ def test_unmapped_protocol_http_restfuzz_refused(db):
     counters = _run_scan(db, S2, 1, eps)
     assert counters["refused_probe"] >= 1
     assert counters["closed"] == 0
-    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == []
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]  # WR-03 carry
 
 
 def test_unmapped_protocol_tls_openapi_refused_in_deep_mode(db):
@@ -366,7 +419,7 @@ def test_unmapped_protocol_tls_openapi_refused_in_deep_mode(db):
     counters = _run_scan(db, S2, 1, eps, tls_mode="deep")
     assert counters["refused_probe"] >= 1
     assert counters["closed"] == 0
-    assert _fp_states(db, S2, TLS_SLUG, host="h7") == []
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]  # WR-03 carry
 
 
 # ---------------------------------------------------------------------------
