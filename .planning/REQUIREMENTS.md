@@ -74,7 +74,7 @@ HORIZON prose:
 
 ### Finding and state correctness (FIND)
 
-- [ ] **FIND-11**: Remediation closure states follow the documented model end to end. A detected
+- [x] **FIND-11**: Remediation closure states follow the documented model end to end. A detected
       finding is written `open` (not read as `not_observed`), a closure lands on the scan that
       observed it closed (not the prior scan), and plaintext HTTP can close (todo
       `261013-doc224-closure-states-open-never-written-closed-on-prior-scan`).
@@ -166,7 +166,7 @@ Deferred from this milestone with an owner:
 | XSURF-06 | Phase 228 | Complete |
 | XSURF-07 | Phase 228 | Complete |
 | XSURF-08 | Phase 228 | Complete |
-| FIND-11 | Phase 229 | Pending |
+| FIND-11 | Phase 229 | Complete |
 | FIND-12 | Phase 229 | Pending |
 | FIND-13 | Phase 229 | Pending |
 | DETECT-01 | Phase 230 | Pending |
