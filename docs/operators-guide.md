@@ -3546,6 +3546,11 @@ them can mark a finding closed that is not fixed.
   write, that scan carries no pending findings forward. Findings it did not detect, including
   ones that were `not_observed` before it, drop out of later scans' burndowns and can no longer
   close.
+- **Findings carried from scans recorded before this release.** A finding whose only record is a
+  `not_observed` row from a scan stored before this release has no record of which probe raised
+  it. It needs a probe-identified basis before it can close: it stays `not_observed` until a
+  later scan detects it again, or until a scan finds its own probe answering at that host:port.
+  A different service answering there, such as SAML or JWT, does not close it.
 - **An endpoint that leaves service.** A finding at a host:port that stops answering is carried
   as `not_observed` on every later scan. There is no action to retire it yet.
 
