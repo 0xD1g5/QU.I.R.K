@@ -421,6 +421,10 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 .all()
             )
 
+            # IN-02: current-scan rows this computation inserts, per slug, so a
+            # closed item inserted in the rollup can be linked back to them.
+            inserted_rows: Dict[str, list] = defaultdict(list)
+
             def _carry_forward(prior_row: RemediationItemFingerprint) -> None:
                 """229-REVIEW WR-03: a refused candidate stays a candidate.
 
@@ -436,19 +440,19 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     return
                 current_fingerprints.add(key)
                 cur_item = current_items.get(prior_row.slug)
-                session.add(
-                    RemediationItemFingerprint(
-                        remediation_item_id=cur_item.id if cur_item is not None else None,
-                        slug=prior_row.slug,
-                        scan_run_id=scan_run_id,
-                        finding_fingerprint=prior_row.finding_fingerprint,
-                        host=prior_row.host,
-                        port=prior_row.port,
-                        finding_title=prior_row.finding_title,
-                        state=_NOT_OBSERVED_STATE,
-                        observed_at=datetime.now(timezone.utc),
-                    )
+                carried = RemediationItemFingerprint(
+                    remediation_item_id=cur_item.id if cur_item is not None else None,
+                    slug=prior_row.slug,
+                    scan_run_id=scan_run_id,
+                    finding_fingerprint=prior_row.finding_fingerprint,
+                    host=prior_row.host,
+                    port=prior_row.port,
+                    finding_title=prior_row.finding_title,
+                    state=_NOT_OBSERVED_STATE,
+                    observed_at=datetime.now(timezone.utc),
                 )
+                session.add(carried)
+                inserted_rows[prior_row.slug].append(carried)
 
             touched_slugs = set()
             for row in prior_rows:
@@ -536,19 +540,19 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # guarantees this fingerprint is absent from the current scan, so the
                 # (scan_run_id, slug, finding_fingerprint) unique key cannot collide.
                 cur_item = current_items.get(row.slug)
-                session.add(
-                    RemediationItemFingerprint(
-                        remediation_item_id=cur_item.id if cur_item is not None else None,
-                        slug=row.slug,
-                        scan_run_id=scan_run_id,
-                        finding_fingerprint=row.finding_fingerprint,
-                        host=row.host,
-                        port=row.port,
-                        finding_title=row.finding_title,
-                        state=_CLOSED_STATE,
-                        observed_at=datetime.now(timezone.utc),
-                    )
+                closed_row = RemediationItemFingerprint(
+                    remediation_item_id=cur_item.id if cur_item is not None else None,
+                    slug=row.slug,
+                    scan_run_id=scan_run_id,
+                    finding_fingerprint=row.finding_fingerprint,
+                    host=row.host,
+                    port=row.port,
+                    finding_title=row.finding_title,
+                    state=_CLOSED_STATE,
+                    observed_at=datetime.now(timezone.utc),
                 )
+                session.add(closed_row)
+                inserted_rows[row.slug].append(closed_row)
 
             # CLOSE-02 (D-29): resurface detection. Evaluated on the CURRENT
             # scan's OWN fingerprint rows (a fresh row exists only when the
@@ -627,19 +631,23 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     # D-03: a current-scan closed item so VEX reads RESOLVED; an
                     # existing current item is never flipped.
                     if slug not in current_items:
-                        session.add(
-                            RemediationItem(
-                                slug=slug,
-                                scan_run_id=scan_run_id,
-                                title=item.title,
-                                phase=item.phase,
-                                priority=item.priority,
-                                constituency=item.constituency,
-                                state=_CLOSED_STATE,
-                                first_seen_scan_run_id=item.first_seen_scan_run_id,
-                                created_at=datetime.now(timezone.utc),
-                            )
+                        closed_item = RemediationItem(
+                            slug=slug,
+                            scan_run_id=scan_run_id,
+                            title=item.title,
+                            phase=item.phase,
+                            priority=item.priority,
+                            constituency=item.constituency,
+                            state=_CLOSED_STATE,
+                            first_seen_scan_run_id=item.first_seen_scan_run_id,
+                            created_at=datetime.now(timezone.utc),
                         )
+                        session.add(closed_item)
+                        # IN-02: link the rows inserted beside it.
+                        session.flush()
+                        for inserted in inserted_rows.get(slug, ()):
+                            if inserted.remediation_item_id is None:
+                                inserted.remediation_item_id = closed_item.id
 
             session.commit()
         return counters

@@ -230,6 +230,10 @@ def test_http_all_fixed_closes_every_host(db):
     with get_session(db) as s:
         item = s.query(RemediationItem).filter_by(scan_run_id=S2, slug=HTTP_SLUG).one()
         assert item.state == "closed"
+        # IN-02: the closed rows inserted beside the closed item point at it.
+        links = {r.remediation_item_id for r in s.query(RemediationItemFingerprint)
+                 .filter_by(scan_run_id=S2, slug=HTTP_SLUG).all()}
+        assert links == {item.id}
     assert _vex_for(db, S2, HTTP_SLUG) == "RESOLVED"
 
 
