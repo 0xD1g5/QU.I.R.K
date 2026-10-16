@@ -200,7 +200,7 @@ Plans:
 - [x] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
 - [x] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
 - [x] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
-- [ ] 229-12-PLAN.md — Gap closure (229-VERIFICATION gap 1): per-host:port recheck rule, a co-resident live row never closes a failed/absent finding probe; fail-first regressions, §16 docs, UAT-229-02/03 (FIND-11, D-20/D-05) (gap wave 1)
+- [x] 229-12-PLAN.md — Gap closure (229-VERIFICATION gap 1): per-host:port recheck rule, a co-resident live row never closes a failed/absent finding probe; fail-first regressions, §16 docs, UAT-229-02/03 (FIND-11, D-20/D-05) (gap wave 1)
 
 ### Phase 230: Findings That Fire
 **Goal**: Detection paths that exist in the code but never fire in a real scan now produce their findings, each proven by a test that exercises the real capture or the real wire rather than an injected fixture.
