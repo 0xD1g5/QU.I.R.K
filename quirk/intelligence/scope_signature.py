@@ -411,6 +411,21 @@ def family_for_protocol(protocol: str) -> Optional[str]:
     return _PROTOCOL_TO_FAMILY.get(protocol)
 
 
+def endpoint_has_family_evidence(endpoint: Any, family: Optional[str]) -> bool:
+    """Phase 229-12 (FIND-11): PUBLIC per-row evidence predicate.
+
+    True iff `endpoint` carries `family`'s evidence field with real content
+    (the same `_has_evidence` test `assess_probe_health` applies estate-wide).
+    False for an unknown family. Closure uses it to require that the row
+    answering at a finding's host:port is itself evidenced, because family
+    health is estate-wide and says nothing about one host's row.
+    """
+    spec = _FAMILY_SPEC.get(family) if family else None
+    if spec is None:
+        return False
+    return _has_evidence(getattr(endpoint, spec.evidence_field, None))
+
+
 def probe_family_rechecked(probe_health: Dict[str, Any], family: Optional[str]) -> bool:
     """Phase 229 D-21: PUBLIC predicate - did `family` genuinely re-probe?
 

@@ -123,6 +123,7 @@ from quirk.intelligence.remediation import (
 from quirk.intelligence.evidence import NON_ASSET_PROTOCOLS
 from quirk.intelligence.scope_signature import (
     SCOPE_SIGNATURE_VERSION,
+    endpoint_has_family_evidence,
     family_for_protocol,
     probe_family_rechecked,
 )
@@ -362,6 +363,7 @@ def _host_port_rechecked(
     live_families_at_k: set,
     live_protocols_at_k: set,
     probe_health: Dict[str, Any],
+    evidenced_families_at_k: Optional[set] = None,
 ) -> bool:
     """Per host:port recheck decision (229-VERIFICATION gap 1, D-20/D-05/D-21).
 
@@ -370,6 +372,12 @@ def _host_port_rechecked(
     a live row whose protocol is in ``_FINGERPRINT_RECLASS_PROTOCOLS`` and whose family
     was not live at the host:port in the detecting scan (``reclass_baseline``).
     An empty family set is never vacuously rechecked.
+
+    229-12 (FIND-11): a live row only counts when at least one live row of that family at
+    the host:port also carries the family's evidence field (``evidenced_families_at_k``;
+    family health is estate-wide, so a sslyze-fallback TLS row with no
+    ``tls_capabilities_json`` is live but proves nothing about this host). ``None`` keeps
+    the legacy no-evidence-required behaviour for callers that do not supply it.
     """
     if not prior_families:
         return False
@@ -377,6 +385,11 @@ def _host_port_rechecked(
         if not probe_family_rechecked(probe_health, fam):
             return False
         if fam in live_families_at_k:
+            if (
+                evidenced_families_at_k is not None
+                and fam not in evidenced_families_at_k
+            ):
+                return False
             continue
         if fam == "http" and any(
             p in _FINGERPRINT_RECLASS_PROTOCOLS
@@ -463,6 +476,9 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             # set that rule is checked against.
             current_failed: set = set()
             current_live_families: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            # 229-12 (FIND-11): families with a live row that ALSO carries that
+            # family's evidence field, per host:port.
+            current_evidenced_families: Dict[Tuple[Any, Any], set] = defaultdict(set)
             for ep in (
                 session.query(CryptoEndpoint)
                 .filter(CryptoEndpoint.scan_run_id == scan_run_id)
@@ -487,7 +503,10 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     current_asset[key].add(ep.protocol)
                     if family_for_protocol(ep.protocol) is not None:
                         current_live[key].add(ep.protocol)
-                        current_live_families[key].add(family_for_protocol(ep.protocol))
+                        _fam = family_for_protocol(ep.protocol)
+                        current_live_families[key].add(_fam)
+                        if endpoint_has_family_evidence(ep, _fam):
+                            current_evidenced_families[key].add(_fam)
             prior_protocols_at: Dict[Tuple[Any, Any], set] = defaultdict(set)
             # Reclassification baseline for a direct (non-carried) row: the families
             # LIVE at the host:port in the adjacent prior (= detecting) scan.
@@ -692,6 +711,7 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     current_live_families.get(endpoint_key, set()),
                     live_protocols,
                     probe_health,
+                    current_evidenced_families.get(endpoint_key, set()),
                 ):
                     counters["refused_probe"] += 1
                     _carry_forward(row)

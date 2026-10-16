@@ -56,6 +56,18 @@ FINDING = {
 # D-07: the fingerprint is the production formula, not a hand-typed literal.
 FINGERPRINT = TicketingChannel.compute_fingerprint(dict(FINDING))
 PROTOCOL = "TLS"
+
+
+def _live_current_row(host, port, protocol, scan_run_id, **kw):
+    """A current-scan row as production writes a SUCCESSFUL probe: carrying the
+    family's evidence field (229-12 FIND-11 requires it for a per-host recheck)."""
+    evidence = {
+        "TLS": {"tls_capabilities_json": '{"ok": true}'},
+        "HTTP": {"service_detail": "HTTP/1.1 200 OK"},
+    }.get(protocol, {})
+    for k, v in evidence.items():
+        kw.setdefault(k, v)
+    return CryptoEndpoint(host=host, port=port, protocol=protocol, scan_run_id=scan_run_id, **kw)
 HEALTHY_TLS = {"tls": {"status": "healthy", "evidence_field": "tls_capabilities_json", "endpoints_seen": 1, "endpoints_with_evidence": 1}}
 
 
@@ -116,7 +128,7 @@ def _seed_two_scans(
             session.add(RemediationItemFingerprint(**extra))
 
         if include_current_endpoint:
-            session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=CURRENT_SCAN_ID))
+            session.add(_live_current_row(HOST, PORT, PROTOCOL, CURRENT_SCAN_ID))
 
         session.commit()
 
@@ -620,7 +632,7 @@ def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
     # Scan 2: rechecked, absent, healthy probe -> closes.
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan2))
         session.commit()
     _persist_clean_snapshot(db_path, scan2)  # CR-02: the fixed scan's snapshot ran
     counters2 = compute_closure(db_path, scan2)
@@ -653,7 +665,7 @@ def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
     # Scan 4: rechecked with a healthy probe, absent -> recloses.
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan4))
         session.commit()
     _persist_clean_snapshot(db_path, scan4)  # CR-02: the fixed scan's snapshot ran
     counters4 = compute_closure(db_path, scan4)
@@ -887,7 +899,7 @@ def test_resurfaced_event_survives_a_database_reopen(tmp_path):
 
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan2))
         session.commit()
     _persist_clean_snapshot(db_path, scan2)  # CR-02: the fixed scan's snapshot ran
     compute_closure(db_path, scan2)
@@ -912,7 +924,7 @@ def test_resurfaced_event_survives_a_database_reopen(tmp_path):
 
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan4))
         session.commit()
     _persist_clean_snapshot(db_path, scan4)  # CR-02: the fixed scan's snapshot ran
     compute_closure(db_path, scan4)
@@ -1014,9 +1026,10 @@ def _scenario(tmp_path, *, prior_protocols=(), current_rows=(), health=None):
             session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=proto, scan_run_id=PRIOR_SCAN_ID))
         for proto, detail, err in current_rows:
             session.add(
-                CryptoEndpoint(
-                    host=HOST, port=PORT, protocol=proto, service_detail=detail,
-                    scan_error=err, scan_run_id=CURRENT_SCAN_ID,
+                _live_current_row(
+                    HOST, PORT, proto,
+                    CURRENT_SCAN_ID, **({"service_detail": detail} if detail is not None else {}),
+                    scan_error=err,
                 )
             )
         session.commit()
@@ -1111,7 +1124,7 @@ def test_next_scan_treats_inserted_closed_rows_as_unchanged(tmp_path):
     third = "scan-third-0003"
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=third, created_at=datetime.now(timezone.utc) + timedelta(days=1), digest="digest-a", target_set_digest="tsd-a")
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=third))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, third))
         session.commit()
     before = _counts(db_path)
     counters = compute_closure(db_path, third)
