@@ -3,9 +3,10 @@
 compute_trend_report() is a pure function (D-12: no datetime.now() inside).
 The caller supplies current_ts and previous_ts as parameters.
 
-Session grouping uses func.strftime microsecond-precision grouping (%Y-%m-%d %H:%M:%f)
-so two scans started within the same second appear as distinct sessions (CR-05).
-_fetch_session_endpoints uses a 1-microsecond window to match exactly one session.
+Session grouping is by scan_run_id (list_session_timestamps, RVW-003 / FIND-12);
+legacy rows with scan_run_id NULL fall back to millisecond buckets so two scans
+started in different milliseconds stay distinct (CR-05).
+_fetch_session_endpoints resolves a session timestamp back to its scan run.
 
 NULL scanned_at rows (D-13): v4.2-era endpoints may have scanned_at IS NULL.
 These are excluded from session grouping AND from per-session endpoint fetches by
@@ -99,6 +100,50 @@ class TrendReport:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+def list_session_timestamps(db: Session, limit: int = 10) -> List[datetime]:
+    """Return up to `limit` most recent distinct session timestamps (newest first).
+
+    RVW-003: a session is one `scan_run_id`, represented by its *earliest*
+    endpoint timestamp. Grouping on a millisecond-precision strftime key
+    instead made one scan look like many sessions - a scan's stages each stamp
+    their own rows as they run, so a 10-endpoint scan could yield 10 "sessions",
+    and the trend delta was then computed between two stages of the same scan.
+
+    Rows predating the column (scan_run_id IS NULL) are bucketed by millisecond
+    so two scans started in different milliseconds stay distinct (CR-05). NULL
+    scanned_at rows are excluded (D-13). The returned datetimes are real stored
+    values, so _fetch_session_endpoints can match them exactly (FIND-12).
+
+    Shared by the dashboard routes and the notifier (Phase 229 D-08); it must
+    stay free of dashboard-extra imports.
+    """
+    rows = (
+        db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
+        .filter(CryptoEndpoint.scanned_at.isnot(None))
+        .all()
+    )
+    earliest: dict = {}
+    for row_ts, row_run_id in rows:
+        if row_ts is None:
+            continue
+        if isinstance(row_ts, str):
+            try:
+                row_ts = datetime.fromisoformat(row_ts)
+            except ValueError:
+                continue
+        if row_run_id:
+            key = row_run_id
+        else:
+            key = (
+                "legacy",
+                row_ts.replace(microsecond=(row_ts.microsecond // 1000) * 1000),
+            )
+        prev = earliest.get(key)
+        if prev is None or row_ts < prev:
+            earliest[key] = row_ts
+    return sorted(earliest.values(), reverse=True)[:limit]
+
 
 def _fetch_session_endpoints(db: Session, target_ts: datetime) -> List[CryptoEndpoint]:
     """Fetch every endpoint belonging to the scan session `target_ts` represents.

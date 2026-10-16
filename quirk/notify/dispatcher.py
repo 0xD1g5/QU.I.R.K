@@ -23,11 +23,14 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from quirk.intelligence.trends import TrendReport, compute_trend_report
-from quirk.models import CryptoEndpoint, IntegrationDelivery, ScheduledRun, ScheduledScan
+from quirk.intelligence.trends import (
+    TrendReport,
+    compute_trend_report,
+    list_session_timestamps,
+)
+from quirk.models import IntegrationDelivery, ScheduledRun, ScheduledScan
 from quirk.notify.config import load_notifications_config, NotifyCfg
 from quirk.notify.payload import (
     HardwareLifecycleSummary,
@@ -106,25 +109,13 @@ def _channel_send_webhook(cfg, payload) -> None:
 
 
 def _find_two_sessions(db: Session) -> Tuple[Optional[datetime], Optional[datetime]]:
-    """Return (current_ts, previous_ts) from the two most recent scan sessions.
+    """Return (current_ts, previous_ts) from the two most recent scan runs.
 
-    Mirrors _list_session_timestamps() in quirk/dashboard/api/routes/trends.py.
-    Uses millisecond-precision strftime (%Y-%m-%d %H:%M:%f) — SQLite's %f gives
-    3 decimal digits (ms), so two scans milliseconds apart appear as distinct
-    sessions (CR-05).  NULL scanned_at rows excluded (D-13).
+    Thin wrapper over the shared list_session_timestamps() (Phase 229 D-10):
+    sessions are identified by scan_run_id, not by a millisecond string key
+    (FIND-12). NULL scanned_at rows excluded (D-13).
     """
-    ts_usec = func.strftime(
-        "%Y-%m-%d %H:%M:%f", CryptoEndpoint.scanned_at
-    ).label("ts_usec")
-    rows = (
-        db.query(ts_usec)
-        .filter(CryptoEndpoint.scanned_at.isnot(None))
-        .group_by("ts_usec")
-        .order_by(ts_usec.desc())
-        .limit(2)
-        .all()
-    )
-    sessions = [datetime.fromisoformat(r.ts_usec) for r in rows]
+    sessions = list_session_timestamps(db, limit=2)
     current = sessions[0] if sessions else None
     previous = sessions[1] if len(sessions) > 1 else None
     return current, previous

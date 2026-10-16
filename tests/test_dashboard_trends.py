@@ -285,6 +285,37 @@ def test_trends_timeline_schema():
         assert total_counted >= 0  # basic sanity; INFO excluded means count <= non-INFO rows
 
 
+def test_trends_timeline_one_point_per_scan_run_microsecond_stamps():
+    """FIND-12 / Phase 229 D-09: sessions resolve by scan_run_id, so rows at
+    several microsecond timestamps inside one run are ONE timeline point with
+    a non-zero endpoint count."""
+    from quirk.models import CryptoEndpoint
+
+    client, SessionFactory = _make_trend64_client_and_session()
+    db = SessionFactory()
+    try:
+        for run_id, base in (
+            ("run-1", _dt_t64(2026, 10, 1, 12, 0, 0, 123456)),
+            ("run-2", _dt_t64(2026, 10, 2, 12, 0, 0, 654321)),
+        ):
+            for i, sev in enumerate(("HIGH", "LOW")):
+                db.add(CryptoEndpoint(
+                    host=f"{run_id}-{i}.example", port=443, protocol="TLS",
+                    severity=sev, scan_run_id=run_id,
+                    scanned_at=base + _td_t64(milliseconds=3 * i),
+                ))
+        db.commit()
+    finally:
+        db.close()
+
+    resp = client.get("/api/trends/timeline?n=30")
+    assert resp.status_code == 200
+    points = resp.json()["sessions"]
+    assert len(points) == 2
+    for p in points:
+        assert sum(p["finding_counts"].values()) > 0
+
+
 def test_trends_timeline_n_param(dashboard_client):
     """TREND-01: ?n=N returns at most N sessions."""
     from quirk.models import CryptoEndpoint

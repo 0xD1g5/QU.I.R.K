@@ -841,10 +841,10 @@ _EXPECTED_XSURF07_COMPARE_B = 31
 def _xsurf07_seed(TestingSession):
     db = TestingSession()
     try:
-        # Whole-second scanned_at: the timeline lister truncates to ms and the
-        # session resolver matches scanned_at by equality, so a microsecond
-        # stamp would make the session invisible to /api/trends/timeline.
-        now = _datetime.now().replace(microsecond=0)
+        # Phase 229 D-09: the timeline resolves sessions by scan_run_id, so a
+        # microsecond stamp is visible to /api/trends/timeline (the old
+        # whole-second workaround is no longer required).
+        now = _datetime.now()
         wall = _datetime.now(_timezone.utc)
 
         def _ep(host, sensor, seg, not_after):
