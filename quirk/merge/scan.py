@@ -168,6 +168,13 @@ def _assemble_union(
                 .filter(CryptoEndpoint.sensor_id == sid)
                 .scalar()
             )
+            if max_ts is None:
+                # 229-REVIEW WR-01: every row of this legacy sensor has a NULL
+                # scanned_at (nullable column; _parse_dt yields None for a
+                # missing/invalid stamp). No bracket can be built, and the old
+                # max-scanned_at join contributed nothing either - skip it
+                # rather than raise TypeError (a 500 on /api/merge/latest).
+                continue
             rows = (
                 db.query(CryptoEndpoint)
                 .filter(

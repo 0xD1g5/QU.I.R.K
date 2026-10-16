@@ -528,6 +528,25 @@ def test_legacy_sensor_same_second_rows_all_kept(tmp_path):
     assert first == second
 
 
+def test_legacy_sensor_with_only_null_scanned_at_is_skipped_not_crashed(tmp_path):
+    """229-REVIEW WR-01: an untagged sensor whose every row has scanned_at NULL
+    used to raise TypeError (None - timedelta). It contributes zero rows; other
+    sensors are unaffected."""
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [
+        _tls_ep(host="null-a", sensor_id="s0", scanned_at=None),
+        _tls_ep(host="null-b", sensor_id="s0", scanned_at=None),
+        _tag("s1-real", "s1", "p1", T),
+        _tls_ep(host="legacy", sensor_id="s2", scanned_at=T),
+    ]
+    first, second = _union_rows(
+        tmp_path, eps, [_sensor("s0", T), _sensor("s1", T), _sensor("s2", T)],
+        [("s1", "p1", T)],
+    )
+    assert [(s, h) for s, h, _ in first] == [("s1", "s1-real"), ("s2", "legacy")]
+    assert first == second
+
+
 def test_forged_tag_does_not_leak_across_sensors(tmp_path):
     T = datetime(2026, 6, 1, 12, 0, 0)
     eps = [
