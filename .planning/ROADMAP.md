@@ -196,7 +196,7 @@ Plans:
 - [x] 229-03-PLAN.md — Closure: protocol-set live-row guard, prior-protocol families, closed rows on the observing scan (D-03/D-05/D-20/D-07) (wave 2)
 - [x] 229-07-PLAN.md — Merge union keeps every endpoint of each sensor's latest push; CLI + API proof (FIND-13, D-13/D-14/D-15) (wave 2)
 - [x] 229-04-PLAN.md — End-to-end closure state model on production writers: HTTP fast, TLS deep/fast, guardrail negatives (D-06/D-07) (wave 3)
-- [ ] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
+- [x] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
 - [ ] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
 - [ ] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
 - [ ] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
