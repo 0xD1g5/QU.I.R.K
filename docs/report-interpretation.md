@@ -1319,7 +1319,10 @@ that data. The item slug is the correlation key back to the report's roadmap and
   the host:port never closes a finding, and neither does a placeholder row. A finding does not
   close while any row at its host:port is a service the scan could not identify (`UNKNOWN`),
   even if another probe there, such as SAML or JWT, answered. A scan that reused cached fingerprint
-  results does not count as a recheck, and TLS findings close only on deep TLS scans.
+  results does not count as a recheck, and TLS findings close only on deep TLS scans. The live
+  row at the host:port must also carry its probe's own evidence: a TLS finding closes only when
+  that host's deep TLS enumeration succeeded, not when the host fell back to a basic handshake
+  while TLS was healthy elsewhere.
 - **A finding the scan could not recheck stays on its report as Not Verified,** rather than
   dropping out of the burndown. A later scan that rechecks it can usually still close it, and
   once every finding of its remediation item has closed, that item's VEX entry reads `resolved`

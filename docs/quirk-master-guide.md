@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,526 lines, in reading order.
+Five guides, 7,535 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -6903,6 +6903,13 @@ closed for that item, and when all eight were fixed it read 8 closed.
 TLS findings close only on deep TLS scans. A fast-mode scan does not produce the evidence needed
 to show a TLS finding is gone, so it leaves the finding open (tracked in HORIZON 999.138).
 
+A probe family that is healthy elsewhere in the scan is not enough for one host. A finding closes
+only when a live row at its own host:port carries that family's evidence. For a TLS finding that
+means the deep TLS enumeration of that host succeeded; if it failed there and the scanner fell
+back to a basic handshake, the finding stays `not_observed` even though TLS is healthy on other
+hosts. For a plaintext HTTP finding that is still answered by an HTTP row, the row must carry the
+service identification. The HTTP-moved-to-TLS or SSH rule above needs no such evidence.
+
 Two cases are deliberate under-claims, listed here side by side so the reason is not a surprise:
 
 - A port that serves both HTTP and SAML closes only when both probes recheck it.
@@ -6970,6 +6977,8 @@ is one of:
 - **It is one of the known limitations above.** For example, the port changed service while the
   finding was waiting to be rechecked, or a scan in between had its closure refused as a whole.
 - **The scan reused cached fingerprint results.** A cached run does not count as a recheck.
+- **The host's own probe returned no evidence.** For a TLS finding, the deep TLS enumeration of
+  that host failed and only a basic handshake row was recorded.
 - **It is a TLS finding and the scan ran in fast mode.** Only deep TLS scans can close TLS
   findings (HORIZON 999.138).
 
