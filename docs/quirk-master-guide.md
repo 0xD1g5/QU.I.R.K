@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,446 lines, in reading order.
+Five guides, 7,475 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -5123,16 +5123,21 @@ quirk sensor merge --db /path/to/quirk.db   # merge a database other than the de
 
 `quirk sensor merge` has no output-directory flag: the CBOM files are written next to the
 console database. It re-runs `compute_readiness_score()` and `build_cbom()` over the
-console's own latest local scan session (`CryptoEndpoint` rows with no sensor) plus **one
-endpoint row per sensor**: the single most recent row that sensor pushed, not its whole
-latest push. A sensor that pushed many endpoints therefore contributes one of them to the
-merged CBOM and score (a known defect, tracked for a fix). The merge produces:
+console's own latest local scan session (`CryptoEndpoint` rows with no sensor) plus **every
+endpoint from each sensor's latest push**. A sensor that pushed many endpoints contributes
+all of them to the merged CBOM and score. Rows that sensors ingested before this release carry
+no push marker, so for those the merge falls back to the rows within five minutes of that
+sensor's newest row. Local scan rows are unchanged. The merge produces:
 
 - One merged CBOM (`cbom-<YYYYMMDDTHHMMSS>.cdx.json` + `cbom-<YYYYMMDDTHHMMSS>.cdx.xml`)
 - One unified quantum-readiness score
 - A `coverage_warning` if any enrolled sensor is overdue, meaning it has not pushed within
   twice its expected cadence (`expected_cadence_minutes`, default 1440). Sensors silent
   for longer than `--stale-days` are treated as decommissioned and left out of the warning.
+
+**Import air-gapped results in order.** When you carry results to the console as `.qpush` files,
+import them oldest first. The most recently imported file becomes that sensor's latest push, even
+if it is older than one you imported before it, and the merge then uses the older data.
 
 With no endpoints at all (no sensor has pushed), the command prints `Score: None (None)` and
 writes no CBOM. Its warning names any sensor enrolled within the last `--stale-days` days
@@ -5151,7 +5156,7 @@ version and last push time, and a status of `current`, `stale` (no push within t
 expected cadence) or `unknown` (never pushed). The **Executive** page shows the latest
 merge's coverage warning when a sensor did not contribute, and a score gauge for each
 segment. The gauges are recomputed from the current sensor rows each time the page loads
-(with the same one-endpoint-per-sensor limit), not read back from the stored merge.
+(from every endpoint of each sensor's latest push), not read back from the stored merge.
 
 #### 8.5 Windows sensor installation
 
@@ -6734,8 +6739,8 @@ roadmap or it isn't). A remediation item is now a stable, kind-derived ID (e.g.
 `plaintext-http-exposure`) with its constituent findings recorded explicitly, per scan, in the
 database. That is what makes "6 of 8 verified closed" an expressible fact rather than an
 approximation, and fixing the 8th leaves a closure record instead of the item silently vanishing.
-The closures are recorded against the earlier scan's records, not the new scan's (see §16, "The
-four states"), so the new scan's own burndown does not count them.
+A closure is recorded on the scan that observed the fix, and the earlier scan's record of that
+finding is marked closed too (see §16, "The four states").
 
 Three things operators should understand about how this tracking behaves:
 
@@ -6752,13 +6757,12 @@ Three things operators should understand about how this tracking behaves:
   usable evidence — this is precisely the failure mode a prior integration defect
   demonstrated for SSH. Health is now derived from whether that family actually produced evidence,
   not from the absence of an error.
-- **`not_observed` is a real, persisted state, and it is the state every finding starts in.** A
-  finding is never inferred `closed` from absence. But in this release `not_observed` is also
-  the state a finding keeps when the scan *detected* it: nothing promotes a detected finding to
-  `open` (see §16, "The four states"). So `not_observed` means "not verified closed", which covers
-  both "found again this scan" and "not checked this run" (a narrower port scope, a disabled
-  connector, an unreachable host). Never read it as "there's nothing there", and do not read it
-  as "we did not check" either; use the scan's findings list to tell the two apart.
+- **A detected finding is `open`; `not_observed` means nothing was verified.** A finding is never
+  inferred `closed` from absence. A finding the scan detected is recorded `open`. `not_observed`
+  is kept for items where nothing was checked, such as counter-only roadmap items, and for scans
+  stored before this release, which are not rewritten and so still show their detected findings
+  as Not Verified (see §16, "The four states"). Never read `not_observed` as "there's nothing
+  there".
 
 See `docs/configuration.md` §"Remediation Aliases" for the related `remediation_aliases:` config
 key, which is meant to let an operator manually declare that two identities across engagements
@@ -6844,27 +6848,48 @@ case is a missing badge or an empty burndown block, not a broken page.
 
 #### The four states
 
-`ITEM_STATES` in `quirk/intelligence/remediation.py` defines four closure states. In this
-release only three of them are ever written, and they are written to different scans' records:
+`ITEM_STATES` in `quirk/intelligence/remediation.py` defines four closure states:
 
-- **`not_observed`** — every finding a scan detects is recorded in this state
-  (`DEFAULT_ITEM_STATE`), and nothing later moves a still-present finding to `open`. It also
-  stays the state of anything the scan could not verify (see the troubleshooting list below).
-- **`closed`** — written to the **earlier** scan's record of a finding, when that finding was
-  present in a comparable prior scan and the current scan positively rechecked the same host:port
-  with a healthy probe and did not find it. The current scan has no record of a finding it did not
-  find, so the current scan's burndown and roadmap badges never count it as closed; the closure is
-  kept on the prior scan's record and in the closure event log.
+- **`open`** — a finding the scan detected. It is written when the scan is stored.
+- **`closed`** — written on the scan that observed the fix, when the finding was present in a
+  comparable prior scan and this scan positively rechecked the same host:port and did not find it.
+  The earlier scan's record of that finding is also marked closed, so the earlier scan's burndown
+  reads the closure as well once the later scan has run. Closed rows are not carried forward: a
+  third scan that rechecks the same estate counts only its own rows, which show no closure.
+- **`not_observed`** — nothing was verified. Counter-only roadmap items use it, and so do scans
+  stored before this release, which keep their detected findings as Not Verified and are not
+  rewritten.
 - **`resurfaced`** — written to the current scan's record when a finding whose most recent earlier
   record is `closed` is detected again. It is counted as open-like for reporting, but reported as
   its own line rather than folded into `open`, and its closure history is retained.
-- **`open`** — defined, but no code path writes it, so every `open` count is 0.
 
-A plaintext HTTP finding cannot close while its host:port is still recorded with protocol `HTTP`:
-no probe family claims that protocol, so the probe-health check for that host:port reads
-`not_run`. It can close only once the current scan records that host:port under a protocol a
-healthy probe family claims (for example `TLS`, after the port is moved to HTTPS) and the finding
-is gone.
+A finding closes only when all of the following hold:
+
+- The current scan has the same scope as the prior one (see §15).
+- The current scan has an endpoint at that host:port, and at least one of the rows there is live.
+  A timed-out, refused, unreachable, placeholder or errored row is not a recheck.
+- Every probe family that originally reported that host:port was rechecked in this scan. A run
+  that reused cached fingerprint results does not count as a recheck.
+
+Plaintext HTTP findings close when the port now serves something else, for example TLS after the
+port is moved to HTTPS, and also when no plaintext HTTP endpoint remains anywhere in the scan.
+In a test of eight plaintext hosts with one moved to HTTPS, the next scan read 7 open and 1
+closed for that item, and when all eight were fixed it read 8 closed.
+
+TLS findings close only on deep TLS scans. A fast-mode scan does not produce the evidence needed
+to show a TLS finding is gone, so it leaves the finding open (tracked in HORIZON 999.138).
+
+Two cases are deliberate under-claims, listed here side by side so the reason is not a surprise:
+
+- A port that serves both HTTP and SAML closes only when both probes recheck it.
+- A finding at a host:port where a probe with no recheck signal also reported, such as the REST
+  fuzzer, OpenAPI, Vault, AD CS, Kubernetes or cloud connectors, does not close, because that
+  probe cannot be shown to have rechecked the port. This also covers a host:port that reported
+  HTTP together with the REST fuzzer.
+
+The same plaintext HTTP finding can count under two remediation items (`plaintext-http-exposure`
+and `high-impact-findings`), and the burndown places plaintext HTTP in the `unmapped` bucket,
+because plain HTTP carries no algorithm. Do not add the item rows together.
 
 **Absence alone never closes an item.** A host that stops appearing in a scan — because it was
 decommissioned, because the target list shrank, because a segment of the network was unreachable —
@@ -6876,9 +6901,8 @@ that specific host:port and found the finding gone, not merely to have not seen 
 If a client or colleague asks "why does this say `not_observed` instead of `closed`?", the answer
 is one of:
 
-- **The current scan found it again.** A detected finding is recorded as `not_observed` (see "The
-  four states" above). Check the scan's findings list first: if the finding is there, it is still
-  present.
+- **The scan predates this release.** Scans stored before this release keep their detected
+  findings as `not_observed` and are not rewritten. Rescan to get `open` and `closed` states.
 - **No comparable prior scan exists.** This is the first scan of this estate, or no prior scan's
   scope signature matches closely enough to compare against.
 - **The scope signature is missing or mismatched.** Port scope, `--profile`, enabled optional
@@ -6893,17 +6917,21 @@ is one of:
   one probe family silently produced no usable evidence — probe health is asserted positively per
   family, never inferred from a clean exit.
 - **No endpoint was rechecked at that host:port.** The current scan simply did not touch that
-  address this run.
+  address this run, or every row there was a timeout, refusal, placeholder or error.
+- **The scan reused cached fingerprint results.** A cached run does not count as a recheck.
+- **It is a TLS finding and the scan ran in fast mode.** Only deep TLS scans can close TLS
+  findings (HORIZON 999.138).
 
-Treat `not_observed` as **"not verified closed"**, never as **"nothing was found."** Telling a
-client "12 items came back clean" when the true state is "12 items were not verified closed" is
-the exact misreading this state exists to prevent. Because detected findings share the state, do
-not tell a client "we did not check" those 12 either until the findings list confirms it.
+Treat `not_observed` as **"not verified"**, never as **"nothing was found."** Telling a client
+"12 items came back clean" when the true state is "12 items were not verified" is the exact
+misreading this state exists to prevent. A finding that is still `open` was detected and is still
+there.
 
 #### Troubleshooting — "the burndown block is empty / says not computed"
 
 This is the same comparability gap as the `not_observed` troubleshooting list above, surfaced at
-the whole-scan level instead of the per-item level. Check, in order:
+the whole-scan level instead of the per-item level. A fully fixed estate is not an
+empty block: it shows closed rows on the scan that observed the fixes. Check, in order:
 
 - **No comparable prior scan exists** — this is the first scan of this estate, or nothing prior
   matches closely enough.
@@ -6988,8 +7016,9 @@ Three things burndown and closure will never do, by design:
 
 > **Client Conversation — Closure:**
 > "This report's `not_observed` count is not 'nothing found' — it means none of those items was
-> verified closed this run: either we found them again, or we could not recheck them because this
-> scan's scope differed from the prior one or a probe family came back unhealthy. Nothing here can
+> verified, either because the scan predates this release or because we could not recheck them:
+> this scan's scope differed from the prior one or a probe family came back unhealthy. Items we
+> found again are shown as open, not as clean. Nothing here can
 > be marked closed by a flag; a finding only closes when we
 > positively recheck it and it's gone. And a `resurfaced` item means something we believed fixed
 > came back — that's reported separately from ordinary open items so it isn't lost in the count."
