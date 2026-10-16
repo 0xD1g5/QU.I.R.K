@@ -767,3 +767,69 @@ def test_legacy_origin_carried_chain_refuses_on_empty_probe_basis(db, co, s2_h7)
     assert _count_closed(db) == 0
     assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
     assert _vex_for(db, S3, HTTP_SLUG) != "RESOLVED"
+
+
+S4 = "scan-e2e-4"
+
+
+def _legacy_s1(db, co):
+    """Scan 1 with HTTP at h7:80 plus a co-resident row, then rewritten to the
+    pre-release ``not_observed`` state (D-04): no open/resurfaced detecting row."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [_CO_EP[co](7)], **_GAP_KW)
+    with get_session(db) as s:
+        for r in s.query(RemediationItemFingerprint).filter_by(scan_run_id=S1).all():
+            r.state = "not_observed"
+        s.commit()
+
+
+def _assert_legacy_still_carried(db, last):
+    assert _count_closed(db) == 0
+    assert _fp_states(db, last, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _vex_for(db, last, HTTP_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_legacy_coresident_only_twice_refuses(db, co):
+    """FIND-11 (fail-first, iteration 2): a legacy chain whose scan 2 AND scan 3 saw
+    only a co-resident row at h7:80 takes a {SAML}/{JWT} basis from scan 2, never
+    HTTP. A carried row with no detecting open/resurfaced row must not close."""
+    _legacy_s1(db, co)
+    def sc():
+        return [http_ep(i) for i in range(7)] + [_CO_EP[co](7)]
+
+    c2 = _run_scan(db, S2, 1, sc(), **_GAP_KW)
+    c3 = _run_scan(db, S3, 2, sc(), **_GAP_KW)
+    assert c2["closed"] == 0 and c3["closed"] == 0, (c2, c3)
+    _assert_legacy_still_carried(db, S3)
+
+
+@pytest.mark.parametrize("s2_h7", ["absent", "closed_timeout"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_legacy_carried_chain_fourth_scan_refuses(db, co, s2_h7):
+    """FIND-11 (fail-first, iteration 2): scan 3 then scan 4 co-resident only. By scan
+    4 the adjacent prior scan has an asset row, so the basis is non-empty but still
+    not the HTTP probe that raised the finding."""
+    _legacy_s1(db, co)
+    s2 = [http_ep(i) for i in range(7)]
+    if s2_h7 == "closed_timeout":
+        s2.append(closed_ep(7, "TIMEOUT"))
+    def sc():
+        return [http_ep(i) for i in range(7)] + [_CO_EP[co](7)]
+
+    c2 = _run_scan(db, S2, 1, s2, **_GAP_KW)
+    c3 = _run_scan(db, S3, 2, sc(), **_GAP_KW)
+    c4 = _run_scan(db, S4, 3, sc(), **_GAP_KW)
+    assert c2["closed"] == 0 and c3["closed"] == 0 and c4["closed"] == 0, (c2, c3, c4)
+    _assert_legacy_still_carried(db, S4)
+
+
+def test_legacy_chain_redetected_then_fixed_closes(db):
+    """Positive control: a legacy finding that is RE-DETECTED (scan 2 writes a real
+    open row) and then genuinely fixed (HTTP -> live TLS at the same port) closes."""
+    _legacy_s1(db, "saml")
+    c2 = _run_scan(db, S2, 1, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["open"]
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
+    assert c3["closed"] >= 1, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
