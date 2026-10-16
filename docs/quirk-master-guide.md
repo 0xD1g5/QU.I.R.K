@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,445 lines, in reading order.
+Five guides, 7,446 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -2711,10 +2711,11 @@ Notifications are **never** sent on:
 - The very first scan (no previous baseline to compare against)
 - MEDIUM-only changes with score delta within the floor
 
-> **Known limitation:** the notifier picks the two most recent endpoint timestamps, not the two
-> most recent scan runs. A scan stamps its endpoints at different moments, so when the latest scan
-> has more than one endpoint timestamp the notifier compares that scan with itself and the trigger
-> does not fire. The dashboard's Trends page groups by scan run and is not affected.
+The notifier compares the two most recent scan runs. Rows are grouped by scan run, and each run is
+represented by its earliest endpoint timestamp; older rows that carry no scan run id are grouped by
+millisecond. This is the same grouping the dashboard's Trends page uses. A sensor push that lands between
+two scheduled scans counts as its own session, so it can become the "previous" session for the next drift
+comparison, exactly as it does on the Trends page.
 
 #### Notification config block
 
