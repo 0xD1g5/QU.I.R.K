@@ -26,8 +26,9 @@ respect: a scan that crashed before producing a signature leaves no row at all, 
 the honest outcome, not a clean baseline to compare against.
 
 Phase 229 (FIND-11) refinements: clauses (c)/(d) work on protocol SETS per host:port. A
-host:port whose current rows are all non-live (CLOSED/ADVISORY protocol, or scan_error
-set) is refused (``refused_probe``). Clause (d) takes the families of the PRIOR scan's
+host:port whose current rows are all non-live (CLOSED/ADVISORY protocol, scan_error
+set, or a protocol no probe family classifies, e.g. UNKNOWN after a probe timeout) is
+refused (``refused_probe``). Clause (d) takes the families of the PRIOR scan's
 protocols at that host:port (fallback: the live current protocols) and requires ALL to be
 rechecked through ``probe_family_rechecked`` (``http`` also accepts ``no_targets``); any
 protocol with no probe family refuses. A closure is also written on the CURRENT scan
@@ -324,9 +325,19 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
             # D-20: protocol SETS per host:port (a last-row-wins dict misjudged real
             # multi-protocol host:ports). `current_present` answers clause (c) (any row
             # at all); `current_live` answers the live-row guard: a recheck needs a row
-            # that is a real asset (not CLOSED/ADVISORY) and carries no scan_error.
+            # that is a real asset (not CLOSED/ADVISORY), carries no scan_error, AND
+            # has a protocol some probe family classifies. An unclassified row
+            # (UNKNOWN from a plaintext-HTTP probe timeout or an SSH banner-read
+            # timeout, TCP, FINGERPRINT, ...) is not recheck evidence: clause (d)
+            # judges the PRIOR protocol's family scan-wide, so admitting it would
+            # let one slow endpoint close whenever its family is healthy elsewhere
+            # (229-REVIEW CR-01).
+            # `current_asset` keeps every error-free asset protocol (classified or
+            # not) for clause (d)'s no-prior-row fallback, so an unclassified
+            # protocol there still refuses rather than being filtered away.
             current_present: Dict[Tuple[Any, Any], set] = defaultdict(set)
             current_live: Dict[Tuple[Any, Any], set] = defaultdict(set)
+            current_asset: Dict[Tuple[Any, Any], set] = defaultdict(set)
             for ep in (
                 session.query(CryptoEndpoint)
                 .filter(CryptoEndpoint.scan_run_id == scan_run_id)
@@ -339,7 +350,9 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     and ep.protocol not in NON_ASSET_PROTOCOLS
                     and ep.scan_error is None
                 ):
-                    current_live[key].add(ep.protocol)
+                    current_asset[key].add(ep.protocol)
+                    if family_for_protocol(ep.protocol) is not None:
+                        current_live[key].add(ep.protocol)
             prior_protocols_at: Dict[Tuple[Any, Any], set] = defaultdict(set)
             for ep in (
                 session.query(CryptoEndpoint)
@@ -391,7 +404,8 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     continue
 
                 # Clause (c'): a row exists but none is LIVE (timeout/refused CLOSED
-                # row, ADVISORY placeholder, or scan_error set) - not a recheck.
+                # row, ADVISORY placeholder, scan_error set, or an unclassified
+                # protocol such as UNKNOWN) - not a recheck.
                 live_protocols = current_live.get(endpoint_key, set())
                 if not live_protocols:
                     counters["refused_probe"] += 1
@@ -399,15 +413,17 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
 
                 # Clause (d): the probe family(ies) that raised the finding must ALL
                 # be rechecked. Families come from the PRIOR scan's protocols at this
-                # host:port (D-05); fall back to the live current ones. A protocol
-                # with no probe family can never be shown rechecked, so it refuses
-                # (never dropped from the set).
+                # host:port (D-05); fall back to the current error-free asset ones
+                # (classified or not). A protocol with no probe family can never be
+                # shown rechecked, so it refuses (never dropped from the set).
                 prior_set = {
                     p
                     for p in prior_protocols_at.get(endpoint_key, set())
                     if p and p not in NON_ASSET_PROTOCOLS
                 }
-                check_protocols = prior_set or live_protocols
+                check_protocols = prior_set or current_asset.get(
+                    endpoint_key, live_protocols
+                )
                 families = [family_for_protocol(p) for p in check_protocols]
                 if any(f is None for f in families) or not all(
                     probe_family_rechecked(probe_health, f) for f in families

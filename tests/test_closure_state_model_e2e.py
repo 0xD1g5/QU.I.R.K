@@ -90,6 +90,13 @@ def advisory_ep(i, sid=None, port=80):
     )
 
 
+def unknown_ep(i, sid=None, port=80, detail="OPEN_NOT_TLS"):
+    """What run_scan.py writes when ``_http_probe_plain`` (or an SSH banner read)
+    times out: ``fingerprint_service`` returns ``(True, "UNKNOWN", "OPEN_NOT_TLS")``
+    and the row carries no ``scan_error`` (229-REVIEW CR-01)."""
+    return CryptoEndpoint(host=f"h{i}", port=port, protocol="UNKNOWN", service_detail=detail, scan_run_id=sid)
+
+
 def rest_fuzz_ep(i, sid=None, port=80):
     return CryptoEndpoint(host=f"h{i}", port=port, protocol="REST_FUZZ", scan_run_id=sid)
 
@@ -269,6 +276,8 @@ _NEGATIVES = {
     "closed-unreachable": dict(h7=lambda: closed_ep(7, "UNREACHABLE")),
     "advisory-only": dict(h7=lambda: advisory_ep(7)),
     "tls-scan-error": dict(h7=lambda: tls_ep(7, scan_error="handshake failed")),
+    # CR-01: an HTTP-probe timeout row, while http is healthy on h0..h6.
+    "unknown-open-not-tls": dict(h7=lambda: unknown_ep(7)),
     "no-fingerprinting-timing": dict(
         h7=lambda: tls_ep(7), timings={"tls_scanning": 1.0, "ssh_scanning": 1.0}),
 }
@@ -284,6 +293,39 @@ def test_guardrail_negatives_refuse_and_write_no_closed_row(db, case):
     assert counters["closed"] == 0
     assert _fp_states(db, S2, HTTP_SLUG, host="h7") == []
     assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+
+
+def _probe_status(db_path, sid, family):
+    with get_session(db_path) as s:
+        sig = s.query(ScanScopeSignature).filter_by(scan_run_id=sid).one()
+        return json.loads(sig.probe_health_json)[family]["status"]
+
+
+def test_unknown_row_refused_when_http_has_no_targets(db):
+    """CR-01: h0..h6 move to TLS (so http reports ``no_targets``, which D-21 accepts
+    as a recheck) and h7's probe times out to an UNKNOWN row. The seven rechecked
+    hosts close; h7 must not close on a timeout."""
+    _http_scan1(db)
+    eps = [tls_ep(i) for i in range(7)] + [unknown_ep(7)]
+    counters = _run_scan(db, S2, 1, eps)
+    assert _probe_status(db, S2, "http") == "no_targets"
+    assert counters["closed"] == 14, counters  # 7 hosts x 2 slugs (Pitfall 3)
+    assert counters["refused_probe"] >= 1, counters
+    assert "closed" not in _fp_states(db, S2, HTTP_SLUG, host="h7")
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+
+
+def test_tls_finding_on_unknown_row_refused_in_deep_mode(db):
+    """CR-01, another family: a legacy-TLS finding whose host:port now answers as
+    UNKNOWN (a handshake/banner timeout) must not close because ``tls`` is healthy
+    on the other seven hosts."""
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    eps = [tls_ep(i, port=443, legacy=True) for i in range(7)] + [unknown_ep(7, port=443)]
+    counters = _run_scan(db, S2, 1, eps, tls_mode="deep")
+    assert _probe_status(db, S2, "tls") == "healthy"
+    assert counters["closed"] == 0, counters
+    assert counters["refused_probe"] >= 1, counters
+    assert _fp_states(db, S1, TLS_SLUG, host="h7") == ["open"]
 
 
 def test_unmapped_protocol_http_restfuzz_refused(db):
