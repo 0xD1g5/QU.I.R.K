@@ -9,7 +9,7 @@ resolves_phase: null
 owner: "999.138"
 ---
 
-# Closure evidence shape residue: a DNSSEC timeout reads as an unsigned zone, and email/broker evidence sits on one row
+# Closure evidence shape residue: a DNSSEC timeout reads as an unsigned zone, email/broker evidence sits on one row, and database findings never close
 
 **Owner:** 999.138 (closure evidence)
 
@@ -31,6 +31,14 @@ broker row of the whole scan (`run_scan.py:4041`). A finding on any other email 
 other broker host:port, can therefore never have a live row carrying its family's evidence and can
 never close. This is an under-claim only (Phase 32/33 layout). The email half was narrowed, not
 fixed, by 229-12 (a blocked mail port now refuses closure).
+
+## (c) Database findings can never close (added 2026-10-16, Phase 229 final verification)
+
+The `database` family's evidence field is `tls_version`, but `quirk/scanner/db_connector.py` never sets
+it on POSTGRESQL/MYSQL rows, so whenever DB rows exist the family reads `unhealthy` and no database
+finding can ever close. Pre-existing (predates Phase 229), an under-claim only; `docs/operators-guide.md`
+§16 makes no database-closure claim. Fix shape: point the family at the field the DB connector actually
+writes, or have the connector write `tls_version`, with a closure test on real connector rows.
 
 ## Feasibility & Effort
 

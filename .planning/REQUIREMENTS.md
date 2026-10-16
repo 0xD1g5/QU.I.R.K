@@ -125,6 +125,23 @@ HORIZON prose:
 - [ ] **POLISH-04**: Every README link resolves on the PyPI project page (todo
       `261014-readme-relative-links-dont-resolve-on-pypi`).
 
+### Release and launch gate (LAUNCH)
+
+Added 2026-10-16 at the operator's request: the public social-media announcement waits on this gate.
+
+- [ ] **LAUNCH-01**: `v5.28.0` is merged to `main` with required CI green at the merge commit,
+      tagged, published to PyPI by `release.yml`, and its GitHub release notes describe v5.28.
+- [ ] **LAUNCH-02**: The Azure Key Vault zero-endpoint defect (`999.126`) and the Semgrep
+      `p/cryptography` 404 (`999.127`) are each fixed with a real-SDK/registry test, or every public
+      claim of that capability is removed. Operator decision per defect.
+- [ ] **LAUNCH-03**: A fresh `pip install quirk-scanner==5.28.0` on clean macOS and Linux passes an
+      end-to-end smoke test (doctor, chaos-lab scan, dashboard, HTML/PDF report, matching scores), and
+      every README command works as written.
+- [ ] **LAUNCH-04**: Every README link resolves from PyPI and every README/PyPI-description claim is
+      true for `v5.28.0`; no open high-priority todo contradicts a public claim.
+- [ ] **LAUNCH-05**: A recorded go/no-go lists every LAUNCH criterion with evidence and the operator's
+      sign-off; nothing is announced publicly before a recorded "go".
+
 ### Todo ownership (OWN)
 
 - [x] **OWN-01**: Every pending `doc224` todo names a live owner (a v5.28 requirement or a HORIZON
@@ -151,7 +168,7 @@ Deferred from this milestone with an owner:
 
 | Feature | Reason |
 |---------|--------|
-| A release tag inside this milestone | P2b rescales every ladder rung; a tag must not freeze an unmeasured number (212 §8). The next release follows a milestone that has re-measured the ladder |
+| A release tag before the ladder is re-measured | P2b rescales every ladder rung; a tag must not freeze an unmeasured number (212 §8). Superseded 2026-10-16: the operator added Phase 235, which tags `v5.28.0` only after Phase 234 re-measures the ladder |
 | Fixing the four high-priority `doc224` todos outside this scope | Operator accepted them as owner-assignment only (OWN-01) at the 2026-10-15 kickoff |
 | Rewriting reference docs by hand | `999.123` owns the durable fix (generate from source) |
 | New scanner families or connectors | This is a correctness milestone; net-new detection waits for the next capability cycle |
@@ -183,3 +200,8 @@ Deferred from this milestone with an owner:
 | POLISH-03 | Phase 232 | Pending |
 | POLISH-04 | Phase 232 | Pending |
 | OWN-01 | Phase 227 | Complete |
+| LAUNCH-01 | Phase 235 | Pending |
+| LAUNCH-02 | Phase 235 | Pending |
+| LAUNCH-03 | Phase 235 | Pending |
+| LAUNCH-04 | Phase 235 | Pending |
+| LAUNCH-05 | Phase 235 | Pending |

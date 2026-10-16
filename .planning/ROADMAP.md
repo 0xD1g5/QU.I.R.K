@@ -103,7 +103,7 @@ insistence on a real, correctly-formed tag rather than another silent gap.
 **Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
 The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
 scoring surfaces work.
-Requirements: `.planning/REQUIREMENTS.md` (23: SCORE-08..09, XSURF-05..08, FIND-11..13,
+Requirements: `.planning/REQUIREMENTS.md` (28, incl. LAUNCH-01..05 added 2026-10-16: SCORE-08..09, XSURF-05..08, FIND-11..13,
 DETECT-01..05, QRAMM-17..20, POLISH-01..04, OWN-01).
 
 **Sequencing.** OWN-01 opens the milestone (Phase 227) because it is small and independent, and
@@ -113,9 +113,10 @@ treatment in 230) lands BEFORE the P2b work, so the re-measured calibration ladd
 model. P2b is split across two phases of its own and shares neither with unrelated work: Phase 233
 builds and records the third measurement instrument (SCORE-08) and the pre-change ladder, and no fix
 shape is chosen until it closes; Phase 234 applies the fix chosen by that measurement (SCORE-09) and
-re-measures all five rungs. **There is no release phase in this milestone** (212 §8: P2b rescales
-every ladder rung, and a tag must not freeze an unmeasured number). Phases 228–232 have no hard
-ordering among themselves beyond the dependencies stated below.
+re-measures all five rungs. **Release & launch gate (added 2026-10-16, operator):** Phase 235 cuts
+`v5.28.0` and gates the public social-media announcement. It runs only after Phase 234, so 212 §8's
+rule (a tag must not freeze an unmeasured number) still holds: the ladder is re-measured before the
+tag. Phases 228–232 have no hard ordering among themselves beyond the dependencies stated below.
 
 ### Phases
 
@@ -127,6 +128,7 @@ ordering among themselves beyond the dependencies stated below.
 - [ ] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
 - [ ] **Phase 233: P2b Measurement Instrument** - A third, independent instrument measures scan-depth dilution on the calibration ladder and its result is recorded before any fix is chosen
 - [ ] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
+- [ ] **Phase 235: Release & Launch Gate** - `v5.28.0` is on PyPI, a clean install works end to end as the README says, and the operator signs a go/no-go for the public announcement
 
 ### Phase Details
 
@@ -263,6 +265,18 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 235: Release & Launch Gate
+**Goal**: The version a new user installs after the public announcement is the corrected one, and works as the README says: `v5.28.0` is merged, tagged and published, a fresh install from PyPI passes an end-to-end smoke test, every public claim is true for that release, and the operator signs a recorded go/no-go before anything is posted.
+**Depends on**: Phases 229–234 (every score-moving and first-impression fix lands first; the release follows the Phase 234 ladder re-measurement, so 212 §8 holds)
+**Requirements**: LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05
+**Success Criteria** (what must be TRUE):
+  1. `v528-open` is merged to `main` through a PR, `scripts/branch_ci_state.py --branch main` exits 0 at the merge commit, `v5.28.0` is tagged, `release.yml` publishes it, and `pip index versions quirk-scanner` lists `5.28.0`; the GitHub release notes describe v5.28 (the `github-release-notes-and-ci-failures` debug session's wrong-notes finding is re-checked and closed or fixed).
+  2. The two P1 connector defects that contradict public claims (Azure Key Vault keys emit zero endpoints, `999.126`; the Semgrep `p/cryptography` ruleset 404s, `999.127`) are each either fixed with a test against the real SDK/registry, or every claim of that capability is removed from the README, PyPI description and announcement copy. The choice is the operator's, taken in this phase's discuss step.
+  3. On a clean macOS and a clean Linux machine with no repo checkout: `pip install quirk-scanner==5.28.0` in a fresh venv, `quirk doctor`, a chaos-lab scan, `quirk serve` (dashboard loads, JetBrains Mono served, current brand), and an HTML and PDF report all succeed, and the dashboard and report show the same readiness score. Every README command is run as written and either works or is corrected, including `gh attestation verify` (`999.129`). Transcript recorded in the phase directory.
+  4. Every link in the README resolves from the PyPI project page, and every user-facing claim in `README.md` and the PyPI long description is re-verified against `v5.28.0` (doc-claim ledger gate green on `main`); any open high-priority todo that contradicts a README claim is either closed or the claim is removed.
+  5. A launch go/no-go record (`docs/launch-gate.md` or the phase VERIFICATION) lists each criterion above with its evidence link and the operator's sign-off. "No-go" names the blocking item and its owner. Nothing is posted publicly before a recorded "go".
+**Plans**: TBD
+
 ### Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -275,6 +289,7 @@ Plans:
 | 232. Post-Launch Visible Fixes | 0/TBD | Not started | - |
 | 233. P2b Measurement Instrument | 0/TBD | Not started | - |
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 0/TBD | Not started | - |
+| 235. Release & Launch Gate | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
 
