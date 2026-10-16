@@ -199,7 +199,7 @@ Plans:
 - [x] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
 - [x] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
 - [x] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
-- [ ] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
+- [x] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
 
 ### Phase 230: Findings That Fire
 **Goal**: Detection paths that exist in the code but never fire in a real scan now produce their findings, each proven by a test that exercises the real capture or the real wire rather than an injected fixture.
