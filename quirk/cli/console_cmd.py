@@ -580,6 +580,9 @@ def _ingest_envelope(
                 # (forward-compat — older sensors may emit None in per-finding dict)
                 sensor_id=sensor_id,
                 segment=segment,
+                # Phase 229 D-12: push identity. The SensorPush row above was flushed
+                # first, so a duplicate payload never writes a tagged row.
+                push_payload_id=payload_id or None,
             )
             db.add(ep)
 
