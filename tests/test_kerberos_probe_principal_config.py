@@ -263,8 +263,16 @@ def test_answered_tcp_failure_is_honest_row_without_udp(monkeypatch, exc):
         ConnectionRefusedError("refused"),
         TimeoutError("connect timed out"),
         ks.KerberosTransportError("KDC reply timed out", answered=False),
+        # 230-REVIEW-R4 WR-02/IN-02: every trigger the guide and oracle list.
+        OSError(65, "No route to host"),
+        __import__("socket").gaierror(8, "nodename nor servname provided"),
+        ks.KerberosTransportError("KDC reply timed out", False, "timeout"),
+        ks.KerberosTransportError("KDC send failed", False, "send"),
+        ks.KerberosTransportError("failed before any reply byte", False, "error"),
     ],
-    ids=["refused", "connect-timeout", "no-reply-byte"],
+    ids=["refused", "connect-timeout", "no-reply-byte", "unreachable",
+         "name-does-not-resolve", "silent-peer", "send-failed",
+         "other-socket-error-before-first-byte"],
 )
 def test_unanswered_tcp_failure_still_falls_back_to_udp(monkeypatch, exc):
     rows, udp_calls = _scan_with_tcp_raising(monkeypatch, exc)
@@ -296,6 +304,24 @@ def test_kerberos_error_still_falls_back_to_udp(monkeypatch):
     """A KRB_ERROR code other than 25/6 keeps the known D-08a UDP path."""
     rows, udp_calls = _scan_with_tcp_raising(monkeypatch, ks.KerberosError())
     assert udp_calls == [1]
+
+
+def test_unexpected_udp_probe_exception_is_unreachable_row(monkeypatch):
+    """230-REVIEW-R4 IN-02: only UDP's swallowed network/decode errors read as
+    ``kerberos-no-preauth``; any other UDP exception gives kerberos-unreachable."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+
+    def tcp(*a, **k):
+        raise ConnectionRefusedError("refused")
+
+    def udp(*a, **k):
+        raise AttributeError("unexpected")
+
+    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+    monkeypatch.setattr(ks, "_probe_kdc_udp", udp)
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+    rows = ks.scan_kerberos_targets(["kdc.example.com"], timeout=1)
+    assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
 
 
 # --- 230-REVIEW-R3 IN-01: one TCP retry, only after a zero-byte close/reset ---

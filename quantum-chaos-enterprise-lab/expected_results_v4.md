@@ -444,8 +444,12 @@ Known open defects the lab exposes (not fixed by Phase 230):
   answer over UDP) is rendered as `kerberos-no-preauth`. A scan of this lab can therefore show
   either the `etype:18` row or `kerberos-no-preauth`. In the 2026-10-23 runs, before the TCP
   retry existed, 7 of 20 Administrator scans and 12 of 20 `nobody` scans (larger run) gave a false
-  `kerberos-no-preauth`. UDP is used only after a TCP connect failure, a zero-byte TCP drop
-  that survives the retry, or a Kerberos error other than codes 25/6. Owned by todo
+  `kerberos-no-preauth`. UDP is used only after one of these, the same set as the operators
+  guide lists: a TCP connect failure (refused, timed out, unreachable, or a name that does not
+  resolve); a peer that sends no reply byte before the timeout; a failed send; any other socket
+  error before the first reply byte; a zero-byte TCP close or reset that recurs on the one retry,
+  or comes with under 0.25 s of the deadline left to retry in; or a Kerberos error other than
+  codes 25/6. Owned by todo
   `261023-detect-kerberos-udp-failure-reads-as-no-preauth`.
 - The `samba-dc` healthcheck runs `smbclient`, which the image lacks, so the container never
   reports healthy although the KDC answers.

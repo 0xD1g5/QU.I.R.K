@@ -739,9 +739,14 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 continue
             tcp_error = exc
             # 230-REVIEW-R3 WR-01: UDP fallback ONLY for these three: OSError
-            # (connect refused or timed out), KerberosTransportError with no
-            # reply byte (silent peer, or a close/reset before any reply
-            # byte), and KerberosError for KRB_ERROR codes other than 25/6
+            # (connect refused, timed out or unreachable, the name does not
+            # resolve, or no time left for the retry's connect),
+            # KerberosTransportError with no reply byte (kind "timeout":
+            # silent peer; "send"; "error": any other socket error before the
+            # first reply byte; "eof"/"reset": a zero-byte close/reset after
+            # the one retry, or with too little time left to retry), and
+            # KerberosError for KRB_ERROR codes other than 25/6.  The guide
+            # and the lab oracle list exactly this set (230-REVIEW-R4 WR-02)
             # (RFC 4120 §7.2.1; the known D-08a path, todo
             # 261023-detect-kerberos-udp-failure-reads-as-no-preauth).
             try:
