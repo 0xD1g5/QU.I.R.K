@@ -240,47 +240,41 @@ def test_jwt_no_cred_ctx_unchanged_behavior() -> None:
 httpx = pytest.importorskip("httpx")
 
 
-def test_strip_auth_from_log_redacts_query_param_secret():
-    """_strip_auth_from_log must replace a known key query-param value with REDACTED."""
-    from quirk.scanner.jwt_scanner import _strip_auth_from_log
-
-    request = httpx.Request("GET", "https://api.example.com/jwks?api_key=SUPER_SECRET_VALUE&foo=bar")
-    _strip_auth_from_log(request)
-
-    assert "SUPER_SECRET_VALUE" not in str(request.url)
-    assert request.url.params.get("api_key") == "REDACTED"
-    # Non-secret params are left intact.
-    assert request.url.params.get("foo") == "bar"
+def _record(msg):
+    import logging
+    return logging.LogRecord("httpx", logging.INFO, __file__, 1, msg, None, None)
 
 
-def test_strip_auth_from_log_pops_auth_headers():
-    """_strip_auth_from_log must remove Authorization / X-Api-Key / X-Auth-Token headers."""
-    from quirk.scanner.jwt_scanner import _strip_auth_from_log
+def test_redact_filter_redacts_key_param():
+    from quirk.scanner.jwt_scanner import _RedactKeyQueryFilter
 
-    request = httpx.Request(
-        "GET",
-        "https://api.example.com/jwks",
-        headers={
-            "Authorization": "Bearer SECRET_TOKEN",
-            "X-Api-Key": "SECRET_KEY",
-            "X-Auth-Token": "SECRET_AUTH",
-        },
-    )
-    _strip_auth_from_log(request)
-
-    assert "Authorization" not in request.headers
-    assert "X-Api-Key" not in request.headers
-    assert "X-Auth-Token" not in request.headers
+    rec = _record('GET http://h/jwks?page=2&api_key=SEKRET230 "HTTP/1.1 200 OK"')
+    assert _RedactKeyQueryFilter().filter(rec) is True
+    out = rec.getMessage()
+    assert "api_key=REDACTED" in out and "page=2" in out and "SEKRET230" not in out
 
 
-def test_strip_auth_from_log_noop_without_secrets():
-    """A URL with no key params is returned unchanged (no spurious rewrite)."""
-    from quirk.scanner.jwt_scanner import _strip_auth_from_log
+def test_redact_filter_leaves_clean_message_identical():
+    from quirk.scanner.jwt_scanner import _RedactKeyQueryFilter
 
-    request = httpx.Request("GET", "https://api.example.com/jwks?page=2")
-    _strip_auth_from_log(request)
+    msg = 'GET http://h/jwks?page=2 "HTTP/1.1 200 OK"'
+    rec = _record(msg)
+    assert _RedactKeyQueryFilter().filter(rec) is True
+    assert rec.getMessage() == msg
 
-    assert request.url.params.get("page") == "2"
+
+def test_redact_filter_installed_once_after_reload():
+    import importlib
+    import logging
+
+    import quirk.scanner.jwt_scanner as mod
+
+    importlib.reload(mod)
+    importlib.reload(mod)
+    for name in ("httpx", "httpcore", "quirk.scanner.jwt_scanner"):
+        n = [f for f in logging.getLogger(name).filters
+             if type(f).__name__ == "_RedactKeyQueryFilter"]
+        assert len(n) == 1, name
 
 
 # ---------------------------------------------------------------------------

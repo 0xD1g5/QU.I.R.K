@@ -6,12 +6,13 @@ Degrades gracefully if httpx is not installed (HTTPX_AVAILABLE = False).
 Phase 93 / AUTH-01: optional CredentialContext support.
   - cred_ctx.as_headers() injects Authorization/X-Api-Key headers.
   - cred_ctx.query_param() appends the key to the fetch URL (D-03: never in headers).
-  - event_hooks strip auth headers + redact query key before any log handler (D-10).
+  - credentials are sent intact; key query params are redacted only in log records (D-09/D-10a).
   - D-12: auth is attached to the EXISTING JWKS/endpoint fetch only; no new probe targets.
 """
 import base64
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
@@ -30,34 +31,55 @@ from quirk.util.url_allowlist import validate_external_url
 logger = logging.getLogger(__name__)
 
 # Phase 93 / IN-01: single source of truth for query-param key names. Referenced by
-# the D-10 log-redaction hook below; CredentialContext.query_param() defaults to "api_key".
+# the log-redaction filter below; CredentialContext.query_param() defaults to "api_key".
 _KEY_PARAM_NAMES = frozenset({
     "api_key", "apikey", "key", "token", "auth_token", "access_token",
 })
 
 
-def _strip_auth_from_log(request) -> None:
-    """Phase 93 / D-10: event_hooks request filter — remove auth headers and redact
-    the query-param key from request.url before any log handler sees them.
+_QUERY_KEY_RE = re.compile(
+    r"([?&](?:"
+    + "|".join(sorted((re.escape(n) for n in _KEY_PARAM_NAMES), key=len, reverse=True))
+    + r")=)[^&\s\"']+",
+    re.IGNORECASE,
+)
 
-    Pops Authorization, X-Api-Key, X-Auth-Token from request.headers.
-    Redacts any query parameter whose name matches a known key param name (CR-01).
+
+class _RedactKeyQueryFilter(logging.Filter):
+    """Phase 230 / D-09, D-10a: redact key query params at the logging boundary.
+
+    httpx logs ``HTTP Request: GET <url>`` at INFO with the full query string,
+    so an ``api_key_query`` credential would otherwise reach log handlers. The
+    outgoing request is never touched; only the rendered log record is rewritten.
     """
-    # Strip auth headers
-    request.headers.pop("Authorization", None)
-    request.headers.pop("X-Api-Key", None)
-    request.headers.pop("X-Auth-Token", None)
 
-    # CR-01: redact query-param secret in request.url before any log handler /
-    # redirect sees it. The api_key_query scheme carries the secret in the URL,
-    # so popping headers alone leaves it intact. httpx event hooks run after the
-    # request is sent, so this protects post-send logging/redirects, not the wire.
-    redacted = request.url
-    for name in request.url.params:
-        if name.lower() in _KEY_PARAM_NAMES:
-            redacted = redacted.copy_set_param(name, "REDACTED")
-    if redacted is not request.url:
-        request.url = redacted
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:
+            return True
+        redacted = _QUERY_KEY_RE.sub(r"\1REDACTED", message)
+        if redacted != message:
+            record.msg = redacted
+            record.args = None
+        return True
+
+
+def _install_redact_filter() -> None:
+    """Attach one redaction filter to the httpx, httpcore and module loggers.
+
+    Idempotent across module reloads: a reload creates a new class object, so
+    stale instances are detected by class name and replaced.
+    """
+    flt = _RedactKeyQueryFilter()
+    for name in ("httpx", "httpcore", __name__):
+        lg = logging.getLogger(name)
+        for old in [f for f in lg.filters if type(f).__name__ == "_RedactKeyQueryFilter"]:
+            lg.removeFilter(old)
+        lg.addFilter(flt)
+
+
+_install_redact_filter()
 
 
 def _append_query_param(url: str, param_name: str, param_value: str) -> str:
@@ -142,8 +164,8 @@ def _fetch_jwks(
     Phase 93 / AUTH-01:
       auth_headers: dict of headers to pass (e.g. {"Authorization": "Bearer ..."}).
       auth_query: (param_name, secret) tuple to append to the fetch URL (D-03).
-      When either is set, requests are made via a short-lived httpx.Client with
-      event_hooks that strip auth headers and redact the query key before logging (D-10).
+      When either is set, requests are made via a short-lived httpx.Client; the
+      credential is sent intact and only logged URLs are redacted (logging.Filter).
       D-12: auth is attached to this existing fetch only — no new probe targets.
     """
     base_url = base_url.rstrip("/")
@@ -152,7 +174,7 @@ def _fetch_jwks(
     _use_client = bool(_hdrs) or auth_query is not None
 
     def _get(url: str) -> "httpx.Response":
-        """Make a GET with optional auth; uses event_hooks when auth is present (D-10)."""
+        """Make a GET with optional auth; credentials are sent intact."""
         # Append query-param key to URL if present (D-03: never in headers)
         fetch_url = url
         if auth_query is not None:
@@ -162,7 +184,6 @@ def _fetch_jwks(
                 timeout=timeout,
                 follow_redirects=False,
                 verify=verify_tls,
-                event_hooks={"request": [_strip_auth_from_log]},
             ) as _client:
                 return fetch_validated(
                     fetch_url,
@@ -252,7 +273,8 @@ def scan_jwt_endpoint(
 
     Phase 93 / AUTH-01: optional CredentialContext.
       cred_ctx.as_headers() injects auth headers; cred_ctx.query_param() appends
-      the API key to the fetch URL (D-03). auth-strip event_hooks applied (D-10).
+      the API key to the fetch URL (D-03). Credentials are sent intact; log redaction
+      is a logging.Filter (D-09).
       D-12: consumer is EXISTING JWKS/endpoint fetch only; no new probe targets.
     """
     if not HTTPX_AVAILABLE:
