@@ -455,9 +455,12 @@ def build_evidence_summary(
 
         # ---- Phase 94 — Bearer token weak algorithm counter (TOKEN-02, SCORE-01) ----
         elif proto == "BEARER_TOKEN":
-            # Increment when a bearer token has a declared algorithm that is not alg:none
-            # (alg:none is a separate CRITICAL finding; this counter tracks quantum-vulnerable
-            # conventional algorithms like HS256, RS256, ES256 — all currently quantum-vulnerable).
+            # Increment when a bearer token has a declared algorithm that is not alg:none.
+            # alg:none is the separate CRITICAL "Bearer token is unsigned (alg:none)"
+            # (findings_evaluator.evaluate_bearer_token_endpoints); a missing alg is stored
+            # as cert_pubkey_alg=None so it is not counted here either (D-15, no double
+            # count). This counter tracks quantum-vulnerable conventional algorithms
+            # like HS256, RS256, ES256.
             _bt_alg = str(getattr(ep, "cert_pubkey_alg", "") or "")
             if _bt_alg and _bt_alg.lower() != "none":
                 bearer_token_weak_alg_count += 1

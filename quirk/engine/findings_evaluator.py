@@ -19,6 +19,7 @@ from quirk.reports.content_model import (
 )
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
+from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 from quirk.util.weak_crypto import has_legacy_tls_versions_signal
 
@@ -1312,8 +1313,49 @@ def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
     return findings
 
 
+def evaluate_bearer_token_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Phase 230 DETECT-05: CRITICAL for an unsigned bearer token.
+
+    Fires when the operator-supplied bearer JWT declares ``alg: none`` (any
+    case) or carries no ``alg`` at all (stored as cert_pubkey_alg=None plus the
+    shared absence marker). The signature is never verified by the scanner; the
+    finding is about the token's construction. Only the alg metadata reaches
+    this function -- the raw token is never available here.
+    """
+    findings: List[Dict[str, Any]] = []
+    for e in endpoints:
+        alg = getattr(e, "cert_pubkey_alg", None)
+        detail = getattr(e, "service_detail", "") or ""
+        if alg:
+            if not is_unsigned_jwt_alg(alg):
+                continue
+            cause = f'The token header declares alg "{alg}" (no signature).'
+        elif BEARER_ALG_ABSENT_MARKER in detail:
+            cause = "The token header carries no alg, so no signature algorithm is declared."
+        else:
+            continue
+        findings.append(_build_finding(
+            severity="CRITICAL",
+            host=getattr(e, "host", ""),
+            port=int(getattr(e, "port", 0) or 0),
+            title="Bearer token is unsigned (alg:none)",
+            description=(
+                f"{cause} The scanner did not verify the signature, but an unsigned "
+                "token can be forged by anyone, so any verifier that accepts it "
+                "grants access to whoever constructs it."
+            ),
+            recommendation=(
+                "Issue tokens signed with an asymmetric algorithm (for example "
+                "RS256 or ES256), reject alg:none and missing-alg tokens at every "
+                "verifier, and rotate this token."
+            ),
+            quantum_vulnerable=False,
+        ))
+    return findings
+
+
 def evaluate_protocol_service_endpoints(endpoints) -> List[Dict[str, Any]]:
-    """Run the email, broker and code-signing evaluators with their partition.
+    """Run the email, broker, code-signing and bearer-token evaluators with their partition.
 
     The email and code-signing evaluators do not self-filter by protocol; the
     broker evaluator does. This partition is shared by the report composer and
@@ -1324,6 +1366,7 @@ def evaluate_protocol_service_endpoints(endpoints) -> List[Dict[str, Any]]:
         evaluate_email_endpoints([e for e in eps if getattr(e, "protocol", "") in EMAIL_PROTOCOLS])
         + evaluate_broker_endpoints(eps)
         + evaluate_codesign_endpoints([e for e in eps if getattr(e, "protocol", "") == "CODE_SIGNING"])
+        + evaluate_bearer_token_endpoints([e for e in eps if getattr(e, "protocol", "") == "BEARER_TOKEN"])
     )
 
 

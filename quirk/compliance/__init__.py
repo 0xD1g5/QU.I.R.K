@@ -413,6 +413,10 @@ UNMAPPED_TITLES: FrozenSet[str] = frozenset({
     "Container image contains crypto library",
     # Score-neutral configuration advisory (config_advisory); no control mapping.
     "JWKS fetched with TLS certificate verification disabled",
+    # Phase 230 DETECT-05: token-construction finding; no control mapping verified
+    # against a source (D-16a). Do not add via _pci()/_soc2()/_iso() without reading
+    # the control text and stamping a new verified date.
+    "Bearer token is unsigned (alg:none)",
 })
 
 
