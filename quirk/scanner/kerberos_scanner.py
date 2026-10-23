@@ -78,11 +78,17 @@ class KerberosTransportError(Exception):
     answered on the port but not as a KDC, so the caller must not treat it as a
     plain transport failure.  ``answered`` is False when no reply byte arrived
     (silent peer, or closed or reset before replying).
+
+    ``kind`` says how it failed (230-REVIEW-R3 IN-01/IN-02): ``"eof"`` (peer
+    closed), ``"reset"`` (connection reset or aborted), ``"error"`` (another
+    socket error mid-read), ``"timeout"`` (deadline passed), ``"framing"``
+    (implausible length prefix) or ``"send"`` (the request could not be sent).
     """
 
-    def __init__(self, message: str, answered: bool):
+    def __init__(self, message: str, answered: bool, kind=None):
         super().__init__(message)
         self.answered = answered
+        self.kind = kind
 
 
 class KerberosPrincipalUnknown(Exception):
@@ -257,20 +263,25 @@ def _recv_exact(sock, n: int, deadline: float, received_before: int) -> bytes:
         remaining = deadline - time.monotonic()
         answered = (received_before + len(buf)) > 0
         if remaining <= 0:
-            raise KerberosTransportError("KDC reply timed out", answered)
+            raise KerberosTransportError("KDC reply timed out", answered, "timeout")
         sock.settimeout(remaining)
         try:
             chunk = sock.recv(n - len(buf))
         except socket.timeout as exc:
-            raise KerberosTransportError("KDC reply timed out", answered) from exc
-        except OSError as exc:
             raise KerberosTransportError(
-                f"KDC connection failed mid-reply: {exc}", answered
+                "KDC reply timed out", answered, "timeout"
+            ) from exc
+        except OSError as exc:
+            kind = ("reset" if isinstance(exc, (ConnectionResetError,
+                                                ConnectionAbortedError))
+                    else "error")
+            raise KerberosTransportError(
+                f"KDC connection failed mid-reply: {exc}", answered, kind
             ) from exc
         if not chunk:
             raise KerberosTransportError(
                 f"KDC closed the connection after {received_before + len(buf)} "
-                f"of {received_before + n} reply bytes", answered,
+                f"of {received_before + n} reply bytes", answered, "eof",
             )
         buf += chunk
     return buf
@@ -290,12 +301,15 @@ def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float) -> b
         try:
             sock.sendall(struct.pack("!I", len(message)) + message)
         except OSError as exc:
-            raise KerberosTransportError(f"KDC send failed: {exc}", False) from exc
+            raise KerberosTransportError(
+                f"KDC send failed: {exc}", False, "send"
+            ) from exc
         (length,) = struct.unpack("!I", _recv_exact(sock, 4, deadline, 0))
         if length == 0 or length > MAX_KDC_TCP_REPLY:
             raise KerberosTransportError(
                 f"implausible KDC reply length {length} "
                 f"(limit {MAX_KDC_TCP_REPLY}); not a Kerberos TCP reply", True,
+                "framing",
             )
         return _recv_exact(sock, length, deadline, 4)
 
@@ -368,6 +382,21 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
     if code == principal_unknown:
         raise KerberosPrincipalUnknown(principal, code)
     raise KerberosError(packet=err)
+
+
+def _is_retryable_tcp_drop(exc) -> bool:
+    """True for a TCP probe the peer dropped before sending any reply byte.
+
+    230-REVIEW-R3 IN-01 retry rule: retry the TCP probe exactly once, and only
+    for KerberosTransportError(answered=False) whose kind is ``"eof"`` (closed
+    with zero bytes) or ``"reset"`` (reset with zero bytes).  Both fail fast,
+    so the retry adds no meaningful time; the live Samba lab drops about half
+    of TCP connections this way.  Connect refused, connect timeout, a silent
+    peer's reply timeout and a send failure are NOT retried: the timeouts
+    would add up to another full timeout to the scan's worst case.
+    """
+    return (isinstance(exc, KerberosTransportError) and not exc.answered
+            and exc.kind in ("eof", "reset"))
 
 
 def _probe_kdc_udp(host: str, realm: str, timeout: int,
@@ -560,7 +589,16 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         # RFC 4120 §7.2.1 ("Kerberos clients SHOULD support both UDP and TCP; a
         # client MAY retry over TCP/UDP on failure") — it is NOT a defect.
         try:
-            etypes = _probe_kdc(target, realm, timeout, principal=principal)
+            try:
+                etypes = _probe_kdc(target, realm, timeout, principal=principal)
+            except KerberosTransportError as exc:
+                if not _is_retryable_tcp_drop(exc):
+                    raise
+                # 230-REVIEW-R3 IN-01: one TCP retry after a zero-byte drop.
+                if logger:
+                    logger.info("Kerberos TCP probe to %s dropped (%s); retrying once",
+                                target, exc)
+                etypes = _probe_kdc(target, realm, timeout, principal=principal)
         except KerberosPreauthNoEtypes:
             # 230-REVIEW CR-02: code 25 proves pre-auth IS required, but the
             # KDC named no etypes.  Honest gap row like D-25: no UDP fallback,

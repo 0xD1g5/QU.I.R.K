@@ -395,6 +395,33 @@ class TestKerberosPreauthWire:
         assert exc is None
         self._assert_unrecognised_row(rows, udp_calls)
 
+    def test_first_connection_dropped_second_answered_no_udp(self, monkeypatch):
+        """230-REVIEW-R3 IN-01: the live Samba drop shape (zero bytes, then
+        FIN) is retried once over TCP before any UDP fallback."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        conns = []
+        reply = _krb_error(25, ETYPES)
+
+        def drop_first(c, stop):
+            conns.append(1)
+            if len(conns) > 1:
+                c.sendall(struct.pack(">I", len(reply)) + reply)
+
+        peer = kwh.RawPeer(drop_first)
+        _redirect_kdc(monkeypatch, peer.port)
+        udp_calls = self._real_udp_spy(monkeypatch)
+        try:
+            rows, exc, _ = kwh.run_with_watchdog(
+                lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=1), budget=10,
+            )
+        finally:
+            peer.close()
+        assert exc is None
+        assert conns == [1, 1]
+        assert udp_calls == []
+        assert _row_etypes(rows) == ETYPES
+
     def test_probe_kdc_unrecognised_reply_raises(self, fake_kdc_factory):
         import quirk.scanner.kerberos_scanner as ks
 

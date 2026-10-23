@@ -297,6 +297,77 @@ def test_kerberos_error_still_falls_back_to_udp(monkeypatch):
     assert udp_calls == [1]
 
 
+# --- 230-REVIEW-R3 IN-01: one TCP retry, only after a zero-byte close/reset ---
+# Retry rule: retry the TCP probe exactly once, and only when it raised
+# KerberosTransportError(answered=False) because the peer closed (EOF) or
+# reset the connection before sending any reply byte.  Connect refused,
+# connect timeout and a silent-peer reply timeout are NOT retried: each would
+# add up to another full timeout to the scan's worst case.
+
+
+def test_tcp_exchange_zero_byte_close_kind_is_eof():
+    result, exc, _ = _exchange(kwh.close_immediately, timeout=1, budget=5)
+    assert isinstance(exc, ks.KerberosTransportError)
+    assert exc.answered is False and exc.kind == "eof"
+
+
+def test_tcp_exchange_silent_peer_kind_is_timeout():
+    result, exc, _ = _exchange(kwh.silent, timeout=1, budget=5)
+    assert isinstance(exc, ks.KerberosTransportError)
+    assert exc.answered is False and exc.kind == "timeout"
+
+
+def _scan_with_tcp_sequence(monkeypatch, outcomes):
+    """``_probe_kdc`` raises/returns each of ``outcomes`` in turn."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    tcp_calls = []
+
+    def tcp(*a, **k):
+        out = outcomes[len(tcp_calls)]
+        tcp_calls.append(1)
+        if isinstance(out, BaseException):
+            raise out
+        return out
+
+    udp_calls = []
+    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+    rows = ks.scan_kerberos_targets(["kdc.example.com"], timeout=1)
+    return rows, tcp_calls, udp_calls
+
+
+@pytest.mark.parametrize("kind", ["eof", "reset"])
+def test_zero_byte_drop_is_retried_once_over_tcp(monkeypatch, kind):
+    drop = ks.KerberosTransportError("dropped", answered=False, kind=kind)
+    rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, [18]])
+    assert tcp_calls == [1, 1]
+    assert udp_calls == []
+    assert [r.service_detail for r in rows] == ["etype:18:aes256-cts-hmac-sha1-96:SAFE"]
+
+
+def test_two_zero_byte_drops_fall_back_to_udp(monkeypatch):
+    drop = ks.KerberosTransportError("dropped", answered=False, kind="eof")
+    rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, drop, [18]])
+    assert tcp_calls == [1, 1]
+    assert udp_calls == [1]
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ConnectionRefusedError("refused"),
+        TimeoutError("connect timed out"),
+        ks.KerberosTransportError("KDC reply timed out", answered=False, kind="timeout"),
+    ],
+    ids=["refused", "connect-timeout", "silent-peer"],
+)
+def test_slow_or_refused_tcp_failure_is_not_retried(monkeypatch, exc):
+    rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [exc, [18]])
+    assert tcp_calls == [1]
+    assert udp_calls == [1]
+
+
 def test_unrecognised_reply_row_derives_no_finding_and_no_weak_count():
     from quirk.dashboard.api.routes.scan import _derive_identity_findings
     from quirk.intelligence.evidence import build_evidence_summary
