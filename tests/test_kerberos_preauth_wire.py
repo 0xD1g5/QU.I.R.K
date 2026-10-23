@@ -484,7 +484,10 @@ class TestKerberosPreauthWire:
         finally:
             peer.close()
         assert exc is None, repr(exc)
-        assert connects == [("127.0.0.1", peer.port)] * 2
+        # Only the first attempt resolves via create_connection; the retry
+        # reconnects to the recorded sockaddr directly (230-REVIEW-R6 WR-01).
+        # The peer seeing two connections is the behavioural proof.
+        assert connects == [("127.0.0.1", peer.port)]
         assert conns == [1, 1]
         assert udp_calls == [1]
         assert elapsed <= 4 + 0.5, f"TCP leg took {elapsed:.2f}s; one deadline is 4s"

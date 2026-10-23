@@ -850,3 +850,72 @@ def test_retry_send_gets_only_the_time_left_after_connect(monkeypatch):
     assert exc is None, repr(exc)
     assert len(spy.send_timeouts) == 1
     assert spy.send_timeouts[0] <= 1.5 - 0.6 + 0.05, spy.send_timeouts
+
+
+def test_retry_keeps_the_ipv6_scope_id(monkeypatch):
+    """230-REVIEW-R6 WR-01: the retry connects to the FULL recorded IPv6
+    sockaddr (flowinfo + scope_id), in AF_INET6. Re-resolving ``peer[:2]``
+    dropped the scope, so a link-local KDC could never be retried."""
+    import socket as socket_mod
+
+    seen = {}
+
+    class FakeSock:
+        def __init__(self, family=-1, type=-1, *a, **k):
+            seen["family"] = family
+
+        def settimeout(self, t):
+            seen["timeout"] = t
+
+        def connect(self, addr):
+            seen["addr"] = addr
+            raise ConnectionRefusedError("fake: stop after recording the address")
+
+        def close(self):
+            seen["closed"] = True
+
+    monkeypatch.setattr(socket_mod, "socket", FakeSock)
+    with pytest.raises(ConnectionRefusedError):
+        ks._kdc_tcp_exchange(
+            "fe80::1%en0", 88, _REQ, 2,
+            deadline=time.monotonic() + 2, peer=("fe80::1", 88, 0, 7),
+        )
+    assert seen["family"] == socket_mod.AF_INET6
+    assert seen["addr"] == ("fe80::1", 88, 0, 7)
+    assert seen["closed"] is True
+
+
+def test_retry_connect_gets_only_the_time_left(monkeypatch):
+    """230-REVIEW-R6 WR-02: the retry's connect is bounded by the time left on
+    the shared deadline, not by a fresh full timeout, and a connect that
+    times out routes like a failed connect (OSError -> UDP)."""
+    _SocketSpy(monkeypatch, {})
+    result, exc, elapsed = kwh.run_with_watchdog(
+        lambda: ks._kdc_tcp_exchange(
+            "127.0.0.1", 88, _REQ, 4,
+            deadline=time.monotonic() + 1.0, peer=(_BLACKHOLE, 88),
+        ),
+        budget=8,
+    )
+    assert isinstance(exc, OSError), repr(exc)
+    assert elapsed < 2.0, f"retry connect waited {elapsed:.2f}s on a 1.0s budget"
+
+
+def test_retry_with_no_time_left_after_connect_is_a_timeout(monkeypatch):
+    """230-REVIEW-R6 WR-02: a retry whose connect used up the deadline raises
+    the documented unanswered timeout (routes to UDP), never a ValueError from
+    a negative socket timeout."""
+    peer = kwh.RawPeer(kwh.framed(b"reply-body"))
+    _SocketSpy(monkeypatch, {}, connect_delay=0.5)
+    try:
+        result, exc, _ = kwh.run_with_watchdog(
+            lambda: ks._kdc_tcp_exchange(
+                "127.0.0.1", peer.port, _REQ, 1,
+                deadline=time.monotonic() + 0.3, peer=("127.0.0.1", peer.port),
+            ),
+            budget=6,
+        )
+    finally:
+        peer.close()
+    assert isinstance(exc, ks.KerberosTransportError), repr(exc)
+    assert exc.answered is False and exc.kind == "timeout"

@@ -333,7 +333,18 @@ def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float,
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise socket.timeout("no time left before the Kerberos deadline to connect")
-        sock = socket.create_connection(tuple(peer[:2]), timeout=remaining)
+        # 230-REVIEW-R6 WR-01: connect to the FULL recorded sockaddr in its own
+        # family. An IPv6 getpeername() is a 4-tuple whose host string has no
+        # "%scope", so re-resolving peer[:2] would drop scope_id and could
+        # never reach a link-local KDC.
+        family = socket.AF_INET6 if len(peer) == 4 else socket.AF_INET
+        sock = socket.socket(family, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(remaining)
+            sock.connect(tuple(peer))
+        except BaseException:
+            sock.close()
+            raise
     with sock:
         if peer is None:
             try:
