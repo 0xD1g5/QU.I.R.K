@@ -214,7 +214,16 @@ Plans:
   3. A wire-level test shows the JWKS target receives the `--auth-*` credential headers, while the scan log shows them redacted; `--auth-basic user:pass` sends `Authorization: Basic <base64(user:pass)>`, and its `--help` text and the `docs/configuration.md` row describe the same form.
   4. A scan that encounters a bearer token declaring `alg: none` produces a CRITICAL finding, and the phase records how that finding is treated by the score.
   5. The owning todos (`261013-doc224-codesign-tls-eku-path-dead-in-real-scans`, `-kerberos-preauth-required-read-as-no-preauth`) and `999.125` items 1-3 are closed or updated with their closing commits.
-**Plans**: TBD
+**Plans**: 7 plans (6 waves)
+
+Plans:
+- [ ] 230-01-PLAN.md — DETECT-01: leaf EKU at both TLS parse sites into a persisted `cert_eku_oids` column; real loopback-TLS proof (D-01..D-04/D-02a) (wave 1)
+- [ ] 230-03-PLAN.md — DETECT-03/04: JWKS credentials reach the wire with log-boundary redaction; RFC 7617 `--auth-basic` (D-09..D-13) (wave 1)
+- [ ] 230-04-PLAN.md — DETECT-05: `alg: none` / missing-alg bearer token is an ordinary CRITICAL (D-14..D-17/D-15a/D-16a) (wave 2)
+- [ ] 230-02-PLAN.md — DETECT-02: returned KRB_ERROR 25 decoded; configurable probe principal (default Administrator); honest code-6 row; live Samba AD DC re-measure (D-05..D-08a/D-24..D-27) (wave 3)
+- [ ] 230-05-PLAN.md — Docs, doc-claim ledger, master guide, chaos-lab oracle from the live re-measure, vault (D-18/D-18a/D-28) (wave 4)
+- [ ] 230-06-PLAN.md — UAT Series 230, requirement flips with todo closures, new owned todos (D-19/D-20) (wave 5)
+- [ ] 230-07-PLAN.md — Full-suite baseline compare, VALIDATION sign-off, Obsidian phase note (D-22/D-23) (wave 6)
 
 ### Phase 231: QRAMM Scoring Surfaces
 **Goal**: QRAMM's scoring surfaces show what was actually assessed: the compliance map updates after scoring, unanswered dimensions are not scored as level 1, self-assessed dimensions are treated the way the operator decides, and the QRAMM-adjacent CLI commands behave like CLI commands.
