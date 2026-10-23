@@ -446,6 +446,49 @@ class TestKerberosPreauthWire:
         assert udp_calls == []
         assert _row_etypes(rows) == ETYPES
 
+    def test_late_close_retry_through_real_probe_stays_within_one_deadline(
+            self, monkeypatch):
+        """230-REVIEW-R5 WR-03: the real AS-REQ, the real ``_probe_kdc`` and
+        the real retry.  The peer closes with zero bytes 2.5 s into a 4 s
+        deadline, twice.  The retry makes exactly one connect, to the address
+        the first attempt reached, and the TCP leg ends by the original
+        deadline (~5 s if the retry got a fresh budget)."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        conns = []
+
+        def late(c, stop):
+            conns.append(1)
+            stop.wait(2.5)
+
+        peer = kwh.RawPeer(late)
+        _redirect_kdc(monkeypatch, peer.port)
+        udp_calls = []
+        monkeypatch.setattr(ks, "_probe_kdc_udp",
+                            lambda *a, **k: udp_calls.append(1) or [])
+        monkeypatch.setattr(ks, "_probe_ldap_anon",
+                            lambda *a, **k: {"ldap_status": "skipped"})
+        connects = []
+        real_cc = socket.create_connection
+
+        def cc(address, *a, **k):
+            connects.append(tuple(address))
+            return real_cc(address, *a, **k)
+
+        monkeypatch.setattr(socket, "create_connection", cc)
+        try:
+            rows, exc, elapsed = kwh.run_with_watchdog(
+                lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=4),
+                budget=15,
+            )
+        finally:
+            peer.close()
+        assert exc is None, repr(exc)
+        assert connects == [("127.0.0.1", peer.port)] * 2
+        assert conns == [1, 1]
+        assert udp_calls == [1]
+        assert elapsed <= 4 + 0.5, f"TCP leg took {elapsed:.2f}s; one deadline is 4s"
+
     def test_probe_kdc_unrecognised_reply_raises(self, fake_kdc_factory):
         import quirk.scanner.kerberos_scanner as ks
 
