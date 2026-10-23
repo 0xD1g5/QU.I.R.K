@@ -83,11 +83,17 @@ Round-3 mitigation (fix commits on `v528-open`, not a fix for this todo). The TC
 zero-byte close or reset, before UDP. At a ~50% independent drop rate, that should cut UDP entries to about 25%.
 This has not been re-measured live. UDP `[]` semantics are unchanged; this todo still owns them.
 
-UDP is now reached only on these paths:
-- a TCP connect failure;
+UDP is now reached only on these paths (completed in 230-REVIEW-R4 WR-02/IN-02; the same set as the operators guide
+and the lab oracle):
+- a TCP connect failure (refused, timed out, unreachable, or a name that does not resolve);
 - a silent peer, or a send failure;
-- a zero-byte close or reset that happens again on the retry;
+- any other socket error before the first reply byte (`kind="error"`, e.g. EHOSTUNREACH after connect);
+- a zero-byte close or reset that happens again on the retry, or that leaves under 0.25 s of the first attempt's reply
+  deadline to retry in (R4 WR-01: the retry shares that deadline);
 - a KRB_ERROR whose code is not 25 or 6.
+
+An unresolvable name reaches UDP, whose `sendto` fails the same way and returns `[]`, so it too reads as
+`kerberos-no-preauth` today.
 
 Any decoder exception on a TCP reply now gets the honest unrecognised-reply row and never reaches UDP (230-REVIEW-R3
 WR-01).
