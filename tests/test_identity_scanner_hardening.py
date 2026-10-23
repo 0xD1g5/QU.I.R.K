@@ -83,22 +83,27 @@ def _kerb_mod():
 
 
 def test_kdc_udp_decode_failure_logs(_kerb_mod, caplog):
-    """A decode error inside _probe_kdc_udp must log WARNING and return []
-    rather than propagating or being silently swallowed."""
+    """A decode error inside _probe_kdc_udp must log WARNING and raise
+    KerberosUnrecognisedReply (230-08 D-29).  It used to return [], which the
+    caller reads as "AS-REP, no pre-auth" (a false kerberos-no-preauth)."""
     kmod = _kerb_mod
 
     fake_sock = MagicMock()
+    fake_sock.recv.return_value = b"\x00\x01\x02garbage"
     fake_sock.recvfrom.return_value = (b"\x00\x01\x02garbage", ("127.0.0.1", 88))
 
     def _fail_decode(*_a, **_kw):
         raise struct.error("truncated KRB_ERROR")
 
+    record = (kmod.socket.AF_INET, kmod.socket.SOCK_DGRAM, 17, "", ("127.0.0.1", 88))
     with patch.object(kmod.socket, "socket", return_value=fake_sock), \
+         patch.object(kmod.socket, "getaddrinfo", return_value=[record]), \
          patch.object(kmod.decoder, "decode", side_effect=_fail_decode), \
          caplog.at_level(logging.WARNING, logger="quirk.scanner.kerberos_scanner"):
-        result = kmod._probe_kdc_udp("127.0.0.1", "EXAMPLE.COM", timeout=1)
-    assert result == []
+        with pytest.raises(kmod.KerberosUnrecognisedReply):
+            kmod._probe_kdc_udp("127.0.0.1", "EXAMPLE.COM", timeout=1)
     assert any("decode failed" in rec.message for rec in caplog.records)
+    fake_sock.close.assert_called()
 
 
 def test_build_as_req_nonce_uses_secrets(_kerb_mod):

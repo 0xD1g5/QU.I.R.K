@@ -150,6 +150,73 @@ class _FakeKdc:
         self.sock.close()
 
 
+class _FakeUdpKdc:
+    """Principal-aware loopback UDP KDC (230-08 D-29): replies per cname.
+
+    Runs on a port with no TCP listener, so the scanner's real TCP connect is
+    refused and its real UDP fallback talks to this server.  Unframed datagrams,
+    real ASN.1 bytes, per-socket timeouts.
+    """
+
+    def __init__(self, replies, fixed_blob=None):
+        self.replies = replies
+        self.fixed_blob = fixed_blob
+        self.cnames = []
+        self.stop = threading.Event()
+        for _ in range(50):
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.bind(("127.0.0.1", 0))
+            self.port = self.sock.getsockname()[1]
+            if kwh.tcp_port_is_closed(self.port):
+                break
+            self.sock.close()
+        self.sock.settimeout(0.2)
+        self._t = threading.Thread(target=self._serve, daemon=True)
+        self._t.start()
+
+    def _serve(self):
+        from pyasn1.codec.ber import decoder
+        from impacket.krb5.asn1 import AS_REQ
+
+        while not self.stop.is_set():
+            try:
+                req, addr = self.sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            try:
+                msg = decoder.decode(req, asn1Spec=AS_REQ())[0]
+                cname = str(msg["req-body"]["cname"]["name-string"][0])
+                self.cnames.append(cname)
+                if self.fixed_blob is not None:
+                    r = self.fixed_blob
+                else:
+                    r = self.replies.get(cname) or _krb_error(6)
+                self.sock.sendto(r, addr)
+            except Exception:  # noqa: BLE001 - test server must never kill the thread
+                pass
+
+    def close(self):
+        self.stop.set()
+        self._t.join(2)
+        self.sock.close()
+
+
+@pytest.fixture
+def fake_udp_kdc_factory():
+    made = []
+
+    def make(replies=None, fixed_blob=None):
+        k = _FakeUdpKdc(replies or {}, fixed_blob)
+        made.append(k)
+        return k
+
+    yield make
+    for k in made:
+        k.close()
+
+
 @pytest.fixture
 def fake_kdc_factory():
     # 230-REVIEW-R2 CR-01: no process-wide socket.setdefaulttimeout here.  It
@@ -328,9 +395,9 @@ class TestKerberosPreauthWire:
     )
     def test_no_tcp_reply_still_falls_back_to_udp(self, handler, monkeypatch):
         """A TCP leg that got no reply byte is a transport failure: UDP is
-        still tried (RFC 4120 §7.2.1).  The row that follows is D-08a's
-        deferred defect (todo 261023-detect-kerberos-udp-failure-reads-as-
-        no-preauth), so only the fallback is asserted here."""
+        still tried (RFC 4120 §7.2.1).  Nothing listens on UDP either, so
+        the row is kerberos-unreachable, never kerberos-no-preauth (230-08
+        D-29: UDP failure is no longer read as "no pre-auth")."""
         import quirk.scanner.kerberos_scanner as ks
 
         if handler is None:
@@ -353,7 +420,7 @@ class TestKerberosPreauthWire:
                 peer.close()
         assert exc is None
         assert udp_calls == [1]
-        assert len(rows) == 1
+        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
 
     # 230-REVIEW-R3 WR-01: a framed KRB_ERROR-shaped reply whose malformed
     # indefinite-length inner SEQUENCE makes pyasn1 0.6.3 raise IndexError
@@ -672,3 +739,101 @@ class TestKerberosPreauthWire:
         udp_calls = self._real_udp_spy(monkeypatch)
         rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=1)
         self._assert_unrecognised_row(rows, udp_calls)
+
+    # --- 230-08 D-29: the UDP leg, real ASN.1 bytes both ways --------------------
+    # Real UDP socket, real decode, real caller routing.  Nothing listens on TCP
+    # at the fake KDC's port, so the real TCP connect is refused and the UDP
+    # leg runs.
+
+    @staticmethod
+    def _shapes():
+        """name -> (blob builder, expected service_detail list).  The probe
+        target is the IP literal 127.0.0.1, whose realm is the address itself."""
+        from quirk.scanner.kerberos_scanner import KERBEROS_ETYPE_MAP
+
+        realm = "127.0.0.1"
+        etype_rows = [
+            f"etype:{e}:{KERBEROS_ETYPE_MAP[e][0]}:{KERBEROS_ETYPE_MAP[e][1]}"
+            for e in ETYPES
+        ]
+        unrec = "kerberos-etypes-unavailable-unrecognised-reply"
+        return {
+            "err25-etypes": (lambda: _krb_error(25, ETYPES, realm=realm), etype_rows),
+            "err25-enc-ts-only": (
+                lambda: _krb_error(25, realm=realm, enc_ts_only=True),
+                ["kerberos-etypes-unavailable-preauth-no-etype-info"]),
+            "err25-no-edata": (
+                lambda: _krb_error(25, realm=realm),
+                ["kerberos-etypes-unavailable-preauth-no-etype-info"]),
+            "err6": (lambda: _krb_error(6, realm=realm),
+                     ["kerberos-etypes-unavailable-principal-unknown"]),
+            "err68": (lambda: _krb_error(68, realm=realm),
+                      ["kerberos-etypes-unavailable-krb-error"]),
+            "garbage": (lambda: b"\x00garbage", [unrec]),
+            "asrep-other-realm": (lambda: _as_rep(realm="OTHER.TEST"), [unrec]),
+            "asrep-other-cname": (
+                lambda: _as_rep(realm=realm, cname="someone-else"), [unrec]),
+            "asrep-match": (lambda: _as_rep(realm=realm), ["kerberos-no-preauth"]),
+            "asrep-match-case": (
+                lambda: _as_rep(realm=realm, cname="administrator"),
+                ["kerberos-no-preauth"]),
+        }
+
+    @pytest.mark.parametrize("shape", sorted([
+        "err25-etypes", "err25-enc-ts-only", "err25-no-edata", "err6", "err68",
+        "garbage", "asrep-other-realm", "asrep-other-cname", "asrep-match",
+        "asrep-match-case",
+    ]))
+    def test_udp_leg_real_decode_rows(self, shape, fake_udp_kdc_factory, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
+
+        build, expected = self._shapes()[shape]
+        kdc = fake_udp_kdc_factory(fixed_blob=build())
+        _redirect_kdc(monkeypatch, kdc.port)
+        rows, exc, _ = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=2), budget=15,
+        )
+        assert exc is None, repr(exc)
+        assert [r.service_detail for r in rows] == expected
+        assert kdc.cnames == ["Administrator"]
+        assert (("kerberos-no-preauth" in expected)
+                == any(r.service_detail == "kerberos-no-preauth" for r in rows))
+
+    def test_udp_leg_sends_the_configured_principal(self, fake_udp_kdc_factory, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_udp_kdc_factory({"svc-quirk-probe": _krb_error(25, ETYPES)})
+        _redirect_kdc(monkeypatch, kdc.port)
+        rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=2, principal="svc-quirk-probe")
+        assert kdc.cnames == ["svc-quirk-probe"]
+        assert _row_etypes(rows) == ETYPES
+
+    @pytest.mark.parametrize("leg", ["tcp", "udp"])
+    @pytest.mark.parametrize("shape", sorted([
+        "err25-etypes", "err25-enc-ts-only", "err25-no-edata", "err6", "err68",
+        "garbage", "asrep-other-realm", "asrep-other-cname", "asrep-match",
+        "asrep-match-case",
+    ]))
+    def test_no_preauth_iff_matching_as_rep_real_decode(
+        self, leg, shape, fake_kdc_factory, fake_udp_kdc_factory, monkeypatch
+    ):
+        """Real-decode mirror of the CI invariant: over real ASN.1 bytes on both
+        transports, kerberos-no-preauth appears iff the reply is an AS-REP that
+        answers the probe (case-insensitive realm and cname)."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        build, expected = self._shapes()[shape]
+        blob = build()
+        kdc = (fake_kdc_factory if leg == "tcp" else fake_udp_kdc_factory)(fixed_blob=blob)
+        _redirect_kdc(monkeypatch, kdc.port)
+        rows, exc, _ = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=2), budget=15,
+        )
+        assert exc is None, repr(exc)
+        details = [r.service_detail for r in rows]
+        # A TCP code 68 falls back to a UDP leg with no listener: the KDC
+        # answered, so the row is the krb-error row from the TCP code.
+        assert details == expected
+        is_match = shape.startswith("asrep-match")
+        assert ("kerberos-no-preauth" in details) == is_match
+

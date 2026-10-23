@@ -928,3 +928,452 @@ def test_retry_with_no_time_left_after_connect_is_a_timeout(monkeypatch):
         peer.close()
     assert isinstance(exc, ks.KerberosTransportError), repr(exc)
     assert exc.answered is False and exc.kind == "timeout"
+
+
+# --- 230-08 D-29/D-30: the UDP leg follows the TCP rule (CI-visible) ---------
+# Gap 1 of 230-VERIFICATION: ``_probe_kdc_udp`` used to return [] for a timeout,
+# an undecodable reply and every KRB_ERROR code except 25, and the caller reads
+# [] as "AS-REP, no pre-auth".  After 230-08, [] can only come from a matching
+# AS-REP, on either transport.  Real TCP and UDP sockets run on loopback; only
+# the reply classifier is replaced by a token map (the real ASN.1 decode is
+# proven in test_kerberos_preauth_wire.py, local-only).
+
+_NO_PREAUTH = "kerberos-no-preauth"
+_UNREC = "kerberos-etypes-unavailable-unrecognised-reply"
+_NOET = "kerberos-etypes-unavailable-preauth-no-etype-info"
+_UNKNOWN_PRINCIPAL = "kerberos-etypes-unavailable-principal-unknown"
+_KRB_ERR = "kerberos-etypes-unavailable-krb-error"
+_UNREACHABLE = "kerberos-unreachable"
+_ETYPE18 = "etype:18:aes256-cts-hmac-sha1-96:SAFE"
+
+# token -> what the stubbed _classify_kdc_reply does with it
+_TOKEN_EXC = {
+    b"ERR25-NOET": lambda: ks.KerberosPreauthNoEtypes(),
+    b"ERR6": lambda: ks.KerberosPrincipalUnknown("Administrator", 6),
+    b"ERR68": lambda: ks.KerberosError(error=68),
+    b"ERR52": lambda: ks.KerberosError(error=52),
+    b"ASREP-OTHER": lambda: ks.KerberosUnrecognisedReply("AS-REP mismatch"),
+    b"GARBAGE": lambda: ks.KerberosUnrecognisedReply("garbage"),
+    b"": lambda: ks.KerberosUnrecognisedReply("empty datagram"),
+    b"BOOM": lambda: RuntimeError("unexpected classifier failure"),
+}
+
+
+def _classify_by_token(reply, realm, client_name, principal):
+    if reply == b"ASREP-MATCH":
+        return []
+    if reply == b"ERR25":
+        return [18]
+    raise _TOKEN_EXC[reply]()
+
+
+def _install_token_classifier(monkeypatch):
+    """Stub the shared reply classifier and the AS-REQ builders (no impacket)."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    _stub_as_req_builders(monkeypatch)
+    calls = []
+
+    def classify(reply, realm, client_name, principal):
+        calls.append(reply)
+        return _classify_by_token(reply, realm, client_name, principal)
+
+    monkeypatch.setattr(ks, "_classify_kdc_reply", classify, raising=False)
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+    return calls
+
+
+def _udp_scan(monkeypatch, handler=None, port=None, tcp_exc=None, timeout=0.6,
+              budget=10, spy=True):
+    """Run the real scan with the TCP probe raising ``tcp_exc`` and the real
+    UDP leg aimed at a loopback UdpPeer (or ``port`` when given)."""
+    classify_calls = _install_token_classifier(monkeypatch)
+    peer = kwh.UdpPeer(handler) if handler is not None else None
+    monkeypatch.setattr(ks, "KDC_PORT", peer.port if peer else port)
+
+    def tcp(*a, **k):
+        raise tcp_exc
+
+    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+    tracker = _SocketSpy(monkeypatch, {}) if spy else None
+    try:
+        rows, exc, elapsed = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=timeout),
+            budget=budget,
+        )
+    finally:
+        if peer:
+            peer.close()
+    assert exc is None, repr(exc)
+    if tracker is not None:
+        tracker.assert_all_closed()
+    return rows, elapsed, classify_calls, tracker
+
+
+_REFUSED = ConnectionRefusedError("refused")
+
+
+def test_udp_silent_peer_is_unreachable_not_no_preauth(monkeypatch):
+    rows, elapsed, _, _ = _udp_scan(monkeypatch, kwh.udp_silent, tcp_exc=_REFUSED,
+                                    timeout=0.6)
+    assert [r.service_detail for r in rows] == [_UNREACHABLE]
+    assert elapsed < 0.6 + 1.5, f"UDP leg took {elapsed:.2f}s on a 0.6s timeout"
+    assert rows[0].scan_error  # the TCP failure is still carried
+
+
+def test_udp_no_listener_is_unreachable(monkeypatch):
+    rows, _, _, _ = _udp_scan(monkeypatch, port=kwh.closed_udp_port(), tcp_exc=_REFUSED)
+    assert [r.service_detail for r in rows] == [_UNREACHABLE]
+
+
+def test_udp_name_that_does_not_resolve_is_unreachable(monkeypatch):
+    import socket as socket_mod
+
+    def boom(*a, **k):
+        raise socket_mod.gaierror(8, "nodename nor servname provided")
+
+    _install_token_classifier(monkeypatch)
+    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: boom())
+    monkeypatch.setattr(socket_mod, "getaddrinfo", boom)
+    rows, exc, _ = kwh.run_with_watchdog(
+        lambda: ks.scan_kerberos_targets(["kdc.invalid"], timeout=1), budget=8,
+    )
+    assert exc is None, repr(exc)
+    assert [r.service_detail for r in rows] == [_UNREACHABLE]
+
+
+def test_udp_reply_from_another_source_port_is_not_consumed(monkeypatch):
+    """T-230-08-01: a connected UDP socket discards a datagram that does not
+    come from the probed address, so a spoofed AS-REP times out."""
+    rows, elapsed, classify_calls, _ = _udp_scan(
+        monkeypatch, kwh.udp_reply_from_other_port(b"ASREP-MATCH"),
+        tcp_exc=_REFUSED, timeout=0.6,
+    )
+    assert classify_calls == []
+    assert [r.service_detail for r in rows] == [_UNREACHABLE]
+    assert elapsed < 0.6 + 1.5
+
+
+@pytest.mark.parametrize(
+    "handler", [kwh.udp_empty, kwh.udp_reply(b"GARBAGE")], ids=["empty", "garbage"],
+)
+def test_udp_undecodable_reply_is_unrecognised_row(monkeypatch, handler):
+    rows, _, _, _ = _udp_scan(monkeypatch, handler, tcp_exc=_REFUSED)
+    assert [r.service_detail for r in rows] == [_UNREC]
+    assert rows[0].scan_error and rows[0].cert_pubkey_alg is None
+
+
+def test_udp_code_6_is_principal_unknown_row_and_logs(monkeypatch, caplog):
+    with caplog.at_level(logging.WARNING, logger="quirk.scanner.kerberos_scanner"):
+        rows, _, _, _ = _udp_scan(monkeypatch, kwh.udp_reply(b"ERR6"), tcp_exc=_REFUSED)
+    assert [r.service_detail for r in rows] == [_UNKNOWN_PRINCIPAL]
+    assert rows[0].scan_error is None
+    assert any("principal" in rec.getMessage().lower() and "unknown" in rec.getMessage().lower()
+               for rec in caplog.records), [r.getMessage() for r in caplog.records]
+
+
+def test_udp_other_code_is_krb_error_row_without_a_finding(monkeypatch):
+    from quirk.dashboard.api.routes.scan import _derive_identity_findings
+    from quirk.intelligence.evidence import build_evidence_summary
+
+    rows, _, _, _ = _udp_scan(monkeypatch, kwh.udp_reply(b"ERR52"), tcp_exc=_REFUSED)
+    assert [r.service_detail for r in rows] == [_KRB_ERR]
+    row = rows[0]
+    assert row.cert_pubkey_alg is None
+    assert row.scan_error and row.scan_error_category == "exception"
+    sj = json.loads(row.kerberos_scan_json)
+    assert sj["etypes"] == [] and sj["etype_details"] == []
+    assert sj["probe_principal"] == "Administrator"
+    assert "52" in sj["etypes_unavailable_reason"]
+    assert _derive_identity_findings([row]) == []
+    assert build_evidence_summary([row])["identity_weak_etype_count"] == 0
+
+
+def test_tcp_other_code_then_udp_failure_is_krb_error_row(monkeypatch):
+    """The KDC answered over TCP with a KRB_ERROR; a dead UDP leg must not turn
+    that into "unreachable"."""
+    rows, _, _, _ = _udp_scan(monkeypatch, port=kwh.closed_udp_port(),
+                              tcp_exc=ks.KerberosError(error=68))
+    assert [r.service_detail for r in rows] == [_KRB_ERR]
+    assert "68" in json.loads(rows[0].kerberos_scan_json)["etypes_unavailable_reason"]
+
+
+def test_udp_code_25_with_etypes_gives_etype_rows(monkeypatch):
+    rows, _, _, _ = _udp_scan(monkeypatch, kwh.udp_reply(b"ERR25"), tcp_exc=_REFUSED)
+    assert [r.service_detail for r in rows] == [_ETYPE18]
+
+
+def test_udp_matching_as_rep_is_the_only_no_preauth_route(monkeypatch):
+    rows, _, _, _ = _udp_scan(monkeypatch, kwh.udp_reply(b"ASREP-MATCH"), tcp_exc=_REFUSED)
+    assert [r.service_detail for r in rows] == [_NO_PREAUTH]
+
+
+def test_tcp_and_udp_share_one_reply_classifier(monkeypatch):
+    """D-29: ``_probe_kdc`` and ``_probe_kdc_udp`` both hand the reply bytes to
+    ``_classify_kdc_reply``; there is no second copy of the rules."""
+    calls = _install_token_classifier(monkeypatch)
+    peer = kwh.RawPeer(kwh.framed(b"ERR25"))
+    udp = kwh.UdpPeer(kwh.udp_reply(b"ERR25"), require_no_tcp=False)
+    try:
+        tcp_res, tcp_exc, _ = kwh.run_with_watchdog(
+            lambda: ks._probe_kdc("127.0.0.1", "R", 2, port=peer.port), budget=6)
+        udp_res, udp_exc, _ = kwh.run_with_watchdog(
+            lambda: ks._probe_kdc_udp("127.0.0.1", "R", 2, port=udp.port), budget=6)
+    finally:
+        peer.close()
+        udp.close()
+    assert tcp_exc is None and udp_exc is None, (tcp_exc, udp_exc)
+    assert tcp_res == [18] and udp_res == [18]
+    assert calls == [b"ERR25", b"ERR25"]
+
+
+def test_udp_probe_uses_the_getaddrinfo_family_and_full_sockaddr(monkeypatch):
+    """D-30: the UDP socket takes its family and sockaddr from getaddrinfo, so
+    an IPv6 KDC is reachable.  No network: the socket class is a recorder."""
+    import socket as socket_mod
+
+    _install_token_classifier(monkeypatch)
+    seen = {}
+    sockaddr = ("fe80::1", 88, 0, 7)
+
+    class FakeSock:
+        def __init__(self, family=-1, type=-1, *a, **k):
+            seen["family"], seen["type"] = family, type
+
+        def settimeout(self, t):
+            seen["timeout"] = t
+
+        def connect(self, addr):
+            seen["addr"] = addr
+
+        def send(self, data, *a):
+            seen["sent"] = data
+
+        def sendto(self, data, addr):
+            seen["sendto"] = addr
+
+        def recv(self, n):
+            return b"ERR25"
+
+        def close(self):
+            seen["closed"] = True
+
+    def gai(host, port, *a, **k):
+        seen["gai"] = (host, port, k.get("type"))
+        return [(socket_mod.AF_INET6, socket_mod.SOCK_DGRAM, 17, "", sockaddr)]
+
+    monkeypatch.setattr(socket_mod, "socket", FakeSock)
+    monkeypatch.setattr(socket_mod, "getaddrinfo", gai)
+    assert ks._probe_kdc_udp("fe80::1%en0", "R", 2, port=88) == [18]
+    assert seen["gai"] == ("fe80::1%en0", 88, socket_mod.SOCK_DGRAM)
+    assert seen["family"] == socket_mod.AF_INET6
+    assert seen["addr"] == sockaddr
+    assert "sendto" not in seen
+    assert seen["closed"] is True
+
+
+# --- 230-08 THE INVARIANT ----------------------------------------------------
+# kerberos-no-preauth appears iff the consumed leg delivered a matching AS-REP.
+
+_MATCH = b"ASREP-MATCH"
+
+# name -> (callable standing in for _probe_kdc, terminal?, delivered a match?, expected)
+# A terminal TCP outcome never reaches UDP; a non-terminal one falls back.
+
+
+def _tcp_returns(value):
+    return lambda: value
+
+
+def _tcp_raises(factory):
+    def run():
+        raise factory()
+    return run
+
+
+_TCP_OUTCOMES = {
+    # --- terminal: the KDC (or something) answered over TCP ---
+    "asrep-match": (_tcp_returns([]), True, True, [_NO_PREAUTH]),
+    "err25": (_tcp_returns([18]), True, False, [_ETYPE18]),
+    "err25-noet": (_tcp_raises(lambda: ks.KerberosPreauthNoEtypes()), True, False, [_NOET]),
+    "err6": (_tcp_raises(lambda: ks.KerberosPrincipalUnknown("Administrator", 6)),
+             True, False, [_UNKNOWN_PRINCIPAL]),
+    "asrep-other": (_tcp_raises(lambda: ks.KerberosUnrecognisedReply("mismatch")),
+                    True, False, [_UNREC]),
+    "boom": (_tcp_raises(lambda: RuntimeError("decoder blew up")), True, False, [_UNREC]),
+    **{
+        f"answered-{kind}": (
+            _tcp_raises(lambda kind=kind: ks.KerberosTransportError(
+                f"answered {kind}", True, kind)),
+            True, False, [_UNREC])
+        for kind in ("eof", "reset", "error", "timeout", "framing")
+    },
+    # --- non-terminal: fall back to UDP ---
+    "refused": (_tcp_raises(lambda: ConnectionRefusedError("refused")), False, False, None),
+    "gaierror": (_tcp_raises(lambda: __import__("socket").gaierror(8, "no name")),
+                 False, False, None),
+    "oserror": (_tcp_raises(lambda: OSError(65, "No route to host")), False, False, None),
+    **{
+        f"unanswered-{kind}": (
+            _tcp_raises(lambda kind=kind: ks.KerberosTransportError(
+                f"unanswered {kind}", False, kind)),
+            False, False, None)
+        for kind in ("eof", "reset", "error", "timeout", "send")
+    },
+    "err68": (_tcp_raises(lambda: ks.KerberosError(error=68)), False, False, None),
+}
+
+# name -> (how the UDP leg is set up, expected rows, delivered a match?)
+# ``transport`` outcomes are the ones that deliver nothing at all.
+_UDP_OUTCOMES = {
+    "silent": ("silent", [_UNREACHABLE], False),
+    "refused": ("refused", [_UNREACHABLE], False),
+    "gaierror": ("gaierror", [_UNREACHABLE], False),
+    "empty": (b"", [_UNREC], False),
+    "garbage": (b"GARBAGE", [_UNREC], False),
+    "asrep-other": (b"ASREP-OTHER", [_UNREC], False),
+    "err25": (b"ERR25", [_ETYPE18], False),
+    "err25-noet": (b"ERR25-NOET", [_NOET], False),
+    "err6": (b"ERR6", [_UNKNOWN_PRINCIPAL], False),
+    "err68": (b"ERR68", [_KRB_ERR], False),
+    "asrep-match": (b"ASREP-MATCH", [_NO_PREAUTH], True),
+    "boom": (b"BOOM", [_UNREACHABLE], False),
+}
+_UDP_TRANSPORT = {"silent", "refused", "gaierror"}
+
+
+def _invariant_cases():
+    cases = []
+    for tcp, (_, terminal, _, _) in _TCP_OUTCOMES.items():
+        if terminal:
+            cases.append(pytest.param(tcp, None, id=f"tcp-{tcp}"))
+        else:
+            for udp in _UDP_OUTCOMES:
+                cases.append(pytest.param(tcp, udp, id=f"tcp-{tcp}__udp-{udp}"))
+    return cases
+
+
+@pytest.mark.parametrize("tcp,udp", _invariant_cases())
+def test_no_preauth_iff_matching_as_rep(monkeypatch, tcp, udp):
+    import socket as socket_mod
+
+    probe, terminal, tcp_match, tcp_expected = _TCP_OUTCOMES[tcp]
+    _install_token_classifier(monkeypatch)
+    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: probe())
+    peer = None
+    if udp is not None:
+        mode, udp_expected, udp_match = _UDP_OUTCOMES[udp]
+        if mode == "silent":
+            peer = kwh.UdpPeer(kwh.udp_silent)
+        elif isinstance(mode, bytes):
+            peer = kwh.UdpPeer(kwh.udp_reply(mode))
+        monkeypatch.setattr(ks, "KDC_PORT",
+                            peer.port if peer else kwh.closed_udp_port())
+    tracker = _SocketSpy(monkeypatch, {})
+    if udp is not None and _UDP_OUTCOMES[udp][0] == "gaierror":
+        def no_name(*a, **k):
+            raise socket_mod.gaierror(8, "nodename nor servname provided")
+        monkeypatch.setattr(socket_mod, "getaddrinfo", no_name)
+    try:
+        rows, exc, _ = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=0.5), budget=10,
+        )
+    finally:
+        if peer:
+            peer.close()
+    assert exc is None, repr(exc)
+    tracker.assert_all_closed()
+    details = [r.service_detail for r in rows]
+
+    if terminal:
+        expected, delivered = tcp_expected, tcp_match
+    else:
+        expected, delivered = udp_expected, udp_match
+        if tcp == "err68" and udp in _UDP_TRANSPORT:
+            expected = [_KRB_ERR]  # the KDC answered over TCP
+    assert details == expected
+    assert (_NO_PREAUTH in details) == delivered, (
+        f"{_NO_PREAUTH} must appear iff a matching AS-REP was delivered: {details}"
+    )
+
+
+def _module_tree():
+    return ast.parse((REPO / "quirk" / "scanner" / "kerberos_scanner.py")
+                     .read_text(encoding="utf-8"))
+
+
+def _matrix_exception_classes():
+    names = set()
+    for probe, _, _, _ in _TCP_OUTCOMES.values():
+        try:
+            probe()
+        except BaseException as exc:  # noqa: BLE001 - collecting classes
+            names.add(type(exc).__name__)
+            # the stand-in and impacket KerberosError are the same name
+    for factory in _TOKEN_EXC.values():
+        names.add(type(factory()).__name__)
+    return names
+
+
+def _matrix_transport_kinds():
+    kinds = set()
+    for probe, _, _, _ in _TCP_OUTCOMES.values():
+        try:
+            probe()
+        except Exception as exc:  # noqa: BLE001 - collecting kinds
+            if isinstance(exc, ks.KerberosTransportError):
+                kinds.add(exc.kind)
+    return kinds
+
+
+def test_invariant_matrix_covers_every_exception_class_in_the_source():
+    """Re-derived from the scanner source at run time: a new Kerberos* exception
+    class with no matrix case turns this red."""
+    tree = _module_tree()
+    declared = {n.name for n in ast.walk(tree)
+                if isinstance(n, ast.ClassDef) and n.name.startswith("Kerberos")}
+    assert declared >= {"KerberosTransportError", "KerberosPrincipalUnknown",
+                        "KerberosUnrecognisedReply", "KerberosPreauthNoEtypes",
+                        "KerberosError"}, declared
+    missing = declared - _matrix_exception_classes()
+    assert not missing, f"no invariant case raises {sorted(missing)}"
+
+
+def test_invariant_matrix_covers_every_transport_error_kind_in_the_source():
+    """Every ``kind`` literal the scanner can give a KerberosTransportError."""
+    kinds = set()
+    for n in ast.walk(_module_tree()):
+        if (isinstance(n, ast.Call)
+                and getattr(n.func, "id", getattr(n.func, "attr", "")) == "KerberosTransportError"):
+            if len(n.args) >= 3 and isinstance(n.args[2], ast.Constant):
+                kinds.add(n.args[2].value)
+            for kw in n.keywords:
+                if kw.arg == "kind" and isinstance(kw.value, ast.Constant):
+                    kinds.add(kw.value.value)
+        if (isinstance(n, ast.Assign)
+                and any(getattr(t, "id", None) == "kind" for t in n.targets)):
+            kinds.update(c.value for c in ast.walk(n.value)
+                         if isinstance(c, ast.Constant) and isinstance(c.value, str))
+    assert kinds >= {"eof", "reset", "error", "timeout", "framing", "send"}, kinds
+    missing = kinds - _matrix_transport_kinds()
+    assert not missing, f"no invariant case raises a transport error of kind {sorted(missing)}"
+
+
+def test_only_a_matched_as_rep_can_produce_an_empty_etype_list():
+    """Source scan: the only places the module returns ``[]`` or builds an empty
+    etype list.  A new one must be added here deliberately."""
+    tree = _module_tree()
+    found = set()
+    for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
+        for n in ast.walk(fn):
+            if (isinstance(n, ast.Return) and isinstance(n.value, ast.List)
+                    and not n.value.elts):
+                found.add((fn.name, "return []"))
+            if (isinstance(n, ast.Assign) and isinstance(n.value, ast.List)
+                    and not n.value.elts
+                    and any(getattr(t, "id", None) == "etypes" for t in n.targets)):
+                found.add((fn.name, "etypes = []"))
+    assert found == {
+        ("_classify_kdc_reply", "return []"),          # after the realm/cname match
+        ("scan_kerberos_targets", "return []"),        # the impacket-absent exit
+        ("_parse_preauth_etypes", "etypes = []"),      # local accumulator, never returned empty
+    }, found

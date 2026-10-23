@@ -135,3 +135,106 @@ def reset_immediately(c, stop):
     ``recv``, not a hand-built exception.
     """
     c.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+
+
+# --- 230-08 D-29: loopback UDP peers (no impacket import) --------------------
+
+
+def tcp_port_is_closed(port):
+    """True when a TCP connect to 127.0.0.1:``port`` is refused (nothing listens)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(1)
+    try:
+        s.connect(("127.0.0.1", port))
+    except ConnectionRefusedError:
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+    return False
+
+
+class UdpPeer:
+    """Loopback UDP listener that runs ``handler(sock, data, addr, stop)`` per datagram.
+
+    ``require_no_tcp`` re-binds until the chosen port number has no TCP
+    listener, so the scanner's real TCP connect is refused and its real UDP
+    fallback runs against this peer.  Every socket has its own timeout.
+    """
+
+    def __init__(self, handler, require_no_tcp=True):
+        self.handler = handler
+        self.stop = threading.Event()
+        self.requests = []
+        for _ in range(50):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+            if not require_no_tcp or tcp_port_is_closed(port):
+                break
+            sock.close()
+        else:  # pragma: no cover - 50 collisions in a row
+            raise RuntimeError("could not find a UDP port with no TCP listener")
+        self.sock = sock
+        self.sock.settimeout(0.2)
+        self.port = port
+        self._t = threading.Thread(target=self._serve, daemon=True)
+        self._t.start()
+
+    def _serve(self):
+        while not self.stop.is_set():
+            try:
+                data, addr = self.sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            self.requests.append(data)
+            try:
+                self.handler(self.sock, data, addr, self.stop)
+            except OSError:
+                pass
+
+    def close(self):
+        self.stop.set()
+        self._t.join(2)
+        self.sock.close()
+
+
+def closed_udp_port():
+    """A UDP port number with nothing bound and nothing listening on TCP."""
+    peer = UdpPeer(udp_silent)
+    port = peer.port
+    peer.close()
+    return port
+
+
+def udp_silent(sock, data, addr, stop):
+    """Receives the datagram and never replies."""
+
+
+def udp_reply(blob):
+    """Replies to every datagram with ``blob`` from the KDC address."""
+    def handler(sock, data, addr, stop):
+        sock.sendto(blob, addr)
+    return handler
+
+
+def udp_reply_from_other_port(blob):
+    """Spoof control: the reply comes from a DIFFERENT source port than the
+    address the scanner probed.  A connected UDP socket must discard it."""
+    def handler(sock, data, addr, stop):
+        other = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            other.settimeout(1)
+            other.bind(("127.0.0.1", 0))
+            other.sendto(blob, addr)
+        finally:
+            other.close()
+    return handler
+
+
+def udp_empty(sock, data, addr, stop):
+    """Replies with a zero-length datagram."""
+    sock.sendto(b"", addr)
