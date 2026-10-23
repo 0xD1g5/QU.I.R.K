@@ -90,7 +90,7 @@ HORIZON prose:
       an injected fixture (todo `261013-doc224-codesign-tls-eku-path-dead-in-real-scans`).
 - [x] **DETECT-02**: Kerberos etype enumeration runs against a KDC that requires pre-authentication
       with the pinned impacket (todo `261013-doc224-kerberos-preauth-required-read-as-no-preauth`).
-- [ ] **DETECT-03**: `--auth-*` credentials reach the JWKS target, and the redaction applies only to
+- [x] **DETECT-03**: `--auth-*` credentials reach the JWKS target, and the redaction applies only to
       logged output, proven by a wire-level test asserting the received headers (`999.125` item 1).
 - [ ] **DETECT-04**: `--auth-basic` sends a correctly base64-encoded `Authorization: Basic` header,
       and its help text and `docs/configuration.md` row match (`999.125` item 2).
@@ -188,7 +188,7 @@ Deferred from this milestone with an owner:
 | FIND-13 | Phase 229 | Complete |
 | DETECT-01 | Phase 230 | Complete |
 | DETECT-02 | Phase 230 | Complete |
-| DETECT-03 | Phase 230 | Pending |
+| DETECT-03 | Phase 230 | Complete |
 | DETECT-04 | Phase 230 | Pending |
 | DETECT-05 | Phase 230 | Pending |
 | QRAMM-17 | Phase 231 | Pending |
