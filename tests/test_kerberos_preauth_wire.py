@@ -26,8 +26,12 @@ from quirk.scanner.kerberos_scanner import IMPACKET_AVAILABLE
 ETYPES = [23, 17, 18, 1]
 
 
-def _krb_error(error_code=25, etypes=None, realm="LAB.TEST"):
-    """Build DER KRB_ERROR bytes; PA-ETYPE-INFO2 e-data only when etypes given."""
+def _krb_error(error_code=25, etypes=None, realm="LAB.TEST", enc_ts_only=False):
+    """Build DER KRB_ERROR bytes; PA-ETYPE-INFO2 e-data only when etypes given.
+
+    ``enc_ts_only`` builds e-data whose METHOD-DATA carries only a
+    PA-ENC-TIMESTAMP hint and no ETYPE-INFO/ETYPE-INFO2 (230-REVIEW CR-02).
+    """
     from pyasn1.codec.der import encoder
     from impacket.krb5 import constants
     from impacket.krb5.asn1 import (
@@ -54,6 +58,13 @@ def _krb_error(error_code=25, etypes=None, realm="LAB.TEST"):
         pa = PA_DATA()
         pa["padata-type"] = int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO2.value)
         pa["padata-value"] = encoder.encode(info2)
+        md = METHOD_DATA()
+        md.setComponentByPosition(0, pa)
+        err["e-data"] = encoder.encode(md)
+    elif enc_ts_only:
+        pa = PA_DATA()
+        pa["padata-type"] = int(constants.PreAuthenticationDataTypes.PA_ENC_TIMESTAMP.value)
+        pa["padata-value"] = b""
         md = METHOD_DATA()
         md.setComponentByPosition(0, pa)
         err["e-data"] = encoder.encode(md)
@@ -253,3 +264,60 @@ class TestKerberosPreauthWire:
         with pytest.raises(KerberosError) as ei:
             ks._probe_kdc("127.0.0.1", "LAB.TEST", 3, port=kdc.port)
         assert not isinstance(ei.value, ks.KerberosPrincipalUnknown)
+
+    # 230-REVIEW CR-02: a KRB_ERROR 25 reply is proof that pre-auth IS required,
+    # so it must never yield kerberos-no-preauth, even when it carries no usable
+    # etype info.  Honest row, no UDP fallback, no weak-etype count.
+
+    def _assert_preauth_no_etype_info_row(self, rows, udp_calls):
+        assert [r.service_detail for r in rows] == [
+            "kerberos-etypes-unavailable-preauth-no-etype-info"
+        ]
+        row = rows[0]
+        assert row.cert_pubkey_alg is None
+        assert row.scan_error is None
+        assert udp_calls == []
+        sj = json.loads(row.kerberos_scan_json)
+        assert sj["etypes"] == []
+        assert sj["probe_principal"] == "Administrator"
+        assert "(25)" in sj["etypes_unavailable_reason"]
+
+    @pytest.mark.parametrize(
+        "reply_kwargs",
+        [{}, {"enc_ts_only": True}],
+        ids=["no-e-data", "enc-timestamp-only"],
+    )
+    def test_preauth_required_without_etype_info_is_not_no_preauth(
+        self, reply_kwargs, fake_kdc_factory, monkeypatch
+    ):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_kdc_factory({"Administrator": _krb_error(25, **reply_kwargs)})
+        _redirect_sendreceive(monkeypatch, kdc.port)
+        udp_calls = []
+        monkeypatch.setattr(
+            ks, "_probe_kdc_udp",
+            lambda *a, **k: udp_calls.append(1) or [],
+        )
+        rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=3)
+        self._assert_preauth_no_etype_info_row(rows, udp_calls)
+
+    @pytest.mark.parametrize(
+        "reply_kwargs",
+        [{}, {"enc_ts_only": True}],
+        ids=["no-e-data", "enc-timestamp-only"],
+    )
+    def test_old_impacket_raise_shape_without_etype_info(self, reply_kwargs, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
+        from pyasn1.codec.ber import decoder
+        from impacket.krb5.asn1 import KRB_ERROR
+        from impacket.krb5.kerberosv5 import KerberosError
+
+        pkt = decoder.decode(_krb_error(25, **reply_kwargs), asn1Spec=KRB_ERROR())[0]
+
+        def boom(*a, **k):
+            raise KerberosError(packet=pkt)
+
+        monkeypatch.setattr(ks, "sendReceive", boom)
+        with pytest.raises(ks.KerberosPreauthNoEtypes):
+            ks._probe_kdc("127.0.0.1", "LAB.TEST", 3)

@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,569 lines, in reading order.
+Five guides, 7,577 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4634,6 +4634,14 @@ Kerberos evidence, so the identity domain is treated as assessed, and it counts 
 assessed endpoint, so it raises the scan's coverage (and therefore its confidence) although
 no Kerberos crypto was assessed. To resolve it, set `kerberos_probe_principal` to an account
 that exists.
+
+If the KDC answers that pre-authentication is required but its reply lists no encryption types
+(no error data, error data that cannot be decoded, or error data that carries only other
+pre-authentication hints such as a timestamp request), the scanner emits the row
+`kerberos-etypes-unavailable-preauth-no-etype-info`. That reply proves the KDC requires
+pre-authentication, so it is never reported as `kerberos-no-preauth`. It is treated the same way
+as the principal-unknown row: an assessment gap with no finding, no weak-etype count and no UDP
+retry.
 
 Kerberos targets need an FQDN whose last two labels are the realm (for example
 `dc.corp.example.com` gives realm `CORP.EXAMPLE.COM`). An IP-literal target is used as the
