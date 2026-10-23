@@ -38,6 +38,27 @@ from quirk.util.safe_exc import safe_str  # IN-01: sanitize tcp_error onto unrea
 # Module-level logger
 logger = logging.getLogger(__name__)
 
+# Phase 230 D-24: client principal named in the probe AS-REQ.  "Administrator"
+# exists by default on AD and Samba AD DC, so the KDC answers
+# KDC_ERR_PREAUTH_REQUIRED (25) with PA-ETYPE-INFO2 instead of
+# KDC_ERR_C_PRINCIPAL_UNKNOWN (6, no etype data).  An AS-REQ carrying no
+# pre-auth data is not a failed logon and does not count toward lockout.
+# Defined outside the impacket try-block so the module imports without
+# impacket; config.py keeps its own literal (drift-guarded by a test).
+DEFAULT_PROBE_PRINCIPAL = "Administrator"
+
+
+class KerberosPrincipalUnknown(Exception):
+    """The KDC answered KDC_ERR_C_PRINCIPAL_UNKNOWN (6): reachable, but it
+    returned no etype information for the probe principal (Phase 230 D-25)."""
+
+    def __init__(self, principal: str, error_code: int = 6):
+        super().__init__(
+            f"KDC does not know principal {principal!r} (error {error_code})"
+        )
+        self.principal = principal
+        self.error_code = error_code
+
 # KERBEROS etype severity map (D-08 through D-12)
 # Maps etype int -> (name, severity)
 # CRITICAL: DES-based etypes (RFC 6649 deprecated)
@@ -124,53 +145,82 @@ def _build_as_req(client_name, server_name, realm: str):
     return as_req
 
 
-def _probe_kdc(host: str, realm: str, timeout: int) -> list:
+def _parse_preauth_etypes(error_pkt) -> list:
+    """Parse etypes from the PA-ETYPE-INFO2 / PA-ETYPE-INFO e-data of a KRB_ERROR.
+
+    One parser shared by the returned-reply and raised-error shapes of
+    KDC_ERR_PREAUTH_REQUIRED, and the UDP probe (Phase 230 D-05/D-06).
+    Per Pitfall 3: handles both PA_ETYPE_INFO2 (type 19) and PA_ETYPE_INFO (type 11).
+    """
+    method_data_raw = bytes(error_pkt['e-data'])
+    method_data = decoder.decode(method_data_raw, asn1Spec=MethodData())[0]
+    etypes = []
+    for method in method_data:
+        ptype = int(method['padata-type'])
+        if ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO2.value):
+            info2 = decoder.decode(
+                bytes(method['padata-value']),
+                asn1Spec=ETYPE_INFO2()
+            )[0]
+            for entry in info2:
+                etypes.append(int(entry['etype']))
+        elif ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO.value):
+            info1 = decoder.decode(
+                bytes(method['padata-value']),
+                asn1Spec=ETYPE_INFO()
+            )[0]
+            for entry in info1:
+                etypes.append(int(entry['etype']))
+    return etypes
+
+
+def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
+               principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
     """Probe a KDC over TCP and parse etypes from PA-ETYPE-INFO2 in KDC_ERR_PREAUTH_REQUIRED.
 
     Returns list of etype integers advertised by the KDC.
-    Returns [] if KDC returns AS-REP (no preauth required -- unexpected).
-    Raises on non-preauth errors or connection failures.
-    Per Pitfall 3: handles both PA_ETYPE_INFO2 (type 19) and PA_ETYPE_INFO (type 11).
+    Returns [] if the reply is a genuine AS-REP (no preauth required).
+    Raises KerberosPrincipalUnknown for KDC_ERR_C_PRINCIPAL_UNKNOWN (6), and
+    KerberosError for any other error code or connection failure.
+
+    impacket>=0.13.0 RETURNS the KRB_ERROR 25 reply from sendReceive instead of
+    raising, so the returned reply is decoded here (Phase 230 D-05); the
+    KerberosError branch stays for the older raise shape (D-06).
     """
-    client_name = Principal("nobody", type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+    client_name = Principal(principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
     server_name = Principal(
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
     )
     as_req = _build_as_req(client_name, server_name, realm)
     message = encoder.encode(as_req)
 
+    preauth_required = constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value
+    principal_unknown = constants.ErrorCodes.KDC_ERR_C_PRINCIPAL_UNKNOWN.value
     try:
-        _r = sendReceive(message, realm, host)
-        return []  # Unexpected AS-REP without preauth
+        r = sendReceive(message, realm, host, port=port)
     except KerberosError as e:
         code = e.getErrorCode()
-        if code != constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value:
-            raise
-        error_pkt = e.getErrorPacket()
-        method_data_raw = bytes(error_pkt['e-data'])
-        method_data = decoder.decode(method_data_raw, asn1Spec=MethodData())[0]
-        etypes = []
-        for method in method_data:
-            ptype = int(method['padata-type'])
-            # Handle both PA_ETYPE_INFO2 (type 19) and PA_ETYPE_INFO (type 11)
-            if ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO2.value):
-                info2 = decoder.decode(
-                    bytes(method['padata-value']),
-                    asn1Spec=ETYPE_INFO2()
-                )[0]
-                for entry in info2:
-                    etypes.append(int(entry['etype']))
-            elif ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO.value):
-                info1 = decoder.decode(
-                    bytes(method['padata-value']),
-                    asn1Spec=ETYPE_INFO()
-                )[0]
-                for entry in info1:
-                    etypes.append(int(entry['etype']))
-        return etypes
+        if code == preauth_required:
+            return _parse_preauth_etypes(e.getErrorPacket())
+        if code == principal_unknown:
+            raise KerberosPrincipalUnknown(principal, code) from e
+        raise
+
+    try:
+        err = decoder.decode(r, asn1Spec=KRB_ERROR())[0]
+    except (PyAsn1Error, ValueError, TypeError):
+        # Not a KRB_ERROR: a genuine AS-REP, no pre-auth required (unchanged behaviour).
+        return []
+    code = int(err['error-code'])
+    if code == preauth_required:
+        return _parse_preauth_etypes(err)
+    if code == principal_unknown:
+        raise KerberosPrincipalUnknown(principal, code)
+    raise KerberosError(packet=err)
 
 
-def _probe_kdc_udp(host: str, realm: str, timeout: int) -> list:
+def _probe_kdc_udp(host: str, realm: str, timeout: int,
+                   principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
     """UDP fallback for KDC probing.
 
     Sends raw AS-REQ bytes (no length prefix) to port 88 via UDP.
@@ -178,7 +228,7 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int) -> list:
     Returns empty list on any failure (errors are swallowed -- UDP is best-effort fallback).
     Per Pitfall 1: UDP does NOT use the 4-byte length prefix (only TCP does).
     """
-    client_name = Principal("nobody", type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+    client_name = Principal(principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
     server_name = Principal(
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
     )
@@ -195,26 +245,7 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int) -> list:
         error_code = int(krb_error['error-code'])
         if error_code != constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value:
             return []
-        method_data_raw = bytes(krb_error['e-data'])
-        method_data = decoder.decode(method_data_raw, asn1Spec=MethodData())[0]
-        etypes = []
-        for method in method_data:
-            ptype = int(method['padata-type'])
-            if ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO2.value):
-                info2 = decoder.decode(
-                    bytes(method['padata-value']),
-                    asn1Spec=ETYPE_INFO2()
-                )[0]
-                for entry in info2:
-                    etypes.append(int(entry['etype']))
-            elif ptype == int(constants.PreAuthenticationDataTypes.PA_ETYPE_INFO.value):
-                info1 = decoder.decode(
-                    bytes(method['padata-value']),
-                    asn1Spec=ETYPE_INFO()
-                )[0]
-                for entry in info1:
-                    etypes.append(int(entry['etype']))
-        return etypes
+        return _parse_preauth_etypes(krb_error)
     except (socket.timeout, socket.error, OSError) as e:
         # WR-08 (Phase 71): UDP transport failure — log+continue (best-effort fallback)
         logger.warning("KDC UDP probe transport failed for %r: %s", host, e)
@@ -282,7 +313,8 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
         return {"ldap_status": "skipped", "ldap_error": str(exc)}
 
 
-def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session_start=None) -> list:
+def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session_start=None,
+                          principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
     """Scan Kerberos KDCs for supported encryption types via unauthenticated AS-REQ probe.
 
     Entry point for the Kerberos scanner. Returns list[CryptoEndpoint] -- one endpoint
@@ -310,12 +342,36 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         # RFC 4120 §7.2.1 ("Kerberos clients SHOULD support both UDP and TCP; a
         # client MAY retry over TCP/UDP on failure") — it is NOT a defect.
         try:
-            etypes = _probe_kdc(target, realm, timeout)
+            etypes = _probe_kdc(target, realm, timeout, principal=principal)
+        except KerberosPrincipalUnknown:
+            # Phase 230 D-25: the KDC answered (code 6) but returns no etype data
+            # for this principal.  An assessment gap, not a transport failure:
+            # no UDP fallback, no scan_error, and never "kerberos-no-preauth".
+            gap_ep = CryptoEndpoint(
+                host=target,
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg=None,
+                service_detail="kerberos-etypes-unavailable-principal-unknown",
+                scanned_at=now,
+            )
+            ldap_result = _probe_ldap_anon(target, timeout, logger)
+            gap_ep.kerberos_scan_json = json.dumps({
+                "realm": realm,
+                "etypes": [],
+                "etype_details": [],
+                "ldap": ldap_result,
+                "ldap_status": ldap_result.get("ldap_status", "skipped"),
+                "probe_principal": principal,
+                "etypes_unavailable_reason": "KDC_ERR_C_PRINCIPAL_UNKNOWN (6)",
+            })
+            results.append(gap_ep)
+            continue
         except Exception as exc:
             tcp_error = exc
             # UDP fallback on any TCP failure (RFC 4120 §7.2.1)
             try:
-                etypes = _probe_kdc_udp(target, realm, timeout)
+                etypes = _probe_kdc_udp(target, realm, timeout, principal=principal)
             except Exception:
                 etypes = None  # Both paths failed
 

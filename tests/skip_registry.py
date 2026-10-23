@@ -287,6 +287,8 @@ ALLOWED_SKIPS = [
     ("test_modbus_scanner.py", "test_single_inflight_no_writes", "ci_extras_gap", "hw extra absent from .[all]; pymodbus not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_import_guard_returns_empty_with_zero_network_calls", "ci_extras_gap", "hw extra absent from .[all]; pysnmp not installed"),
     ("test_identity_surface.py", "Issue3ScanWindowRegressionTest.test_issue3_scan_window_returns_all_identity_protocols", "ci_extras_gap", "identity extra absent from .[all]; impacket not installed"),
+    # Phase 230 D-07a: fake-KDC wire proof is local-only (impacket absent from .[all]).
+    ("test_kerberos_preauth_wire.py", "TestKerberosPreauthWire", "ci_extras_gap", "identity extra absent from .[all]; impacket not installed (Phase 230 DETECT-02: proof is local-only)"),
 
     # Phase 150 D-09/D-10 CI-parity gap closure (Plan 06, Task 2): `api` extras
     # group (schemathesis, openapi-spec-validator) absent from .[all].

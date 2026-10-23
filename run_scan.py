@@ -3718,6 +3718,7 @@ def main():
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
                 timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
+                principal=cfg.connectors.kerberos_probe_principal,
                 logger=logger,
                 session_start=session_start,
             )

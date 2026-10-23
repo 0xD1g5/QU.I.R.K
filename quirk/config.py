@@ -288,6 +288,11 @@ class ConnectorsCfg:
     enable_smime: bool = False
     # Identity connector target lists (v4.2, per D-05)
     kerberos_targets: list = field(default_factory=list)
+    # Phase 230 D-24: client principal named in the Kerberos etype probe. A
+    # principal name, not a secret (so not in CREDENTIAL_REGISTRY). Must match
+    # kerberos_scanner.DEFAULT_PROBE_PRINCIPAL (drift-guarded by a test; config
+    # does not import the scanner).
+    kerberos_probe_principal: str = "Administrator"
     saml_targets: list = field(default_factory=list)
     dnssec_targets: list = field(default_factory=list)
     # Phase 89 LAB-06: optional resolver override for DNSSEC scanning (host:port, e.g. 127.0.0.1:15353)
@@ -947,6 +952,17 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
                 priv_protocol=priv_protocol,
             )
         conn_raw["snmp_v3_credentials"] = snmp_v3_credentials
+
+    # Phase 230 D-24: the probe principal is placed in the AS-REQ cname; reject
+    # non-string / blank values at load time rather than probing as "".
+    if "kerberos_probe_principal" in conn_raw:
+        _kpp = conn_raw["kerberos_probe_principal"]
+        if not isinstance(_kpp, str) or not _kpp.strip():
+            raise ValueError(
+                "connectors.kerberos_probe_principal must be a non-empty principal "
+                f"name (got {_kpp!r}); e.g. \"Administrator\"."
+            )
+        conn_raw["kerberos_probe_principal"] = _kpp.strip()
 
     # Phase 72 D-02 / WR-11: build connectors then stamp user-set field set so the
     # profile-application code can distinguish user-explicit values from defaults.
