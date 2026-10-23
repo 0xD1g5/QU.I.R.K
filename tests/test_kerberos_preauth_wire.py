@@ -244,7 +244,9 @@ class TestKerberosPreauthWire:
 
         # A real encoded AS-REP (WR-01): only a reply that decodes as AS_REP
         # may be read as "no pre-auth required".
-        kdc = fake_kdc_factory(fixed_blob=_as_rep())
+        # The AS-REP must name the probed realm and principal (230-REVIEW-R2
+        # IN-04); an IP-literal target's realm is the address itself.
+        kdc = fake_kdc_factory(fixed_blob=_as_rep(realm="127.0.0.1"))
         _redirect_kdc(monkeypatch, kdc.port)
         rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=3)
         assert [r.service_detail for r in rows] == ["kerberos-no-preauth"]
@@ -499,3 +501,37 @@ class TestKerberosPreauthWire:
         assert type(exc).__name__ == "KerberosTransportError"
         assert exc.answered is False
         assert elapsed < 2
+
+    # 230-REVIEW-R2 IN-04: an AS-REP is "no pre-auth required" only when it
+    # answers THIS probe: crealm (case-insensitive) is the probed realm and
+    # cname (case-insensitive) is the probe principal.  A mis-routed or
+    # replayed AS-REP for someone else is an unrecognised reply.
+
+    @pytest.mark.parametrize(
+        "rep_kwargs",
+        [{"realm": "OTHER.TEST"}, {"cname": "someone-else"}],
+        ids=["other-realm", "other-principal"],
+    )
+    def test_probe_kdc_rejects_as_rep_for_another_probe(self, rep_kwargs, fake_kdc_factory):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_kdc_factory(fixed_blob=_as_rep(**rep_kwargs))
+        with pytest.raises(ks.KerberosUnrecognisedReply):
+            ks._probe_kdc("127.0.0.1", "LAB.TEST", 3, port=kdc.port)
+
+    def test_probe_kdc_as_rep_match_is_case_insensitive(self, fake_kdc_factory):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_kdc_factory(fixed_blob=_as_rep(realm="lab.test", cname="administrator"))
+        assert ks._probe_kdc("127.0.0.1", "LAB.TEST", 3, port=kdc.port) == []
+
+    def test_scan_as_rep_for_another_realm_is_unrecognised_row(
+        self, fake_kdc_factory, monkeypatch
+    ):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_kdc_factory(fixed_blob=_as_rep(realm="OTHER.TEST"))
+        _redirect_kdc(monkeypatch, kdc.port)
+        udp_calls = self._real_udp_spy(monkeypatch)
+        rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=1)
+        self._assert_unrecognised_row(rows, udp_calls)

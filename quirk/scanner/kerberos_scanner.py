@@ -297,8 +297,9 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
     """Probe a KDC over TCP and parse etypes from PA-ETYPE-INFO2 in KDC_ERR_PREAUTH_REQUIRED.
 
     Returns list of etype integers advertised by the KDC.
-    Returns [] only if the reply decodes as an AS-REP (no preauth required);
-    a reply that is neither KRB_ERROR nor AS-REP raises KerberosUnrecognisedReply.
+    Returns [] only if the reply decodes as an AS-REP whose crealm and cname
+    match the probe (no preauth required); any other reply that is not a
+    KRB_ERROR raises KerberosUnrecognisedReply.
     Raises KerberosPrincipalUnknown for KDC_ERR_C_PRINCIPAL_UNKNOWN (6),
     KerberosPreauthNoEtypes for a code-25 reply with no usable etype info,
     KerberosError for any other error code, KerberosTransportError for a failed
@@ -331,11 +332,23 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
         # positively decodes as an AS-REP (230-REVIEW WR-01); garbage, a
         # truncated reply or a non-Kerberos service raises instead.
         try:
-            decoder.decode(r, asn1Spec=AS_REP())
-        except (PyAsn1Error, ValueError, TypeError) as exc:
+            rep = decoder.decode(r, asn1Spec=AS_REP())[0]
+            rep_realm = str(rep['crealm'])
+            rep_cname = [str(c) for c in rep['cname']['name-string']]
+        except (PyAsn1Error, ValueError, TypeError, KeyError, IndexError) as exc:
             raise KerberosUnrecognisedReply(
                 "KDC reply decodes as neither KRB_ERROR nor AS-REP"
             ) from exc
+        # 230-REVIEW-R2 IN-04: only an AS-REP that answers THIS probe proves
+        # "no pre-auth required".  Case-insensitive on both: realms are
+        # conventionally upper-case, and AD matches principal names without
+        # regard to case.
+        expected_cname = [str(c) for c in client_name.components]
+        if (rep_realm.upper() != realm.upper()
+                or [c.lower() for c in rep_cname] != [c.lower() for c in expected_cname]):
+            raise KerberosUnrecognisedReply(
+                "AS-REP does not answer the probe (realm or principal mismatch)"
+            )
         return []
     code = int(err['error-code'])
     if code == preauth_required:

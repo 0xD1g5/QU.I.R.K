@@ -1251,9 +1251,10 @@ retry.
 
 If something answers on port 88 but not as a KDC, the scanner emits the row
 `kerberos-etypes-unavailable-unrecognised-reply` and records the error on it. This covers a reply
-that decodes as neither a Kerberos error nor an AS-REP, and a reply that breaks Kerberos TCP
-framing: an HTTP or other non-Kerberos service, a truncated reply, or a declared reply length
-over 64 KiB. That row is never reported as `kerberos-no-preauth`, derives no finding, and is not
+that decodes as neither a Kerberos error nor an AS-REP, an AS-REP for a different realm or
+principal than the probe's (realm and principal are compared without regard to case), and a
+reply that breaks Kerberos TCP framing: an HTTP or other non-Kerberos service, a truncated reply,
+or a declared reply length over 64 KiB. That row is never reported as `kerberos-no-preauth`, derives no finding, and is not
 retried over UDP. Only a TCP probe that received no reply byte at all (connection refused, a
 timeout, or a close before replying) falls back to UDP. The TCP probe, including its reply, is
 bounded by the Kerberos timeout (a fixed 10 s), so a silent or misbehaving listener cannot stall
