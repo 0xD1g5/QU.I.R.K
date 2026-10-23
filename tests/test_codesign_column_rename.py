@@ -133,9 +133,7 @@ def test_codesign_scanner_writes_codesign_scan_json() -> None:
     tls_ep = SimpleNamespace(
         host="10.0.0.1",
         port=443,
-        tls_capabilities_json=json.dumps({
-            "eku_oids": ["1.3.6.1.5.5.7.3.3"],  # code-signing EKU
-        }),
+        cert_eku_oids="1.3.6.1.5.5.7.3.3",  # code-signing EKU
         cert_subject="CN=TestCodeSigner",
         cert_issuer="CN=TestCA",
         cert_sig_alg="sha256WithRSAEncryption",

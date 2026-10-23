@@ -8,9 +8,9 @@ Also covers the TLS-EKU in-process path via
 ``scan_codesign_from_tls_endpoints``.
 
 For the TLS-EKU check, the implementation reads EKU OIDs from
-``tls_capabilities_json["eku_oids"]`` (the existing TLS capabilities field).
-This avoids needing a new model field while allowing run_scan.py (Plan 95-03)
-to populate the EKU OID list when it captures TLS cert data.
+``cert_eku_oids`` (the persisted leaf-EKU column, Phase 230).
+The TLS capture populates it at both parse sites (see
+tests/test_codesign_tls_eku_live.py for the real-capture proof).
 
 Asserts the contract from Phase 95 Plan 95-01:
 
@@ -170,9 +170,7 @@ def test_tls_eku_check():
         cert_sig_alg="sha256",
         cert_subject="CN=tls-server.example.com",
         cert_not_after=None,
-        tls_capabilities_json=json.dumps({
-            "eku_oids": ["1.3.6.1.5.5.7.3.1", "1.3.6.1.5.5.7.3.3"],  # ServerAuth + CodeSigning
-        }),
+        cert_eku_oids="1.3.6.1.5.5.7.3.1,1.3.6.1.5.5.7.3.3",  # ServerAuth + CodeSigning
     )
     tls_ep_without_codesign = CryptoEndpoint(
         host="web-server.example.com",
@@ -183,9 +181,7 @@ def test_tls_eku_check():
         cert_sig_alg="sha256",
         cert_subject="CN=web-server.example.com",
         cert_not_after=None,
-        tls_capabilities_json=json.dumps({
-            "eku_oids": ["1.3.6.1.5.5.7.3.1"],  # ServerAuth only
-        }),
+        cert_eku_oids="1.3.6.1.5.5.7.3.1",  # ServerAuth only
     )
 
     # Only the server-auth-only endpoint

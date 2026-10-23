@@ -8,7 +8,7 @@ CSIGN-01: Discovers code-signing certificates from two passive sources:
   1. LDAP ``userCertificate`` attributes on configured targets, filtered
      to entries that carry the CodeSigning EKU (OID 1.3.6.1.5.5.7.3.3).
   2. Already-captured TLS ``CryptoEndpoint`` objects checked in-process
-     for the CodeSigning EKU (reads ``tls_capabilities_json["eku_oids"]``);
+     for the CodeSigning EKU (reads ``cert_eku_oids``);
      no new network fetch is performed.
 
 CSIGN-02: Certificates with weak algorithms (RSA<2048, EC<256, SHA-1 sig
@@ -55,7 +55,7 @@ EKU_CODE_SIGNING = ExtendedKeyUsageOID.CODE_SIGNING
 # LDAP attribute — only the standard RFC 4523 attribute (NOT userSMIMECertificate)
 _CODESIGN_ATTRS = ("userCertificate",)
 
-# CodeSigning EKU OID as a dotted string (for tls_capabilities_json lookup)
+# CodeSigning EKU OID as a dotted string (for cert_eku_oids lookup)
 _CODE_SIGNING_OID = EKU_CODE_SIGNING.dotted_string  # "1.3.6.1.5.5.7.3.3"
 
 
@@ -429,7 +429,7 @@ def scan_codesign_from_tls_endpoints(
     """Check already-captured TLS endpoints in-process for the CodeSigning EKU.
 
     No new network I/O is performed (CSIGN-01 in-process path). Reads EKU OIDs
-    from ``ep.tls_capabilities_json["eku_oids"]`` if present, else skips.
+    from ``ep.cert_eku_oids`` (comma-separated) if present, else skips.
 
     When the CodeSigning EKU OID (1.3.6.1.5.5.7.3.3) is found, emits a
     CODE_SIGNING CryptoEndpoint. Since raw DER is not stored in TLS endpoints,
@@ -445,15 +445,8 @@ def scan_codesign_from_tls_endpoints(
     results: list = []
 
     for ep in tls_endpoints:
-        # Read EKU OIDs from tls_capabilities_json
-        eku_oids: list[str] = []
-        try:
-            caps_json = getattr(ep, "tls_capabilities_json", None)
-            if caps_json:
-                caps = json.loads(caps_json)
-                eku_oids = caps.get("eku_oids") or []
-        except Exception:
-            pass
+        # Phase 230 DETECT-01: leaf EKU OIDs from the dedicated persisted column
+        eku_oids = (getattr(ep, "cert_eku_oids", None) or "").split(",")
 
         if _CODE_SIGNING_OID not in eku_oids:
             continue

@@ -35,6 +35,7 @@ from quirk.db import (
     _PHASE146_SCANJOB_COLUMNS,
     _PHASE191_COLUMNS,
     _PHASE229_COLUMNS,
+    _PHASE230_COLUMNS,
     _SAFE_COL_TYPE_RE,
     _V43_COLUMNS,
     _ensure_columns,
@@ -518,6 +519,47 @@ def test_phase229_push_payload_id_migration_idempotent(tmp_path: Path) -> None:
     rows = [
         r for r in results
         if r.table == "crypto_endpoints" and r.column == "push_payload_id"
+    ]
+    assert len(rows) == 1
+    assert rows[0].status == "already-present"
+
+
+# ---------------------------------------------------------------------------
+# Phase 230 DETECT-01 D-02a: cert_eku_oids column on crypto_endpoints.
+# ---------------------------------------------------------------------------
+
+
+def test_phase230_cert_eku_oids_column_registered() -> None:
+    assert _PHASE230_COLUMNS == (("cert_eku_oids", "TEXT"),)
+    assert ("crypto_endpoints", _PHASE230_COLUMNS) in _ADDITIVE_MIGRATIONS
+
+
+def test_phase230_cert_eku_oids_migration_idempotent(tmp_path: Path) -> None:
+    import sqlite3
+
+    from sqlalchemy import inspect as sa_inspect
+
+    db_path = tmp_path / "p230.db"
+    init_db(str(db_path))
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("ALTER TABLE crypto_endpoints DROP COLUMN cert_eku_oids")
+        conn.commit()
+    finally:
+        conn.close()
+
+    engine = get_engine(str(db_path))
+    cols = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    assert "cert_eku_oids" not in cols
+
+    run_additive_migration(engine, dry_run=False)
+    cols = {c["name"] for c in sa_inspect(engine).get_columns("crypto_endpoints")}
+    assert "cert_eku_oids" in cols
+
+    results = run_additive_migration(engine, dry_run=False)
+    rows = [
+        r for r in results
+        if r.table == "crypto_endpoints" and r.column == "cert_eku_oids"
     ]
     assert len(rows) == 1
     assert rows[0].status == "already-present"

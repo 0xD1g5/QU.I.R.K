@@ -77,6 +77,24 @@ def _spki_sha256(cert) -> Optional[str]:
         return None
 
 
+def _eku_oids(cert) -> Optional[str]:
+    """Phase 230 DETECT-01: comma-separated dotted EKU OIDs of a leaf certificate.
+
+    Returns None when the certificate has no ExtendedKeyUsage extension, or when
+    the extension cannot be parsed. Same never-raise contract as
+    ``_spki_sha256`` (T-191-01): a malformed extension must never abort the
+    sslyze path or turn the fallback row into a scan_error.
+    """
+    try:
+        ext = cert.extensions.get_extension_for_class(x509.ExtendedKeyUsage)
+        oids = ",".join(o.dotted_string for o in ext.value)
+        return oids or None
+    except x509.ExtensionNotFound:
+        return None
+    except Exception:
+        return None
+
+
 def _extract_sans(cert: x509.Certificate) -> str:
     try:
         ext = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
@@ -240,6 +258,7 @@ def _scan_one_sslyze(
             ep.cert_pubkey_alg = alg
             ep.cert_pubkey_size = size
             ep.cert_spki_fingerprint = _spki_sha256(leaf)
+            ep.cert_eku_oids = _eku_oids(leaf)
 
             # Date handling — use _utc variant when available
             if hasattr(leaf, "not_valid_before_utc") and hasattr(leaf, "not_valid_after_utc"):
@@ -464,6 +483,7 @@ def _scan_one_fallback(
                 ep.cert_pubkey_alg = alg
                 ep.cert_pubkey_size = size
                 ep.cert_spki_fingerprint = _spki_sha256(cert)
+                ep.cert_eku_oids = _eku_oids(cert)
 
                 # avoid cryptography warnings if possible
                 if hasattr(cert, "not_valid_before_utc") and hasattr(cert, "not_valid_after_utc"):
@@ -547,6 +567,8 @@ def scan_one(
                         ep.cert_pubkey_alg = fb.cert_pubkey_alg
                     if ep.chain_verified is None:
                         ep.chain_verified = fb.chain_verified
+                    if ep.cert_eku_oids is None:
+                        ep.cert_eku_oids = fb.cert_eku_oids
                 return ep
         except Exception as e:
             if logger:
