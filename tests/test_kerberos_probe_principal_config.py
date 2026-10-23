@@ -644,6 +644,7 @@ class _SocketSpy:
         self.connects = []
         self.client_socks = []
         self.send_timeouts = []
+        self.connect_timeouts = []
         spy = self
 
         class Tracked(real_socket):
@@ -657,8 +658,13 @@ class _SocketSpy:
 
             def connect(self, addr):
                 spy.connects.append(tuple(addr[:2]))
+                spy.connect_timeouts.append(self.gettimeout())
                 if addr[0] == _BLACKHOLE:
-                    time.sleep(self.gettimeout() or 0)
+                    # 230-REVIEW-R7 WR-01: an unbounded (None) timeout must
+                    # not read as an instant timeout; it waits long enough
+                    # for the caller's watchdog/elapsed bound to catch it.
+                    t = self.gettimeout()
+                    time.sleep(t if t is not None else 30)
                     raise socket_mod.timeout("timed out")
                 time.sleep(connect_delay)
                 return super().connect(addr)
@@ -880,6 +886,7 @@ def test_retry_keeps_the_ipv6_scope_id(monkeypatch):
             "fe80::1%en0", 88, _REQ, 2,
             deadline=time.monotonic() + 2, peer=("fe80::1", 88, 0, 7),
         )
+    assert seen["timeout"] is not None and 0 < seen["timeout"] <= 2
     assert seen["family"] == socket_mod.AF_INET6
     assert seen["addr"] == ("fe80::1", 88, 0, 7)
     assert seen["closed"] is True
@@ -889,7 +896,7 @@ def test_retry_connect_gets_only_the_time_left(monkeypatch):
     """230-REVIEW-R6 WR-02: the retry's connect is bounded by the time left on
     the shared deadline, not by a fresh full timeout, and a connect that
     times out routes like a failed connect (OSError -> UDP)."""
-    _SocketSpy(monkeypatch, {})
+    spy = _SocketSpy(monkeypatch, {})
     result, exc, elapsed = kwh.run_with_watchdog(
         lambda: ks._kdc_tcp_exchange(
             "127.0.0.1", 88, _REQ, 4,
@@ -897,6 +904,8 @@ def test_retry_connect_gets_only_the_time_left(monkeypatch):
         ),
         budget=8,
     )
+    assert spy.connect_timeouts and spy.connect_timeouts[0] is not None
+    assert 0 < spy.connect_timeouts[0] <= 1.0 + 0.05, spy.connect_timeouts
     assert isinstance(exc, OSError), repr(exc)
     assert elapsed < 2.0, f"retry connect waited {elapsed:.2f}s on a 1.0s budget"
 

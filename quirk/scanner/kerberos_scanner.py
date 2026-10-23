@@ -381,6 +381,14 @@ def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float,
             raise
 
 
+def _fmt_peer(peer) -> str:
+    """Render a recorded sockaddr for logs, keeping an IPv6 scope id
+    (230-REVIEW-R7 IN-02): ``fe80::1%3`` rather than a bare ``fe80::1``."""
+    if len(peer) == 4 and peer[3]:
+        return f"{peer[0]}%{peer[3]}"
+    return str(peer[0])
+
+
 def _probe_kdc(host: str, realm: str, timeout: int, port=None,
                principal: str = DEFAULT_PROBE_PRINCIPAL, deadline=None,
                peer=None) -> list:
@@ -714,7 +722,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 if logger:
                     logger.info("Kerberos TCP probe to %s dropped (%s); retrying "
                                 "once to %s within the remaining %.2fs",
-                                target, exc, exc.peer[0], left)
+                                target, exc, _fmt_peer(exc.peer), left)
                 etypes = _probe_kdc(target, realm, timeout, principal=principal,
                                     deadline=exc.deadline, peer=exc.peer)
         except KerberosPreauthNoEtypes:
