@@ -33465,11 +33465,11 @@ gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomO
 .venv/bin/python -m pytest -q -m "" tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire
 ```
 
-**Pass Criteria:** The run reports 8 passed.
+**Pass Criteria:** The run reports 33 passed.
 
-**Result:** - [x] PASS (2026-10-23 8 passed — covered by `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-23 33 passed — covered by `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-23  **Tester:** automated
-**Notes:** Plan 230-02 (commit 15e35662). LOCAL-ONLY PROOF: this class skips in CI's Linux Full Suite (ci_extras_gap: `.[all]` excludes impacket; registered in tests/skip_registry.py). The 8 passed was observed locally with impacket 0.13.0. Adding an [identity] CI leg is operator-reserved and was not done. REAL-KDC: MEASURED on 2026-10-23 against the chaos-lab Samba KDC (on 127.0.0.1:18088 through a scratch override because host port 88 is held by the macOS KDC): principal Administrator -> KRB_ERROR code 25 with etypes [18] only (6 of 10 attempts; the rest were empty TCP replies); principal nobody -> code 6 (principal unknown); IP-literal realm 127.0.0.1 -> code 6. Fixed-fake-KDC results are therefore corroborated by one real KDC, and the real KDC offers aes256 only, not the RC4/AES128 rows the old oracle claimed.
+**Notes:** Plan 230-02 (commit 15e35662). LOCAL-ONLY PROOF: this class skips in CI's Linux Full Suite (ci_extras_gap: `.[all]` excludes impacket; registered in tests/skip_registry.py). The 33 passed was re-measured locally with impacket 0.13.0 after the seven 230-REVIEW rounds (it was 8 at plan close; the rounds added fail-first tests for code-25 replies without etype info, unparseable and truncated replies, the one TCP retry, AS-REP realm/principal matching and the IPv6 scope id). Adding an [identity] CI leg is operator-reserved and was not done. REAL-KDC: MEASURED on 2026-10-23 against the chaos-lab Samba KDC (on 127.0.0.1:18088 through a scratch override because host port 88 is held by the macOS KDC): principal Administrator -> KRB_ERROR code 25 with etypes [18] only (6 of 10 attempts; the rest were empty TCP replies); principal nobody -> code 6 (principal unknown); IP-literal realm 127.0.0.1 -> code 6. Fixed-fake-KDC results are therefore corroborated by one real KDC, and the real KDC offers aes256 only, not the RC4/AES128 rows the old oracle claimed.
 
 ### UAT-230-04: --auth-* credentials reach the JWKS target under all four schemes and never appear in DEBUG logs
 
@@ -33551,8 +33551,8 @@ gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomO
   tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_principal_unknown_reply_yields_honest_row
 ```
 
-**Pass Criteria:** The run reports 12 passed.
+**Pass Criteria:** The run reports 74 passed.
 
-**Result:** - [x] PASS (2026-10-23 12 passed — covered by `tests/test_kerberos_probe_principal_config.py` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_configured_principal_is_sent_on_the_wire` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_principal_unknown_reply_yields_honest_row`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-23 74 passed — covered by `tests/test_kerberos_probe_principal_config.py` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_configured_principal_is_sent_on_the_wire` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_principal_unknown_reply_yields_honest_row`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-23  **Tester:** automated
-**Notes:** Plan 230-02 (D-24/D-25). The config file (10 passed) is CI-visible and needs no impacket; the two wire nodes (2 passed) are LOCAL-ONLY and skip in CI (ci_extras_gap), same as UAT-230-03. The principal-unknown row's two effects (counts as assessed in identity and coverage) are pinned, not endorsed, by test_principal_unknown_row_counts_as_assessed_pinned and owned by todo 261023-detect-kerberos-placeholder-rows-count-as-assessed (999.120). kerberos_probe_principal is YAML-only; dashboard parity is todo 261023-detect-kerberos-probe-principal-dashboard-parity (999.121).
+**Notes:** Plan 230-02 (D-24/D-25). The config file (72 passed after the 230-REVIEW rounds; 10 at plan close) is CI-visible and needs no impacket; the two wire nodes (2 passed) are LOCAL-ONLY and skip in CI (ci_extras_gap), same as UAT-230-03. The principal-unknown row's two effects (counts as assessed in identity and coverage) are pinned, not endorsed, by test_principal_unknown_row_counts_as_assessed_pinned and owned by todo 261023-detect-kerberos-placeholder-rows-count-as-assessed (999.120). kerberos_probe_principal is YAML-only; dashboard parity is todo 261023-detect-kerberos-probe-principal-dashboard-parity (999.121).
