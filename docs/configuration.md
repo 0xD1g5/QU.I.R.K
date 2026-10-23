@@ -918,6 +918,9 @@ OpenAPI scan results appear in the standard findings table as `CryptoEndpoint(pr
 Phase 93 (available since release 5.0.0) introduced per-scan ephemeral credential support,
 through the `--auth-*` flags below, for the JWT/JWKS probe. The credential is sent to the JWKS
 target with the request; only logged URLs have the `api_key` query value replaced with `REDACTED`.
+The credential goes only to URLs on the same origin (scheme, host and port) as the configured JWT
+target. When the target's OIDC discovery document names a `jwks_uri` on a different origin, QUIRK
+fetches that URL without the credential and logs one WARNING naming both origins.
 The REST fuzzer does not attach the credential to its probes. It uses a bearer token only to forge
 the `--fuzz-jwt-alg-confusion` test token. Credentials are never
 persisted to SQLite, the CBOM, log files, or the dashboard — they live only in-process for the

@@ -123,3 +123,68 @@ def test_auth_basic_help_text():
     out = " ".join(proc.stdout.split())
     assert "user:password" in out
     assert "base64-encoded user:pass" not in out
+
+
+# ---------------------------------------------------------------------------
+# 230-REVIEW CR-01: a cross-origin jwks_uri named by the target's discovery
+# document must never receive the operator credential.
+# ---------------------------------------------------------------------------
+
+_AUTH_HEADER_NAMES = ("authorization", "x-api-key", "x-auth-token")
+
+
+@pytest.fixture
+def two_origin_servers():
+    from tests.jwks_wire_helpers import make_discovery_server, make_jwks_server
+
+    server_b = make_jwks_server()
+    jwks_uri = f"http://127.0.0.1:{server_b.server_address[1]}/keys"
+    server_a = make_discovery_server(jwks_uri)
+    try:
+        yield server_a, server_b
+    finally:
+        for s in (server_a, server_b):
+            s.shutdown()
+            s.server_close()
+
+
+@pytest.mark.parametrize("scheme", ["bearer", "api_key_header", "api_key_query", "basic"])
+def test_cross_origin_jwks_uri_gets_no_credentials(scheme, two_origin_servers, caplog):
+    server_a, server_b = two_origin_servers
+    ctx = _ctx(scheme)
+    with caplog.at_level(logging.DEBUG):
+        eps = _scan(server_a, ctx)
+
+    assert eps, "scan produced no endpoints (jwks_uri was not followed)"
+    assert server_b.seen, "cross-origin jwks_uri was never fetched"
+
+    # Server B (the target-chosen origin) gets nothing.
+    for path, headers in server_b.seen:
+        h = {k.lower() for k in headers}
+        for name in _AUTH_HEADER_NAMES:
+            assert name not in h, f"{scheme}: {name} sent to cross-origin jwks_uri"
+        assert "api_key" not in parse_qs(urlparse(path).query)
+
+    # Server A (the operator-supplied origin) still gets the credential on
+    # every request, discovery included.
+    assert server_a.seen
+    for path, headers in server_a.seen:
+        _wire_check(scheme, path, headers)
+
+    # One WARNING names the origin mismatch, and no record carries the secret.
+    secret = _ctx(scheme)._secret_buf.decode("utf-8")
+    mismatch = [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING and "different origin" in r.getMessage()
+    ]
+    assert len(mismatch) == 1
+    assert all(secret not in r.getMessage() for r in caplog.records)
+
+
+def test_same_origin_default_port_is_same_origin():
+    from quirk.scanner.jwt_scanner import _norm_origin
+
+    assert _norm_origin("https://h.example/x") == _norm_origin("https://H.example:443/y")
+    assert _norm_origin("http://h.example/x") == _norm_origin("http://h.example:80/")
+    assert _norm_origin("http://h.example/x") != _norm_origin("https://h.example/x")
+    assert _norm_origin("https://h.example/x") != _norm_origin("https://h.example:8443/x")

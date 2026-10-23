@@ -82,6 +82,33 @@ def _install_redact_filter() -> None:
 _install_redact_filter()
 
 
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _norm_origin(url: str) -> tuple:
+    """(scheme, host, port) with the scheme's default port filled in.
+
+    230-REVIEW CR-01: credentials are attached only when a request URL has the
+    same origin as the operator-supplied base URL. ``https://h`` and
+    ``https://h:443`` are the same origin; the host is compared lowercased.
+    """
+    p = urlparse(url)
+    scheme = (p.scheme or "").lower()
+    try:
+        port = p.port
+    except ValueError:
+        port = None
+    if port is None:
+        port = _DEFAULT_PORTS.get(scheme)
+    return (scheme, (p.hostname or "").lower(), port)
+
+
+def _origin_label(url: str) -> str:
+    """Render an origin as ``scheme://host:port`` (never path, query or userinfo)."""
+    scheme, host, port = _norm_origin(url)
+    return f"{scheme}://{host}:{port}"
+
+
 def _append_query_param(url: str, param_name: str, param_value: str) -> str:
     """Append a query parameter to a URL string.
 
@@ -167,17 +194,33 @@ def _fetch_jwks(
       When either is set, requests are made via a short-lived httpx.Client; the
       credential is sent intact and only logged URLs are redacted (logging.Filter).
       D-12: auth is attached to this existing fetch only — no new probe targets.
+
+    230-REVIEW CR-01: credentials (headers AND the query-param key) are attached
+    only to URLs with the same origin (scheme, host, port) as ``base_url``. A
+    discovery document's ``jwks_uri`` on another origin is fetched without
+    credentials, and one WARNING (origins only, no secret) records the mismatch.
     """
     base_url = base_url.rstrip("/")
     fetched_urls: list[str] = []
     _hdrs = auth_headers or {}
-    _use_client = bool(_hdrs) or auth_query is not None
+    _has_creds = bool(_hdrs) or auth_query is not None
+    _base_origin = _norm_origin(base_url)
+    _warned: set = set()
 
     def _get(url: str) -> "httpx.Response":
-        """Make a GET with optional auth; credentials are sent intact."""
+        """Make a GET; credentials are sent intact, but only to the base origin."""
+        same_origin = _norm_origin(url) == _base_origin
+        if _has_creds and not same_origin and "cross-origin" not in _warned:
+            _warned.add("cross-origin")
+            logger.warning(
+                "JWKS URL is on a different origin (%s) than the scan target (%s); "
+                "fetching it without credentials",
+                _origin_label(url), _origin_label(base_url),
+            )
+        _use_client = _has_creds and same_origin
         # Append query-param key to URL if present (D-03: never in headers)
         fetch_url = url
-        if auth_query is not None:
+        if auth_query is not None and same_origin:
             fetch_url = _append_query_param(url, auth_query[0], auth_query[1])
         if _use_client:
             with httpx.Client(
