@@ -92,7 +92,7 @@ HORIZON prose:
       with the pinned impacket (todo `261013-doc224-kerberos-preauth-required-read-as-no-preauth`).
 - [x] **DETECT-03**: `--auth-*` credentials reach the JWKS target, and the redaction applies only to
       logged output, proven by a wire-level test asserting the received headers (`999.125` item 1).
-- [ ] **DETECT-04**: `--auth-basic` sends a correctly base64-encoded `Authorization: Basic` header,
+- [x] **DETECT-04**: `--auth-basic` sends a correctly base64-encoded `Authorization: Basic` header,
       and its help text and `docs/configuration.md` row match (`999.125` item 2).
 - [ ] **DETECT-05**: A bearer token declaring `alg: none` produces a CRITICAL finding in a scan, with
       its score treatment decided and recorded in the phase (`999.125` item 3).
@@ -189,7 +189,7 @@ Deferred from this milestone with an owner:
 | DETECT-01 | Phase 230 | Complete |
 | DETECT-02 | Phase 230 | Complete |
 | DETECT-03 | Phase 230 | Complete |
-| DETECT-04 | Phase 230 | Pending |
+| DETECT-04 | Phase 230 | Complete |
 | DETECT-05 | Phase 230 | Pending |
 | QRAMM-17 | Phase 231 | Pending |
 | QRAMM-18 | Phase 231 | Pending |

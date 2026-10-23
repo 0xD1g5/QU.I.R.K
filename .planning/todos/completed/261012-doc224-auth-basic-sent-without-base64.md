@@ -4,7 +4,8 @@ created: 2026-10-12
 source: Phase 224 doc-claim ledger (DOC-04, D-10); ledger rows DCL-CONFIG-A-* (configuration.md Authenticated Scanning)
 priority: medium
 area: quirk/auth/credentials.py
-status: pending
+status: completed
+completed: 2026-10-23
 resolves_phase: 230
 owner: DETECT-04
 ---
@@ -19,12 +20,19 @@ only an unrelated JWK decode). Reproduced 2026-10-12: with `BV=user:pass`, `Cred
 text and the old `docs/configuration.md` row both said the flag takes `user:password` and adds `Authorization: Basic
 <b64>`. `docs/configuration.md` now says the secret is sent as given, so the operator must pre-encode it.
 
-- [ ] Decide the contract: accept `user:password` and encode it in `as_headers()`, or keep verbatim and rename the
+- [x] Decide the contract: accept `user:password` and encode it in `as_headers()`, or keep verbatim and rename the
       flag help to "base64(user:password)".
-- [ ] Add a test that the emitted header decodes to the supplied `user:password`.
-- [ ] Then update `docs/configuration.md` (the `--auth-basic` row) and the `--auth-basic` help text.
+- [x] Add a test that the emitted header decodes to the supplied `user:password`.
+- [x] Then update `docs/configuration.md` (the `--auth-basic` row) and the `--auth-basic` help text.
 
 ## Feasibility & Effort
 
 **CONFIRMED** (live call above). Effort **S**: one `base64.b64encode` in the `basic` branch plus a test; the choice
 of contract is the only decision. No spike needed.
+
+## Resolution (Phase 230, 2026-10-23)
+
+- Contract chosen: `--auth-basic` takes `user:password` and `as_headers()` base64-encodes it (UTF-8), per RFC 7617. A value without a colon raises a fixed-text `ValueError` that never echoes the value; a pre-encoded value is therefore rejected. This is a behaviour change, called out in `changelog.d/phase-230.bugfix.md`.
+- Fix: `3c42b21c` (with the shared wire harness). `--help` and the getpass prompt now say `user:password`; `docs/configuration.md` updated in `40297bbd`.
+- Proof: `tests/test_jwks_auth_wire.py::test_basic_header_decodes_to_user_password`, `::test_basic_without_colon_raises_from_cli`, `::test_basic_without_colon_raises_from_as_headers`, `::test_auth_basic_help_text`, `tests/test_credential_context.py::TestAsHeaders::test_basic_scheme`, `::test_basic_scheme_rejects_pre_encoded_value` (6 passed, observed 2026-10-23). Reverting `as_headers` to verbatim turns 3 red. UAT-230-05.
+- 999.125 item 2 fixed.
