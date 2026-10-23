@@ -9,6 +9,7 @@ Public surface:
   CredentialContext.from_cli(...)  -> Optional[CredentialContext]
   CredentialContext.as_headers()   -> dict[str, str]
   CredentialContext.query_param()  -> tuple[str, str] | None
+  CredentialContext.bearer_alg_state() -> tuple[str, str | None]   # Phase 230 DETECT-05
   CredentialContext.close()        -> None
 """
 from __future__ import annotations
@@ -113,6 +114,29 @@ class CredentialContext:
         except Exception:
             # Opaque (non-JWT) bearer token or malformed header — no declared alg.
             return None
+
+    def bearer_alg_state(self) -> tuple[str, Optional[str]]:
+        """Tri-state view of a bearer token's declared JWT algorithm (Phase 230 DETECT-05).
+
+        Returns ``("declared", alg)``, ``("missing", None)`` (a JWT whose header has
+        no alg) or ``("opaque", None)`` (non-bearer scheme, non-JWT, or any decode
+        failure). ``bearer_declared_alg`` cannot tell missing from opaque.
+
+        Security: only the alg string is returned; the raw token is never returned,
+        logged, or persisted.
+        """
+        if self.scheme != "bearer":
+            return ("opaque", None)
+        try:
+            import jwt  # PyJWT (core dep); lazy import keeps module load light
+            token = self._secret_buf.decode("utf-8")
+            header = jwt.get_unverified_header(token)
+        except Exception:
+            return ("opaque", None)
+        alg = header.get("alg")
+        if not alg:
+            return ("missing", None)
+        return ("declared", str(alg))
 
     def close(self) -> None:
         """Zero the secret buffer in place (best-effort, D-04/D-05)."""

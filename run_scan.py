@@ -24,6 +24,7 @@ if sys.platform == "win32":
 from quirk.config import load_config, _parse_host_port
 from quirk.config_redaction import credential_is_set  # Phase 192 / OBS-01 / D-05
 from quirk.util.safe_exc import safe_str
+from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
 from quirk.models import (
@@ -504,6 +505,35 @@ def _is_resumed_jwt_row(e) -> bool:
         proto == "ADVISORY"
         and getattr(e, "service_detail", "") == ADVISORY_JWKS_VERIFY_DISABLED
     )
+
+
+def _bearer_token_endpoints(cred_ctx, cfg) -> list:
+    """Build the BEARER_TOKEN endpoint for an operator bearer credential.
+
+    Phase 94 TOKEN-02 + Phase 230 DETECT-05 (D-15a). Passive: the JWT header is
+    decoded UNVERIFIED for its declared algorithm only; the raw token never
+    reaches a CryptoEndpoint, the DB, or the CBOM. A declared alg is stored raw
+    (``none`` stays ``none``); a JWT with no alg is stored as
+    ``cert_pubkey_alg=None`` plus a service_detail marker. Opaque -> no endpoint.
+    """
+    if cred_ctx is None or getattr(cred_ctx, "scheme", None) != "bearer":
+        return []
+    state, alg = cred_ctx.bearer_alg_state()
+    if state == "opaque":
+        return []
+    host = (cfg.targets.fqdns[0] if getattr(cfg, "targets", None)
+            and getattr(cfg.targets, "fqdns", None) else "authenticated-scan")
+    detail = "declared_algorithm (unverified)"
+    if state == "missing":
+        detail += ": " + BEARER_ALG_ABSENT_MARKER
+    return [CryptoEndpoint(
+        host=host,
+        port=443,
+        protocol="BEARER_TOKEN",
+        cert_pubkey_alg=alg,
+        service_detail=detail,
+        severity="INFO",
+    )]
 
 
 def _is_privileged() -> Optional[bool]:
@@ -4053,20 +4083,7 @@ def main():
     # Phase 94 / TOKEN-02: classify the operator-supplied bearer credential into the CBOM.
     # Passive — the JWT header is decoded UNVERIFIED for its declared algorithm only; the
     # raw token never reaches a CryptoEndpoint, the DB, or the CBOM (only the alg string).
-    bearer_token_endpoints = []
-    if cred_ctx is not None and getattr(cred_ctx, "scheme", None) == "bearer":
-        _declared_alg = cred_ctx.bearer_declared_alg()
-        if _declared_alg:
-            _bt_host = (cfg.targets.fqdns[0] if getattr(cfg, "targets", None)
-                        and getattr(cfg.targets, "fqdns", None) else "authenticated-scan")
-            bearer_token_endpoints.append(CryptoEndpoint(
-                host=_bt_host,
-                port=443,
-                protocol="BEARER_TOKEN",
-                cert_pubkey_alg=_declared_alg,
-                service_detail="declared_algorithm (unverified)",
-                severity="INFO",
-            ))
+    bearer_token_endpoints = _bearer_token_endpoints(cred_ctx, cfg)
 
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + pqc_endpoints                                    # Phase 90 PQC-02
