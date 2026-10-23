@@ -447,8 +447,10 @@ Known open defects the lab exposes (not fixed by Phase 230):
   `kerberos-no-preauth`. UDP is used only after one of these, the same set as the operators
   guide lists: a TCP connect failure (refused, timed out, unreachable, or a name that does not
   resolve); a peer that sends no reply byte before the timeout; a failed send; any other socket
-  error before the first reply byte; a zero-byte TCP close or reset that recurs on the one retry,
-  or comes with under 0.25 s of the deadline left to retry in; or a Kerberos error other than
+  error before the first reply byte; a zero-byte TCP close or reset after which the one retry
+  also gets no reply byte (it closes, resets, runs out of the remaining deadline, or fails to
+  connect, send or read), or that cannot be retried (under 0.25 s of the deadline left, or the
+  address the first attempt reached is unknown); or a Kerberos error other than
   codes 25/6. Owned by todo
   `261023-detect-kerberos-udp-failure-reads-as-no-preauth`.
 - The `samba-dc` healthcheck runs `smbclient`, which the image lacks, so the container never

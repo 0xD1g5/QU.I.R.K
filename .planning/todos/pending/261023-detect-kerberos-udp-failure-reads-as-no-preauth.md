@@ -88,8 +88,10 @@ and the lab oracle):
 - a TCP connect failure (refused, timed out, unreachable, or a name that does not resolve);
 - a silent peer, or a send failure;
 - any other socket error before the first reply byte (`kind="error"`, e.g. EHOSTUNREACH after connect);
-- a zero-byte close or reset that happens again on the retry, or that leaves under 0.25 s of the first attempt's reply
-  deadline to retry in (R4 WR-01: the retry shares that deadline);
+- a zero-byte close or reset after which the one retry also gets no reply byte (it closes, resets, runs out of the
+  remaining deadline, or fails to connect, send or read), or that cannot be retried: under 0.25 s of the first
+  attempt's reply deadline left (R4 WR-01: the retry shares that deadline), or the address the first attempt reached
+  is unknown (230-REVIEW-R5: the retry connects only to that address);
 - a KRB_ERROR whose code is not 25 or 6.
 
 An unresolvable name reaches UDP, whose `sendto` fails the same way and returns `[]`, so it too reads as
