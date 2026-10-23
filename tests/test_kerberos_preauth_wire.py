@@ -366,9 +366,32 @@ class TestKerberosPreauthWire:
         "10300e3005a0030201173005a003020112"
     )
 
+    @classmethod
+    def _assert_blob_still_trips_a_non_pyasn1_error(cls):
+        """230-REVIEW-R4 IN-03: precondition.  These tests prove the broad
+        ``except`` only while the pinned decoder raises something OTHER than
+        PyAsn1Error on the blob (IndexError on pyasn1 0.6.3).  If an upgrade
+        changes that, fail loudly (find a new blob by fuzzing) rather than
+        pass while exercising only the narrow path."""
+        from impacket.krb5.asn1 import KRB_ERROR
+        from pyasn1.codec.ber import decoder
+        from pyasn1.error import PyAsn1Error
+
+        try:
+            decoder.decode(cls.DECODER_INDEXERROR_BLOB, asn1Spec=KRB_ERROR())
+        except PyAsn1Error as exc:
+            pytest.fail("precondition lost: DECODER_INDEXERROR_BLOB now raises "
+                        f"PyAsn1Error ({exc!r}), so this test no longer covers a "
+                        "non-pyasn1 decoder exception; re-fuzz a new blob")
+        except Exception:  # noqa: BLE001 - the precondition holds
+            return
+        pytest.fail("precondition lost: DECODER_INDEXERROR_BLOB now decodes "
+                    "without error; re-fuzz a new blob")
+
     def test_probe_kdc_decoder_indexerror_is_unrecognised_reply(self):
         import quirk.scanner.kerberos_scanner as ks
 
+        self._assert_blob_still_trips_a_non_pyasn1_error()
         peer = kwh.RawPeer(kwh.framed(self.DECODER_INDEXERROR_BLOB))
         try:
             result, exc, _ = kwh.run_with_watchdog(
@@ -383,6 +406,7 @@ class TestKerberosPreauthWire:
     def test_scan_decoder_indexerror_is_unrecognised_row_without_udp(self, monkeypatch):
         import quirk.scanner.kerberos_scanner as ks
 
+        self._assert_blob_still_trips_a_non_pyasn1_error()
         peer = kwh.RawPeer(kwh.framed(self.DECODER_INDEXERROR_BLOB))
         _redirect_kdc(monkeypatch, peer.port)
         udp_calls = self._real_udp_spy(monkeypatch)
