@@ -102,7 +102,7 @@ WR-01).
 
 ### Also in scope: UDP probe is IPv4-only (230-REVIEW-R3 IN-04)
 
-The TCP probe handles IPv6, because `socket.create_connection` resolves any family. `_probe_kdc_udp` hardcodes
+The TCP probe handles IPv6: the first attempt uses `socket.create_connection` (any family), and the one retry reconnects to the full recorded 4-tuple sockaddr in `AF_INET6`, so a scoped link-local KDC keeps its `scope_id` (230-REVIEW-R6 WR-01). `_probe_kdc_udp` hardcodes
 `socket.AF_INET`, so `_probe_kdc_udp('::1', ...)` fails with `[Errno 8] nodename nor servname` and returns `[]`. An
 IPv6 target therefore reaches this defect on every TCP outcome that falls back to UDP. This predates round 2. The fix
 belongs with this todo's UDP return-contract change: resolve with `getaddrinfo` and use the returned family.
