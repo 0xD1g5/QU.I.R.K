@@ -319,6 +319,9 @@ def test_tcp_exchange_zero_byte_reset_kind_is_reset():
     assert isinstance(exc, ks.KerberosTransportError), repr(exc)
     assert isinstance(exc.__cause__, (ConnectionResetError, ConnectionAbortedError))
     assert exc.answered is False and exc.kind == "reset"
+    # 230-REVIEW-R4 IN-05: zero bytes arrived, so it is not "mid-reply".
+    assert "before any reply byte" in str(exc)
+    assert "mid-reply" not in str(exc)
 
 
 def test_tcp_exchange_silent_peer_kind_is_timeout():

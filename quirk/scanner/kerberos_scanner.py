@@ -286,8 +286,10 @@ def _recv_exact(sock, n: int, deadline: float, received_before: int) -> bytes:
             kind = ("reset" if isinstance(exc, (ConnectionResetError,
                                                 ConnectionAbortedError))
                     else "error")
+            # 230-REVIEW-R4 IN-05: "mid-reply" only if a reply byte arrived.
+            where = "mid-reply" if answered else "before any reply byte"
             raise KerberosTransportError(
-                f"KDC connection failed mid-reply: {exc}", answered, kind
+                f"KDC connection failed {where}: {exc}", answered, kind
             ) from exc
         if not chunk:
             raise KerberosTransportError(
