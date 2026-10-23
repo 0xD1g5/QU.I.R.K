@@ -219,3 +219,69 @@ def test_tcp_exchange_connect_refused_is_plain_oserror():
     )
     assert isinstance(exc, OSError)
     assert not isinstance(exc, ks.KerberosTransportError)
+
+
+# --- 230-REVIEW-R2 WR-01: which TCP failures fall back to UDP (CI-visible) ---
+# _probe_kdc is replaced here only to choose the exception; the real wire path
+# is proven in test_kerberos_preauth_wire.py (local-only, needs impacket).
+
+
+def _scan_with_tcp_raising(monkeypatch, exc):
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+
+    def tcp(*a, **k):
+        raise exc
+
+    udp_calls = []
+    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+    return ks.scan_kerberos_targets(["kdc.example.com"], timeout=1), udp_calls
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ks.KerberosUnrecognisedReply("neither KRB_ERROR nor AS-REP"),
+        ks.KerberosTransportError("implausible KDC reply length", answered=True),
+    ],
+    ids=["unrecognised-reply", "answered-transport-error"],
+)
+def test_answered_tcp_failure_is_honest_row_without_udp(monkeypatch, exc):
+    rows, udp_calls = _scan_with_tcp_raising(monkeypatch, exc)
+    assert udp_calls == []
+    assert [r.service_detail for r in rows] == [
+        "kerberos-etypes-unavailable-unrecognised-reply"
+    ]
+    assert rows[0].scan_error and rows[0].cert_pubkey_alg is None
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ConnectionRefusedError("refused"),
+        TimeoutError("connect timed out"),
+        ks.KerberosTransportError("KDC reply timed out", answered=False),
+    ],
+    ids=["refused", "connect-timeout", "no-reply-byte"],
+)
+def test_unanswered_tcp_failure_still_falls_back_to_udp(monkeypatch, exc):
+    rows, udp_calls = _scan_with_tcp_raising(monkeypatch, exc)
+    assert udp_calls == [1]
+
+
+def test_unrecognised_reply_row_derives_no_finding_and_no_weak_count():
+    from quirk.dashboard.api.routes.scan import _derive_identity_findings
+    from quirk.intelligence.evidence import build_evidence_summary
+
+    ep = CryptoEndpoint(
+        host="kdc.example.com",
+        port=88,
+        protocol="KERBEROS",
+        cert_pubkey_alg=None,
+        service_detail="kerberos-etypes-unavailable-unrecognised-reply",
+        scan_error="implausible KDC reply length 1213486160",
+        scan_error_category="exception",
+    )
+    assert _derive_identity_findings([ep]) == []
+    assert build_evidence_summary([ep])["identity_weak_etype_count"] == 0

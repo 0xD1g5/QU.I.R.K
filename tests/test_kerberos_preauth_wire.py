@@ -249,6 +249,40 @@ class TestKerberosPreauthWire:
         rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=3)
         assert [r.service_detail for r in rows] == ["kerberos-no-preauth"]
 
+    # 230-REVIEW-R2 WR-01: a TCP peer that answered with non-Kerberos bytes is
+    # a positive answer, not a transport failure.  It must yield the honest
+    # unrecognised-reply row with NO UDP fallback, because the real UDP leg
+    # returns [] (= "no pre-auth") on any failure (D-08a).  The UDP leg here is
+    # the REAL _probe_kdc_udp behind a delegating spy, aimed at the same
+    # loopback port number, where nothing listens on UDP.
+
+    def _real_udp_spy(self, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
+
+        calls = []
+        real = ks._probe_kdc_udp
+
+        def spy(*a, **k):
+            calls.append(1)
+            return real(*a, **k)
+
+        monkeypatch.setattr(ks, "_probe_kdc_udp", spy)
+        return calls
+
+    def _assert_unrecognised_row(self, rows, udp_calls):
+        assert not any(r.service_detail == "kerberos-no-preauth" for r in rows)
+        assert [r.service_detail for r in rows] == [
+            "kerberos-etypes-unavailable-unrecognised-reply"
+        ]
+        row = rows[0]
+        assert row.cert_pubkey_alg is None
+        assert row.scan_error
+        assert udp_calls == []
+        sj = json.loads(row.kerberos_scan_json)
+        assert sj["etypes"] == []
+        assert sj["probe_principal"] == "Administrator"
+        assert sj["etypes_unavailable_reason"]
+
     @pytest.mark.parametrize(
         "blob",
         [
@@ -256,24 +290,68 @@ class TestKerberosPreauthWire:
             bytes([0x6B, 0x03, 0x30, 0x01, 0x00]),  # AS-REP tag, not an AS-REP
             b"HTTP/1.1 400 Bad Request\r\n\r\n",
         ],
-        ids=["garbage", "as-rep-shell", "http"],
+        ids=["garbage", "as-rep-shell", "http-framed"],
     )
     def test_unrecognised_reply_is_not_no_preauth(self, blob, fake_kdc_factory, monkeypatch):
         import quirk.scanner.kerberos_scanner as ks
 
         kdc = fake_kdc_factory(fixed_blob=blob)
         _redirect_kdc(monkeypatch, kdc.port)
+        udp_calls = self._real_udp_spy(monkeypatch)
+        rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=1)
+        self._assert_unrecognised_row(rows, udp_calls)
 
-        def udp_fails(*a, **k):
-            # Host port 88 is held by the macOS KDC; simulate the UDP leg
-            # failing so the existing error handling is what the row shows.
-            raise OSError("udp probe stubbed out")
+    @pytest.mark.parametrize(
+        "handler",
+        [kwh.http_unframed, kwh.short_then_close, kwh.huge_declared],
+        ids=["http-unframed", "short-then-close", "huge-declared"],
+    )
+    def test_broken_framing_is_not_no_preauth(self, handler, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
 
-        monkeypatch.setattr(ks, "_probe_kdc_udp", udp_fails)
-        rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=3)
-        assert not any(r.service_detail == "kerberos-no-preauth" for r in rows)
-        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
-        assert rows[0].scan_error
+        peer = kwh.RawPeer(handler)
+        _redirect_kdc(monkeypatch, peer.port)
+        udp_calls = self._real_udp_spy(monkeypatch)
+        try:
+            rows, exc, _ = kwh.run_with_watchdog(
+                lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=1), budget=10,
+            )
+        finally:
+            peer.close()
+        assert exc is None
+        self._assert_unrecognised_row(rows, udp_calls)
+
+    @pytest.mark.parametrize(
+        "handler", [None, kwh.silent], ids=["tcp-refused", "silent-peer"],
+    )
+    def test_no_tcp_reply_still_falls_back_to_udp(self, handler, monkeypatch):
+        """A TCP leg that got no reply byte is a transport failure: UDP is
+        still tried (RFC 4120 §7.2.1).  The row that follows is D-08a's
+        deferred defect (todo 261023-detect-kerberos-udp-failure-reads-as-
+        no-preauth), so only the fallback is asserted here."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        if handler is None:
+            s = socket.socket()
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+            s.close()
+            peer = None
+        else:
+            peer = kwh.RawPeer(handler)
+            port = peer.port
+        _redirect_kdc(monkeypatch, port)
+        udp_calls = self._real_udp_spy(monkeypatch)
+        try:
+            rows, exc, _ = kwh.run_with_watchdog(
+                lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=1), budget=10,
+            )
+        finally:
+            if peer:
+                peer.close()
+        assert exc is None
+        assert udp_calls == [1]
+        assert len(rows) == 1
 
     def test_probe_kdc_unrecognised_reply_raises(self, fake_kdc_factory):
         import quirk.scanner.kerberos_scanner as ks
@@ -421,17 +499,3 @@ class TestKerberosPreauthWire:
         assert type(exc).__name__ == "KerberosTransportError"
         assert exc.answered is False
         assert elapsed < 2
-
-    def test_scan_returns_on_unframed_http_peer(self, monkeypatch):
-        import quirk.scanner.kerberos_scanner as ks
-
-        peer = kwh.RawPeer(kwh.http_unframed)
-        monkeypatch.setattr(ks, "KDC_PORT", peer.port)
-        try:
-            rows, exc, _ = kwh.run_with_watchdog(
-                lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=1), budget=10,
-            )
-        finally:
-            peer.close()
-        assert exc is None
-        assert len(rows) == 1

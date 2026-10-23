@@ -470,6 +470,42 @@ def _preauth_no_etypes_row(target: str, realm: str, timeout: int, logger,
     return row
 
 
+def _unrecognised_reply_row(target: str, realm: str, timeout: int, logger,
+                            principal: str, now, exc) -> CryptoEndpoint:
+    """Honest row for a port-88 peer that answered, but not as a KDC.
+
+    230-REVIEW-R2 WR-01: the reply decoded as neither KRB_ERROR nor AS-REP, or
+    broke the TCP framing after sending bytes.  Something answered, so this is
+    not a transport failure: no UDP fallback (whose ``[]`` reads as "no
+    pre-auth", D-08a), never ``kerberos-no-preauth``.  Carries the error, so it
+    is visibly a failed assessment rather than a clean result.
+    """
+    row = CryptoEndpoint(
+        host=target,
+        port=88,
+        protocol="KERBEROS",
+        cert_pubkey_alg=None,
+        service_detail="kerberos-etypes-unavailable-unrecognised-reply",
+        scanned_at=now,
+        scan_error=safe_str(exc),
+        scan_error_category="exception",
+    )
+    ldap_result = _probe_ldap_anon(target, timeout, logger)
+    row.kerberos_scan_json = json.dumps({
+        "realm": realm,
+        "etypes": [],
+        "etype_details": [],
+        "ldap": ldap_result,
+        "ldap_status": ldap_result.get("ldap_status", "skipped"),
+        "probe_principal": principal,
+        "etypes_unavailable_reason": (
+            "port 88 answered with a reply that is not a Kerberos KRB_ERROR or "
+            "AS-REP for the probe"
+        ),
+    })
+    return row
+
+
 def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session_start=None,
                           principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
     """Scan Kerberos KDCs for supported encryption types via unauthenticated AS-REQ probe.
@@ -531,9 +567,24 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             })
             results.append(gap_ep)
             continue
+        except KerberosUnrecognisedReply as exc:
+            # 230-REVIEW-R2 WR-01: the peer answered with non-Kerberos bytes.
+            # A positive answer, not a transport failure: no UDP fallback.
+            results.append(_unrecognised_reply_row(target, realm, timeout, logger,
+                                                   principal, now, exc))
+            continue
         except Exception as exc:
+            if isinstance(exc, KerberosTransportError) and exc.answered:
+                # WR-01: bytes arrived but broke the framing (short read,
+                # implausible length prefix such as unframed HTTP, a stall or
+                # reset mid-reply).  Same honest row, no UDP fallback.
+                results.append(_unrecognised_reply_row(target, realm, timeout,
+                                                       logger, principal, now, exc))
+                continue
             tcp_error = exc
-            # UDP fallback on any TCP failure (RFC 4120 §7.2.1)
+            # UDP fallback only when TCP got no reply byte: connect refused or
+            # timed out, a silent peer, or a close/reset before any reply
+            # byte, plus KerberosError for other error codes (RFC 4120 §7.2.1).
             try:
                 etypes = _probe_kdc_udp(target, realm, timeout, principal=principal)
             except KerberosPreauthNoEtypes:

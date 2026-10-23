@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,579 lines, in reading order.
+Five guides, 7,589 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4644,6 +4644,16 @@ pre-authentication hints such as a timestamp request), the scanner emits the row
 pre-authentication, so it is never reported as `kerberos-no-preauth`. It is treated the same way
 as the principal-unknown row: an assessment gap with no finding, no weak-etype count and no UDP
 retry.
+
+If something answers on port 88 but not as a KDC, the scanner emits the row
+`kerberos-etypes-unavailable-unrecognised-reply` and records the error on it. This covers a reply
+that decodes as neither a Kerberos error nor an AS-REP, and a reply that breaks Kerberos TCP
+framing: an HTTP or other non-Kerberos service, a truncated reply, or a declared reply length
+over 64 KiB. That row is never reported as `kerberos-no-preauth`, derives no finding, and is not
+retried over UDP. Only a TCP probe that received no reply byte at all (connection refused, a
+timeout, or a close before replying) falls back to UDP. The TCP probe, including its reply, is
+bounded by the Kerberos timeout (a fixed 10 s), so a silent or misbehaving listener cannot stall
+the scan.
 
 Kerberos targets need an FQDN whose last two labels are the realm (for example
 `dc.corp.example.com` gives realm `CORP.EXAMPLE.COM`). An IP-literal target is used as the
