@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -33407,3 +33407,152 @@ gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomO
 **Result:** - [x] PASS (2026-10-16 7 passed — covered by `tests/test_db_migrations.py::test_phase229_push_payload_id_column_registered` and `tests/test_db_migrations.py::test_phase229_push_payload_id_migration_idempotent` and `tests/test_sensor_push_payload_id.py::test_ingest_stamps_every_endpoint_with_payload_id` and `tests/test_sensor_push_payload_id.py::test_two_pushes_are_not_cross_tagged` and `tests/test_sensor_push_payload_id.py::test_duplicate_payload_writes_no_extra_rows` and `tests/test_sensor_push_payload_id.py::test_import_results_path_stamps_payload_id` and `tests/test_sensor_push_payload_id.py::test_https_push_stamps_every_endpoint_with_payload_id`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-15  **Tester:** automated
 **Notes:** Plan 229-06 (D-12). 2026-10-16 (229-REVIEW WR-06): the HTTPS leg now POSTs through the real `/api/sensor/push` route and reads `push_payload_id` back, replacing a source grep for `_ingest_envelope(` that could not fail if the route stopped stamping rows.
+
+## Series 230: Findings That Fire (Phase 230 — v5.28)
+
+**Last Updated:** 2026-10-23 (Phase 230)
+
+### UAT-230-01: --inventory-code-signing finds a code-signing-EKU certificate from a real TLS capture
+
+**ID:** UAT-230-01
+**Title:** --inventory-code-signing finds a code-signing-EKU certificate from a real TLS capture
+**Maps to:** DETECT-01
+
+**What to test:** A leaf certificate carrying the codeSigning EKU, captured by the sslyze leg and by the fallback leg, yields a CODE_SIGNING endpoint; a no-EKU leaf yields none; EKU is never written into the capabilities blob.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_codesign_tls_eku_live.py
+```
+
+**Pass Criteria:** The run reports 14 passed.
+
+**Result:** - [x] PASS (2026-10-23 14 passed — covered by `tests/test_codesign_tls_eku_live.py`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-01 (commit 4dd08090). The whole file runs (14 passed); it replaces the hand-built fixtures that bypassed the TLS parse sites. Fail-first on the pre-fix tree was 7 failed, 7 passed.
+
+### UAT-230-02: cert_eku_oids persists, so a resumed scan keeps the TLS-EKU source
+
+**ID:** UAT-230-02
+**Title:** cert_eku_oids persists, so a resumed scan keeps the TLS-EKU source
+**Maps to:** DETECT-01
+
+**What to test:** The cert_eku_oids column is registered as an additive migration, is idempotent, and survives a resume round-trip.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_codesign_tls_eku_live.py::test_resume_round_trip_persists_cert_eku_oids \
+  tests/test_db_migrations.py::test_phase230_cert_eku_oids_column_registered \
+  tests/test_db_migrations.py::test_phase230_cert_eku_oids_migration_idempotent
+```
+
+**Pass Criteria:** The run reports 3 passed.
+
+**Result:** - [x] PASS (2026-10-23 3 passed — covered by `tests/test_codesign_tls_eku_live.py::test_resume_round_trip_persists_cert_eku_oids` and `tests/test_db_migrations.py::test_phase230_cert_eku_oids_column_registered` and `tests/test_db_migrations.py::test_phase230_cert_eku_oids_migration_idempotent`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-01 (D-02a). The column is Text and is never part of tls_capabilities_json.
+
+### UAT-230-03: A KDC that requires pre-authentication yields its etypes; an AS-REP still reads as no pre-auth
+
+**ID:** UAT-230-03
+**Title:** A KDC that requires pre-authentication yields its etypes; an AS-REP still reads as no pre-auth
+**Maps to:** DETECT-02
+
+**What to test:** Through impacket's real wire path (a returned KRB_ERROR 25 and the older raised shape), the probe decodes PA-ETYPE-INFO2 and reports etypes; an AS-REP control stays kerberos-no-preauth.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire
+```
+
+**Pass Criteria:** The run reports 8 passed.
+
+**Result:** - [x] PASS (2026-10-23 8 passed — covered by `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-02 (commit 15e35662). LOCAL-ONLY PROOF: this class skips in CI's Linux Full Suite (ci_extras_gap: `.[all]` excludes impacket; registered in tests/skip_registry.py). The 8 passed was observed locally with impacket 0.13.0. Adding an [identity] CI leg is operator-reserved and was not done. REAL-KDC: MEASURED on 2026-10-23 against the chaos-lab Samba KDC (on 127.0.0.1:18088 through a scratch override because host port 88 is held by the macOS KDC): principal Administrator -> KRB_ERROR code 25 with etypes [18] only (6 of 10 attempts; the rest were empty TCP replies); principal nobody -> code 6 (principal unknown); IP-literal realm 127.0.0.1 -> code 6. Fixed-fake-KDC results are therefore corroborated by one real KDC, and the real KDC offers aes256 only, not the RC4/AES128 rows the old oracle claimed.
+
+### UAT-230-04: --auth-* credentials reach the JWKS target under all four schemes and never appear in DEBUG logs
+
+**ID:** UAT-230-04
+**Title:** --auth-* credentials reach the JWKS target under all four schemes and never appear in DEBUG logs
+**Maps to:** DETECT-03
+
+**What to test:** bearer, api_key_header, api_key_query and basic credentials arrive on the wire at the JWKS endpoint; DEBUG logs carry no credential; the log redaction filter redacts key params, leaves clean messages identical and installs once.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_jwks_auth_wire.py::test_credential_reaches_wire_and_not_logs \
+  tests/test_jwt_scanner.py::test_redact_filter_redacts_key_param \
+  tests/test_jwt_scanner.py::test_redact_filter_leaves_clean_message_identical \
+  tests/test_jwt_scanner.py::test_redact_filter_installed_once_after_reload
+```
+
+**Pass Criteria:** The run reports 7 passed.
+
+**Result:** - [x] PASS (2026-10-23 7 passed — covered by `tests/test_jwks_auth_wire.py::test_credential_reaches_wire_and_not_logs` and `tests/test_jwt_scanner.py::test_redact_filter_redacts_key_param` and `tests/test_jwt_scanner.py::test_redact_filter_leaves_clean_message_identical` and `tests/test_jwt_scanner.py::test_redact_filter_installed_once_after_reload`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-03 (commit 0e8074ca). The wire case is parametrized x4 so the run reports 7 (4 + 3). The httpx request hook that stripped credentials before send is deleted. Header and bearer log assertions are guards, not mutation-provable (httpx never logs request headers); the api_key_query log assertion is mutation-proven.
+
+### UAT-230-05: --auth-basic user:password sends RFC 7617 base64; a colon-less value is rejected without being echoed
+
+**ID:** UAT-230-05
+**Title:** --auth-basic user:password sends RFC 7617 base64; a colon-less value is rejected without being echoed
+**Maps to:** DETECT-04
+
+**What to test:** Basic auth arrives as base64(user:password) (UTF-8); a value without a colon raises a fixed-text ValueError that never echoes the value; --help says user:password.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_jwks_auth_wire.py::test_basic_header_decodes_to_user_password \
+  tests/test_jwks_auth_wire.py::test_basic_without_colon_raises_from_cli \
+  tests/test_jwks_auth_wire.py::test_basic_without_colon_raises_from_as_headers \
+  tests/test_jwks_auth_wire.py::test_auth_basic_help_text \
+  tests/test_credential_context.py::TestAsHeaders::test_basic_scheme \
+  tests/test_credential_context.py::TestAsHeaders::test_basic_scheme_rejects_pre_encoded_value
+```
+
+**Pass Criteria:** The run reports 6 passed.
+
+**Result:** - [x] PASS (2026-10-23 6 passed — covered by `tests/test_jwks_auth_wire.py::test_basic_header_decodes_to_user_password` and `tests/test_jwks_auth_wire.py::test_basic_without_colon_raises_from_cli` and `tests/test_jwks_auth_wire.py::test_basic_without_colon_raises_from_as_headers` and `tests/test_jwks_auth_wire.py::test_auth_basic_help_text` and `tests/test_credential_context.py::TestAsHeaders::test_basic_scheme` and `tests/test_credential_context.py::TestAsHeaders::test_basic_scheme_rejects_pre_encoded_value`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-03 (commit 3c42b21c). Behaviour change called out in changelog.d/phase-230.bugfix.md: --auth-basic previously took a pre-encoded value.
+
+### UAT-230-06: An alg:none or no-alg bearer token produces the CRITICAL unsigned-token finding and caps the score
+
+**ID:** UAT-230-06
+**Title:** An alg:none or no-alg bearer token produces the CRITICAL unsigned-token finding and caps the score
+**Maps to:** DETECT-05
+
+**What to test:** alg none (any case) or a missing alg yields one CRITICAL 'Bearer token is unsigned (alg:none)' on CLI and dashboard and moves the consequence ceiling; RS256 does not; an opaque token yields no endpoint; HS256 is counted once.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_bearer_alg_none_finding.py
+```
+
+**Pass Criteria:** The run reports 13 passed.
+
+**Result:** - [x] PASS (2026-10-23 13 passed — covered by `tests/test_bearer_alg_none_finding.py`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-04 (commits b8d7541b, 20372047). Ordinary CRITICAL, no score-exclusion special case, SCORING_VERSION stays 3.0. The raw token never appears in endpoint fields or finding text.
+
+### UAT-230-07: connectors.kerberos_probe_principal is configurable and a principal-unknown reply is an honest row
+
+**ID:** UAT-230-07
+**Title:** connectors.kerberos_probe_principal is configurable and a principal-unknown reply is an honest row
+**Maps to:** DETECT-02
+
+**What to test:** The probe principal defaults to Administrator, loads from YAML, is wired by run_scan.py and is sent as the AS-REQ cname; KDC_ERR_C_PRINCIPAL_UNKNOWN yields kerberos-etypes-unavailable-principal-unknown, never kerberos-no-preauth, with no finding.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_kerberos_probe_principal_config.py \
+  tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_configured_principal_is_sent_on_the_wire \
+  tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_principal_unknown_reply_yields_honest_row
+```
+
+**Pass Criteria:** The run reports 12 passed.
+
+**Result:** - [x] PASS (2026-10-23 12 passed — covered by `tests/test_kerberos_probe_principal_config.py` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_configured_principal_is_sent_on_the_wire` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_principal_unknown_reply_yields_honest_row`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-23  **Tester:** automated
+**Notes:** Plan 230-02 (D-24/D-25). The config file (10 passed) is CI-visible and needs no impacket; the two wire nodes (2 passed) are LOCAL-ONLY and skip in CI (ci_extras_gap), same as UAT-230-03. The principal-unknown row's two effects (counts as assessed in identity and coverage) are pinned, not endorsed, by test_principal_unknown_row_counts_as_assessed_pinned and owned by todo 261023-detect-kerberos-placeholder-rows-count-as-assessed (999.120). kerberos_probe_principal is YAML-only; dashboard parity is todo 261023-detect-kerberos-probe-principal-dashboard-parity (999.121).
