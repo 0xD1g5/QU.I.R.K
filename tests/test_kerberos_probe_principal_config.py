@@ -17,6 +17,7 @@ test_kerberos_preauth_wire.py and is local-only.
 """
 
 import ast
+import json
 import logging
 import time
 from pathlib import Path
@@ -290,8 +291,9 @@ def test_unanswered_tcp_failure_still_falls_back_to_udp(monkeypatch, exc):
 def test_unexpected_tcp_probe_exception_is_honest_row_without_udp(monkeypatch, exc):
     """230-REVIEW-R3 WR-01: only OSError, KerberosError and an unanswered
     KerberosTransportError reach UDP.  Anything else the TCP probe raises (a
-    decoder failure on untrusted reply bytes) is the honest row, never UDP's
-    ``[]`` (= ``kerberos-no-preauth``, D-08a)."""
+    decoder failure on untrusted reply bytes) is the honest row: a retry over
+    UDP would not make a decoder failure on this peer's reply any more
+    readable."""
     rows, udp_calls = _scan_with_tcp_raising(monkeypatch, exc)
     assert udp_calls == []
     assert [r.service_detail for r in rows] == [
@@ -301,14 +303,15 @@ def test_unexpected_tcp_probe_exception_is_honest_row_without_udp(monkeypatch, e
 
 
 def test_kerberos_error_still_falls_back_to_udp(monkeypatch):
-    """A KRB_ERROR code other than 25/6 keeps the known D-08a UDP path."""
+    """A KRB_ERROR code other than 25/6 over TCP still falls back to UDP
+    (RFC 4120 7.2.1).  The stub returns [], which now means a matching AS-REP."""
     rows, udp_calls = _scan_with_tcp_raising(monkeypatch, ks.KerberosError())
     assert udp_calls == [1]
 
 
 def test_unexpected_udp_probe_exception_is_unreachable_row(monkeypatch):
-    """230-REVIEW-R4 IN-02: only UDP's swallowed network/decode errors read as
-    ``kerberos-no-preauth``; any other UDP exception gives kerberos-unreachable."""
+    """230-REVIEW-R4 IN-02: any UDP exception that is not a classified reply
+    gives kerberos-unreachable (never kerberos-no-preauth, 230-08 D-29)."""
     monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
 
     def tcp(*a, **k):

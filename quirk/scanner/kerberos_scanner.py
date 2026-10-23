@@ -422,10 +422,29 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
     as_req = _build_as_req(client_name, server_name, realm)
     message = encoder.encode(as_req)
 
-    preauth_required = constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value
-    principal_unknown = constants.ErrorCodes.KDC_ERR_C_PRINCIPAL_UNKNOWN.value
     r = _kdc_tcp_exchange(host, port, message, timeout, deadline=deadline,
                           peer=peer)
+    return _classify_kdc_reply(r, realm, client_name, principal)
+
+
+def _classify_kdc_reply(reply: bytes, realm: str, client_name, principal: str) -> list:
+    """Classify one KDC reply; the single rule set for the TCP and UDP legs.
+
+    230-08 D-29: ``_probe_kdc`` (TCP) and ``_probe_kdc_udp`` both hand the
+    reply bytes here, so no transport can read a reply differently.
+
+    Returns the etype list of a KDC_ERR_PREAUTH_REQUIRED (25) reply.  Returns
+    ``[]`` ONLY when the reply decodes as an AS-REP whose crealm and cname
+    match the probe (no pre-auth required): ``[]`` is the one value the caller
+    turns into ``kerberos-no-preauth``.  Raises KerberosUnrecognisedReply for
+    anything else that is not a KRB_ERROR (garbage, an empty datagram, a
+    mismatched AS-REP), KerberosPreauthNoEtypes for a code-25 reply with no
+    usable etype info, KerberosPrincipalUnknown for code 6, and KerberosError
+    for any other KRB_ERROR code.
+    """
+    preauth_required = constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value
+    principal_unknown = constants.ErrorCodes.KDC_ERR_C_PRINCIPAL_UNKNOWN.value
+    r = reply
 
     # 230-REVIEW-R3 WR-01: ``r`` is untrusted bytes.  ANY exception while
     # decoding it (pyasn1 raises IndexError, not only PyAsn1Error, on some
@@ -490,15 +509,27 @@ def _is_retryable_tcp_drop(exc) -> bool:
 
 def _probe_kdc_udp(host: str, realm: str, timeout: int,
                    principal: str = DEFAULT_PROBE_PRINCIPAL, port=None) -> list:
-    """UDP fallback for KDC probing.
+    """UDP fallback for KDC probing; follows the same rule as the TCP probe.
 
-    Sends raw AS-REQ bytes (no length prefix) to port 88 via UDP.
-    Returns list of etype integers advertised by the KDC via UDP transport.
-    Returns empty list on any failure (errors are swallowed -- UDP is best-effort fallback),
-    except a code-25 reply with no usable etype info, which raises
-    KerberosPreauthNoEtypes (230-REVIEW CR-02) so it is never read as no-preauth.
-    Per Pitfall 1: UDP does NOT use the 4-byte length prefix (only TCP does).
-    Bounded by ``sock.settimeout(timeout)``: one ``sendto`` and one ``recvfrom``.
+    Sends the raw AS-REQ (no length prefix, per Pitfall 1: only TCP frames) to
+    the KDC port and hands the one reply to ``_classify_kdc_reply``, the same
+    classifier ``_probe_kdc`` uses (230-08 D-29).  Returns the etype list of a
+    code-25 reply, or ``[]`` only for an AS-REP that answers the probe.
+
+    Every other outcome raises, because a swallowed UDP failure used to come
+    back as ``[]``, which the caller reads as "no pre-auth": a timeout, a
+    refusal, a send failure or a name that does not resolve raises OSError;
+    an empty datagram, garbage or a mismatched AS-REP raises
+    KerberosUnrecognisedReply; code 6 raises KerberosPrincipalUnknown; code 25
+    without etypes raises KerberosPreauthNoEtypes; any other KRB_ERROR code
+    raises KerberosError.
+
+    The address family and sockaddr come from ``getaddrinfo`` (230-08 D-30), so
+    an IPv6 KDC is reachable; an A record is preferred over an AAAA record, as
+    the AF_INET-only probe did.  The socket is ``connect()``ed to that sockaddr,
+    so the kernel discards a reply from any other source and an ICMP
+    port-unreachable surfaces as ConnectionRefusedError.  Bounded by
+    ``settimeout(timeout)``: one send and one recv.
     """
     if port is None:
         port = KDC_PORT
@@ -509,28 +540,40 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
     as_req = _build_as_req(client_name, server_name, realm)
     message = encoder.encode(as_req)
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(timeout)
     try:
-        sock.sendto(message, (host, port))
-        data, _ = sock.recvfrom(65535)
-        # Try to decode as KRB_ERROR
-        krb_error = decoder.decode(data, asn1Spec=KRB_ERROR())[0]
-        error_code = int(krb_error['error-code'])
-        if error_code != constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value:
-            return []
-        return _parse_preauth_etypes(krb_error)
-    except (socket.timeout, socket.error, OSError) as e:
-        # WR-08 (Phase 71): UDP transport failure — log+continue (best-effort fallback)
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        if not infos:
+            raise OSError(f"no UDP address for {host!r}")
+        # Stable sort: IPv4 records first, so a name with both A and AAAA
+        # records behaves as the AF_INET-only probe did.
+        infos = sorted(infos, key=lambda i: i[0] != socket.AF_INET)
+        family, sockaddr = infos[0][0], infos[0][4]
+        sock = socket.socket(family, socket.SOCK_DGRAM)
+    except OSError as e:
         logger.warning("KDC UDP probe transport failed for %r: %s", host, e)
-        return []
-    except (ValueError, TypeError, struct.error, IndexError, KeyError, PyAsn1Error) as e:
-        # WR-08 (Phase 71): malformed KDC response — log+continue. Covers pyasn1
-        # decode errors (PyAsn1Error) and any shape/type mismatches downstream.
-        logger.warning("KDC UDP probe decode failed for %r: %s", host, e)
-        return []
+        raise
+    try:
+        sock.settimeout(timeout)
+        sock.connect(sockaddr)
+        sock.send(message)
+        data = sock.recv(65535)
+    except OSError as e:
+        # socket.timeout, ConnectionRefusedError (ICMP unreachable), send errors.
+        logger.warning("KDC UDP probe transport failed for %r: %s", host, e)
+        raise
     finally:
         sock.close()
+
+    try:
+        return _classify_kdc_reply(data, realm, client_name, principal)
+    except KerberosUnrecognisedReply as e:
+        logger.warning("KDC UDP probe decode failed for %r: %s", host, e)
+        raise
+    except KerberosPrincipalUnknown:
+        logger.warning(
+            "KDC UDP probe: principal %r unknown to the KDC at %r "
+            "(KDC_ERR_C_PRINCIPAL_UNKNOWN 6)", principal, host)
+        raise
 
 
 def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
@@ -641,9 +684,10 @@ def _unrecognised_reply_row(target: str, realm: str, timeout: int, logger,
 
     230-REVIEW-R2 WR-01: the reply decoded as neither KRB_ERROR nor AS-REP, or
     broke the TCP framing after sending bytes.  Something answered, so this is
-    not a transport failure: no UDP fallback (whose ``[]`` reads as "no
-    pre-auth", D-08a), never ``kerberos-no-preauth``.  Carries the error, so it
-    is visibly a failed assessment rather than a clean result.
+    not a transport failure: no UDP fallback after a TCP answer, never
+    ``kerberos-no-preauth``.  Also the row for a UDP reply that does not parse
+    (230-08 D-29).  Carries the error, so it is visibly a failed assessment
+    rather than a clean result.
     """
     row = CryptoEndpoint(
         host=target,
@@ -668,6 +712,92 @@ def _unrecognised_reply_row(target: str, realm: str, timeout: int, logger,
     return row
 
 
+def _principal_unknown_row(target: str, realm: str, timeout: int, logger,
+                           principal: str, now) -> CryptoEndpoint:
+    """Honest row for KDC_ERR_C_PRINCIPAL_UNKNOWN (6), on either transport.
+
+    Phase 230 D-25: the KDC answered but returns no etype data for this
+    principal.  An assessment gap, not a transport failure: no scan_error, and
+    never "kerberos-no-preauth".
+    """
+    gap_ep = CryptoEndpoint(
+        host=target,
+        port=88,
+        protocol="KERBEROS",
+        cert_pubkey_alg=None,
+        service_detail="kerberos-etypes-unavailable-principal-unknown",
+        scanned_at=now,
+    )
+    ldap_result = _probe_ldap_anon(target, timeout, logger)
+    gap_ep.kerberos_scan_json = json.dumps({
+        "realm": realm,
+        "etypes": [],
+        "etype_details": [],
+        "ldap": ldap_result,
+        "ldap_status": ldap_result.get("ldap_status", "skipped"),
+        "probe_principal": principal,
+        "etypes_unavailable_reason": "KDC_ERR_C_PRINCIPAL_UNKNOWN (6)",
+    })
+    return gap_ep
+
+
+def _krb_error_code(exc):
+    """The KRB_ERROR code carried by a KerberosError, or None.  Never raises."""
+    try:
+        code = int(exc.error)
+        packet = getattr(exc, "packet", 0)
+        if code == 0 and not isinstance(packet, int):
+            code = int(packet["error-code"])
+        return code
+    except Exception:  # noqa: BLE001 - diagnostics only
+        return None
+
+
+def _krb_error_reason(exc) -> str:
+    """Name the KRB_ERROR code on the honest row (no reply bytes, no secrets)."""
+    code = _krb_error_code(exc)
+    if code is None:
+        return "KDC answered a KRB_ERROR (unknown code); etypes not assessed"
+    name = ""
+    try:
+        name = f" {constants.ErrorCodes(code).name}"
+    except Exception:  # noqa: BLE001 - name lookup is best-effort
+        pass
+    return (f"KDC answered KRB_ERROR code {code}{name}; "
+            "it advertised no etype information for this probe")
+
+
+def _krb_error_row(target: str, realm: str, timeout: int, logger,
+                   principal: str, now, exc) -> CryptoEndpoint:
+    """Honest row for a KRB_ERROR other than 25 and 6 (230-08 D-29).
+
+    The KDC answered, so "kerberos-unreachable" would be false, and an error
+    reply is not an AS-REP, so it is never "kerberos-no-preauth".  Derives no
+    finding and adds no weak-etype count; ``scan_error`` carries the error.
+    """
+    row = CryptoEndpoint(
+        host=target,
+        port=88,
+        protocol="KERBEROS",
+        cert_pubkey_alg=None,
+        service_detail="kerberos-etypes-unavailable-krb-error",
+        scanned_at=now,
+        scan_error=safe_str(exc),
+        scan_error_category="exception",
+    )
+    ldap_result = _probe_ldap_anon(target, timeout, logger)
+    row.kerberos_scan_json = json.dumps({
+        "realm": realm,
+        "etypes": [],
+        "etype_details": [],
+        "ldap": ldap_result,
+        "ldap_status": ldap_result.get("ldap_status", "skipped"),
+        "probe_principal": principal,
+        "etypes_unavailable_reason": _krb_error_reason(exc),
+    })
+    return row
+
+
 def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session_start=None,
                           principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
     """Scan Kerberos KDCs for supported encryption types via unauthenticated AS-REQ probe.
@@ -687,15 +817,20 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
     results = []
     for target in targets:
         realm = _derive_realm(target)
-        etypes = []
+        # 230-08 D-29: None, never [].  Every path below assigns it; a path
+        # that does not must read as unreachable.  [] means "matching AS-REP"
+        # and nothing else.
+        etypes = None
         tcp_error = None
+        udp_error = None
 
         # TCP primary (per D-01; QUIRK-framed TCP since 230-REVIEW-R2 CR-01).
         # AUDIT-03: If the TCP probe raises (connection refused, timeout, or any
         # transport failure), control falls through to _probe_kdc_udp below.  This
-        # silent TCP→UDP downgrade is intentional standard Kerberos behaviour per
+        # TCP→UDP downgrade is intentional standard Kerberos behaviour per
         # RFC 4120 §7.2.1 ("Kerberos clients SHOULD support both UDP and TCP; a
-        # client MAY retry over TCP/UDP on failure") — it is NOT a defect.
+        # client MAY retry over TCP/UDP on failure") — it is NOT a defect.  The
+        # UDP answer goes through the same classifier as TCP (230-08 D-29).
         try:
             try:
                 etypes = _probe_kdc(target, realm, timeout, principal=principal)
@@ -736,25 +871,8 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             # Phase 230 D-25: the KDC answered (code 6) but returns no etype data
             # for this principal.  An assessment gap, not a transport failure:
             # no UDP fallback, no scan_error, and never "kerberos-no-preauth".
-            gap_ep = CryptoEndpoint(
-                host=target,
-                port=88,
-                protocol="KERBEROS",
-                cert_pubkey_alg=None,
-                service_detail="kerberos-etypes-unavailable-principal-unknown",
-                scanned_at=now,
-            )
-            ldap_result = _probe_ldap_anon(target, timeout, logger)
-            gap_ep.kerberos_scan_json = json.dumps({
-                "realm": realm,
-                "etypes": [],
-                "etype_details": [],
-                "ldap": ldap_result,
-                "ldap_status": ldap_result.get("ldap_status", "skipped"),
-                "probe_principal": principal,
-                "etypes_unavailable_reason": "KDC_ERR_C_PRINCIPAL_UNKNOWN (6)",
-            })
-            results.append(gap_ep)
+            results.append(_principal_unknown_row(target, realm, timeout, logger,
+                                                  principal, now))
             continue
         except KerberosUnrecognisedReply as exc:
             # 230-REVIEW-R2 WR-01: the peer answered with non-Kerberos bytes.
@@ -782,20 +900,45 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             # address to retry), and
             # KerberosError for KRB_ERROR codes other than 25/6.  The guide
             # and the lab oracle list exactly this set (230-REVIEW-R4 WR-02)
-            # (RFC 4120 §7.2.1; the known D-08a path, todo
-            # 261023-detect-kerberos-udp-failure-reads-as-no-preauth).
+            # (RFC 4120 §7.2.1).
+            #
+            # 230-08 D-29: the UDP reply is classified exactly as a TCP reply
+            # is.  No UDP failure reads as "no pre-auth": only a matching AS-REP
+            # returns [].
             try:
                 etypes = _probe_kdc_udp(target, realm, timeout, principal=principal)
             except KerberosPreauthNoEtypes:
                 results.append(_preauth_no_etypes_row(target, realm, timeout, logger,
                                                       principal, now))
                 continue
-            except Exception:
-                etypes = None  # Both paths failed
+            except KerberosPrincipalUnknown:
+                results.append(_principal_unknown_row(target, realm, timeout, logger,
+                                                      principal, now))
+                continue
+            except KerberosUnrecognisedReply as udp_exc:
+                results.append(_unrecognised_reply_row(target, realm, timeout, logger,
+                                                       principal, now, udp_exc))
+                continue
+            except KerberosError as udp_exc:
+                results.append(_krb_error_row(target, realm, timeout, logger,
+                                              principal, now, udp_exc))
+                continue
+            except OSError as udp_exc:
+                if isinstance(tcp_error, KerberosError):
+                    # The KDC answered over TCP with a KRB_ERROR; a dead UDP leg
+                    # does not make it unreachable.
+                    results.append(_krb_error_row(target, realm, timeout, logger,
+                                                  principal, now, tcp_error))
+                    continue
+                etypes = None  # both paths failed
+                udp_error = udp_exc
+            except Exception as udp_exc:  # noqa: BLE001 - not a reply we can read
+                etypes = None
+                udp_error = udp_exc
         except Exception as exc:  # noqa: BLE001 - see below
             # 230-REVIEW-R3 WR-01: anything else the TCP probe raises is not a
-            # transport failure.  UDP's [] would read as "no pre-auth" (D-08a),
-            # so this gets the honest row instead.
+            # transport failure (a decoder failure on untrusted reply bytes),
+            # so this gets the honest row instead of a UDP retry.
             results.append(_unrecognised_reply_row(target, realm, timeout, logger,
                                                    principal, now, exc))
             continue
@@ -815,14 +958,16 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 scan_error_category="exception" if tcp_error is not None else None,
             )
             ldap_result = _probe_ldap_anon(target, timeout, logger)
-            scan_json = json.dumps({
+            unreachable_doc = {
                 "realm": realm,
                 "etypes": [],
                 "etype_details": [],
                 "ldap": ldap_result,
                 "ldap_status": ldap_result.get("ldap_status", "skipped"),
-            })
-            unreachable_ep.kerberos_scan_json = scan_json
+            }
+            if udp_error is not None:
+                unreachable_doc["udp_error"] = safe_str(udp_error)
+            unreachable_ep.kerberos_scan_json = json.dumps(unreachable_doc)
             results.append(unreachable_ep)
             continue
 

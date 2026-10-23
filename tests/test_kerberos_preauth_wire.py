@@ -320,10 +320,11 @@ class TestKerberosPreauthWire:
 
     # 230-REVIEW-R2 WR-01: a TCP peer that answered with non-Kerberos bytes is
     # a positive answer, not a transport failure.  It must yield the honest
-    # unrecognised-reply row with NO UDP fallback, because the real UDP leg
-    # returns [] (= "no pre-auth") on any failure (D-08a).  The UDP leg here is
-    # the REAL _probe_kdc_udp behind a delegating spy, aimed at the same
-    # loopback port number, where nothing listens on UDP.
+    # unrecognised-reply row with NO UDP fallback: something answered on the
+    # port, so it is not a transport failure (230-08: the UDP leg no longer
+    # returns [] on failure either, but a TCP answer still ends the probe).  The
+    # UDP leg here is the REAL _probe_kdc_udp behind a delegating spy, aimed at
+    # the same loopback port number, where nothing listens on UDP.
 
     def _real_udp_spy(self, monkeypatch):
         import quirk.scanner.kerberos_scanner as ks

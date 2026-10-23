@@ -177,7 +177,7 @@ class UdpPeer:
         else:  # pragma: no cover - 50 collisions in a row
             raise RuntimeError("could not find a UDP port with no TCP listener")
         self.sock = sock
-        self.sock.settimeout(0.2)
+        self.sock.settimeout(0.05)
         self.port = port
         self._t = threading.Thread(target=self._serve, daemon=True)
         self._t.start()
