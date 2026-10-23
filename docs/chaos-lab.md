@@ -496,7 +496,7 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 - One `etype:18:aes256-cts-hmac-sha1-96` KERBEROS endpoint, SAFE, no finding (measured 2026-10-23)
 - Kerberos targets must be an FQDN (for example `dc.quirk.lab`, with a hosts entry you add); a bare IP such as `127.0.0.1` is used as the realm and the KDC answers principal-unknown, so the scan yields `kerberos-etypes-unavailable-principal-unknown`
-- Known issues: the Samba KDC drops about one TCP connection in three, which can surface as an intermittent `kerberos-no-preauth` row (open todo `261023-detect-kerberos-udp-failure-reads-as-no-preauth`); the `samba-dc` healthcheck uses `smbclient`, which the image lacks, so the container never reports healthy; and host port 88 conflicts with macOS's own KDC
+- Known issues: the Samba KDC closes about half of its TCP connections with no reply (42 of 90 direct probes across two runs on 2026-10-23); the scanner retries once over TCP, then falls back to UDP, which can surface as an intermittent `kerberos-no-preauth` row (open todo `261023-detect-kerberos-udp-failure-reads-as-no-preauth`); the `samba-dc` healthcheck uses `smbclient`, which the image lacks, so the container never reports healthy; and host port 88 conflicts with macOS's own KDC
 
 See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-kerberos`
 

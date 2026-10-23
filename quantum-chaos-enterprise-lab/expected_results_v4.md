@@ -437,10 +437,15 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 Known open defects the lab exposes (not fixed by Phase 230):
 
-- Intermittent `kerberos-no-preauth` rows. The Samba KDC closes roughly one TCP connection in
-  three with no reply (reproduced inside the container, 6 of 18 empty). The scanner then falls
-  back to UDP, and a failed UDP probe is rendered as `kerberos-no-preauth`, so a scan of this lab
-  can show either the `etype:18` row or `kerberos-no-preauth`. Owned by todo
+- Intermittent `kerberos-no-preauth` rows. The Samba KDC closes TCP connections with no reply
+  byte: 6 of 18 inside the container in the first measurement, and 42 of 90 direct probes across
+  two runs through Docker Desktop's port mapping on 2026-10-23. The scanner retries such a connection once
+  over TCP, then falls back to UDP, and a failed UDP probe (a UDP proxy timeout, or a code-6
+  answer over UDP) is rendered as `kerberos-no-preauth`. A scan of this lab can therefore show
+  either the `etype:18` row or `kerberos-no-preauth`. In the 2026-10-23 runs, before the TCP
+  retry existed, 7 of 20 Administrator scans and 12 of 20 `nobody` scans (larger run) gave a false
+  `kerberos-no-preauth`. UDP is used only after a TCP connect failure, a zero-byte TCP drop
+  that survives the retry, or a Kerberos error other than codes 25/6. Owned by todo
   `261023-detect-kerberos-udp-failure-reads-as-no-preauth`.
 - The `samba-dc` healthcheck runs `smbclient`, which the image lacks, so the container never
   reports healthy although the KDC answers.

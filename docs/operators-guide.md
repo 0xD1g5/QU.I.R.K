@@ -1225,11 +1225,13 @@ so the probe carries no lockout risk. A KDC that requires pre-authentication ans
 request with an error that lists its supported encryption types, and the scanner now reads
 that list. This was observed against a real Samba AD DC KDC on 2026-10-23 (lab `kerberos`
 profile, reached on a remapped host port because the macOS KDC holds port 88): the default
-principal returned `aes256-cts-hmac-sha1-96` only. The same lab KDC drops about one TCP
-connection in three without a reply; the scanner then falls back to UDP, and a UDP probe
-that fails is still reported as `kerberos-no-preauth`. That row can therefore be a probe
-failure and not proof the KDC does not require pre-authentication. It is tracked as an
-open todo (`261023-detect-kerberos-udp-failure-reads-as-no-preauth`).
+principal returned `aes256-cts-hmac-sha1-96` only. The same lab KDC closes about half of its
+TCP connections without sending a reply byte (42 of 90 direct probes across two runs on
+2026-10-23, through Docker Desktop's port mapping). The scanner retries such a connection once over TCP,
+then falls back to UDP, and a UDP probe that fails is still reported as `kerberos-no-preauth`.
+That row can therefore be a probe failure and not proof the KDC does not require
+pre-authentication. It is tracked as an open todo
+(`261023-detect-kerberos-udp-failure-reads-as-no-preauth`).
 
 If the KDC answers that the probe principal is unknown, the scanner emits the row
 `kerberos-etypes-unavailable-principal-unknown`. This is an assessment gap: it derives no
@@ -1251,14 +1253,28 @@ retry.
 
 If something answers on port 88 but not as a KDC, the scanner emits the row
 `kerberos-etypes-unavailable-unrecognised-reply` and records the error on it. This covers a reply
-that decodes as neither a Kerberos error nor an AS-REP, an AS-REP for a different realm or
-principal than the probe's (realm and principal are compared without regard to case), and a
-reply that breaks Kerberos TCP framing: an HTTP or other non-Kerberos service, a truncated reply,
-or a declared reply length over 64 KiB. That row is never reported as `kerberos-no-preauth`, derives no finding, and is not
-retried over UDP. Only a TCP probe that received no reply byte at all (connection refused, a
-timeout, or a close before replying) falls back to UDP. The TCP probe, including its reply, is
-bounded by the Kerberos timeout (a fixed 10 s), so a silent or misbehaving listener cannot stall
-the scan.
+that decodes as neither a Kerberos error nor an AS-REP (any decoding failure counts), an AS-REP
+for a different realm or principal than the probe's (realm and principal are compared without
+regard to case), a reply that breaks Kerberos TCP framing (an HTTP or other non-Kerberos service,
+or a declared reply length over 64 KiB), and a reply that is cut off or stalls partway through.
+The row's reason names which of these happened. That row is never reported as
+`kerberos-no-preauth`, derives no finding, and is not retried over UDP. Any other unexpected
+error from the TCP probe gets the same row.
+
+The TCP probe falls back to UDP in exactly these cases: the TCP connect fails (refused or timed
+out); the peer accepts but sends no reply byte before the timeout, or the request cannot be
+sent; the KDC closes or resets the connection before sending any reply byte, and does so again
+on the one TCP retry (only this zero-byte close or reset is retried, because it fails at once);
+or the KDC replies with a Kerberos error other than pre-authentication required (25) or
+principal unknown (6). A UDP probe that then fails, or that gets any answer other than
+pre-authentication required, is still reported as `kerberos-no-preauth`. That is a known open
+defect (`261023-detect-kerberos-udp-failure-reads-as-no-preauth`), not a finding.
+
+Every leg is bounded, so a silent or misbehaving listener cannot stall the scan. With the
+Kerberos timeout (a fixed 10 s), the TCP connect may take up to 10 s for each address the
+target resolves to, and the request and reply then share one 10 s deadline that starts after
+the connect. The zero-byte retry repeats that probe once, a UDP fallback adds up to another
+10 s, and the LDAP probe that follows has its own 10 s connect and receive timeouts.
 
 Kerberos targets need an FQDN whose last two labels are the realm (for example
 `dc.corp.example.com` gives realm `CORP.EXAMPLE.COM`). An IP-literal target is used as the
