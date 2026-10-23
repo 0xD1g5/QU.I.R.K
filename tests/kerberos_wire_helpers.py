@@ -126,3 +126,12 @@ def late_close(delay):
     def handler(c, stop):
         stop.wait(delay)
     return handler
+
+
+def reset_immediately(c, stop):
+    """Reads the request, then resets with zero bytes (SO_LINGER 1,0 -> RST).
+
+    230-REVIEW-R4 WR-03: a real ``ConnectionResetError`` on the client's
+    ``recv``, not a hand-built exception.
+    """
+    c.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))

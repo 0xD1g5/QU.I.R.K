@@ -312,6 +312,15 @@ def test_tcp_exchange_zero_byte_close_kind_is_eof():
     assert exc.answered is False and exc.kind == "eof"
 
 
+def test_tcp_exchange_zero_byte_reset_kind_is_reset():
+    """230-REVIEW-R4 WR-03: a real RST before any reply byte maps to
+    kind "reset" (retryable), not "error" (straight to UDP)."""
+    result, exc, _ = _exchange(kwh.reset_immediately, timeout=1, budget=5)
+    assert isinstance(exc, ks.KerberosTransportError), repr(exc)
+    assert isinstance(exc.__cause__, (ConnectionResetError, ConnectionAbortedError))
+    assert exc.answered is False and exc.kind == "reset"
+
+
 def test_tcp_exchange_silent_peer_kind_is_timeout():
     result, exc, _ = _exchange(kwh.silent, timeout=1, budget=5)
     assert isinstance(exc, ks.KerberosTransportError)
@@ -450,6 +459,16 @@ def test_fast_zero_byte_close_is_still_retried_over_real_tcp(monkeypatch):
     assert len(tcp_calls) == 2
     assert udp_calls == [1]
     assert elapsed < 1.5
+
+
+def test_real_zero_byte_reset_is_retried_once_over_tcp(monkeypatch):
+    """230-REVIEW-R4 WR-03: the reset half of the retry rule, over a real
+    loopback RST: two TCP attempts, then UDP."""
+    rows, tcp_calls, udp_calls, elapsed = _scan_over_loopback(
+        monkeypatch, kwh.reset_immediately, timeout=2, budget=10,
+    )
+    assert len(tcp_calls) == 2
+    assert udp_calls == [1]
 
 
 @pytest.mark.parametrize(
