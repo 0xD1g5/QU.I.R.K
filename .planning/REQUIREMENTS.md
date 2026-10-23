@@ -85,7 +85,7 @@ HORIZON prose:
 
 ### Findings that never fire (DETECT)
 
-- [ ] **DETECT-01**: `--inventory-code-signing` finds code-signing-EKU certificates among those the
+- [x] **DETECT-01**: `--inventory-code-signing` finds code-signing-EKU certificates among those the
       TLS phase captured in a real scan, proven by a test that runs the real TLS capture rather than
       an injected fixture (todo `261013-doc224-codesign-tls-eku-path-dead-in-real-scans`).
 - [ ] **DETECT-02**: Kerberos etype enumeration runs against a KDC that requires pre-authentication
@@ -186,7 +186,7 @@ Deferred from this milestone with an owner:
 | FIND-11 | Phase 229 | Complete |
 | FIND-12 | Phase 229 | Complete |
 | FIND-13 | Phase 229 | Complete |
-| DETECT-01 | Phase 230 | Pending |
+| DETECT-01 | Phase 230 | Complete |
 | DETECT-02 | Phase 230 | Pending |
 | DETECT-03 | Phase 230 | Pending |
 | DETECT-04 | Phase 230 | Pending |
