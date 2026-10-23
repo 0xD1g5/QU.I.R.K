@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,536 lines, in reading order.
+Five guides, 7,566 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -1129,7 +1129,7 @@ connector disposition table" below for all 25 keys.
 | `enable_jwt` | bool | `false` | Enable JWT/REST API scanner (target-guarded — inert until `jwt_targets` is populated). The loader default is `false`; the shipped `config_template.yaml` sets it `true` |
 | `enable_container` | bool | `false` | Enable container/binary crypto scanner (target-guarded — inert until `container_targets` is populated). The loader default is `false`; the shipped template sets it `true` |
 | `enable_source` | bool | `false` | Enable source code scanner (target-guarded — inert until `source_targets` is populated). The loader default is `false`; the shipped template sets it `true` |
-| `enable_codesign` | bool | `false` | Enable code-signing certificate inventory (LDAP `userCertificate`; the TLS EKU check finds nothing in a real scan, see below). **Not a connector toggle** — driven entirely by the `--inventory-code-signing` CLI flag; this key changes zero scan behavior on its own. |
+| `enable_codesign` | bool | `false` | Enable code-signing certificate inventory (LDAP `userCertificate`, plus the TLS phase's own leaf-certificate EKU capture; see below). **Not a connector toggle** — driven entirely by the `--inventory-code-signing` CLI flag; this key changes zero scan behavior on its own. |
 | `codesign_targets` | list[string] | `[]` | LDAP URLs for code-signing certificate discovery (e.g. `ldap://dc.corp.com:389`) |
 | `codesign_search_base` | string | `null` | LDAP search base DN for `userCertificate` discovery (e.g. `dc=corp,dc=com`) |
 | `codesign_timeout` | int | `10` | Per-connection timeout (seconds) for code-signing LDAP queries |
@@ -1198,7 +1198,8 @@ from the submitted delta; explicitly unchecking it sends `vault_tls_verify: fals
 | `jwt_targets` | list[str] | `[]` | `enable_jwt` | REST endpoint URLs for the JWT/API scanner |
 | `container_targets` | list[str] | `[]` | `enable_container` | Docker image refs for the container/binary scanner |
 | `source_targets` | list[str] | `[]` | `enable_source` | Local repository directory paths for the source scanner (URLs are rejected — clone first) |
-| `kerberos_targets` | list[str] | `[]` | `enable_kerberos` | KDC hosts for the Kerberos identity scanner |
+| `kerberos_targets` | list[str] | `[]` | `enable_kerberos` | KDC hosts for the Kerberos identity scanner. List each KDC by FQDN (for example `dc.corp.example.com`): the realm is taken from the last two labels, uppercased, and an IP address is used as the realm as-is, which a real KDC rejects |
+| `kerberos_probe_principal` | str | `Administrator` | `enable_kerberos` | Client principal the etype probe names in its AS-REQ. It exists by default on Active Directory and Samba AD DC. It is a principal name, not a secret. An AS-REQ with no pre-authentication data is not a failed logon, so the probe cannot lock the account out. Set it to an account that exists if the KDC answers that the principal is unknown. YAML only; must be a non-empty string |
 | `saml_targets` | list[str] | `[]` | `enable_saml` | SAML IdP/SP metadata URLs |
 | `dnssec_targets` | list[str] | `[]` | `enable_dnssec` | Zones to query for DNSSEC posture |
 | `dnssec_resolver` | str | `null` | `enable_dnssec` | Resolver host used for DNSSEC lookups |
@@ -1551,9 +1552,10 @@ details flow only into the normal scan outputs (database, CBOM, and reports).
 
 **In-process TLS EKU check:** Even without `codesign_targets` configured, the `--inventory-code-signing`
 flag runs an in-process check over the in-memory `tls_endpoints` list, with no additional network
-connections. That check reads an EKU list the TLS scanner never records, so it finds nothing in a
-real scan, even when a scanned server's certificate carries the Code Signing EKU. Use
-`codesign_targets` to find code-signing certificates.
+connections. The TLS scanner records each leaf certificate's Extended Key Usage OIDs (on both the
+sslyze path and the fallback path, and they survive a resumed scan), and this check reports a
+`CODE_SIGNING` endpoint for any leaf whose EKU includes Code Signing (1.3.6.1.5.5.7.3.3). Use
+`codesign_targets` as well to find code-signing certificates held in LDAP.
 
 **CBOM integration:** Code-signing certificates are emitted as CycloneDX `certificate` components
 with `bom_ref = crypto/certificate/codesign/<sha256-fingerprint>`. If the same certificate was
@@ -1653,10 +1655,9 @@ OpenAPI scan results appear in the standard findings table as `CryptoEndpoint(pr
 ### Authenticated Scanning (ephemeral credentials)
 
 Phase 93 (available since release 5.0.0) introduced per-scan ephemeral credential support,
-through the `--auth-*` flags below, for the JWT/JWKS probe. **In the current release the credential
-does not reach the target:** the JWKS fetch removes the `Authorization` and `X-Api-Key` headers,
-and replaces an `api_key` query value with `REDACTED`, before each request is sent. The REST
-fuzzer does not attach the credential to its probes either. It uses a bearer token only to forge
+through the `--auth-*` flags below, for the JWT/JWKS probe. The credential is sent to the JWKS
+target with the request; only logged URLs have the `api_key` query value replaced with `REDACTED`.
+The REST fuzzer does not attach the credential to its probes. It uses a bearer token only to forge
 the `--fuzz-jwt-alg-confusion` test token. Credentials are never
 persisted to SQLite, the CBOM, log files, or the dashboard — they live only in-process for the
 duration of the run.
@@ -1682,10 +1683,10 @@ Without any `--auth-*` flag, no credential is attached to any probe.
 
 | Flag | Credential scheme | Description |
 |------|-------------------|-------------|
-| `--auth-bearer [REF]` | Bearer token (OAuth2 / JWT) | Builds an `Authorization: Bearer <token>` header for the JWKS fetch, which removes it before sending. Also feeds `--fuzz-jwt-alg-confusion`, and the token's declared algorithm is recorded as a `BEARER_TOKEN` row |
-| `--auth-api-key [REF]` | API-key header (`X-Api-Key`) | Builds an `X-Api-Key: <key>` header for the JWKS fetch, which removes it before sending |
-| `--auth-api-key-query [REF]` | API-key query parameter | Appends `?api_key=<key>` to the JWKS URLs; the fetch replaces the value with `REDACTED` before sending |
-| `--auth-basic [REF]` | HTTP Basic | Builds an `Authorization: Basic <secret>` header for the JWKS fetch, which removes it before sending. The header carries the secret exactly as resolved, not base64-encoded, so supply the already-encoded `base64(user:password)` value |
+| `--auth-bearer [REF]` | Bearer token (OAuth2 / JWT) | Builds an `Authorization: Bearer <token>` header sent with the JWKS fetch. Also feeds `--fuzz-jwt-alg-confusion`, and the token's declared algorithm is recorded as a `BEARER_TOKEN` row |
+| `--auth-api-key [REF]` | API-key header (`X-Api-Key`) | Builds an `X-Api-Key: <key>` header sent with the JWKS fetch |
+| `--auth-api-key-query [REF]` | API-key query parameter | Appends `?api_key=<key>` to the JWKS URLs; the value is sent to the target and replaced with `REDACTED` only in log output |
+| `--auth-basic [REF]` | HTTP Basic | Reads the secret as `user:password` (QUIRK base64-encodes it, per RFC 7617; do not pre-encode) and sends `Authorization: Basic <base64>` with the JWKS fetch. A value with no colon is rejected |
 
 Each flag accepts an optional `REF` argument. If `REF` is omitted the flag is treated as a bare
 flag and triggers an interactive `getpass` prompt (see "Reference model" below).
@@ -2347,12 +2348,12 @@ Authenticated-scanning, fuzzing and OpenAPI flags are covered in more depth in t
 | `--allow-insecure-jwks` | `false` | Disable TLS certificate verification for JWKS fetches. Each JWKS URL fetched this way appears as a HIGH finding titled `JWKS fetched with TLS certificate verification disabled` (counted in the findings totals, not in the readiness score). Same as `security.allow_insecure_jwks` |
 | `--job-id ID` | none | Dashboard job ID for progress reporting; does nothing when absent (set by the dashboard) |
 | `--db-path PATH` | none | SQLite path for dashboard job-progress writes and for the stage checkpoints `--resume-scan-id` needs; without it no checkpoints are written. Job progress is written only when `--job-id` is also set; nothing checks that the two are given together (set by the dashboard) |
-| `--auth-bearer [REF]` | none | Bearer token reference for the JWT/API scanner: an environment variable name or `@/path/to/file` (the file must be inside the current directory); the bare flag prompts for the value. The scanner currently strips the header before the request is sent, so the target never receives it |
-| `--auth-api-key [REF]` | none | API-key reference for the `X-Api-Key` header; same reference forms as `--auth-bearer`. The scanner currently strips the header before the request is sent |
-| `--auth-api-key-query [REF]` | none | API-key reference for the `api_key` query parameter on the JWKS/endpoint fetch URL, never a header; same reference forms. The scanner currently replaces the value with `REDACTED` before the request is sent |
-| `--auth-basic [REF]` | none | HTTP Basic credential reference (`user:pass`); same reference forms. The value is not base64-encoded, and the scanner currently strips the header before the request is sent |
+| `--auth-bearer [REF]` | none | Bearer token reference for the JWT/API scanner: an environment variable name or `@/path/to/file` (the file must be inside the current directory); the bare flag prompts for the value. The header is sent with the JWKS request |
+| `--auth-api-key [REF]` | none | API-key reference for the `X-Api-Key` header; same reference forms as `--auth-bearer`. The header is sent with the JWKS request |
+| `--auth-api-key-query [REF]` | none | API-key reference for the `api_key` query parameter on the JWKS/endpoint fetch URL, never a header; same reference forms. The value is sent to the target and replaced with `REDACTED` only in log output |
+| `--auth-basic [REF]` | none | HTTP Basic credential reference; the resolved value must be `user:password` (QUIRK base64-encodes it; do not pre-encode; a value with no colon is rejected); same reference forms. The header is sent with the JWKS request |
 | `--openapi-spec FILE_OR_URL` | none | Local OpenAPI/Swagger spec file, or an HTTP(S) URL within the configured scan targets (scope gate enforced before any fetch). Overrides `scan.openapi_spec_path` |
-| `--inventory-code-signing` | `false` | Inventory code-signing certificates from LDAP `userCertificate` attributes (Phase 95 CSIGN-01). Its in-process TLS EKU check finds nothing in a real scan |
+| `--inventory-code-signing` | `false` | Inventory code-signing certificates from LDAP `userCertificate` attributes (Phase 95 CSIGN-01) and from the Code Signing EKU on leaf certificates the TLS phase captured |
 | `--fuzz` | `false` | Enable active REST crypto-posture fuzzing (needs a local OpenAPI spec file from `--openapi-spec` or `scan.openapi_spec_path`; a URL spec is not fuzzed; TTY `CONFIRM` prompt; hard-aborts in non-TTY) |
 | `--fuzz-jwt-alg-confusion` | `false` | Also run the JWT RS256→HS256 algorithm-confusion probe; it needs `--auth-bearer` carrying an RS256 token. Acceptance = CRITICAL |
 | `--fuzz-budget N` | `50` | Maximum probe requests (hard max **500**; with `--fuzz`, values above 500 are rejected, never clamped) |
@@ -4468,7 +4469,7 @@ the connector rows.
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
 | Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
-| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
+| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `kerberos_probe_principal`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
 | SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
 | Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `connectors.enable_email`, `timeouts.email_seconds` | `sslyze` (core) | "STARTTLS downgrade risk on SMTP" |
 | Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `sslyze` (core) + `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
@@ -4484,7 +4485,7 @@ the connector rows.
 | PQC probe | Negotiates `X25519MLKEM768` against every TLS target (post-quantum hybrid key exchange) | none: runs with the TLS phase | host `openssl` with ML-KEM support (advisory fallback without it) | `pqc-hybrid-detected` |
 | S/MIME | S/MIME signing certificates in AD `userCertificate` / `userSMIMECertificate` over anonymous LDAP | `connectors.enable_smime`, `smime_targets`, `smime_search_base`, `smime_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (weak-signing-alg / weak-rsa-key / expired certificate rows, protocol `SMIME`) |
 | AD CS | Read-only LDAP enumeration of AD CS certificate authorities and templates (ESC1, ESC2, ESC3, ESC6) | `connectors.enable_adcs`, `adcs_targets`, `adcs_search_base`, `adcs_user`, `adcs_password` or `QUIRK_ADCS_PASSWORD`, `adcs_timeout` | `quirk-scanner[adcs]` (`ldap3`) | `coverage-gap\|ESC4\|reason=not-ldap-observable` |
-| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` (the TLS-certificate check finds nothing in a real scan) | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
+| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` and from the leaf certificates the TLS phase captured | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
 | OpenAPI spec | Security schemes, plaintext `http://` servers and unauthenticated paths in a local or in-scope OpenAPI/Swagger spec | `--openapi-spec FILE_OR_URL` | `quirk-scanner[api]` | `plaintext_server` |
 | REST fuzzing | Active crypto-posture fuzzing of the API described by the spec (TLS downgrade, weak ciphers, HSTS, JWT alg confusion) | `--openapi-spec` plus `--fuzz`, `--fuzz-jwt-alg-confusion`, `--fuzz-budget`; see [§3.2](#32-active-rest-fuzzing---fuzz--interactive-only-by-design) | `quirk-scanner[api]` | `tls_downgrade_accepted` |
 | Hardware fingerprint | Vendor, model, firmware and CNSA 2.0 tier of SSH-reachable devices (SSH banner, HTTP management interface) | none: runs in the SSH phase; see [§9](#9-hardware-scanning) | (none, core) | (advisory device row; no score impact) |
@@ -4608,6 +4609,35 @@ Sends an unauthenticated AS-REQ to KDC port 88 on each entry in `kerberos_target
 enctypes are CRITICAL, `rc4-hmac` and `aes128-cts-hmac-sha1-96` are HIGH, and the AES-256
 enctypes are SAFE. Requires `quirk-scanner[identity]` (`impacket`).
 
+The probe names a client principal in its AS-REQ, set by `connectors.kerberos_probe_principal`
+(default `Administrator`, which exists by default on Active Directory and Samba AD DC). It is a
+principal name, not a secret. An AS-REQ with no pre-authentication data is not a failed logon,
+so the probe carries no lockout risk. A KDC that requires pre-authentication answers that
+request with an error that lists its supported encryption types, and the scanner now reads
+that list. This was observed against a real Samba AD DC KDC on 2026-10-23 (lab `kerberos`
+profile, reached on a remapped host port because the macOS KDC holds port 88): the default
+principal returned `aes256-cts-hmac-sha1-96` only. The same lab KDC drops about one TCP
+connection in three without a reply; the scanner then falls back to UDP, and a UDP probe
+that fails is still reported as `kerberos-no-preauth`. That row can therefore be a probe
+failure and not proof the KDC does not require pre-authentication. It is tracked as an
+open todo (`261023-detect-kerberos-udp-failure-reads-as-no-preauth`).
+
+If the KDC answers that the probe principal is unknown, the scanner emits the row
+`kerberos-etypes-unavailable-principal-unknown`. This is an assessment gap: it derives no
+finding and no direct score penalty, and it is not a statement that the KDC is safe. Two
+effects it shares with the `kerberos-no-preauth` row are pre-existing and are not intended
+(open todo `261023-detect-kerberos-placeholder-rows-count-as-assessed`): the row counts as
+Kerberos evidence, so the identity domain is treated as assessed, and it counts as an
+assessed endpoint, so it raises the scan's coverage (and therefore its confidence) although
+no Kerberos crypto was assessed. To resolve it, set `kerberos_probe_principal` to an account
+that exists.
+
+Kerberos targets need an FQDN whose last two labels are the realm (for example
+`dc.corp.example.com` gives realm `CORP.EXAMPLE.COM`). An IP-literal target is used as the
+realm as-is, and a real KDC answers that the principal is unknown in that realm, so a bare
+IP address yields the principal-unknown row, never the etypes (measured against Samba on
+2026-10-23). There is no separate realm setting; this is tracked as an open todo.
+
 ##### SAML scanner
 
 Fetches the SAML IdP metadata (or OIDC discovery document) for each entry in
@@ -4685,11 +4715,11 @@ cannot be bound or searched gets one LOW `adcs-unreachable` row. Gated by
 ##### Code-signing inventory
 
 Opt-in through the `--inventory-code-signing` CLI flag; `connectors.enable_codesign` does
-not change scan behaviour. It finds code-signing certificates in one place that works in a
-real scan: LDAP `userCertificate` attributes on `codesign_targets`, read with an anonymous
-bind. The flag also runs a second check over the certificates the TLS phase captured, but
-that check reads an EKU list the TLS scanner never records, so it finds nothing in a real
-scan, even for a server whose certificate carries the CodeSigning EKU. Findings use
+not change scan behaviour. It finds code-signing certificates from two sources: LDAP
+`userCertificate` attributes on `codesign_targets`, read with an anonymous bind, and the
+Extended Key Usage OIDs the TLS scanner records for each leaf certificate it captures, so a
+scanned server whose certificate carries the CodeSigning EKU is reported even with no LDAP
+target configured. Findings use
 protocol `CODE_SIGNING`: HIGH for a SHA-1 signature, an RSA key under 2048 bits, an EC
 key under 256 bits, or an expired certificate, and MEDIUM when expiry is within 90 days.
 The LDAP source needs `ldap3` from `quirk-scanner[adcs]`.

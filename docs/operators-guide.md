@@ -1078,7 +1078,7 @@ the connector rows.
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
 | Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
-| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
+| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `kerberos_probe_principal`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
 | SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
 | Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `connectors.enable_email`, `timeouts.email_seconds` | `sslyze` (core) | "STARTTLS downgrade risk on SMTP" |
 | Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `sslyze` (core) + `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
@@ -1094,7 +1094,7 @@ the connector rows.
 | PQC probe | Negotiates `X25519MLKEM768` against every TLS target (post-quantum hybrid key exchange) | none: runs with the TLS phase | host `openssl` with ML-KEM support (advisory fallback without it) | `pqc-hybrid-detected` |
 | S/MIME | S/MIME signing certificates in AD `userCertificate` / `userSMIMECertificate` over anonymous LDAP | `connectors.enable_smime`, `smime_targets`, `smime_search_base`, `smime_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (weak-signing-alg / weak-rsa-key / expired certificate rows, protocol `SMIME`) |
 | AD CS | Read-only LDAP enumeration of AD CS certificate authorities and templates (ESC1, ESC2, ESC3, ESC6) | `connectors.enable_adcs`, `adcs_targets`, `adcs_search_base`, `adcs_user`, `adcs_password` or `QUIRK_ADCS_PASSWORD`, `adcs_timeout` | `quirk-scanner[adcs]` (`ldap3`) | `coverage-gap\|ESC4\|reason=not-ldap-observable` |
-| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` (the TLS-certificate check finds nothing in a real scan) | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
+| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` and from the leaf certificates the TLS phase captured | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
 | OpenAPI spec | Security schemes, plaintext `http://` servers and unauthenticated paths in a local or in-scope OpenAPI/Swagger spec | `--openapi-spec FILE_OR_URL` | `quirk-scanner[api]` | `plaintext_server` |
 | REST fuzzing | Active crypto-posture fuzzing of the API described by the spec (TLS downgrade, weak ciphers, HSTS, JWT alg confusion) | `--openapi-spec` plus `--fuzz`, `--fuzz-jwt-alg-confusion`, `--fuzz-budget`; see [§3.2](#32-active-rest-fuzzing---fuzz--interactive-only-by-design) | `quirk-scanner[api]` | `tls_downgrade_accepted` |
 | Hardware fingerprint | Vendor, model, firmware and CNSA 2.0 tier of SSH-reachable devices (SSH banner, HTTP management interface) | none: runs in the SSH phase; see [§9](#9-hardware-scanning) | (none, core) | (advisory device row; no score impact) |
@@ -1218,6 +1218,35 @@ Sends an unauthenticated AS-REQ to KDC port 88 on each entry in `kerberos_target
 enctypes are CRITICAL, `rc4-hmac` and `aes128-cts-hmac-sha1-96` are HIGH, and the AES-256
 enctypes are SAFE. Requires `quirk-scanner[identity]` (`impacket`).
 
+The probe names a client principal in its AS-REQ, set by `connectors.kerberos_probe_principal`
+(default `Administrator`, which exists by default on Active Directory and Samba AD DC). It is a
+principal name, not a secret. An AS-REQ with no pre-authentication data is not a failed logon,
+so the probe carries no lockout risk. A KDC that requires pre-authentication answers that
+request with an error that lists its supported encryption types, and the scanner now reads
+that list. This was observed against a real Samba AD DC KDC on 2026-10-23 (lab `kerberos`
+profile, reached on a remapped host port because the macOS KDC holds port 88): the default
+principal returned `aes256-cts-hmac-sha1-96` only. The same lab KDC drops about one TCP
+connection in three without a reply; the scanner then falls back to UDP, and a UDP probe
+that fails is still reported as `kerberos-no-preauth`. That row can therefore be a probe
+failure and not proof the KDC does not require pre-authentication. It is tracked as an
+open todo (`261023-detect-kerberos-udp-failure-reads-as-no-preauth`).
+
+If the KDC answers that the probe principal is unknown, the scanner emits the row
+`kerberos-etypes-unavailable-principal-unknown`. This is an assessment gap: it derives no
+finding and no direct score penalty, and it is not a statement that the KDC is safe. Two
+effects it shares with the `kerberos-no-preauth` row are pre-existing and are not intended
+(open todo `261023-detect-kerberos-placeholder-rows-count-as-assessed`): the row counts as
+Kerberos evidence, so the identity domain is treated as assessed, and it counts as an
+assessed endpoint, so it raises the scan's coverage (and therefore its confidence) although
+no Kerberos crypto was assessed. To resolve it, set `kerberos_probe_principal` to an account
+that exists.
+
+Kerberos targets need an FQDN whose last two labels are the realm (for example
+`dc.corp.example.com` gives realm `CORP.EXAMPLE.COM`). An IP-literal target is used as the
+realm as-is, and a real KDC answers that the principal is unknown in that realm, so a bare
+IP address yields the principal-unknown row, never the etypes (measured against Samba on
+2026-10-23). There is no separate realm setting; this is tracked as an open todo.
+
 #### SAML scanner
 
 Fetches the SAML IdP metadata (or OIDC discovery document) for each entry in
@@ -1295,11 +1324,11 @@ cannot be bound or searched gets one LOW `adcs-unreachable` row. Gated by
 #### Code-signing inventory
 
 Opt-in through the `--inventory-code-signing` CLI flag; `connectors.enable_codesign` does
-not change scan behaviour. It finds code-signing certificates in one place that works in a
-real scan: LDAP `userCertificate` attributes on `codesign_targets`, read with an anonymous
-bind. The flag also runs a second check over the certificates the TLS phase captured, but
-that check reads an EKU list the TLS scanner never records, so it finds nothing in a real
-scan, even for a server whose certificate carries the CodeSigning EKU. Findings use
+not change scan behaviour. It finds code-signing certificates from two sources: LDAP
+`userCertificate` attributes on `codesign_targets`, read with an anonymous bind, and the
+Extended Key Usage OIDs the TLS scanner records for each leaf certificate it captures, so a
+scanned server whose certificate carries the CodeSigning EKU is reported even with no LDAP
+target configured. Findings use
 protocol `CODE_SIGNING`: HIGH for a SHA-1 signature, an RSA key under 2048 bits, an EC
 key under 256 bits, or an expired certificate, and MEDIUM when expiry is within 90 days.
 The LDAP source needs `ldap3` from `quirk-scanner[adcs]`.
