@@ -61,3 +61,15 @@ Only the lab demo path shows it. The product defect (UDP failure reads as no pre
 `docker exec` into the KDC and check for a UDP 88 listener (`ss -lnup`; the image has neither `ss` nor `netstat`, so
 install `iproute2`). Capture the TCP exception on a re-run (log `tcp_error` at `scan_kerberos_targets`) so the cause of
 the TCP raise is recorded rather than assumed.
+
+## Update 2026-10-23 (Phase 230 plan 230-08)
+
+The product defect this file cross-links, a UDP failure reading as `kerberos-no-preauth`, is fixed (fix commit
+`2ec5319c`; todo `261023-detect-kerberos-udp-failure-reads-as-no-preauth` is closed). A UDP timeout like the one in the
+2026-09-17 log now gives `kerberos-unreachable`. The same Samba image was re-measured through the `kerberos` profile
+(65 live scans: UDP answered with etypes or principal-unknown in 8 of the 17 scans that used it; the rest timed out
+through Docker Desktop's UDP proxy), so the image does bind UDP 88.
+
+STILL OPEN, and the reason this stays pending: `mh-kdc` itself (10.80.0.42 on the multihost bridge network) was not
+re-measured, so whether it binds UDP 88 and why its TCP probe raised in the 2026-09-17 run are still unknown. Next step is
+unchanged: `docker exec` into the KDC for a UDP 88 listener and capture `tcp_error` on a re-run.

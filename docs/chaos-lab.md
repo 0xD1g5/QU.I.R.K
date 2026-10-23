@@ -496,7 +496,7 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 - One `etype:18:aes256-cts-hmac-sha1-96` KERBEROS endpoint, SAFE, no finding (measured 2026-10-23)
 - Kerberos targets must be an FQDN (for example `dc.quirk.lab`, with a hosts entry you add); a bare IP such as `127.0.0.1` is used as the realm and the KDC answers principal-unknown, so the scan yields `kerberos-etypes-unavailable-principal-unknown`
-- Known issues: the Samba KDC closes about half of its TCP connections with no reply (42 of 90 direct probes across two runs on 2026-10-23); the scanner retries once over TCP, then falls back to UDP, which can surface as an intermittent `kerberos-no-preauth` row (open todo `261023-detect-kerberos-udp-failure-reads-as-no-preauth`); the `samba-dc` healthcheck uses `smbclient`, which the image lacks, so the container never reports healthy; and host port 88 conflicts with macOS's own KDC
+- Known issues: the Samba KDC closes about half of its TCP connections with no reply (42 of 90 direct probes across two runs on 2026-10-23); the scanner retries once over TCP, then falls back to UDP, and the UDP answer is checked exactly like a TCP answer, so a UDP failure gives `kerberos-unreachable` and never a false `kerberos-no-preauth` (65 live scans on 2026-10-23: 0 such rows; 17 of them used UDP); the `samba-dc` healthcheck uses `smbclient`, which the image lacks, so the container never reports healthy; and host port 88 conflicts with macOS's own KDC
 
 See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-kerberos`
 
@@ -1380,6 +1380,9 @@ Three caveats worth knowing before relying on these:
   (`scan_kerberos_targets`). The compose file records an observation from 2026-09-17 that the UDP
   AS-REQ probe timed out against this container and fell back to TCP, which is the reverse of that
   source order and which this guide has not reproduced, so do not rely on UDP-path enctype enumeration here.
+  A UDP timeout no longer reads as `kerberos-no-preauth`: it gives `kerberos-unreachable`, and
+  `kerberos-no-preauth` appears only for an AS-REP that answers the probe. `mh-kdc` itself was not
+  re-measured; the same Samba image was, through the `kerberos` profile, on 2026-10-23.
 - **Email and broker need `sslyze`.** It became a core dependency on 2026-09-17 (commit `15e49e96`);
   prober images built before that lack it, and `run_scan.py` skips the email phase entirely when it
   is missing.

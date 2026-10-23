@@ -1228,10 +1228,14 @@ profile, reached on a remapped host port because the macOS KDC holds port 88): t
 principal returned `aes256-cts-hmac-sha1-96` only. The same lab KDC closes about half of its
 TCP connections without sending a reply byte (42 of 90 direct probes across two runs on
 2026-10-23, through Docker Desktop's port mapping). The scanner retries such a connection once over TCP,
-then falls back to UDP, and a UDP probe that fails is still reported as `kerberos-no-preauth`.
-That row can therefore be a probe failure and not proof the KDC does not require
-pre-authentication. It is tracked as an open todo
-(`261023-detect-kerberos-udp-failure-reads-as-no-preauth`).
+then falls back to UDP, and the UDP answer goes through the same checks as a TCP answer. A UDP
+probe that fails is never reported as `kerberos-no-preauth`: that row now comes only from an
+AS-REP that answers the probe, over either transport. Measured against the same lab KDC on
+2026-10-23 after this change: 65 real scans (20 each for `Administrator`, for a principal that
+does not exist, and for an IP-literal realm, plus 5 at the default 10 s timeout) produced 0
+`kerberos-no-preauth` rows. 17 of the 65 fell back to UDP; those came back as the etypes, as
+`kerberos-etypes-unavailable-principal-unknown`, or as `kerberos-unreachable` when the UDP reply
+did not arrive through Docker Desktop's UDP proxy.
 
 If the KDC answers that the probe principal is unknown, the scanner emits the row
 `kerberos-etypes-unavailable-principal-unknown`. This is an assessment gap: it derives no
@@ -1278,10 +1282,26 @@ The TCP probe falls back to UDP in exactly these cases, and no others:
 - the KDC replies with a Kerberos error other than pre-authentication required (25) or
   principal unknown (6).
 
-A UDP probe that then fails with a network or decoding error, or that gets any answer other
-than pre-authentication required, is still reported as `kerberos-no-preauth`. That is a known
-open defect (`261023-detect-kerberos-udp-failure-reads-as-no-preauth`), not a finding. Any
-other error from the UDP probe gives `kerberos-unreachable`.
+The UDP probe sends the same request to the same address and port and applies the same checks
+as the TCP probe. Its outcomes:
+
+- a pre-authentication required (25) reply gives the etype rows, or
+  `kerberos-etypes-unavailable-preauth-no-etype-info` when it lists none;
+- principal unknown (6) gives `kerberos-etypes-unavailable-principal-unknown`;
+- any other Kerberos error code gives `kerberos-etypes-unavailable-krb-error`, an assessment
+  gap like the other unavailable rows: no finding, no weak-etype count, and the error is
+  recorded on the row (the KDC answered, so it is not reported as unreachable);
+- an undecodable reply, an empty datagram, or an AS-REP for another realm or principal gives
+  `kerberos-etypes-unavailable-unrecognised-reply`;
+- a UDP timeout, a refusal, a send failure or a name that does not resolve gives
+  `kerberos-unreachable`, unless the TCP probe had already received a Kerberos error from the KDC,
+  in which case the row is `kerberos-etypes-unavailable-krb-error` from that TCP error;
+- `kerberos-no-preauth` comes only from an AS-REP that answers the probe (matching realm and
+  principal, compared without regard to case), on either transport.
+
+The UDP socket is connected to the probed address, so a reply from any other address is ignored
+and times out as unreachable. UDP uses the address family the name resolves to, so an IPv6 KDC
+is probed over IPv6 (an IPv4 address is preferred when a name has both).
 
 Every leg is bounded, so a silent or misbehaving listener cannot stall the scan. With the
 Kerberos timeout (a fixed 10 s), the TCP connect may take up to 10 s for each address the

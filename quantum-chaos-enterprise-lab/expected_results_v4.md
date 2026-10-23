@@ -435,24 +435,29 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 |-----:|---------|---------|-----------|-----------------|----------|
 | 88 | samba-dc | 18 | aes256-cts-hmac-sha1-96 | `etype:18:aes256-cts-hmac-sha1-96` KERBEROS endpoint, no finding | SAFE |
 
-Known open defects the lab exposes (not fixed by Phase 230):
+Known issues the lab exposes:
 
-- Intermittent `kerberos-no-preauth` rows. The Samba KDC closes TCP connections with no reply
-  byte: 6 of 18 inside the container in the first measurement, and 42 of 90 direct probes across
-  two runs through Docker Desktop's port mapping on 2026-10-23. The scanner retries such a connection once
-  over TCP, then falls back to UDP, and a failed UDP probe (a UDP proxy timeout, or a code-6
-  answer over UDP) is rendered as `kerberos-no-preauth`. A scan of this lab can therefore show
-  either the `etype:18` row or `kerberos-no-preauth`. In the 2026-10-23 runs, before the TCP
-  retry existed, 7 of 20 Administrator scans and 12 of 20 `nobody` scans (larger run) gave a false
-  `kerberos-no-preauth`. UDP is used only after one of these, the same set as the operators
+- Intermittent TCP drops, and what they yield now. The Samba KDC closes TCP connections with no
+  reply byte: 6 of 18 inside the container in the first measurement, and 42 of 90 direct probes
+  across two runs through Docker Desktop's port mapping on 2026-10-23. The scanner retries such a
+  connection once over TCP, then falls back to UDP, and the UDP answer is checked exactly like a
+  TCP answer (230-08). A UDP probe that fails is `kerberos-unreachable`, never
+  `kerberos-no-preauth`: that row appears only for an AS-REP that answers the probe, which this KDC
+  never sends. Measured on 2026-10-23 after the change, 65 real scans against this KDC through the
+  remapped port: 0 `kerberos-no-preauth` rows. `Administrator` (20 scans, realm `QUIRK.LAB`) gave
+  `etype:18` 18 times and `kerberos-unreachable` 2 times (a UDP reply that did not come back
+  through Docker Desktop's UDP proxy); `nobody` (20) gave principal-unknown 16 times and unreachable
+  4; the IP-literal realm (20) gave principal-unknown 17 times and unreachable 3; 5 scans at the
+  default 10 s timeout all gave `etype:18`. Before the change, 7 of 20 Administrator scans and 12 of
+  20 `nobody` scans gave a false `kerberos-no-preauth`. A scan of this lab can therefore show the
+  `etype:18` row or, when UDP does not answer, `kerberos-unreachable`. UDP is used only after one of these, the same set as the operators
   guide lists: a TCP connect failure (refused, timed out, unreachable, or a name that does not
   resolve); a peer that sends no reply byte before the timeout; a failed send; any other socket
   error before the first reply byte; a zero-byte TCP close or reset after which the one retry
   also gets no reply byte (it closes, resets, runs out of the remaining deadline, or fails to
   connect, send or read), or that cannot be retried (under 0.25 s of the deadline left, or the
   address the first attempt reached is unknown); or a Kerberos error other than
-  codes 25/6. Owned by todo
-  `261023-detect-kerberos-udp-failure-reads-as-no-preauth`.
+  codes 25/6.
 - The `samba-dc` healthcheck runs `smbclient`, which the image lacks, so the container never
   reports healthy although the KDC answers.
 - The scanner probes port 88 only, so on a host whose own KDC holds 88 (macOS) this profile cannot
@@ -473,7 +478,7 @@ as the realm, and the KDC answers KRB_ERROR 6, so the scan yields
 docker compose --profile kerberos up -d && sleep 15
 quirk --config config.yaml
 ```
-**Expected (as measured):** one KERBEROS endpoint `etype:18:aes256-cts-hmac-sha1-96` (SAFE) and no weak-etype finding; intermittently a `kerberos-no-preauth` row instead (known open defect above). Weak-etype findings (`Kerberos weak etype: ...`) would be derived by the dashboard and listed on the Identity page (`/api/scan/latest`), not in the CLI `findings-*.json` (the CLI risk engine has no Kerberos/DNSSEC evaluator, tracked as a todo), but this lab as provisioned does not offer a weak etype.
+**Expected (as measured):** one KERBEROS endpoint `etype:18:aes256-cts-hmac-sha1-96` (SAFE) and no weak-etype finding; when TCP drops and UDP does not answer, a `kerberos-unreachable` row instead (measured above), never `kerberos-no-preauth`. Weak-etype findings (`Kerberos weak etype: ...`) would be derived by the dashboard and listed on the Identity page (`/api/scan/latest`), not in the CLI `findings-*.json` (the CLI risk engine has no Kerberos/DNSSEC evaluator, tracked as a todo), but this lab as provisioned does not offer a weak etype.
 
 ---
 

@@ -4,8 +4,9 @@ created: 2026-10-23
 source: Phase 230 DETECT-02 (plan 230-02 live KDC measurement; D-08a); supersedes the premise of kerberos-udp-probe-times-out-falls-back-to-tcp.md
 priority: high
 area: quirk/scanner/kerberos_scanner.py (_probe_kdc_udp, scan_kerberos_targets), tests/test_kerberos_preauth_wire.py
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-10-23
+resolves_phase: 230
 owner: "999.132"
 ---
 
@@ -42,9 +43,9 @@ Make UDP failure and non-25 codes surface as an error or "unavailable" row (a `s
 `kerberos-etypes-unavailable-*`), never `[]`. Decide how a code-6 UDP reply maps (it should mirror the TCP
 `kerberos-etypes-unavailable-principal-unknown` row). Keep the genuine AS-REP "no pre-auth" row.
 
-- [ ] Add a wire-level test: UDP timeout, undecodable reply and a code-6 reply each must NOT yield `kerberos-no-preauth`.
-- [ ] Change `_probe_kdc_udp` (or its caller) so failure is distinguishable from "empty etype list".
-- [ ] Update `docs/operators-guide.md` Kerberos section and the `docker-compose.yml` mh-kdc comment (which already names this todo).
+- [x] Add a wire-level test: UDP timeout, undecodable reply and a code-6 reply each must NOT yield `kerberos-no-preauth`. (Real UDP sockets in `tests/test_kerberos_probe_principal_config.py`, CI-visible; real ASN.1 bytes in `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire`.)
+- [x] Change `_probe_kdc_udp` (or its caller) so failure is distinguishable from "empty etype list". (It now raises; `[]` only comes from a matching AS-REP via `_classify_kdc_reply`.)
+- [x] Update `docs/operators-guide.md` Kerberos section and the `docker-compose.yml` mh-kdc comment (which already names this todo). (Also `docs/chaos-lab.md` and `expected_results_v4.md`.)
 
 ## Feasibility & Effort
 
@@ -107,5 +108,38 @@ The TCP probe handles IPv6: the first attempt uses `socket.create_connection` (a
 IPv6 target therefore reaches this defect on every TCP outcome that falls back to UDP. This predates round 2. The fix
 belongs with this todo's UDP return-contract change: resolve with `getaddrinfo` and use the returned family.
 
-- [ ] UDP probe resolves the address family (`getaddrinfo`) instead of hardcoding `AF_INET`; add an IPv6 loopback test.
-- [ ] A code-6 UDP reply logs, and maps to the principal-unknown row (mirrors TCP), not `[]`.
+- [x] UDP probe resolves the address family (`getaddrinfo`) instead of hardcoding `AF_INET`; add an IPv6 loopback test. (Done. The test records the socket family and the full 4-tuple sockaddr from a stubbed `getaddrinfo` instead of binding a live `::1` listener, so it never skips on a host without IPv6.)
+- [x] A code-6 UDP reply logs, and maps to the principal-unknown row (mirrors TCP), not `[]`.
+
+## Resolution (Phase 230 plan 230-08, 2026-10-23)
+
+Fixed under operator decisions D-29, D-30 and D-31 (230-VERIFICATION gap 1).
+
+- **Fix commit `2ec5319c`** (`fix(230-08)`), tests first in `9300ed11` (`test(230-08)`, red against `adbba366`).
+  `_probe_kdc` and `_probe_kdc_udp` now hand the reply bytes to ONE classifier, `_classify_kdc_reply`. `[]` comes only
+  from an AS-REP whose realm and principal match the probe, over TCP or UDP. A UDP timeout, refusal, send failure or
+  unresolvable name raises `OSError` and the scan writes `kerberos-unreachable`; an empty or undecodable reply or a
+  mismatched AS-REP gives the unrecognised-reply row; code 6 gives the principal-unknown row (and logs); code 25 without
+  etypes gives the preauth-no-etype-info row; any other KRB_ERROR code gives the new
+  `kerberos-etypes-unavailable-krb-error` row (also used when the TCP probe already got a Kerberos error and UDP then
+  fails, since the KDC answered). `etypes` now starts as `None`, so a fall-through reads as unreachable.
+- **D-30 done:** the UDP socket takes its family and sockaddr from `getaddrinfo(host, port, type=SOCK_DGRAM)` (an IPv4
+  record is preferred when a name has both) and is `connect()`ed, so a reply from another source is dropped by the
+  kernel and ICMP unreachable surfaces as an error.
+- **Proof:** `tests/test_kerberos_probe_principal_config.py::test_no_preauth_iff_matching_as_rep` (119 cases over every
+  TCP outcome and, for each TCP outcome that falls back, every UDP outcome) runs in CI. Its outcome set is re-derived from
+  the scanner source with `ast` (every `Kerberos*` exception class, every `KerberosTransportError` kind, and every
+  `return []` / `etypes = []` site). Whole-file counts: probe_principal_config 207 passed, preauth_wire 64 passed
+  (local-only, impacket), test_kerberos_scanner 25 passed 1 skipped.
+- **Fail-first (against `adbba366`):** config file 112 failed 95 passed; wire file 13 failed 51 passed; the flipped
+  `test_kdc_udp_decode_failure_logs` 1 failed.
+- **Mutants** (out-of-tree plugin, no tracked file edited): the old behaviour (any UDP failure returns `[]`) fails 90 of
+  the 119 invariant cases; mapping a UDP code 6 to `[]` fails 9; skipping the AS-REP realm/cname match fails the
+  real-decode invariant and the UDP shape tests (6 of 30 selected nodes).
+- **Live, Samba KDC on 127.0.0.1:18088, 2026-10-23, at `2ec5319c`:** 65 real scans, **0 `kerberos-no-preauth`**.
+  Administrator/`QUIRK.LAB` (20): `etype:18` 18, unreachable 2. `nobody`/`QUIRK.LAB` (20): principal-unknown 16, unreachable
+  4. IP-literal realm (20): principal-unknown 17, unreachable 3. Administrator at the default 10 s (5): `etype:18` 5. 17 of
+  the 65 used the UDP leg (all after a TCP retry); the unreachable rows are UDP replies that did not come back through
+  Docker Desktop's UDP proxy. Before: 35-60% false rows per scan (round 3). The lab was torn down to its pre-image.
+- Docs: `docs/operators-guide.md`, `docs/chaos-lab.md`, `expected_results_v4.md`, the `docker-compose.yml` mh-kdc comment,
+  UAT-230-03 and UAT-230-07, ledger rows DCL-OPS-P230-0001..0007.
