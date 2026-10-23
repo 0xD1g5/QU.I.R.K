@@ -356,6 +356,9 @@ def test_tcp_exchange_silent_peer_kind_is_timeout():
     assert exc.answered is False and exc.kind == "timeout"
 
 
+_PEER = ("192.0.2.88", 88)
+
+
 def _scan_with_tcp_sequence(monkeypatch, outcomes):
     """``_probe_kdc`` raises/returns each of ``outcomes`` in turn."""
     monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
@@ -378,9 +381,10 @@ def _scan_with_tcp_sequence(monkeypatch, outcomes):
 
 @pytest.mark.parametrize("kind", ["eof", "reset"])
 def test_zero_byte_drop_is_retried_once_over_tcp(monkeypatch, kind):
-    # R4 WR-01: the retry needs time left on the failed attempt's deadline.
+    # R4 WR-01: the retry needs time left on the failed attempt's deadline,
+    # and (R5 WR-02) the address the failed attempt was connected to.
     drop = ks.KerberosTransportError("dropped", answered=False, kind=kind,
-                                     deadline=time.monotonic() + 5)
+                                     deadline=time.monotonic() + 5, peer=_PEER)
     rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, [18]])
     assert tcp_calls == [1, 1]
     assert udp_calls == []
@@ -389,21 +393,24 @@ def test_zero_byte_drop_is_retried_once_over_tcp(monkeypatch, kind):
 
 def test_two_zero_byte_drops_fall_back_to_udp(monkeypatch):
     drop = ks.KerberosTransportError("dropped", answered=False, kind="eof",
-                                     deadline=time.monotonic() + 5)
+                                     deadline=time.monotonic() + 5, peer=_PEER)
     rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, drop, [18]])
     assert tcp_calls == [1, 1]
     assert udp_calls == [1]
 
 
-@pytest.mark.parametrize("deadline_left", [None, -1.0, 0.1],
-                         ids=["unknown", "passed", "below-minimum"])
-def test_zero_byte_drop_without_time_left_is_not_retried(monkeypatch, deadline_left):
+@pytest.mark.parametrize("deadline_left, peer",
+                         [(None, _PEER), (-1.0, _PEER), (0.1, _PEER), (5.0, None)],
+                         ids=["unknown", "passed", "below-minimum", "peer-unknown"])
+def test_zero_byte_drop_without_time_left_is_not_retried(monkeypatch, deadline_left,
+                                                          peer):
     """R4 WR-01: no retry when the failed attempt's deadline is unknown,
-    passed, or less than MIN_TCP_RETRY_S away; straight to UDP."""
+    passed, or less than MIN_TCP_RETRY_S away; R5 WR-02: none when the
+    address it was connected to is unknown.  Straight to UDP."""
     assert ks.MIN_TCP_RETRY_S == 0.25
     deadline = None if deadline_left is None else time.monotonic() + deadline_left
     drop = ks.KerberosTransportError("dropped", answered=False, kind="eof",
-                                     deadline=deadline)
+                                     deadline=deadline, peer=peer)
     rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, [18]])
     assert tcp_calls == [1]
     assert udp_calls == [1]
@@ -479,13 +486,14 @@ def test_parse_preauth_etypes_non_pyasn1_error_is_no_etypes(monkeypatch, exc, wh
 
 def _scan_over_loopback(monkeypatch, handler, timeout, budget):
     monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
-    peer = kwh.RawPeer(handler)
+    listener = kwh.RawPeer(handler)
     tcp_calls = []
 
-    def tcp(host, realm, t, principal=None, port=None, deadline=None):
+    def tcp(host, realm, t, principal=None, port=None, deadline=None, peer=None):
         tcp_calls.append(time.monotonic())
-        kw = {"deadline": deadline} if deadline is not None else {}
-        ks._kdc_tcp_exchange("127.0.0.1", peer.port, _REQ, t, **kw)
+        kw = ({"deadline": deadline, "peer": peer}
+              if deadline is not None else {})
+        ks._kdc_tcp_exchange("127.0.0.1", listener.port, _REQ, t, **kw)
         return [18]
 
     udp_calls = []
@@ -498,7 +506,7 @@ def _scan_over_loopback(monkeypatch, handler, timeout, budget):
             budget=budget,
         )
     finally:
-        peer.close()
+        listener.close()
     assert exc is None, repr(exc)
     return rows, tcp_calls, udp_calls, elapsed
 
@@ -588,3 +596,253 @@ def test_unrecognised_reply_row_derives_no_finding_and_no_weak_count():
     )
     assert _derive_identity_findings([ep]) == []
     assert build_evidence_summary([ep])["identity_weak_etype_count"] == 0
+
+
+# --- 230-REVIEW-R5 WR-01/WR-02/WR-03: the REAL _probe_kdc -> retry path ------
+# The tests above replace ``_probe_kdc`` with a stand-in, so the production
+# line that forwards the retry's deadline and peer was never run (R5 WR-03).
+# Here only the impacket AS-REQ builders are stubbed (the transport never
+# decodes, and every peer below drops before replying), so the real
+# ``_probe_kdc`` and ``_kdc_tcp_exchange`` run in CI without impacket.
+
+_BLACKHOLE = "192.0.2.1"  # TEST-NET-1; connects to it are simulated, never sent
+
+
+def _stub_as_req_builders(monkeypatch):
+    import types
+
+    nt = types.SimpleNamespace(value=1)
+    consts = types.SimpleNamespace(
+        PrincipalNameType=types.SimpleNamespace(NT_PRINCIPAL=nt, NT_SRV_INST=nt),
+        ErrorCodes=types.SimpleNamespace(
+            KDC_ERR_PREAUTH_REQUIRED=types.SimpleNamespace(value=25),
+            KDC_ERR_C_PRINCIPAL_UNKNOWN=types.SimpleNamespace(value=6),
+        ),
+    )
+    monkeypatch.setattr(ks, "constants", consts, raising=False)
+    monkeypatch.setattr(ks, "Principal", lambda *a, **k: object(), raising=False)
+    monkeypatch.setattr(ks, "_build_as_req", lambda *a, **k: object())
+    monkeypatch.setattr(ks, "encoder", types.SimpleNamespace(encode=lambda _: _REQ),
+                        raising=False)
+
+
+class _SocketSpy:
+    """Patches ``socket`` so client connects are recorded, sockets created by
+    the scanner are checked for ``close()``, ``_BLACKHOLE`` never answers
+    (the connect waits out its timeout), and AF_INET6 ``socket()`` can fail
+    as on a host with IPv6 disabled."""
+
+    def __init__(self, monkeypatch, gai_for_name, no_ipv6=False, connect_delay=0.0):
+        import socket as socket_mod
+
+        real_socket = socket_mod.socket
+        real_gai = socket_mod.getaddrinfo
+        self.connects = []
+        self.client_socks = []
+        self.send_timeouts = []
+        spy = self
+
+        class Tracked(real_socket):
+            def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+                if fileno is None and no_ipv6 and family == socket_mod.AF_INET6:
+                    raise OSError(97, "Address family not supported by protocol")
+                super().__init__(family, type, proto, fileno)
+                self.closed_by_close = False
+                if fileno is None:  # accept() passes fileno: server side
+                    spy.client_socks.append(self)
+
+            def connect(self, addr):
+                spy.connects.append(tuple(addr[:2]))
+                if addr[0] == _BLACKHOLE:
+                    time.sleep(self.gettimeout() or 0)
+                    raise socket_mod.timeout("timed out")
+                time.sleep(connect_delay)
+                return super().connect(addr)
+
+            def sendall(self, data, *a):
+                if is_client(self):
+                    spy.send_timeouts.append(self.gettimeout())
+                return super().sendall(data, *a)
+
+            def close(self):
+                self.closed_by_close = True
+                return super().close()
+
+        def is_client(sock):
+            return any(sock is c for c in spy.client_socks)
+
+        def gai(host, port, *a, **k):
+            if host in gai_for_name:
+                return gai_for_name[host](port)
+            return real_gai(host, port, *a, **k)
+
+        monkeypatch.setattr(socket_mod, "socket", Tracked)
+        monkeypatch.setattr(socket_mod, "getaddrinfo", gai)
+
+    def assert_all_closed(self):
+        leaked = [s for s in self.client_socks if not s.closed_by_close]
+        assert not leaked, f"{len(leaked)} scanner socket(s) never closed: {leaked}"
+
+
+def _v4(port, host="127.0.0.1"):
+    import socket as socket_mod
+    return (socket_mod.AF_INET, socket_mod.SOCK_STREAM, 6, "", (host, port))
+
+
+def _real_probe_scan(monkeypatch, handler, timeout, budget, gai_for_name=None,
+                     no_ipv6=False, target="127.0.0.1"):
+    """Scan ``target`` through the REAL ``_probe_kdc`` against a loopback peer."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    _stub_as_req_builders(monkeypatch)
+    conns = []
+
+    def counting(c, stop):
+        conns.append(time.monotonic())
+        handler(c, stop)
+
+    peer = kwh.RawPeer(counting)
+    monkeypatch.setattr(ks, "KDC_PORT", peer.port)
+    udp_calls = []
+    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+    spy = _SocketSpy(monkeypatch, gai_for_name or {}, no_ipv6=no_ipv6)
+    try:
+        rows, exc, elapsed = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets([target], timeout=timeout),
+            budget=budget,
+        )
+    finally:
+        peer.close()
+    assert exc is None, repr(exc)
+    return rows, conns, udp_calls, elapsed, spy, peer.port
+
+
+def test_real_probe_late_close_retry_stays_within_one_deadline(monkeypatch):
+    """R5 WR-03: through the real ``_probe_kdc``.  The peer closes 2.5 s into
+    a 4 s deadline; the retry gets the remaining ~1.5 s for its connect AND
+    reply, so the TCP leg ends by the original deadline.  If ``_probe_kdc``
+    stops forwarding the retry's deadline, the retry gets a fresh 4 s and the
+    leg takes ~5 s."""
+    rows, conns, udp_calls, elapsed, spy, port = _real_probe_scan(
+        monkeypatch, kwh.late_close(2.5), timeout=4, budget=15,
+    )
+    assert len(conns) == 2, conns
+    assert spy.connects == [("127.0.0.1", port)] * 2
+    assert udp_calls == [1]
+    assert elapsed <= 4 + 0.5, f"TCP leg took {elapsed:.2f}s; one deadline is 4s"
+    spy.assert_all_closed()
+
+
+def test_real_probe_retry_targets_the_address_that_answered(monkeypatch):
+    """R5 WR-02: the name resolves to an unresponsive address first.  The
+    first attempt waits it out, connects to the second, and is dropped.  The
+    retry must go straight to the address that answered, not start over at
+    the unresponsive one and spend its whole remaining time there."""
+    gai = {"kdc.example.com": lambda p: [_v4(p, _BLACKHOLE), _v4(p)]}
+    rows, conns, udp_calls, elapsed, spy, port = _real_probe_scan(
+        monkeypatch, kwh.close_immediately, timeout=1.5, budget=15,
+        gai_for_name=gai, target="kdc.example.com",
+    )
+    assert spy.connects == [(_BLACKHOLE, port), ("127.0.0.1", port),
+                            ("127.0.0.1", port)]
+    assert len(conns) == 2, conns
+    assert udp_calls == [1]
+    spy.assert_all_closed()
+
+
+def test_real_probe_retry_survives_a_family_whose_socket_fails(monkeypatch):
+    """R5 WR-01: the name resolves to ::1 first on a host where AF_INET6
+    ``socket()`` fails.  The first attempt falls through to IPv4; the retry
+    must reach the same IPv4 address, not stop at the failing family."""
+    import socket as socket_mod
+
+    def v6_then_v4(p):
+        return [(socket_mod.AF_INET6, socket_mod.SOCK_STREAM, 6, "", ("::1", p, 0, 0)),
+                _v4(p)]
+
+    rows, conns, udp_calls, elapsed, spy, port = _real_probe_scan(
+        monkeypatch, kwh.close_immediately, timeout=2, budget=15,
+        gai_for_name={"kdc.example.com": v6_then_v4}, no_ipv6=True,
+        target="kdc.example.com",
+    )
+    assert len(conns) == 2, conns
+    assert udp_calls == [1]
+    spy.assert_all_closed()
+
+
+# --- 230-REVIEW-R5: the retry exchange itself (CI-visible, no impacket) ------
+
+
+def test_tcp_exchange_records_the_connected_peer():
+    """The failed attempt carries the address it was connected to, which is
+    the only address the retry may use (R5 WR-02)."""
+    peer = kwh.RawPeer(kwh.close_immediately)
+    try:
+        _, exc, _ = kwh.run_with_watchdog(
+            lambda: ks._kdc_tcp_exchange("127.0.0.1", peer.port, _REQ, 1), budget=5,
+        )
+    finally:
+        peer.close()
+    assert isinstance(exc, ks.KerberosTransportError) and exc.kind == "eof"
+    assert tuple(exc.peer[:2]) == ("127.0.0.1", peer.port)
+
+
+def test_retry_exchange_uses_only_the_recorded_peer(monkeypatch):
+    """The retry ignores ``host``/``port`` (no re-resolution of the name) and
+    makes exactly one connect, to the recorded peer, closing its socket."""
+    peer = kwh.RawPeer(kwh.framed(b"reply-body"))
+    spy = _SocketSpy(monkeypatch, {})
+    try:
+        result, exc, _ = kwh.run_with_watchdog(
+            lambda: ks._kdc_tcp_exchange(
+                "unresolvable.invalid", 1, _REQ, 2,
+                deadline=time.monotonic() + 2, peer=("127.0.0.1", peer.port),
+            ),
+            budget=6,
+        )
+    finally:
+        peer.close()
+    assert exc is None, repr(exc)
+    assert result == b"reply-body"
+    assert spy.connects == [("127.0.0.1", peer.port)]
+    spy.assert_all_closed()
+
+
+def test_retry_exchange_without_peer_is_a_plain_oserror():
+    """R5 IN-02: an unknown peer is reported as exactly that (and routes like
+    a failed connect), not as a deadline that ran out."""
+    with pytest.raises(OSError) as ei:
+        ks._kdc_tcp_exchange("127.0.0.1", 1, _REQ, 2,
+                             deadline=time.monotonic() + 2, peer=None)
+    assert not isinstance(ei.value, ks.KerberosTransportError)
+    assert "no recorded KDC peer address" in str(ei.value)
+
+
+def test_retry_exchange_with_no_time_left_does_not_connect(monkeypatch):
+    spy = _SocketSpy(monkeypatch, {})
+    with pytest.raises(OSError) as ei:
+        ks._kdc_tcp_exchange("127.0.0.1", 1, _REQ, 2,
+                             deadline=time.monotonic() - 0.01,
+                             peer=("127.0.0.1", 1))
+    assert "no time left before the Kerberos deadline to connect" in str(ei.value)
+    assert spy.connects == []
+
+
+def test_retry_send_gets_only_the_time_left_after_connect(monkeypatch):
+    """R5 IN-01: the send timeout is what is left after the connect, not the
+    timeout set before it, so the send cannot run past the deadline."""
+    peer = kwh.RawPeer(kwh.framed(b"reply-body"))
+    spy = _SocketSpy(monkeypatch, {}, connect_delay=0.6)
+    try:
+        result, exc, _ = kwh.run_with_watchdog(
+            lambda: ks._kdc_tcp_exchange(
+                "127.0.0.1", peer.port, _REQ, 1.5,
+                deadline=time.monotonic() + 1.5, peer=("127.0.0.1", peer.port),
+            ),
+            budget=6,
+        )
+    finally:
+        peer.close()
+    assert exc is None, repr(exc)
+    assert len(spy.send_timeouts) == 1
+    assert spy.send_timeouts[0] <= 1.5 - 0.6 + 0.05, spy.send_timeouts

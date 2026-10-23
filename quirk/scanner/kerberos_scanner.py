@@ -93,13 +93,19 @@ class KerberosTransportError(Exception):
     ``deadline`` is the ``time.monotonic()`` reply deadline of the attempt that
     failed, or None when unknown.  The one TCP retry may use only the time left
     before it (230-REVIEW-R4 WR-01).
+
+    ``peer`` is the socket address the failed attempt was connected to (its
+    ``getpeername()``), or None when unknown.  The one TCP retry connects to
+    exactly that address and no other (230-REVIEW-R5 WR-01/WR-02).
     """
 
-    def __init__(self, message: str, answered: bool, kind=None, deadline=None):
+    def __init__(self, message: str, answered: bool, kind=None, deadline=None,
+                 peer=None):
         super().__init__(message)
         self.answered = answered
         self.kind = kind
         self.deadline = deadline
+        self.peer = peer
 
 
 class KerberosPrincipalUnknown(Exception):
@@ -300,36 +306,8 @@ def _recv_exact(sock, n: int, deadline: float, received_before: int) -> bytes:
     return buf
 
 
-def _connect_before(host: str, port: int, deadline: float):
-    """Connect to ``host:port``, trying each address, all before ``deadline``.
-
-    The retry's connect (230-REVIEW-R4 WR-01).  ``socket.create_connection``
-    applies its timeout to EACH address, so N addresses could take N times
-    the time left; here every address shares what remains.  Raises
-    ``OSError`` (``socket.timeout`` when time runs out) like a failed connect.
-    Name resolution is not bounded by ``deadline``, as in create_connection.
-    """
-    err = None
-    for family, stype, proto, _, addr in socket.getaddrinfo(
-            host, port, 0, socket.SOCK_STREAM):
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
-        sock = socket.socket(family, stype, proto)
-        try:
-            sock.settimeout(remaining)
-            sock.connect(addr)
-            return sock
-        except OSError as exc:
-            err = exc
-            sock.close()
-    if err is not None:
-        raise err
-    raise socket.timeout("no time left before the Kerberos deadline to connect")
-
-
 def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float,
-                      deadline=None) -> bytes:
+                      deadline=None, peer=None) -> bytes:
     """Send one length-prefixed Kerberos message over TCP; return the reply body.
 
     RFC 4120 §7.2.2 framing: a 4-byte big-endian length, then the message.
@@ -337,19 +315,41 @@ def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float,
     reply (a deadline, so a peer dripping one byte at a time cannot stretch
     it).  Connect failures propagate as ``OSError``; failures after connect
     raise KerberosTransportError, which says whether the peer sent anything
-    and carries the reply deadline.
+    and carries the reply deadline and the connected peer address.
 
-    With ``deadline`` (a ``time.monotonic()`` value, used by the one retry,
-    230-REVIEW-R4 WR-01), the connect AND the reply must both finish before
-    it, so the retry cannot extend the first attempt's budget.
+    The one retry (230-REVIEW-R4 WR-01, R5 WR-01/WR-02) passes ``deadline``
+    (a ``time.monotonic()`` value) and ``peer`` (the address the failed
+    attempt was connected to).  It connects to that single address only, so
+    its connect timeout applies once, and its connect, send and reply must
+    all finish before ``deadline``: the retry cannot extend the first
+    attempt's budget.  ``host`` and ``port`` are then unused.
     """
     if deadline is None:
         sock = socket.create_connection((host, port), timeout=timeout)
         deadline = time.monotonic() + timeout
     else:
-        sock = _connect_before(host, port, deadline)
+        if peer is None:
+            raise OSError("no recorded KDC peer address to retry")
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise socket.timeout("no time left before the Kerberos deadline to connect")
+        sock = socket.create_connection(tuple(peer[:2]), timeout=remaining)
     with sock:
+        if peer is None:
+            try:
+                peer = sock.getpeername()
+            except OSError:
+                peer = None  # already reset; the retry is then skipped
         try:
+            # 230-REVIEW-R5 IN-01: the send gets only what is left before the
+            # deadline, not the timeout that was set before the connect.
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise KerberosTransportError(
+                    "no time left before the Kerberos deadline to send", False,
+                    "timeout",
+                )
+            sock.settimeout(remaining)
             try:
                 sock.sendall(struct.pack("!I", len(message)) + message)
             except OSError as exc:
@@ -366,11 +366,13 @@ def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float,
             return _recv_exact(sock, length, deadline, 4)
         except KerberosTransportError as exc:
             exc.deadline = deadline
+            exc.peer = peer
             raise
 
 
 def _probe_kdc(host: str, realm: str, timeout: int, port=None,
-               principal: str = DEFAULT_PROBE_PRINCIPAL, deadline=None) -> list:
+               principal: str = DEFAULT_PROBE_PRINCIPAL, deadline=None,
+               peer=None) -> list:
     """Probe a KDC over TCP and parse etypes from PA-ETYPE-INFO2 in KDC_ERR_PREAUTH_REQUIRED.
 
     Returns list of etype integers advertised by the KDC.
@@ -389,7 +391,8 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
     raised KerberosError for code 25; with sendReceive gone, no impacket call
     on this path raises it, so that branch is retired.
 
-    ``deadline`` is passed to ``_kdc_tcp_exchange`` (the retry, R4 WR-01).
+    ``deadline`` and ``peer`` are passed to ``_kdc_tcp_exchange`` (the retry,
+    230-REVIEW-R4 WR-01 and R5 WR-01/WR-02).
     """
     if port is None:
         port = KDC_PORT
@@ -402,7 +405,8 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
 
     preauth_required = constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value
     principal_unknown = constants.ErrorCodes.KDC_ERR_C_PRINCIPAL_UNKNOWN.value
-    r = _kdc_tcp_exchange(host, port, message, timeout, deadline=deadline)
+    r = _kdc_tcp_exchange(host, port, message, timeout, deadline=deadline,
+                          peer=peer)
 
     # 230-REVIEW-R3 WR-01: ``r`` is untrusted bytes.  ANY exception while
     # decoding it (pyasn1 raises IndexError, not only PyAsn1Error, on some
@@ -453,11 +457,13 @@ def _is_retryable_tcp_drop(exc) -> bool:
 
     A drop is NOT always fast: a peer can stay silent for most of the deadline
     and then close (230-REVIEW-R4 WR-01).  So the retry is given only the time
-    left before the first attempt's reply deadline (its connect and its reply
-    must both finish by then), and is skipped when less than
-    ``MIN_TCP_RETRY_S`` remains.  Retrying therefore never makes the TCP leg
-    longer than one attempt's connect-plus-reply budget.  This predicate only
-    classifies the failure; the caller checks the time left.
+    left before the first attempt's reply deadline (its connect, send and
+    reply must all finish by then), and is skipped when less than
+    ``MIN_TCP_RETRY_S`` remains.  It connects only to the address the first
+    attempt reached (230-REVIEW-R5 WR-01/WR-02), and is skipped when that
+    address is unknown.  Retrying therefore never makes the TCP leg longer
+    than one attempt's connect-plus-reply budget.  This predicate only
+    classifies the failure; the caller checks the time left and the peer.
     """
     return (isinstance(exc, KerberosTransportError) and not exc.answered
             and exc.kind in ("eof", "reset"))
@@ -678,9 +684,16 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 if not _is_retryable_tcp_drop(exc):
                     raise
                 # 230-REVIEW-R3 IN-01: one TCP retry after a zero-byte drop,
-                # inside the first attempt's deadline (230-REVIEW-R4 WR-01).
+                # inside the first attempt's deadline (230-REVIEW-R4 WR-01),
+                # to the one address that answered (230-REVIEW-R5 WR-01/WR-02).
                 left = (exc.deadline - time.monotonic()
                         if exc.deadline is not None else 0.0)
+                if exc.peer is None:
+                    if logger:
+                        logger.info("Kerberos TCP probe to %s dropped (%s) and "
+                                    "the peer address is unknown; not retrying",
+                                    target, exc)
+                    raise
                 if left < MIN_TCP_RETRY_S:
                     if logger:
                         logger.info("Kerberos TCP probe to %s dropped (%s) with "
@@ -689,9 +702,10 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                     raise
                 if logger:
                     logger.info("Kerberos TCP probe to %s dropped (%s); retrying "
-                                "once within the remaining %.2fs", target, exc, left)
+                                "once to %s within the remaining %.2fs",
+                                target, exc, exc.peer[0], left)
                 etypes = _probe_kdc(target, realm, timeout, principal=principal,
-                                    deadline=exc.deadline)
+                                    deadline=exc.deadline, peer=exc.peer)
         except KerberosPreauthNoEtypes:
             # 230-REVIEW CR-02: code 25 proves pre-auth IS required, but the
             # KDC named no etypes.  Honest gap row like D-25: no UDP fallback,
@@ -740,11 +754,13 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             tcp_error = exc
             # 230-REVIEW-R3 WR-01: UDP fallback ONLY for these three: OSError
             # (connect refused, timed out or unreachable, the name does not
-            # resolve, or no time left for the retry's connect),
+            # resolve, or the retry's connect failed or ran out of time),
             # KerberosTransportError with no reply byte (kind "timeout":
-            # silent peer; "send"; "error": any other socket error before the
+            # silent peer, including a retry that ran out of the remaining
+            # deadline; "send"; "error": any other socket error before the
             # first reply byte; "eof"/"reset": a zero-byte close/reset after
-            # the one retry, or with too little time left to retry), and
+            # the one retry, or with too little time left or no known peer
+            # address to retry), and
             # KerberosError for KRB_ERROR codes other than 25/6.  The guide
             # and the lab oracle list exactly this set (230-REVIEW-R4 WR-02)
             # (RFC 4120 §7.2.1; the known D-08a path, todo
