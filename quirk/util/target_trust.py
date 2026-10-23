@@ -149,6 +149,9 @@ CONNECTOR_NON_HOST_FIELDS: Final[dict] = {
         "checked targets; names no additional target"
     ),
     "vault_transit_mount": "path inside the vault named by vault_addr",
+    "kerberos_probe_principal": (
+        "client principal name sent in the AS-REQ to a checked kerberos_targets KDC; names no host"
+    ),
     "_user_set_fields": "internal record of which keys the YAML set",
 }
 
