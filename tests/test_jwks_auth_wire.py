@@ -188,3 +188,43 @@ def test_same_origin_default_port_is_same_origin():
     assert _norm_origin("http://h.example/x") == _norm_origin("http://h.example:80/")
     assert _norm_origin("http://h.example/x") != _norm_origin("https://h.example/x")
     assert _norm_origin("https://h.example/x") != _norm_origin("https://h.example:8443/x")
+
+
+# ---------------------------------------------------------------------------
+# 230-REVIEW WR-02: Logger.addFilter only filters records created on that
+# exact logger, so the redaction filter must sit on every emitting httpcore
+# child logger, not on the "httpcore" parent.
+# ---------------------------------------------------------------------------
+
+def _httpcore_logger_names_from_source() -> set:
+    """Independent re-derivation: scan installed httpcore source for getLogger names."""
+    import pathlib
+    import re
+
+    import httpcore
+
+    root = pathlib.Path(httpcore.__file__).parent
+    pat = re.compile(r"""getLogger\(\s*["']([^"']+)["']\s*\)""")
+    names = set()
+    for py in root.rglob("*.py"):
+        names.update(pat.findall(py.read_text(encoding="utf-8")))
+    return names
+
+
+@pytest.mark.parametrize("name", ["httpcore.http11", "httpcore.connection", "httpcore.http2"])
+def test_httpcore_child_logger_record_is_redacted(name, caplog):
+    secret = "ZQXV230wr02"
+    with caplog.at_level(logging.DEBUG, logger=name):
+        logging.getLogger(name).debug("GET %s", f"https://h/x?api_key={secret}")
+    msgs = [r.getMessage() for r in caplog.records if r.name == name]
+    assert msgs, "record not captured"
+    assert all(secret not in m for m in msgs)
+    assert any("api_key=REDACTED" in m for m in msgs)
+
+
+def test_filter_covers_every_httpcore_logger_in_installed_source():
+    names = _httpcore_logger_names_from_source()
+    assert names, "scan found no httpcore getLogger call (scan is broken)"
+    for name in sorted(names | {"httpx"}):
+        flts = logging.getLogger(name).filters
+        assert any(type(f).__name__ == "_RedactKeyQueryFilter" for f in flts), name

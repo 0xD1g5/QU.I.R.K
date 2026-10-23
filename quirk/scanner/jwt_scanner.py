@@ -65,14 +65,66 @@ class _RedactKeyQueryFilter(logging.Filter):
         return True
 
 
+# 230-REVIEW WR-02: the httpcore child loggers known to emit records (httpcore
+# 1.0.x; `_sync`/`_async` modules call logging.getLogger with these names).
+# Baseline for environments where the package source cannot be read (frozen
+# builds ship bytecode only); _httpcore_logger_names() adds whatever the
+# installed source actually names.
+_HTTPCORE_LOGGER_BASELINE = (
+    "httpcore.connection",
+    "httpcore.http11",
+    "httpcore.http2",
+    "httpcore.proxy",
+    "httpcore.socks",
+)
+
+_GETLOGGER_NAME_RE = re.compile(r"""getLogger\(\s*["'](httpcore(?:\.[\w.]+)?)["']\s*\)""")
+
+
+def _httpcore_logger_names() -> set:
+    """Every httpcore logger name: baseline + installed source + live loggers.
+
+    ``Logger.addFilter`` filters only records created on that exact logger;
+    records do not pass through an ancestor logger's filters as they
+    propagate. So the filter has to sit on each emitting child logger, and
+    those names are enumerated from the installed httpcore source at run time
+    (never a hand-maintained list alone).
+    """
+    names = set(_HTTPCORE_LOGGER_BASELINE)
+    try:
+        import pathlib
+
+        import httpcore  # noqa: F401 - only its location is used
+
+        root = pathlib.Path(httpcore.__file__).parent
+        for py in root.rglob("*.py"):
+            try:
+                names.update(_GETLOGGER_NAME_RE.findall(py.read_text(encoding="utf-8")))
+            except (OSError, UnicodeDecodeError):
+                continue
+    except Exception:  # noqa: BLE001 - enumeration must never break import
+        pass
+    for existing in list(logging.root.manager.loggerDict):
+        if existing == "httpcore" or existing.startswith("httpcore."):
+            names.add(existing)
+    return names
+
+
 def _install_redact_filter() -> None:
-    """Attach one redaction filter to the httpx, httpcore and module loggers.
+    """Attach one redaction filter to every logger that can render a fetch URL.
+
+    Covered: ``httpx`` (its INFO ``HTTP Request: GET <url>`` line), each
+    httpcore logger named by ``_httpcore_logger_names()`` (``httpcore`` itself
+    plus its emitting children such as ``httpcore.http11`` and
+    ``httpcore.connection``), and this module's logger. Not covered: records
+    created on any other logger, and handler-level output. The filter only
+    rewrites log records; the outgoing request is never touched.
 
     Idempotent across module reloads: a reload creates a new class object, so
     stale instances are detected by class name and replaced.
     """
     flt = _RedactKeyQueryFilter()
-    for name in ("httpx", "httpcore", __name__):
+    for name in sorted({"httpx", __name__} | _httpcore_logger_names()):
         lg = logging.getLogger(name)
         for old in [f for f in lg.filters if type(f).__name__ == "_RedactKeyQueryFilter"]:
             lg.removeFilter(old)
