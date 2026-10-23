@@ -398,6 +398,50 @@ def test_slow_or_refused_tcp_failure_is_not_retried(monkeypatch, exc):
     assert udp_calls == [1]
 
 
+# --- 230-REVIEW-R4 IN-04: _parse_preauth_etypes catches ANY decode failure ---
+# The e-data is untrusted bytes; a non-pyasn1 exception while reading it must
+# become KerberosPreauthNoEtypes (the honest code-25 row), never escape.
+# ks.PyAsn1Error is replaced with a narrow class so that narrowing the
+# ``except Exception`` back to ``except PyAsn1Error`` fails here even in CI,
+# where impacket/pyasn1 are absent and PyAsn1Error is aliased to Exception.
+
+
+class _NarrowPyAsn1Error(Exception):
+    pass
+
+
+class _EDataRaises:
+    def __init__(self, exc):
+        self.exc = exc
+
+    def __getitem__(self, key):
+        raise self.exc
+
+
+class _DecoderRaises:
+    def __init__(self, exc):
+        self.exc = exc
+
+    def decode(self, *a, **k):
+        raise self.exc
+
+
+@pytest.mark.parametrize("exc", [IndexError("list index out of range"),
+                                 KeyError("e-data")], ids=["indexerror", "keyerror"])
+@pytest.mark.parametrize("where", ["e-data-access", "decoder"])
+def test_parse_preauth_etypes_non_pyasn1_error_is_no_etypes(monkeypatch, exc, where):
+    monkeypatch.setattr(ks, "PyAsn1Error", _NarrowPyAsn1Error, raising=False)
+    if where == "e-data-access":
+        error_pkt = _EDataRaises(exc)
+    else:
+        monkeypatch.setattr(ks, "decoder", _DecoderRaises(exc), raising=False)
+        monkeypatch.setattr(ks, "MethodData", lambda: None, raising=False)
+        error_pkt = {"e-data": b"\x30\x00"}
+    with pytest.raises(ks.KerberosPreauthNoEtypes) as ei:
+        ks._parse_preauth_etypes(error_pkt)
+    assert ei.value.__cause__ is exc
+
+
 # --- 230-REVIEW-R4 WR-01: the retry shares the first attempt's deadline ------
 # A zero-byte close that arrives LATE (an idle-closing listener, or a proxy
 # whose backend connect timed out) must not buy a second full connect+reply
