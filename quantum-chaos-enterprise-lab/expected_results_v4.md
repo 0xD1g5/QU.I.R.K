@@ -412,7 +412,7 @@ quirk --targets-file targets.txt
 
 ## Profile: kerberos
 
-*Samba AD-DC for Kerberos etype enumeration on privileged ports 88 + 389. Warning: These ports collide with system DNS/LDAP if anything else is listening locally.*
+*Samba AD-DC for Kerberos etype enumeration on privileged ports 88 + 389. Warning: These ports collide with system DNS/LDAP if anything else is listening locally (macOS's own KDC holds 88).*
 
 ```bash
 PROFILE_ARGS="--profile kerberos" ./lab.sh up
@@ -422,23 +422,47 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 > **Port conflict warning:** Ports 88 and 389 are privileged ports that bind directly (not remapped to a high-numbered range). Do not run this profile if your host system has a local Kerberos KDC or LDAP server, as port conflicts will occur.
 
-| Port | Service | Etype ID | Etype Name | Expected Finding | Severity |
+> **Re-measured 2026-10-23 (Phase 230, real Samba KDC).** An earlier revision of this oracle
+> expected `rc4-hmac` (23) and `aes128-cts-hmac-sha1-96` (17), both HIGH. The real KDC does not
+> offer them: probed as the default principal `Administrator` (realm `QUIRK.LAB`) it answered
+> KRB_ERROR 25 (pre-authentication required) with etypes **[18] only**, so the lab as provisioned
+> produces no weak-etype finding. The previous probe principal `nobody` got KRB_ERROR 6 (principal
+> unknown). The measurement used the host path `127.0.0.1:18088` (a scratch compose override),
+> because the macOS host KDC already holds `*.88` and `lab.sh up` for this profile fails there with
+> "ports are not available ... bind: address already in use".
+
+| Port | Service | Etype ID | Etype Name | Expected Row | Severity |
 |-----:|---------|---------|-----------|-----------------|----------|
-| 88 | samba-dc | 23 | rc4-hmac | Kerberos weak etype: rc4-hmac | HIGH |
-| 88 | samba-dc | 17 | aes128-cts-hmac-sha1-96 | Kerberos weak etype: aes128-cts-hmac-sha1-96 | HIGH |
+| 88 | samba-dc | 18 | aes256-cts-hmac-sha1-96 | `etype:18:aes256-cts-hmac-sha1-96` KERBEROS endpoint, no finding | SAFE |
+
+Known open defects the lab exposes (not fixed by Phase 230):
+
+- Intermittent `kerberos-no-preauth` rows. The Samba KDC closes roughly one TCP connection in
+  three with no reply (reproduced inside the container, 6 of 18 empty). The scanner then falls
+  back to UDP, and a failed UDP probe is rendered as `kerberos-no-preauth`, so a scan of this lab
+  can show either the `etype:18` row or `kerberos-no-preauth`. Owned by todo
+  `261023-detect-kerberos-udp-failure-reads-as-no-preauth`.
+- The `samba-dc` healthcheck runs `smbclient`, which the image lacks, so the container never
+  reports healthy although the KDC answers.
+- The scanner probes port 88 only, so on a host whose own KDC holds 88 (macOS) this profile cannot
+  be scanned end to end without a port remap.
 
 Port 389 (LDAP) is also published by `samba-dc`, but no scanner code emits a finding for it; an
 earlier revision of this oracle listed an INFO "LDAP service exposed on standard port" row that no
 code path produces, and it has been removed.
 
 **Scanner validation command:** Kerberos scanning is config-driven — `--targets-file` does not feed
-it. Set `connectors.enable_kerberos: true` and `connectors.kerberos_targets: ["127.0.0.1"]` in the
-scan config (it needs the `[identity]` extra), then:
+it. Set `connectors.enable_kerberos: true` and `connectors.kerberos_targets: ["dc.quirk.lab"]` in the
+scan config (it needs the `[identity]` extra; the target must be an FQDN whose last two labels
+give the realm `QUIRK.LAB`, and `dc.quirk.lab` needs a local hosts entry you add pointing at the
+lab host). Measured 2026-10-23: the IP-literal target `127.0.0.1` makes the scanner use `127.0.0.1`
+as the realm, and the KDC answers KRB_ERROR 6, so the scan yields
+`kerberos-etypes-unavailable-principal-unknown` and never the etypes. Then:
 ```
 docker compose --profile kerberos up -d && sleep 15
 quirk --config config.yaml
 ```
-**Expected:** the dashboard derives >= 2 HIGH findings for weak etypes (`Kerberos weak etype: rc4-hmac`, `Kerberos weak etype: aes128-cts-hmac-sha1-96`), listed on the Identity page and merged into its findings list (`/api/scan/latest`). They are **not** written to the CLI `findings-*.json`: the CLI risk engine has no Kerberos/DNSSEC evaluator (tracked as a todo).
+**Expected (as measured):** one KERBEROS endpoint `etype:18:aes256-cts-hmac-sha1-96` (SAFE) and no weak-etype finding; intermittently a `kerberos-no-preauth` row instead (known open defect above). Weak-etype findings (`Kerberos weak etype: ...`) would be derived by the dashboard and listed on the Identity page (`/api/scan/latest`), not in the CLI `findings-*.json` (the CLI risk engine has no Kerberos/DNSSEC evaluator, tracked as a todo), but this lab as provisioned does not offer a weak etype.
 
 ---
 

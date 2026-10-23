@@ -64,7 +64,7 @@ When the `ssh-audit` tool is installed and on `PATH`, QU.I.R.K. runs ssh-audit a
 
 ### API & JWT Token Analysis
 
-QU.I.R.K. fetches JWKS (JSON Web Key Set) documents from the base URLs you configure (at `/.well-known/jwks.json` or `/oauth/jwks`, or through `/.well-known/openid-configuration`) and records each key's algorithm (its key type when the key declares no `alg`) and, for RSA and EC keys, its key size. `quirk analyze-token` decodes a single token and reports its algorithm, flagging `alg:none` as CRITICAL.
+QU.I.R.K. fetches JWKS (JSON Web Key Set) documents from the base URLs you configure (at `/.well-known/jwks.json` or `/oauth/jwks`, or through `/.well-known/openid-configuration`) and records each key's algorithm (its key type when the key declares no `alg`) and, for RSA and EC keys, its key size. `quirk analyze-token` decodes a single token and reports its algorithm, flagging `alg:none` as CRITICAL. A scan run with a bearer credential (`--auth-bearer`) whose JWT declares `alg: none`, or declares no `alg`, also reports the CRITICAL finding "Bearer token is unsigned (alg:none)".
 
 ### Container Image Scanning
 
@@ -86,7 +86,7 @@ In the CBOM, AWS KMS and GCP Cloud KMS key specifications are normalized to algo
 
 ### Identity Protocol Scanning
 
-**Kerberos** (needs the `[identity]` extra, which `[all]` does not include). QU.I.R.K. sends an unauthenticated AS-REQ over TCP (retrying over UDP if the TCP probe fails) to read the encryption types the KDC advertises, and rates them with a fixed map: the DES types are CRITICAL, RC4-HMAC and AES-128 are HIGH, and AES-256 types are SAFE. Known issue: a KDC that requires pre-authentication, which is the usual configuration, is currently recorded as `kerberos-no-preauth` with no encryption types, so the map is not applied. It also attempts an anonymous LDAP bind to read `msDS-SupportedEncryptionTypes`.
+**Kerberos** (needs the `[identity]` extra, which `[all]` does not include). QU.I.R.K. sends an unauthenticated AS-REQ over TCP (retrying over UDP if the TCP probe fails) to read the encryption types the KDC advertises, and rates them with a fixed map: the DES types are CRITICAL, RC4-HMAC and AES-128 are HIGH, and AES-256 types are SAFE. It also attempts an anonymous LDAP bind to read `msDS-SupportedEncryptionTypes`.
 
 **SAML / OIDC.** QU.I.R.K. fetches SAML metadata and OIDC discovery documents and parses the signing certificates (SAML) and signing-algorithm declarations (OIDC) they contain.
 

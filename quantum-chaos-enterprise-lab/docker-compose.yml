@@ -2070,10 +2070,16 @@ services:
     profiles: ["multihost"]
     # 88/udp is declared for documentation parity with the Dockerfile's EXPOSE; on a
     # bridge network `expose` does not gate container-to-container traffic either way.
-    # Observed 2026-09-17: the Kerberos connector's UDP AS-REQ probe times out against
-    # this container and it falls back to TCP, which succeeds — the scan yields a
-    # KERBEROS endpoint with service_detail "kerberos-no-preauth". Enctype enumeration
-    # via the UDP path is therefore not exercised here; not investigated further.
+    # Observed 2026-09-17: the scan of this container yielded a KERBEROS endpoint with
+    # service_detail "kerberos-no-preauth". The log shows the TCP probe raised (cause not
+    # captured); the scanner then ran its UDP probe, which timed out and returned an
+    # empty etype list, and that empty list was rendered as "kerberos-no-preauth".
+    # That reading was a scanner defect, not KDC behaviour. It is still open, owned by
+    # todo 261023-detect-kerberos-udp-failure-reads-as-no-preauth, and is NOT fixed by
+    # DETECT-02 (Phase 230). The same ./samba image was re-measured through the
+    # `kerberos` profile on 2026-10-23: the KDC answered the default probe principal
+    # with its etype list ([18], aes256 only) and also drops about one TCP connection
+    # in three without a reply. mh-kdc itself was not re-measured.
     expose:
       - "88"
       - "88/udp"

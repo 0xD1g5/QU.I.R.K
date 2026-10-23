@@ -477,11 +477,11 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-saml`
 
 ### 3.14 kerberos Profile (first released in 4.10.0)
 
-The `kerberos` profile runs a Samba Active Directory Domain Controller configured to advertise weak Kerberos encryption types (`rc4-hmac`, `aes128-cts-hmac-sha1-96`), giving QU.I.R.K.'s Kerberos etype enumeration scanner a realistic target. The scanner rates both HIGH: `rc4-hmac` because RC4 is a weak cipher, and `aes128-cts-hmac-sha1-96` because AES-128's post-quantum (Grover) security margin is only about 64 bits.
+The `kerberos` profile runs a Samba Active Directory Domain Controller (realm `QUIRK.LAB`), giving QU.I.R.K.'s Kerberos etype enumeration scanner a realistic target. Re-measured 2026-10-23 against the real KDC: probed as the default principal `Administrator` it answers with the etype list [18], `aes256-cts-hmac-sha1-96` only, which the scanner rates SAFE, so the profile as provisioned yields no weak-etype finding. (The scanner would rate `rc4-hmac` and `aes128-cts-hmac-sha1-96` HIGH if a KDC offered them; this lab does not.)
 
 | Port | Service  | Protocol  | Finding Tag                              |
 |------|----------|-----------|------------------------------------------|
-| 88   | samba-dc | Kerberos  | weak etype: rc4-hmac HIGH; weak etype: aes128-cts-hmac-sha1-96 HIGH |
+| 88   | samba-dc | Kerberos  | `etype:18:aes256-cts-hmac-sha1-96` SAFE, no finding (measured) |
 | 389  | samba-dc | LDAP      | no LDAP-exposure finding (no scanner code emits one); 389 is not in the default TLS port list |
 
 > **Port collision warning:** Ports 88 and 389 are not remapped to a non-standard range. If the lab host is a domain member or has a local Kerberos/LDAP daemon (e.g. `krb5kdc`, Active Directory agent, or system OpenLDAP on port 389), there will be a conflict. Verify with `lsof -i:88 -i:389` before starting this profile.
@@ -494,8 +494,9 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 **Expected scanner findings:**
 
-- `weak etype: rc4-hmac` advertised by KDC — HIGH
-- `weak etype: aes128-cts-hmac-sha1-96` advertised by KDC — HIGH
+- One `etype:18:aes256-cts-hmac-sha1-96` KERBEROS endpoint, SAFE, no finding (measured 2026-10-23)
+- Kerberos targets must be an FQDN (for example `dc.quirk.lab`, with a hosts entry you add); a bare IP such as `127.0.0.1` is used as the realm and the KDC answers principal-unknown, so the scan yields `kerberos-etypes-unavailable-principal-unknown`
+- Known issues: the Samba KDC drops about one TCP connection in three, which can surface as an intermittent `kerberos-no-preauth` row (open todo `261023-detect-kerberos-udp-failure-reads-as-no-preauth`); the `samba-dc` healthcheck uses `smbclient`, which the image lacks, so the container never reports healthy; and host port 88 conflicts with macOS's own KDC
 
 See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-kerberos`
 

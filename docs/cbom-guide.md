@@ -252,7 +252,7 @@ standard. Grover's algorithm searches an unsorted space of N items in O(sqrt(N))
 
 > **Note on `alg:none`:** The `quantum-vulnerable` label for a JWT whose `alg` is `none` reflects
 > that `nist_level == 0`, but the actual risk is a critical authentication bypass, not a quantum
-> computing threat. `quirk analyze-token` reports `alg:none` as a CRITICAL finding.
+> computing threat. A scan run with a bearer credential (`--auth-bearer`) whose JWT declares `alg:none`, or no `alg`, reports the CRITICAL finding "Bearer token is unsigned (alg:none)", and `quirk analyze-token` reports it as a CRITICAL finding offline. The CBOM still classifies the declared `none` at level 0, and a missing `alg` registers no algorithm component.
 
 ---
 

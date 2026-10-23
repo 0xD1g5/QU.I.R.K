@@ -87,7 +87,7 @@ The dashboard has no login by default and is meant for local use. To require one
 | **Kerberos** | KDC encryption types, from an unauthenticated AS-REQ | `enable_kerberos`, `[identity]` extra |
 | **AD CS** | CA certificates and templates, read over LDAP; checks templates for ESC1–ESC8 misconfigurations (ESC4/5/7/8 recorded as coverage gaps), which feed the score and the CBOM | `enable_adcs` |
 | **S/MIME** | S/MIME certificates discovered via LDAP (reads no mail) | `enable_smime` |
-| **Code signing** | Code-signing certificates from LDAP `userCertificate` | `--inventory-code-signing` |
+| **Code signing** | Code-signing certificates from LDAP `userCertificate` and from the Code Signing EKU on leaf certificates the TLS phase captured | `--inventory-code-signing` |
 | **DNSSEC** | DNSKEY / DS algorithms | `enable_dnssec` |
 | **Container images** | Crypto libraries found in the image SBOM | `enable_container`, `syft` |
 | **Source code** | Cryptographic API usage (Semgrep `p/cryptography`) | `enable_source`, `semgrep` |

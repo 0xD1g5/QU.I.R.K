@@ -98,7 +98,7 @@ Agility measures how ready you are to swap out cryptographic algorithms when the
 | ECDSA adoption | +4 pts | At least one ECDSA certificate found (Ed25519 and Ed448 keys count as ECDSA here) |
 | Certificate key types undetermined | −8 pts | Certificates were observed but none was recognised as RSA, EC or EdDSA: no key type was recorded, or the key type is another algorithm such as DSA or ML-DSA (treated as the worst case, the same penalty as RSA-only) |
 | PQC-hybrid key exchange | +8 pts | At least one endpoint negotiated the hybrid post-quantum key exchange X25519MLKEM768 (a scan run from a host whose own OpenSSL is too old to probe it also records a placeholder that currently counts here, so the bonus can appear without a real detection) |
-| Bearer token weak algorithm | −6 pts | Share of assessable endpoints with a bearer token declaring any algorithm other than `none`. Every declared algorithm counts, including one the CBOM classifier labels quantum-safe such as `ML-DSA-65` (a token declaring `alg:none` is not counted here; `quirk analyze-token` flags it as CRITICAL) |
+| Bearer token weak algorithm | −6 pts | Share of assessable endpoints with a bearer token declaring any algorithm other than `none`. Every declared algorithm counts, including one the CBOM classifier labels quantum-safe such as `ML-DSA-65` (a token declaring `alg:none`, or no `alg`, is not counted here: a scan reports it as the CRITICAL finding "Bearer token is unsigned (alg:none)", and `quirk analyze-token` still flags it offline) |
 | OpenAPI plaintext servers | −4 pts | Share of assessable endpoints whose OpenAPI spec declares `http://` servers |
 | Code-signing cert weak algorithm | −6 pts | Share of assessable endpoints with a code-signing certificate that the code-signing scanner flagged: a weak algorithm (RSA < 2048-bit, EC < 256-bit, or SHA-1), an expired certificate, or one expiring within 90 days (`agility_codesign_weak_algo_ratio`) |
 | Active REST fuzz crypto-posture findings | −4 pts | Share of assessable endpoints with CRITICAL/HIGH crypto-posture findings from active REST fuzzing |
@@ -261,7 +261,7 @@ Every finding in a QU.I.R.K. report is assigned one of five severity levels. CRI
 
 | Severity | Color (HTML/PDF report) | What It Means | Recommended Response |
 |----------|-------|---------------|---------------------|
-| CRITICAL | Red | Cryptographic failure with no mitigation — e.g., an expired TLS certificate, an undersized SAML signing key (RSA below 2048 bits), a REST API that accepts a forged token | Immediate remediation — stop using this in production |
+| CRITICAL | Red | Cryptographic failure with no mitigation — e.g., an expired TLS certificate, an undersized SAML signing key (RSA below 2048 bits), a REST API that accepts a forged token, a bearer token whose JWT is unsigned (`alg:none` or no `alg`) | Immediate remediation — stop using this in production |
 | HIGH | Orange | Active risk with known exploit path — e.g., plaintext HTTP, HTTP on TLS port | Remediate within 30 days |
 | MEDIUM | Yellow | Risk that degrades posture but no immediate exploit — e.g., TLS handshake blocked assessment, unknown services | Investigate and validate within 90 days |
 | LOW | Blue | Technical debt or deprecated standard — e.g., legacy TLS 1.0/1.1 allowed | Schedule upgrade — typically 1–2 sprint cycles |
@@ -298,6 +298,7 @@ The table below maps common finding titles to their plain-English explanation an
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
 | mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
 | JWKS fetched with TLS certificate verification disabled | HIGH | A JWKS URL was fetched with `allow_insecure_jwks` on, so its TLS certificate check was turned off. One finding per URL fetched | Turn off `security.allow_insecure_jwks` (or `--allow-insecure-jwks`) and fix the endpoint certificate. Counted in the findings totals, but does not change the readiness score |
+| Bearer token is unsigned (alg:none) | CRITICAL | The JWT supplied with `--auth-bearer` declares `alg: none` (any case) or carries no `alg`, so it carries no signature a server could verify. Ordinary CRITICAL for scoring: it caps the rating at the top of POOR through the consequence ceiling, like any open CRITICAL | Do not use unsigned tokens; make the issuer sign with a real algorithm and have the API reject `none` |
 | Code-signing certificate uses weak algorithm: *subject* | HIGH | Code-signing certificate uses a weak key or hash: RSA < 2048-bit, EC < 256-bit, or a weak signature hash such as SHA-1 or MD5 | Replace the signing certificate with RSA ≥ 2048-bit / SHA-256 or an ECDSA P-256+ key; re-sign artifacts with the new cert |
 
 Some findings are configuration advisories, such as the JWKS row above. They are listed and counted in the findings totals but are excluded from the readiness score, so they never move the score or its ceilings.
