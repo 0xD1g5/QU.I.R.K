@@ -88,7 +88,7 @@ HORIZON prose:
 - [x] **DETECT-01**: `--inventory-code-signing` finds code-signing-EKU certificates among those the
       TLS phase captured in a real scan, proven by a test that runs the real TLS capture rather than
       an injected fixture (todo `261013-doc224-codesign-tls-eku-path-dead-in-real-scans`).
-- [ ] **DETECT-02**: Kerberos etype enumeration runs against a KDC that requires pre-authentication
+- [x] **DETECT-02**: Kerberos etype enumeration runs against a KDC that requires pre-authentication
       with the pinned impacket (todo `261013-doc224-kerberos-preauth-required-read-as-no-preauth`).
 - [ ] **DETECT-03**: `--auth-*` credentials reach the JWKS target, and the redaction applies only to
       logged output, proven by a wire-level test asserting the received headers (`999.125` item 1).
@@ -187,7 +187,7 @@ Deferred from this milestone with an owner:
 | FIND-12 | Phase 229 | Complete |
 | FIND-13 | Phase 229 | Complete |
 | DETECT-01 | Phase 230 | Complete |
-| DETECT-02 | Phase 230 | Pending |
+| DETECT-02 | Phase 230 | Complete |
 | DETECT-03 | Phase 230 | Pending |
 | DETECT-04 | Phase 230 | Pending |
 | DETECT-05 | Phase 230 | Pending |
