@@ -355,6 +355,46 @@ class TestKerberosPreauthWire:
         assert udp_calls == [1]
         assert len(rows) == 1
 
+    # 230-REVIEW-R3 WR-01: a framed KRB_ERROR-shaped reply whose malformed
+    # indefinite-length inner SEQUENCE makes pyasn1 0.6.3 raise IndexError
+    # (found by fuzzing).  Any exception while decoding untrusted reply bytes
+    # is an unrecognised reply: never UDP, never kerberos-no-preauth.
+    DECODER_INDEXERROR_BLOB = bytes.fromhex(
+        "7e753073a003020105a10302011ea411180f323032363130323331371f3133315aa5"
+        "03020100a603020119a90a1b084c41422e544553a6aa1d3080a003020102a1143012"
+        "1b066b72627467741b084c41420d54455354ac1f041d301b3019a103020113a21204"
+        "10300e3005a0030201173005a003020112"
+    )
+
+    def test_probe_kdc_decoder_indexerror_is_unrecognised_reply(self):
+        import quirk.scanner.kerberos_scanner as ks
+
+        peer = kwh.RawPeer(kwh.framed(self.DECODER_INDEXERROR_BLOB))
+        try:
+            result, exc, _ = kwh.run_with_watchdog(
+                lambda: ks._probe_kdc("127.0.0.1", "LAB.TEST", 2, port=peer.port),
+                budget=6,
+            )
+        finally:
+            peer.close()
+        assert result is None
+        assert isinstance(exc, ks.KerberosUnrecognisedReply), repr(exc)
+
+    def test_scan_decoder_indexerror_is_unrecognised_row_without_udp(self, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
+
+        peer = kwh.RawPeer(kwh.framed(self.DECODER_INDEXERROR_BLOB))
+        _redirect_kdc(monkeypatch, peer.port)
+        udp_calls = self._real_udp_spy(monkeypatch)
+        try:
+            rows, exc, _ = kwh.run_with_watchdog(
+                lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=1), budget=10,
+            )
+        finally:
+            peer.close()
+        assert exc is None
+        self._assert_unrecognised_row(rows, udp_calls)
+
     def test_probe_kdc_unrecognised_reply_raises(self, fake_kdc_factory):
         import quirk.scanner.kerberos_scanner as ks
 

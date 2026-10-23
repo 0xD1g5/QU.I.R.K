@@ -270,6 +270,33 @@ def test_unanswered_tcp_failure_still_falls_back_to_udp(monkeypatch, exc):
     assert udp_calls == [1]
 
 
+@pytest.mark.parametrize(
+    "exc",
+    [
+        IndexError("list assignment index out of range"),
+        RuntimeError("arbitrary decoder failure"),
+    ],
+    ids=["indexerror", "arbitrary"],
+)
+def test_unexpected_tcp_probe_exception_is_honest_row_without_udp(monkeypatch, exc):
+    """230-REVIEW-R3 WR-01: only OSError, KerberosError and an unanswered
+    KerberosTransportError reach UDP.  Anything else the TCP probe raises (a
+    decoder failure on untrusted reply bytes) is the honest row, never UDP's
+    ``[]`` (= ``kerberos-no-preauth``, D-08a)."""
+    rows, udp_calls = _scan_with_tcp_raising(monkeypatch, exc)
+    assert udp_calls == []
+    assert [r.service_detail for r in rows] == [
+        "kerberos-etypes-unavailable-unrecognised-reply"
+    ]
+    assert rows[0].scan_error and rows[0].cert_pubkey_alg is None
+
+
+def test_kerberos_error_still_falls_back_to_udp(monkeypatch):
+    """A KRB_ERROR code other than 25/6 keeps the known D-08a UDP path."""
+    rows, udp_calls = _scan_with_tcp_raising(monkeypatch, ks.KerberosError())
+    assert udp_calls == [1]
+
+
 def test_unrecognised_reply_row_derives_no_finding_and_no_weak_count():
     from quirk.dashboard.api.routes.scan import _derive_identity_findings
     from quirk.intelligence.evidence import build_evidence_summary

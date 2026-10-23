@@ -23,6 +23,14 @@ except ImportError:
     IMPACKET_AVAILABLE = False
     PyAsn1Error = Exception  # type: ignore[assignment,misc]  # fallback when impacket/pyasn1 absent
 
+    class KerberosError(Exception):  # type: ignore[no-redef]
+        """Stand-in so ``except KerberosError`` resolves without impacket."""
+
+        def __init__(self, error=0, packet=0):
+            super().__init__()
+            self.error = error
+            self.packet = packet
+
 import ipaddress  # Phase 77 D-06 — closes scanners-protocol/IN-06
 import json
 import logging
@@ -231,7 +239,7 @@ def _parse_preauth_etypes(error_pkt) -> list:
                 )[0]
                 for entry in info1:
                     etypes.append(int(entry['etype']))
-    except (PyAsn1Error, ValueError, TypeError, KeyError, IndexError) as exc:
+    except Exception as exc:  # noqa: BLE001 - untrusted bytes (230-REVIEW-R3 WR-01)
         raise KerberosPreauthNoEtypes() from exc
     if not etypes:
         raise KerberosPreauthNoEtypes()
@@ -325,9 +333,14 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
     principal_unknown = constants.ErrorCodes.KDC_ERR_C_PRINCIPAL_UNKNOWN.value
     r = _kdc_tcp_exchange(host, port, message, timeout)
 
+    # 230-REVIEW-R3 WR-01: ``r`` is untrusted bytes.  ANY exception while
+    # decoding it (pyasn1 raises IndexError, not only PyAsn1Error, on some
+    # malformed indefinite-length input) means "not a KRB_ERROR"; the exception
+    # types are deliberately not enumerated.
     try:
         err = decoder.decode(r, asn1Spec=KRB_ERROR())[0]
-    except (PyAsn1Error, ValueError, TypeError):
+        code = int(err['error-code'])
+    except Exception:  # noqa: BLE001 - untrusted bytes
         # Not a KRB_ERROR.  Conclude "no pre-auth required" only if the reply
         # positively decodes as an AS-REP (230-REVIEW WR-01); garbage, a
         # truncated reply or a non-Kerberos service raises instead.
@@ -335,7 +348,7 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
             rep = decoder.decode(r, asn1Spec=AS_REP())[0]
             rep_realm = str(rep['crealm'])
             rep_cname = [str(c) for c in rep['cname']['name-string']]
-        except (PyAsn1Error, ValueError, TypeError, KeyError, IndexError) as exc:
+        except Exception as exc:  # noqa: BLE001 - untrusted bytes
             raise KerberosUnrecognisedReply(
                 "KDC reply decodes as neither KRB_ERROR nor AS-REP"
             ) from exc
@@ -350,7 +363,6 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
                 "AS-REP does not answer the probe (realm or principal mismatch)"
             )
         return []
-    code = int(err['error-code'])
     if code == preauth_required:
         return _parse_preauth_etypes(err)
     if code == principal_unknown:
@@ -586,7 +598,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             results.append(_unrecognised_reply_row(target, realm, timeout, logger,
                                                    principal, now, exc))
             continue
-        except Exception as exc:
+        except (OSError, KerberosError, KerberosTransportError) as exc:
             if isinstance(exc, KerberosTransportError) and exc.answered:
                 # WR-01: bytes arrived but broke the framing (short read,
                 # implausible length prefix such as unframed HTTP, a stall or
@@ -595,9 +607,12 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                                                        logger, principal, now, exc))
                 continue
             tcp_error = exc
-            # UDP fallback only when TCP got no reply byte: connect refused or
-            # timed out, a silent peer, or a close/reset before any reply
-            # byte, plus KerberosError for other error codes (RFC 4120 §7.2.1).
+            # 230-REVIEW-R3 WR-01: UDP fallback ONLY for these three: OSError
+            # (connect refused or timed out), KerberosTransportError with no
+            # reply byte (silent peer, or a close/reset before any reply
+            # byte), and KerberosError for KRB_ERROR codes other than 25/6
+            # (RFC 4120 §7.2.1; the known D-08a path, todo
+            # 261023-detect-kerberos-udp-failure-reads-as-no-preauth).
             try:
                 etypes = _probe_kdc_udp(target, realm, timeout, principal=principal)
             except KerberosPreauthNoEtypes:
@@ -606,6 +621,13 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 continue
             except Exception:
                 etypes = None  # Both paths failed
+        except Exception as exc:  # noqa: BLE001 - see below
+            # 230-REVIEW-R3 WR-01: anything else the TCP probe raises is not a
+            # transport failure.  UDP's [] would read as "no pre-auth" (D-08a),
+            # so this gets the honest row instead.
+            results.append(_unrecognised_reply_row(target, realm, timeout, logger,
+                                                   principal, now, exc))
+            continue
 
         # Graceful failure: both TCP and UDP failed
         if etypes is None:
