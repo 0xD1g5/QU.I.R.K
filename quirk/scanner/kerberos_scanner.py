@@ -184,10 +184,66 @@ def _derive_realm(host: str) -> str:
         return stripped.upper()
     except ValueError:
         pass
+    # 230-REVIEW-R9 WR-01: RFC 4120 §5.2.1 KerberosString should hold IA5
+    # characters only, so an internationalised name's realm is its IDNA
+    # A-label; the U-label could not be encoded into the AS-REQ.
+    try:
+        stripped = stripped.encode("idna").decode("ascii")
+    except UnicodeError:
+        pass  # the connect leg reports such a name as unreachable (R8 WR-03)
     parts = stripped.split(".")
     if len(parts) >= 2:
         return ".".join(parts[-2:]).upper()
     return stripped.upper()
+
+
+def _invalid_target_reason(target):
+    """Why ``target`` is not a usable KDC host name, or None if it is.
+
+    230-REVIEW-R9 WR-02/WR-03/IN-03: a non-str target used to abort the whole
+    Kerberos loop; a NUL truncates the name inside ``getaddrinfo``, so a
+    different host would be probed under this target's name; and "" resolves
+    to the local host.  None of these is probed.
+    """
+    if not isinstance(target, str):
+        return f"KDC target is not a host name string ({type(target).__name__})"
+    stripped = target.strip()
+    if not stripped:
+        return "KDC target is empty"
+    if "\x00" in stripped:
+        return "KDC target contains a NUL character"
+    if any(c.isspace() for c in stripped):
+        return "KDC target contains whitespace"
+    return None
+
+
+def _encode_as_req(as_req) -> bytes:
+    """Encode the AS-REQ.  A failure here means nothing was sent, so it is an
+    OSError, the not-assessed class, never a reply-decoding error
+    (230-REVIEW-R9 WR-01)."""
+    try:
+        return encoder.encode(as_req)
+    except Exception as exc:  # noqa: BLE001 - nothing reached the wire
+        raise OSError(f"cannot build AS-REQ: {exc}") from exc
+
+
+def _resolve_udp(host: str, port: int):
+    """``(family, sockaddr)`` for the UDP probe; an A record is preferred over
+    an AAAA record, as the AF_INET-only probe did (230-08 D-30).
+
+    Raises OSError for a name that does not resolve or cannot be IDNA-encoded
+    (230-REVIEW-R8 WR-03).  Split out so it is testable without impacket
+    (230-REVIEW-R9 IN-01).
+    """
+    try:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+    except UnicodeError as exc:
+        raise OSError(f"KDC host name cannot be encoded: {exc}") from exc
+    if not infos:
+        raise OSError(f"no UDP address for {host!r}")
+    # Stable sort: IPv4 records first.
+    infos = sorted(infos, key=lambda i: i[0] != socket.AF_INET)
+    return infos[0][0], infos[0][4]
 
 
 def _build_as_req(client_name, server_name, realm: str):
@@ -425,7 +481,7 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
     )
     as_req = _build_as_req(client_name, server_name, realm)
-    message = encoder.encode(as_req)
+    message = _encode_as_req(as_req)
 
     r = _kdc_tcp_exchange(host, port, message, timeout, deadline=deadline,
                           peer=peer)
@@ -544,20 +600,10 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
     )
     as_req = _build_as_req(client_name, server_name, realm)
-    message = encoder.encode(as_req)
+    message = _encode_as_req(as_req)
 
     try:
-        try:
-            infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
-        except UnicodeError as exc:
-            # 230-REVIEW-R8 WR-03, as on the TCP leg.
-            raise OSError(f"KDC host name cannot be encoded: {exc}") from exc
-        if not infos:
-            raise OSError(f"no UDP address for {host!r}")
-        # Stable sort: IPv4 records first, so a name with both A and AAAA
-        # records behaves as the AF_INET-only probe did.
-        infos = sorted(infos, key=lambda i: i[0] != socket.AF_INET)
-        family, sockaddr = infos[0][0], infos[0][4]
+        family, sockaddr = _resolve_udp(host, port)
         sock = socket.socket(family, socket.SOCK_DGRAM)
     except OSError as e:
         logger.warning("KDC UDP probe transport failed for %r: %s", host, e)
@@ -826,6 +872,25 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
     now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
     results = []
     for target in targets:
+        invalid = _invalid_target_reason(target)
+        if invalid is not None:
+            # 230-REVIEW-R9 WR-02/WR-03: never probed (no Kerberos, no LDAP).
+            row = CryptoEndpoint(
+                host=target if isinstance(target, str) else repr(target),
+                port=88,
+                protocol="KERBEROS",
+                cert_pubkey_alg="kerberos-unreachable",
+                service_detail="kerberos-unreachable",
+                scanned_at=now,
+                scan_error=invalid,
+                scan_error_category="invalid_input",
+            )
+            row.kerberos_scan_json = json.dumps({
+                "realm": None, "etypes": [], "etype_details": [],
+                "ldap": {}, "ldap_status": "skipped",
+            })
+            results.append(row)
+            continue
         realm = _derive_realm(target)
         # 230-08 D-29: None, never [].  Every path below assigns it; a path
         # that does not must read as unreachable.  [] means "matching AS-REP"

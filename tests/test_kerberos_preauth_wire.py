@@ -437,6 +437,62 @@ class TestKerberosPreauthWire:
         assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
         assert "cannot be encoded" in json.loads(rows[0].kerberos_scan_json)["udp_error"]
 
+    def test_idn_target_is_probed_with_its_a_label_realm(self, monkeypatch):
+        """230-REVIEW-R9 WR-01: a non-Latin-1 IDN target used to fail while the
+        AS-REQ was encoded, before any packet, and was labelled
+        unrecognised-reply ("a peer answered").  Its realm is now the A-label,
+        the request encodes, and with the name unresolvable the row is
+        kerberos-unreachable."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        def no_such_name(*a, **k):
+            raise socket.gaierror(socket.EAI_NONAME, "stubbed NXDOMAIN")
+
+        monkeypatch.setattr(ks.socket, "getaddrinfo", no_such_name)
+        monkeypatch.setattr(ks.socket, "create_connection", no_such_name)
+        rows, exc, _ = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(["kdc.пример"], timeout=1), budget=10,
+        )
+        assert exc is None
+        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
+        assert json.loads(rows[0].kerberos_scan_json)["realm"] == "KDC.XN--E1AFMKFD"
+
+    def test_request_build_failure_is_oserror_not_a_reply(self):
+        """230-REVIEW-R9 WR-01: if the AS-REQ cannot be encoded, nothing was
+        sent, so it is an OSError (both legs), never a decoder-class error."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        for probe in (ks._probe_kdc, ks._probe_kdc_udp):
+            with pytest.raises(OSError, match="cannot build AS-REQ"):
+                probe("127.0.0.1", "X.\u0436", 1)
+
+    def test_invalid_targets_are_not_probed_and_do_not_abort_the_loop(self, monkeypatch):
+        """230-REVIEW-R9 WR-02/WR-03/IN-03: non-str, empty, NUL and whitespace
+        targets each get an invalid_input unreachable row, nothing resolves or
+        connects for them, and the valid target after them is still scanned."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        resolved = []
+
+        def record(host, *a, **k):
+            resolved.append(host[0] if isinstance(host, tuple) else host)
+            raise socket.gaierror(socket.EAI_NONAME, "stubbed NXDOMAIN")
+
+        monkeypatch.setattr(ks.socket, "getaddrinfo", record)
+        monkeypatch.setattr(ks.socket, "create_connection", record)
+        monkeypatch.setattr(ks, "_probe_ldap_anon",
+                            lambda host, *a, **k: resolved.append(("ldap", host)) or {})
+        targets = [10, None, b"kdc.example", "", "kdc\x00.corp.example", "kdc corp",
+                   "ok.example"]
+        rows, exc, _ = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(targets, timeout=1), budget=10,
+        )
+        assert exc is None
+        assert [r.service_detail for r in rows] == ["kerberos-unreachable"] * len(targets)
+        assert [r.scan_error_category for r in rows[:-1]] == ["invalid_input"] * 6
+        assert all(isinstance(r.host, str) for r in rows)
+        assert set(resolved) == {"ok.example", ("ldap", "ok.example")}
+
     # 230-REVIEW-R3 WR-01: a framed KRB_ERROR-shaped reply whose malformed
     # indefinite-length inner SEQUENCE makes pyasn1 0.6.3 raise IndexError
     # (found by fuzzing).  Any exception while decoding untrusted reply bytes

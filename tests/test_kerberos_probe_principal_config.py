@@ -1402,3 +1402,51 @@ def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
     the "a peer answered" unrecognised-reply row."""
     with pytest.raises(OSError, match="cannot be encoded"):
         ks._kdc_tcp_exchange(UNENCODABLE_HOST, 88, b"x", 1)
+
+
+# 230-REVIEW-R9 WR-01: RFC 4120 §5.2.1 KerberosString should hold IA5
+# characters only, so the realm of an internationalised name is its IDNA
+# A-label.  A U-label realm such as "KDC.ПРИМЕР" cannot be encoded into the
+# AS-REQ at all.
+@pytest.mark.parametrize("host, realm", [
+    ("kdc.пример", "KDC.XN--E1AFMKFD"),
+    ("dc.münchen.de", "XN--MNCHEN-3YA.DE"),
+    ("dc01.corp.local", "CORP.LOCAL"),
+])
+def test_derive_realm_uses_the_idna_a_label(host, realm):
+    assert ks._derive_realm(host) == realm
+
+
+def test_derive_realm_unencodable_name_does_not_raise():
+    """The connect leg reports such a name as unreachable (R8 WR-03); deriving
+    its realm must not raise first."""
+    assert ks._derive_realm(UNENCODABLE_HOST) == "EXAMPLE.COM"
+
+
+# 230-REVIEW-R9 WR-02/WR-03/IN-03: a target that is not a usable host name is
+# never probed.  A NUL truncates the name inside getaddrinfo, so a different
+# host would be probed under this target's name; "" resolves to the local host.
+@pytest.mark.parametrize("target", [
+    10, None, b"kdc.example", "", "   ", "kdc\x00.corp.example", "kdc corp",
+])
+def test_invalid_target_reason_rejects(target):
+    assert ks._invalid_target_reason(target)
+
+
+@pytest.mark.parametrize("target", [
+    "dc01.corp.local", " dc01.corp.local ", "10.0.0.1", "::1", "kdc.пример",
+])
+def test_invalid_target_reason_accepts(target):
+    assert ks._invalid_target_reason(target) is None
+
+
+def test_resolve_udp_unencodable_host_is_oserror():
+    """230-REVIEW-R9 IN-01: the UDP leg's resolve step, testable without
+    impacket (the TCP twin is test_tcp_exchange_unencodable_host_is_a_connect_oserror)."""
+    with pytest.raises(OSError, match="cannot be encoded"):
+        ks._resolve_udp(UNENCODABLE_HOST, 88)
+
+
+def test_resolve_udp_returns_family_and_sockaddr_ipv4_first():
+    family, sockaddr = ks._resolve_udp("127.0.0.1", 88)
+    assert family == ks.socket.AF_INET and sockaddr[:2] == ("127.0.0.1", 88)
