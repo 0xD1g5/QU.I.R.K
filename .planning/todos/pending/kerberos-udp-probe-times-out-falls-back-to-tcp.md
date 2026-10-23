@@ -1,43 +1,63 @@
-# Kerberos UDP AS-REQ probe times out against the lab KDC; enctype enumeration via UDP is unexercised
+---
+type: todo
+created: 2026-09-17
+source: demo-prep, multihost connector coverage; corrected by Phase 230 (D-08a)
+priority: low
+area: quirk/scanner/kerberos_scanner.py (scan_kerberos_targets, _probe_kdc_udp), quantum-chaos-enterprise-lab (mh-kdc)
+status: pending
+resolves_phase: null
+owner: "999.132"
+---
+
+# Kerberos UDP AS-REQ probe times out against the lab KDC; the `kerberos-no-preauth` row came from the UDP path
 
 **Filed:** 2026-09-17 (demo-prep, multihost connector coverage)
-**Priority:** P3 — the connector still produces a finding via TCP
-**Status:** open, not diagnosed
+**Corrected:** 2026-10-23 (Phase 230, D-08a). The original text read the log as "the connector falls back to TCP, which
+succeeds". That reading is **withdrawn**: it had the fallback direction backwards.
+**Priority:** P3
+**Status:** open, partly diagnosed. Cross-link: `261023-detect-kerberos-udp-failure-reads-as-no-preauth` (owns the defect).
 
 ## What happens
 
-Scanning `mh-kdc` (10.80.0.42, Samba AD DC, realm QUIRK.LAB) logs:
+Scanning `mh-kdc` (10.80.0.42, Samba AD DC, realm QUIRK.LAB) logged:
 
 ```
 KDC UDP probe transport failed for '10.80.0.42': timed out
 Kerberos scan: 1 endpoints from 1 targets
 ```
 
-The connector falls back to TCP, which succeeds, and records one `KERBEROS` endpoint with
-`service_detail="kerberos-no-preauth"`. So the Identity tab is populated and the demo path works —
-but whatever the UDP path would have enumerated (enctypes) is never exercised against this lab.
+and recorded one `KERBEROS` endpoint with `service_detail="kerberos-no-preauth"`.
+
+What the code actually does (`quirk/scanner/kerberos_scanner.py`):
+
+1. The UDP probe runs **only when the TCP probe raises** (`:370-376`: `except Exception` then `_probe_kdc_udp`). The UDP
+   timeout in this log therefore means the TCP probe **raised**. The cause of the TCP raise was not captured. The most
+   likely cause is a non-25 KRB_ERROR from a realm derived from an IP literal (`_derive_realm` uses the IP as the realm,
+   `:95-97`), which a real KDC answers with code 6 (assumption, unverified for this lab run; measured on a Samba KDC in
+   Phase 230, see `261023-detect-kerberos-ip-literal-target-used-as-realm`). A dropped TCP connection (Samba drops about
+   one in three, measured in 230-02) is the other candidate.
+2. `_probe_kdc_udp` returns `[]` on timeout or decode failure (`:249-257`), and the caller records `[]` as
+   `kerberos-no-preauth` (`:443`). So the row in this log came from the UDP **failure**, not from a successful TCP
+   exchange: a second false no-preauth path, distinct from DETECT-02 (a returned KRB_ERROR 25 on TCP, fixed in Phase 230
+   commit `15e35662`).
+3. The earlier claim that this log "matches" the DETECT-02 root cause is also wrong: DETECT-02 is the TCP path
+   returning code 25, which never reaches UDP.
 
 ## What is known
 
-- TCP 88 and 389 both answer from inside the subnet (`socket.connect` succeeds).
-- A crude UDP probe (8 null bytes to :88) also timed out, but that proves little — a KDC would
-  correctly drop a malformed datagram rather than reply, so this may be a bad test rather than
-  evidence of a missing listener.
-- `88/udp` is declared in the compose `expose:` block for documentation parity with the
-  Dockerfile's `EXPOSE`. On a bridge network `expose` does not gate container-to-container
-  traffic either way, so that declaration is not the cause.
-- Not established: whether Samba is binding UDP 88 at all in this configuration, whether the
-  connector's AS-REQ is malformed for this KDC, or whether something in the Docker bridge drops
-  the datagram.
+- TCP 88 and 389 answer from inside the subnet (`socket.connect` succeeds).
+- A crude UDP probe (8 null bytes to :88) timing out proves little: a KDC drops a malformed datagram.
+- `88/udp` in the compose `expose:` block is documentation parity with the Dockerfile `EXPOSE` and does not gate
+  container-to-container traffic.
+- Not established: whether Samba binds UDP 88 in this configuration, and why the TCP probe raised in this run.
 
 ## Why it is P3
 
-The finding the demo needs (`kerberos-no-preauth`) is produced. This is a coverage gap in the
-lab's exercise of the connector, not a user-facing defect — but it means any future change to the
-Kerberos UDP path has no lab coverage and would pass unnoticed.
+Only the lab demo path shows it. The product defect (UDP failure reads as no pre-auth) is owned by
+`261023-detect-kerberos-udp-failure-reads-as-no-preauth`; this file remains as the lab observation and the UDP-listener question.
 
 ## Suggested first step
 
-`docker exec` into the KDC and check for a UDP 88 listener (`ss -lnup`, after installing
-`iproute2` — the image has neither `ss` nor `netstat`). If Samba is not binding UDP, that is a
-lab-config fix; if it is, the probe itself needs looking at.
+`docker exec` into the KDC and check for a UDP 88 listener (`ss -lnup`; the image has neither `ss` nor `netstat`, so
+install `iproute2`). Capture the TCP exception on a re-run (log `tcp_error` at `scan_kerberos_targets`) so the cause of
+the TCP raise is recorded rather than assumed.

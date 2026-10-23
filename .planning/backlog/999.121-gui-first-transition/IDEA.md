@@ -52,3 +52,5 @@ All checks run 2026-10-12 against `origin/main` `a073cab9`.
   the scan↔report association has to be built first. That is the main unknown, so spike it.
 - **Sub-item 3, re-homed doc224 members:** `quirk/dashboard/api/routes/reports.py:15` (re-grepped 2026-10-15) still states "nothing on disk associates them", the premise the second todo calls false; the first todo's job-report links hit the same latest-only route.
 - **Spike?** Only for sub-item 3's scan↔report association. 1 and 2 are design decisions.
+
+Phase 230 (2026-10-23): + `261023-detect-kerberos-probe-principal-dashboard-parity`.

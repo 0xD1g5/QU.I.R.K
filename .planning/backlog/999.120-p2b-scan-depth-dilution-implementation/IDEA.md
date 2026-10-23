@@ -25,3 +25,5 @@ v5.26 re-audit found it through the new todo -> live-owner gate
 - A denominator change rescales every ladder rung together; all five rungs must be re-measured (212 §3, §8).
 - Not a release-phase item: re-scoring inside a tag freezes an unmeasured number (212 §8).
 - Operator-reserved: the owner phase and its milestone are the operator's call, not a planner's.
+
+Phase 230 (2026-10-23): + `261023-detect-kerberos-placeholder-rows-count-as-assessed` (resolve before or in Phase 233).

@@ -46,3 +46,5 @@ Constraints:
 
 - #11's root cause may sit in the console-enroll step, not the sensor step the todo names.
 - #12 touches every oracle that mentions the old names; regenerate expected results against a live lab run.
+
+Phase 230 (2026-10-23): + `261023-chaos-lab-kerberos-profile-healthcheck-and-port-88`.
