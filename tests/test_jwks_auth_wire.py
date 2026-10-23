@@ -19,11 +19,9 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-pytest.importorskip("httpx")
-
-from quirk.auth.credentials import CredentialContext  # noqa: E402
-from quirk.scanner.jwt_scanner import scan_jwt_endpoint  # noqa: E402
-from tests.jwks_wire_helpers import jwks_server  # noqa: E402,F401
+from quirk.auth.credentials import CredentialContext
+from quirk.scanner.jwt_scanner import scan_jwt_endpoint
+from tests.jwks_wire_helpers import jwks_server  # noqa: F401
 
 BEARER = "ZQXV230bearer"
 APIKEY = "ZQXV230apikey"
