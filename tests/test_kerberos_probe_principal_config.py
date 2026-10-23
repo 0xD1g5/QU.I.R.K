@@ -18,6 +18,7 @@ test_kerberos_preauth_wire.py and is local-only.
 
 import ast
 import logging
+import time
 from pathlib import Path
 
 import pytest
@@ -339,7 +340,9 @@ def _scan_with_tcp_sequence(monkeypatch, outcomes):
 
 @pytest.mark.parametrize("kind", ["eof", "reset"])
 def test_zero_byte_drop_is_retried_once_over_tcp(monkeypatch, kind):
-    drop = ks.KerberosTransportError("dropped", answered=False, kind=kind)
+    # R4 WR-01: the retry needs time left on the failed attempt's deadline.
+    drop = ks.KerberosTransportError("dropped", answered=False, kind=kind,
+                                     deadline=time.monotonic() + 5)
     rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, [18]])
     assert tcp_calls == [1, 1]
     assert udp_calls == []
@@ -347,9 +350,24 @@ def test_zero_byte_drop_is_retried_once_over_tcp(monkeypatch, kind):
 
 
 def test_two_zero_byte_drops_fall_back_to_udp(monkeypatch):
-    drop = ks.KerberosTransportError("dropped", answered=False, kind="eof")
+    drop = ks.KerberosTransportError("dropped", answered=False, kind="eof",
+                                     deadline=time.monotonic() + 5)
     rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, drop, [18]])
     assert tcp_calls == [1, 1]
+    assert udp_calls == [1]
+
+
+@pytest.mark.parametrize("deadline_left", [None, -1.0, 0.1],
+                         ids=["unknown", "passed", "below-minimum"])
+def test_zero_byte_drop_without_time_left_is_not_retried(monkeypatch, deadline_left):
+    """R4 WR-01: no retry when the failed attempt's deadline is unknown,
+    passed, or less than MIN_TCP_RETRY_S away; straight to UDP."""
+    assert ks.MIN_TCP_RETRY_S == 0.25
+    deadline = None if deadline_left is None else time.monotonic() + deadline_left
+    drop = ks.KerberosTransportError("dropped", answered=False, kind="eof",
+                                     deadline=deadline)
+    rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [drop, [18]])
+    assert tcp_calls == [1]
     assert udp_calls == [1]
 
 
@@ -366,6 +384,72 @@ def test_slow_or_refused_tcp_failure_is_not_retried(monkeypatch, exc):
     rows, tcp_calls, udp_calls = _scan_with_tcp_sequence(monkeypatch, [exc, [18]])
     assert tcp_calls == [1]
     assert udp_calls == [1]
+
+
+# --- 230-REVIEW-R4 WR-01: the retry shares the first attempt's deadline ------
+# A zero-byte close that arrives LATE (an idle-closing listener, or a proxy
+# whose backend connect timed out) must not buy a second full connect+reply
+# budget.  The retry gets only what is left of the first attempt's reply
+# deadline, and none at all below MIN_TCP_RETRY_S.  ``_probe_kdc`` is replaced
+# by a stand-in that forwards to the REAL transport, so this runs without
+# impacket against a real loopback peer.
+
+
+def _scan_over_loopback(monkeypatch, handler, timeout, budget):
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    peer = kwh.RawPeer(handler)
+    tcp_calls = []
+
+    def tcp(host, realm, t, principal=None, port=None, deadline=None):
+        tcp_calls.append(time.monotonic())
+        kw = {"deadline": deadline} if deadline is not None else {}
+        ks._kdc_tcp_exchange("127.0.0.1", peer.port, _REQ, t, **kw)
+        return [18]
+
+    udp_calls = []
+    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+    try:
+        rows, exc, elapsed = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets(["127.0.0.1"], timeout=timeout),
+            budget=budget,
+        )
+    finally:
+        peer.close()
+    assert exc is None, repr(exc)
+    return rows, tcp_calls, udp_calls, elapsed
+
+
+def test_late_zero_byte_close_retry_stays_within_one_deadline(monkeypatch):
+    # Peer closes 1.5 s into a 2 s deadline.  The retry gets the remaining
+    # ~0.5 s, so the TCP leg ends by the ORIGINAL deadline (was ~3.0 s).
+    rows, tcp_calls, udp_calls, elapsed = _scan_over_loopback(
+        monkeypatch, kwh.late_close(1.5), timeout=2, budget=10,
+    )
+    assert len(tcp_calls) == 2
+    assert udp_calls == [1]
+    assert elapsed <= 2 + 0.5, f"TCP leg took {elapsed:.2f}s; one deadline is 2s"
+
+
+def test_zero_byte_close_too_close_to_deadline_is_not_retried(monkeypatch):
+    # Peer closes 1.9 s into a 2 s deadline: < MIN_TCP_RETRY_S left, so no
+    # retry; straight to UDP (was a second full attempt, ~3.8 s).
+    rows, tcp_calls, udp_calls, elapsed = _scan_over_loopback(
+        monkeypatch, kwh.late_close(1.9), timeout=2, budget=10,
+    )
+    assert len(tcp_calls) == 1
+    assert udp_calls == [1]
+    assert elapsed <= 2 + 0.5
+
+
+def test_fast_zero_byte_close_is_still_retried_over_real_tcp(monkeypatch):
+    rows, tcp_calls, udp_calls, elapsed = _scan_over_loopback(
+        monkeypatch, kwh.close_immediately, timeout=2, budget=10,
+    )
+    assert len(tcp_calls) == 2
+    assert udp_calls == [1]
+    assert elapsed < 1.5
 
 
 @pytest.mark.parametrize(

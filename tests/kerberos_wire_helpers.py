@@ -115,3 +115,14 @@ def framed(blob):
     def handler(c, stop):
         c.sendall(struct.pack(">I", len(blob)) + blob)
     return handler
+
+
+def late_close(delay):
+    """Reads the request, stays silent ``delay`` s, then closes with zero bytes.
+
+    230-REVIEW-R4 WR-01: an idle-closing listener, or a proxy whose backend
+    connect timed out.  A zero-byte close, but not a fast one.
+    """
+    def handler(c, stop):
+        stop.wait(delay)
+    return handler
