@@ -251,6 +251,8 @@ def _fetch_jwks(
     only to URLs with the same origin (scheme, host, port) as ``base_url``. A
     discovery document's ``jwks_uri`` on another origin is fetched without
     credentials, and one WARNING (origins only, no secret) records the mismatch.
+    230-REVIEW WR-03: credentials sent to an ``http://`` origin are not blocked,
+    but one WARNING (origin only, no secret) records that they went in cleartext.
     """
     base_url = base_url.rstrip("/")
     fetched_urls: list[str] = []
@@ -270,6 +272,15 @@ def _fetch_jwks(
                 _origin_label(url), _origin_label(base_url),
             )
         _use_client = _has_creds and same_origin
+        if _use_client and _base_origin[0] == "http" and "cleartext" not in _warned:
+            # 230-REVIEW WR-03: not blocked (the operator chose the target),
+            # but say once that the credential travels without TLS.
+            _warned.add("cleartext")
+            logger.warning(
+                "Sending --auth-* credential to a non-TLS (http://) origin %s; "
+                "it is readable on the network path",
+                _origin_label(url),
+            )
         # Append query-param key to URL if present (D-03: never in headers)
         fetch_url = url
         if auth_query is not None and same_origin:

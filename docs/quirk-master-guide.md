@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,577 lines, in reading order.
+Five guides, 7,579 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -1659,7 +1659,9 @@ through the `--auth-*` flags below, for the JWT/JWKS probe. The credential is se
 target with the request; only logged URLs have the `api_key` query value replaced with `REDACTED`.
 The credential goes only to URLs on the same origin (scheme, host and port) as the configured JWT
 target. When the target's OIDC discovery document names a `jwks_uri` on a different origin, QUIRK
-fetches that URL without the credential and logs one WARNING naming both origins.
+fetches that URL without the credential and logs one WARNING naming both origins. A JWT target
+given as `http://` still receives the credential, in cleartext, and QUIRK logs one WARNING that
+names the origin (never the secret).
 The REST fuzzer does not attach the credential to its probes. It uses a bearer token only to forge
 the `--fuzz-jwt-alg-confusion` test token. Credentials are never
 persisted to SQLite, the CBOM, log files, or the dashboard — they live only in-process for the

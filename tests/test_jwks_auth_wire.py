@@ -228,3 +228,37 @@ def test_filter_covers_every_httpcore_logger_in_installed_source():
     for name in sorted(names | {"httpx"}):
         flts = logging.getLogger(name).filters
         assert any(type(f).__name__ == "_RedactKeyQueryFilter" for f in flts), name
+
+
+# ---------------------------------------------------------------------------
+# 230-REVIEW WR-03: credentials attached to a non-TLS (http://) origin are not
+# blocked (operator-supplied target), but one WARNING says so, without the
+# secret.
+# ---------------------------------------------------------------------------
+
+def _cleartext_warnings(caplog):
+    return [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING and "non-TLS" in r.getMessage()
+    ]
+
+
+@pytest.mark.parametrize("scheme", ["bearer", "api_key_header", "api_key_query", "basic"])
+def test_cleartext_credential_warns_once_without_secret(scheme, jwks_server, caplog):
+    ctx = _ctx(scheme)
+    secret = _ctx(scheme)._secret_buf.decode("utf-8")
+    with caplog.at_level(logging.DEBUG):
+        eps = _scan(jwks_server, ctx)
+    assert eps
+    _wire_check(scheme, *jwks_server.seen[0])  # still sent: not blocked
+    warns = _cleartext_warnings(caplog)
+    assert len(warns) == 1
+    assert "http://127.0.0.1:" in warns[0].getMessage()
+    assert all(secret not in r.getMessage() for r in caplog.records)
+
+
+def test_cleartext_without_credentials_does_not_warn(jwks_server, caplog):
+    port = jwks_server.server_address[1]
+    with caplog.at_level(logging.DEBUG):
+        scan_jwt_endpoint(f"http://127.0.0.1:{port}", timeout=3, allow_internal=True)
+    assert _cleartext_warnings(caplog) == []
