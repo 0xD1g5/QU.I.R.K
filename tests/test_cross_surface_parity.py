@@ -461,7 +461,14 @@ def _xsurf04_seed_scan_run(TestingSession, scan_run_id: str) -> None:
     """
     db = TestingSession()
     try:
-        now = _datetime(2026, 9, 27, 9, 15, 0)
+        # ONE clock (Phase 230): scanned_at tracks the wall clock, like the
+        # XSURF-0508/XSURF-07 fixtures. It used to be fixed at 2026-09-27
+        # while the near-expiry row below is now+10d. evidence.py measures
+        # expiry against scanned_at and the finding generators against the
+        # wall clock, so the pinned score silently moved 31 -> 32 at
+        # 2026-10-17 09:15 UTC (fixed scanned_at + 30d passed now+10d).
+        # Only the run-id STRING is matched, so it stays a literal.
+        now = _datetime.now()
         rows = [
             # --- SAML dual-`use` same-serial pair (XSURF-01 fixture) ---
             _CryptoEndpoint(
@@ -506,11 +513,10 @@ def _xsurf04_seed_scan_run(TestingSession, scan_run_id: str) -> None:
             # `test_xsurf0508_no_critical_cross_surface_parity` is the
             # detector for XSURF-05/06/08 (D-28 supersedes D-16 here;
             # RESEARCH Pitfall 1).
-            # Near-expiry: WALL-CLOCK based, NOT `now + 10 days` -- this
-            # fixture's scanned_at is fixed at 2026-09-27 and both finding
-            # generators measure expiry against the wall clock (Pitfall 7),
-            # so a scanned_at-relative date is already EXPIRED and would add
-            # a CRITICAL on both surfaces.
+            # Near-expiry: wall clock + 10 days. scanned_at is the wall clock
+            # too (see `now` above), so evidence.py (scanned_at-relative) and
+            # both finding generators (wall-clock-relative) agree this cert is
+            # expiring within 30 days on every date the suite runs.
             _CryptoEndpoint(
                 scan_run_id=scan_run_id, scanned_at=now,
                 host="10.80.0.52", port=443, protocol="TLS",
