@@ -1721,7 +1721,7 @@ def main():
         default=None,
         metavar="REF",
         help=(
-            "HTTP Basic credentials (base64-encoded user:pass). "
+            "HTTP Basic credentials as user:password (QUIRK base64-encodes them; do not pre-encode). "
             "Bare flag triggers getpass prompt; or supply ENVVAR_NAME or @/path/to/creds."
         ),
     )

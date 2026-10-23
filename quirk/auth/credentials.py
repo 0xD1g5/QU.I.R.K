@@ -13,6 +13,7 @@ Public surface:
 """
 from __future__ import annotations
 
+import base64
 import getpass
 import os
 from dataclasses import dataclass, field
@@ -54,6 +55,7 @@ class CredentialContext:
         """Materialize auth headers — str only at injection boundary (D-04).
 
         Returns {} for api_key_query scheme; query placement via query_param() (D-03).
+        Basic: the secret is user:password and is base64-encoded here (RFC 7617).
         """
         # D-02/D-05: This decode materializes a new immortal str the GC controls and
         # close() cannot zero. The str-copy proliferation is explicitly accepted under
@@ -65,7 +67,11 @@ class CredentialContext:
         if self.scheme == "api_key_header":
             return {self._header_name or "X-Api-Key": secret}
         if self.scheme == "basic":
-            return {"Authorization": f"Basic {secret}"}
+            # RFC 7617: secret is user:password; encoded here (UTF-8), never by the operator.
+            if ":" not in secret:
+                raise ValueError(_BASIC_FORM_ERROR)
+            token = base64.b64encode(secret.encode("utf-8")).decode("ascii")
+            return {"Authorization": "Basic " + token}
         # api_key_query: secret goes on query string, never in headers (D-03)
         return {}
 
@@ -169,7 +175,9 @@ class CredentialContext:
             )
 
         if basic is not None:
-            raw = _resolve_reference("basic", basic, prompt="Basic auth credentials: ")
+            raw = _resolve_reference("basic", basic, prompt="Basic auth (user:password): ")
+            if ":" not in raw:
+                raise ValueError(_BASIC_FORM_ERROR)
             return cls(
                 scheme="basic",
                 _secret_buf=bytearray(raw.encode("utf-8")),
@@ -179,6 +187,12 @@ class CredentialContext:
 
 
 _FILE_REF_PLACEHOLDER = "<@file reference>"
+
+# Phase 230 / D-12: fixed text, never interpolates the resolved value.
+_BASIC_FORM_ERROR = (
+    "The 'basic' credential must resolve to user:password (QUIRK base64-encodes "
+    "it); the resolved value contains no ':'. Do not pre-encode it."
+)
 
 
 def _resolve_reference(scheme: str, ref: str, *, prompt: str) -> str:
