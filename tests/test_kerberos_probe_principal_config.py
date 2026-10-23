@@ -512,14 +512,18 @@ def _scan_over_loopback(monkeypatch, handler, timeout, budget):
 
 
 def test_late_zero_byte_close_retry_stays_within_one_deadline(monkeypatch):
-    # Peer closes 1.5 s into a 2 s deadline.  The retry gets the remaining
-    # ~0.5 s, so the TCP leg ends by the ORIGINAL deadline (was ~3.0 s).
+    # Peer closes 2.5 s into a 4 s deadline.  The retry gets the remaining
+    # ~1.5 s, so the TCP leg ends by the ORIGINAL deadline (was ~5.0 s).
+    # 230-REVIEW-R5 IN-03: 1.25 s of margin on the retry-happens side
+    # (1.5 s left vs MIN_TCP_RETRY_S) and 0.5 s on each side of the bound
+    # (~4.0 s now, ~5.0 s with a fresh retry budget, bound 4.5 s); at 2 s /
+    # 1.5 s a peer thread waking 0.25 s late skipped the retry.
     rows, tcp_calls, udp_calls, elapsed = _scan_over_loopback(
-        monkeypatch, kwh.late_close(1.5), timeout=2, budget=10,
+        monkeypatch, kwh.late_close(2.5), timeout=4, budget=15,
     )
     assert len(tcp_calls) == 2
     assert udp_calls == [1]
-    assert elapsed <= 2 + 0.5, f"TCP leg took {elapsed:.2f}s; one deadline is 2s"
+    assert elapsed <= 4 + 0.5, f"TCP leg took {elapsed:.2f}s; one deadline is 4s"
 
 
 def test_zero_byte_close_too_close_to_deadline_is_not_retried(monkeypatch):
