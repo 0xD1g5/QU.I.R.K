@@ -1,7 +1,7 @@
 """Kerberos scanner module -- sends unauthenticated AS-REQ to enumerate KDC encryption types."""
 
 try:
-    from impacket.krb5.asn1 import AS_REQ, KRB_ERROR, ETYPE_INFO2, ETYPE_INFO
+    from impacket.krb5.asn1 import AS_REQ, AS_REP, KRB_ERROR, ETYPE_INFO2, ETYPE_INFO
     from impacket.krb5.asn1 import seq_set, seq_set_iter
     try:
         # impacket>=0.13.0 (current pin) renamed MethodData -> METHOD_DATA.
@@ -58,6 +58,16 @@ class KerberosPrincipalUnknown(Exception):
         )
         self.principal = principal
         self.error_code = error_code
+
+
+class KerberosUnrecognisedReply(Exception):
+    """The KDC port answered with bytes that decode as neither KRB_ERROR nor
+    AS-REP (garbage, a truncated reply, or a non-Kerberos service).
+
+    Only a reply that positively decodes as an AS-REP may be read as "no
+    pre-auth required" (230-REVIEW WR-01); anything else takes the existing
+    probe-failure path.
+    """
 
 
 class KerberosPreauthNoEtypes(Exception):
@@ -204,7 +214,8 @@ def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
     """Probe a KDC over TCP and parse etypes from PA-ETYPE-INFO2 in KDC_ERR_PREAUTH_REQUIRED.
 
     Returns list of etype integers advertised by the KDC.
-    Returns [] if the reply is a genuine AS-REP (no preauth required).
+    Returns [] only if the reply decodes as an AS-REP (no preauth required);
+    a reply that is neither KRB_ERROR nor AS-REP raises KerberosUnrecognisedReply.
     Raises KerberosPrincipalUnknown for KDC_ERR_C_PRINCIPAL_UNKNOWN (6),
     KerberosPreauthNoEtypes for a code-25 reply with no usable etype info, and
     KerberosError for any other error code or connection failure.
@@ -235,7 +246,15 @@ def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
     try:
         err = decoder.decode(r, asn1Spec=KRB_ERROR())[0]
     except (PyAsn1Error, ValueError, TypeError):
-        # Not a KRB_ERROR: a genuine AS-REP, no pre-auth required (unchanged behaviour).
+        # Not a KRB_ERROR.  Conclude "no pre-auth required" only if the reply
+        # positively decodes as an AS-REP (230-REVIEW WR-01); garbage, a
+        # truncated reply or a non-Kerberos service raises instead.
+        try:
+            decoder.decode(r, asn1Spec=AS_REP())
+        except (PyAsn1Error, ValueError, TypeError) as exc:
+            raise KerberosUnrecognisedReply(
+                "KDC reply decodes as neither KRB_ERROR nor AS-REP"
+            ) from exc
         return []
     code = int(err['error-code'])
     if code == preauth_required:

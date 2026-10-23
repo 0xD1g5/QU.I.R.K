@@ -71,6 +71,30 @@ def _krb_error(error_code=25, etypes=None, realm="LAB.TEST", enc_ts_only=False):
     return encoder.encode(err)
 
 
+def _as_rep(realm="LAB.TEST", cname="Administrator"):
+    """Build a structurally valid DER AS-REP (WR-01 control: decodes as AS_REP)."""
+    from pyasn1.codec.der import encoder
+    from impacket.krb5.asn1 import AS_REP
+
+    rep = AS_REP()
+    rep["pvno"] = 5
+    rep["msg-type"] = 11
+    rep["crealm"] = realm
+    rep["cname"]["name-type"] = 1
+    rep["cname"]["name-string"][0] = cname
+    tkt = rep["ticket"]
+    tkt["tkt-vno"] = 5
+    tkt["realm"] = realm
+    tkt["sname"]["name-type"] = 2
+    tkt["sname"]["name-string"][0] = "krbtgt"
+    tkt["sname"]["name-string"][1] = realm
+    tkt["enc-part"]["etype"] = 18
+    tkt["enc-part"]["cipher"] = b"\x00" * 16
+    rep["enc-part"]["etype"] = 18
+    rep["enc-part"]["cipher"] = b"\x00" * 16
+    return encoder.encode(rep)
+
+
 class _FakeKdc:
     """Principal-aware loopback KDC: replies per cname, code 6 for unknown."""
 
@@ -221,11 +245,45 @@ class TestKerberosPreauthWire:
     def test_as_rep_control_still_no_preauth(self, fake_kdc_factory, monkeypatch):
         import quirk.scanner.kerberos_scanner as ks
 
-        # Application tag 0x6b (AS-REP) shell: not a KRB_ERROR (tag 0x7e).
-        kdc = fake_kdc_factory(fixed_blob=bytes([0x6B, 0x03, 0x30, 0x01, 0x00]))
+        # A real encoded AS-REP (WR-01): only a reply that decodes as AS_REP
+        # may be read as "no pre-auth required".
+        kdc = fake_kdc_factory(fixed_blob=_as_rep())
         _redirect_sendreceive(monkeypatch, kdc.port)
         rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=3)
         assert [r.service_detail for r in rows] == ["kerberos-no-preauth"]
+
+    @pytest.mark.parametrize(
+        "blob",
+        [
+            b"\x00garbage",
+            bytes([0x6B, 0x03, 0x30, 0x01, 0x00]),  # AS-REP tag, not an AS-REP
+            b"HTTP/1.1 400 Bad Request\r\n\r\n",
+        ],
+        ids=["garbage", "as-rep-shell", "http"],
+    )
+    def test_unrecognised_reply_is_not_no_preauth(self, blob, fake_kdc_factory, monkeypatch):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_kdc_factory(fixed_blob=blob)
+        _redirect_sendreceive(monkeypatch, kdc.port)
+
+        def udp_fails(*a, **k):
+            # Host port 88 is held by the macOS KDC; simulate the UDP leg
+            # failing so the existing error handling is what the row shows.
+            raise OSError("udp probe stubbed out")
+
+        monkeypatch.setattr(ks, "_probe_kdc_udp", udp_fails)
+        rows = ks.scan_kerberos_targets(["127.0.0.1"], timeout=3)
+        assert not any(r.service_detail == "kerberos-no-preauth" for r in rows)
+        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
+        assert rows[0].scan_error
+
+    def test_probe_kdc_unrecognised_reply_raises(self, fake_kdc_factory):
+        import quirk.scanner.kerberos_scanner as ks
+
+        kdc = fake_kdc_factory(fixed_blob=b"\x00garbage")
+        with pytest.raises(ks.KerberosUnrecognisedReply):
+            ks._probe_kdc("127.0.0.1", "LAB.TEST", 3, port=kdc.port)
 
     def test_old_impacket_raise_shape_yields_etypes(self, monkeypatch):
         import quirk.scanner.kerberos_scanner as ks
