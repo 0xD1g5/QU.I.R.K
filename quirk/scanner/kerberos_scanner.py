@@ -325,7 +325,12 @@ def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float,
     attempt's budget.  ``host`` and ``port`` are then unused.
     """
     if deadline is None:
-        sock = socket.create_connection((host, port), timeout=timeout)
+        try:
+            sock = socket.create_connection((host, port), timeout=timeout)
+        except UnicodeError as exc:
+            # 230-REVIEW-R8 WR-03: a name IDNA cannot encode never resolved;
+            # that is a connect failure, not a reply that failed to decode.
+            raise OSError(f"KDC host name cannot be encoded: {exc}") from exc
         deadline = time.monotonic() + timeout
     else:
         if peer is None:
@@ -518,7 +523,8 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
 
     Every other outcome raises, because a swallowed UDP failure used to come
     back as ``[]``, which the caller reads as "no pre-auth": a timeout, a
-    refusal, a send failure or a name that does not resolve raises OSError;
+    refusal, a send failure or a name that does not resolve (or cannot be
+    IDNA-encoded) raises OSError;
     an empty datagram, garbage or a mismatched AS-REP raises
     KerberosUnrecognisedReply; code 6 raises KerberosPrincipalUnknown; code 25
     without etypes raises KerberosPreauthNoEtypes; any other KRB_ERROR code
@@ -541,7 +547,11 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
     message = encoder.encode(as_req)
 
     try:
-        infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        try:
+            infos = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
+        except UnicodeError as exc:
+            # 230-REVIEW-R8 WR-03, as on the TCP leg.
+            raise OSError(f"KDC host name cannot be encoded: {exc}") from exc
         if not infos:
             raise OSError(f"no UDP address for {host!r}")
         # Stable sort: IPv4 records first, so a name with both A and AAAA

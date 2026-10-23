@@ -18,6 +18,7 @@ test_kerberos_preauth_wire.py and is local-only.
 
 import ast
 import json
+from collections import Counter
 import logging
 import time
 from pathlib import Path
@@ -1365,18 +1366,39 @@ def test_only_a_matched_as_rep_can_produce_an_empty_etype_list():
     """Source scan: the only places the module returns ``[]`` or builds an empty
     etype list.  A new one must be added here deliberately."""
     tree = _module_tree()
-    found = set()
+
+    def _empty(v):
+        # ``[]`` or ``list()`` (230-REVIEW-R8 WR-02: the literal alone missed it).
+        if isinstance(v, ast.List):
+            return not v.elts
+        return (isinstance(v, ast.Call) and isinstance(v.func, ast.Name)
+                and v.func.id == "list" and not v.args and not v.keywords)
+
+    # A Counter, not a set (230-REVIEW-R8 WR-02): a second ``return []`` in a
+    # function that already has one must change the result.
+    found = Counter()
     for fn in [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]:
         for n in ast.walk(fn):
-            if (isinstance(n, ast.Return) and isinstance(n.value, ast.List)
-                    and not n.value.elts):
-                found.add((fn.name, "return []"))
-            if (isinstance(n, ast.Assign) and isinstance(n.value, ast.List)
-                    and not n.value.elts
+            if isinstance(n, ast.Return) and n.value is not None and _empty(n.value):
+                found[(fn.name, "return []")] += 1
+            if (isinstance(n, ast.Assign) and _empty(n.value)
                     and any(getattr(t, "id", None) == "etypes" for t in n.targets)):
-                found.add((fn.name, "etypes = []"))
-    assert found == {
-        ("_classify_kdc_reply", "return []"),          # after the realm/cname match
-        ("scan_kerberos_targets", "return []"),        # the impacket-absent exit
-        ("_parse_preauth_etypes", "etypes = []"),      # local accumulator, never returned empty
-    }, found
+                found[(fn.name, "etypes = []")] += 1
+    assert found == Counter({
+        ("_classify_kdc_reply", "return []"): 1,       # after the realm/cname match
+        ("scan_kerberos_targets", "return []"): 1,     # the impacket-absent exit
+        ("_parse_preauth_etypes", "etypes = []"): 1,   # local accumulator, never returned empty
+    }), found
+
+
+# 230-REVIEW-R8 WR-03: a 64-character label is over IDNA's 63 limit, so the
+# socket layer raises UnicodeEncodeError (a ValueError) before any DNS query.
+UNENCODABLE_HOST = "a" * 64 + ".example.com"
+
+
+def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
+    """A name that cannot be encoded never resolved, so it is a connect failure
+    (OSError, the UDP-fallback class), not the decoder-failure path that yields
+    the "a peer answered" unrecognised-reply row."""
+    with pytest.raises(OSError, match="cannot be encoded"):
+        ks._kdc_tcp_exchange(UNENCODABLE_HOST, 88, b"x", 1)

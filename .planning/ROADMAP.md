@@ -214,7 +214,7 @@ Plans:
   3. A wire-level test shows the JWKS target receives the `--auth-*` credential headers, while the scan log shows them redacted; `--auth-basic user:pass` sends `Authorization: Basic <base64(user:pass)>`, and its `--help` text and the `docs/configuration.md` row describe the same form.
   4. A scan that encounters a bearer token declaring `alg: none` produces a CRITICAL finding, and the phase records how that finding is treated by the score.
   5. The owning todos (`261013-doc224-codesign-tls-eku-path-dead-in-real-scans`, `-kerberos-preauth-required-read-as-no-preauth`) and `999.125` items 1-3 are closed or updated with their closing commits.
-**Plans**: 7 plans (6 waves)
+**Plans**: 8 plans (7 waves; 230-08 is gap closure)
 
 Plans:
 - [x] 230-01-PLAN.md — DETECT-01: leaf EKU at both TLS parse sites into a persisted `cert_eku_oids` column; real loopback-TLS proof (D-01..D-04/D-02a) (wave 1)
@@ -224,6 +224,7 @@ Plans:
 - [x] 230-05-PLAN.md — Docs, doc-claim ledger, master guide, chaos-lab oracle from the live re-measure, vault (D-18/D-18a/D-28) (wave 4)
 - [x] 230-06-PLAN.md — UAT Series 230, requirement flips with todo closures, new owned todos (D-19/D-20) (wave 5)
 - [x] 230-07-PLAN.md — Full-suite baseline compare, VALIDATION sign-off, Obsidian phase note (D-22/D-23) (wave 6)
+- [x] 230-08-PLAN.md — Gap closure, criterion 2: the UDP fallback shares the TCP classifier, so `kerberos-no-preauth` comes only from a matching AS-REP; getaddrinfo-family connected UDP socket; live re-measure 0/65 (D-29..D-31) (wave 7)
 
 ### Phase 231: QRAMM Scoring Surfaces
 **Goal**: QRAMM's scoring surfaces show what was actually assessed: the compliance map updates after scoring, unanswered dimensions are not scored as level 1, self-assessed dimensions are treated the way the operator decides, and the QRAMM-adjacent CLI commands behave like CLI commands.

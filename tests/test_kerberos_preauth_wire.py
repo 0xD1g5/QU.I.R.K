@@ -423,6 +423,20 @@ class TestKerberosPreauthWire:
         assert udp_calls == [1]
         assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
 
+    def test_unencodable_host_is_unreachable_not_unrecognised(self, monkeypatch):
+        """230-REVIEW-R8 WR-03: a target name IDNA cannot encode (a 64-character
+        label) never resolved on either leg, so nothing answered: the row is
+        kerberos-unreachable carrying the UDP error, not unrecognised-reply."""
+        import quirk.scanner.kerberos_scanner as ks
+
+        host = "a" * 64 + ".example.com"
+        rows, exc, _ = kwh.run_with_watchdog(
+            lambda: ks.scan_kerberos_targets([host], timeout=1), budget=10,
+        )
+        assert exc is None
+        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
+        assert "cannot be encoded" in json.loads(rows[0].kerberos_scan_json)["udp_error"]
+
     # 230-REVIEW-R3 WR-01: a framed KRB_ERROR-shaped reply whose malformed
     # indefinite-length inner SEQUENCE makes pyasn1 0.6.3 raise IndexError
     # (found by fuzzing).  Any exception while decoding untrusted reply bytes
