@@ -368,6 +368,35 @@ def test_slow_or_refused_tcp_failure_is_not_retried(monkeypatch, exc):
     assert udp_calls == [1]
 
 
+@pytest.mark.parametrize(
+    "exc, expected",
+    [
+        (ks.KerberosUnrecognisedReply("neither KRB_ERROR nor AS-REP"),
+         "complete reply that does not parse"),
+        (ks.KerberosTransportError("KDC reply timed out", True, "timeout"),
+         "did not finish it before the Kerberos timeout"),
+        (ks.KerberosTransportError("closed after 9 of 40", True, "eof"),
+         "closed or failed partway through"),
+        (ks.KerberosTransportError("reset mid-reply", True, "reset"),
+         "closed or failed partway through"),
+        (ks.KerberosTransportError("implausible KDC reply length", True, "framing"),
+         "length prefix that is not Kerberos TCP framing"),
+        (RuntimeError("arbitrary"), "unexpected error"),
+    ],
+    ids=["unparseable", "mid-reply-timeout", "truncated-eof", "truncated-reset",
+         "framing", "unexpected"],
+)
+def test_unrecognised_row_reason_names_the_cause(monkeypatch, exc, expected):
+    """230-REVIEW-R3 IN-02: the reason must not claim "not a Kerberos reply"
+    for a reply that was cut off or stalled partway through."""
+    import json
+
+    rows, udp_calls = _scan_with_tcp_raising(monkeypatch, exc)
+    assert udp_calls == []
+    reason = json.loads(rows[0].kerberos_scan_json)["etypes_unavailable_reason"]
+    assert expected in reason
+
+
 def test_unrecognised_reply_row_derives_no_finding_and_no_weak_count():
     from quirk.dashboard.api.routes.scan import _derive_identity_findings
     from quirk.intelligence.evidence import build_evidence_summary

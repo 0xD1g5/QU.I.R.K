@@ -524,6 +524,28 @@ def _preauth_no_etypes_row(target: str, realm: str, timeout: int, logger,
     return row
 
 
+def _unrecognised_reply_reason(exc) -> str:
+    """Name the actual cause on the honest row (230-REVIEW-R3 IN-02).
+
+    A reply cut off or stalled partway through is not proof that the peer
+    "is not a KDC", so it is not described as one.  Carries no reply bytes,
+    principal or secret; the exception text stays in ``scan_error``.
+    """
+    if isinstance(exc, KerberosUnrecognisedReply):
+        return ("port 88 sent a complete reply that does not parse as a "
+                "Kerberos KRB_ERROR or AS-REP for this probe")
+    if isinstance(exc, KerberosTransportError):
+        if exc.kind == "timeout":
+            return ("port 88 started a TCP reply but did not finish it before "
+                    "the Kerberos timeout")
+        if exc.kind == "framing":
+            return ("port 88 replied with a length prefix that is not Kerberos "
+                    "TCP framing")
+        return ("port 88 started a TCP reply, then the connection closed or "
+                "failed partway through it (truncated reply)")
+    return "the TCP probe failed with an unexpected error; etypes not assessed"
+
+
 def _unrecognised_reply_row(target: str, realm: str, timeout: int, logger,
                             principal: str, now, exc) -> CryptoEndpoint:
     """Honest row for a port-88 peer that answered, but not as a KDC.
@@ -552,10 +574,7 @@ def _unrecognised_reply_row(target: str, realm: str, timeout: int, logger,
         "ldap": ldap_result,
         "ldap_status": ldap_result.get("ldap_status", "skipped"),
         "probe_principal": principal,
-        "etypes_unavailable_reason": (
-            "port 88 answered with a reply that is not a Kerberos KRB_ERROR or "
-            "AS-REP for the probe"
-        ),
+        "etypes_unavailable_reason": _unrecognised_reply_reason(exc),
     })
     return row
 
