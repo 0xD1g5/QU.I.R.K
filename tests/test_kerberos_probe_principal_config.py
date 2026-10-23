@@ -7,6 +7,10 @@ etype; its (pre-existing, shared with kerberos-no-preauth) effect on coverage
 and identity presence is pinned, not endorsed.
 D-28: the template documents the option.
 
+230-REVIEW-R2 CR-01: the QUIRK-owned TCP exchange (``_kdc_tcp_exchange``)
+needs no impacket, so its hang/framing tests live here and run in CI, against
+raw loopback peers with per-socket timeouts and a watchdog.
+
 This file must not need impacket, so it runs in the Linux Full Suite (`.[all]`
 excludes the identity extra). The fake-KDC wire proof is
 test_kerberos_preauth_wire.py and is local-only.
@@ -21,7 +25,9 @@ import yaml
 
 from quirk.config import ConnectorsCfg, load_config
 from quirk.models import CryptoEndpoint
+from quirk.scanner import kerberos_scanner as ks
 from quirk.scanner.kerberos_scanner import DEFAULT_PROBE_PRINCIPAL
+from tests import kerberos_wire_helpers as kwh
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -130,3 +136,86 @@ def test_principal_unknown_row_counts_as_assessed_pinned():
         ev.get("certificate_observations", {}) or ev.get("cert_observations", {}) or {},
         ev["protocol_counts"],
     ) is True
+
+
+# --- 230-REVIEW-R2 CR-01: QUIRK-owned TCP framing (CI-visible) ---------------
+
+_REQ = b"\x6a\x03\x02\x01\x05"  # bytes only; the transport does not decode
+
+
+def _exchange(handler, timeout, budget):
+    peer = kwh.RawPeer(handler)
+    try:
+        return kwh.run_with_watchdog(
+            lambda: ks._kdc_tcp_exchange("127.0.0.1", peer.port, _REQ, timeout),
+            budget=budget,
+        )
+    finally:
+        peer.close()
+
+
+def test_tcp_exchange_returns_framed_reply():
+    result, exc, _ = _exchange(kwh.framed(b"reply-body"), timeout=2, budget=5)
+    assert exc is None
+    assert result == b"reply-body"
+
+
+@pytest.mark.parametrize(
+    "handler",
+    [kwh.http_unframed, kwh.short_then_close],
+    ids=["http-unframed", "short-then-close"],
+)
+def test_tcp_exchange_broken_framing_raises_answered(handler):
+    result, exc, elapsed = _exchange(handler, timeout=2, budget=6)
+    assert result is None
+    assert isinstance(exc, ks.KerberosTransportError)
+    assert exc.answered is True
+    assert elapsed < 3
+
+
+def test_tcp_exchange_rejects_huge_length_without_reading():
+    result, exc, elapsed = _exchange(kwh.huge_declared, timeout=5, budget=8)
+    assert isinstance(exc, ks.KerberosTransportError)
+    assert exc.answered is True
+    assert "implausible KDC reply length 1073741824" in str(exc)
+    assert elapsed < 2  # a read would block to the 5 s timeout
+
+
+def test_tcp_exchange_length_cap_boundary():
+    at_cap = b"\x00" * ks.MAX_KDC_TCP_REPLY
+    result, exc, _ = _exchange(kwh.framed(at_cap), timeout=3, budget=6)
+    assert exc is None and result == at_cap
+
+    over = b"\x00" * (ks.MAX_KDC_TCP_REPLY + 1)
+    result, exc, _ = _exchange(kwh.framed(over), timeout=3, budget=6)
+    assert isinstance(exc, ks.KerberosTransportError) and exc.answered is True
+
+
+@pytest.mark.parametrize(
+    "handler", [kwh.silent, kwh.close_immediately], ids=["silent", "close-immediately"],
+)
+def test_tcp_exchange_no_reply_byte_is_not_answered(handler):
+    result, exc, elapsed = _exchange(handler, timeout=1, budget=5)
+    assert isinstance(exc, ks.KerberosTransportError)
+    assert exc.answered is False
+    assert elapsed < 2
+
+
+def test_tcp_exchange_deadline_bounds_a_slow_drip():
+    # 100 bytes at one per 0.3 s would take 30 s under a per-recv timeout.
+    result, exc, elapsed = _exchange(kwh.slow_drip, timeout=1, budget=5)
+    assert isinstance(exc, ks.KerberosTransportError)
+    assert exc.answered is True
+    assert elapsed < 2
+
+
+def test_tcp_exchange_connect_refused_is_plain_oserror():
+    s = __import__("socket").socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()  # nothing listens here now
+    result, exc, _ = kwh.run_with_watchdog(
+        lambda: ks._kdc_tcp_exchange("127.0.0.1", port, _REQ, 1), budget=5,
+    )
+    assert isinstance(exc, OSError)
+    assert not isinstance(exc, ks.KerberosTransportError)

@@ -11,7 +11,9 @@ try:
         from impacket.krb5.asn1 import METHOD_DATA as MethodData
     except ImportError:
         from impacket.krb5.asn1 import MethodData  # impacket <0.13.0 fallback
-    from impacket.krb5.kerberosv5 import sendReceive, KerberosError
+    # 230-REVIEW-R2 CR-01: sendReceive is no longer called (it sets no socket
+    # timeout and spins forever on a short read); QUIRK frames TCP itself.
+    from impacket.krb5.kerberosv5 import KerberosError
     from impacket.krb5 import constants
     from impacket.krb5.types import KerberosTime, Principal
     from pyasn1.codec.ber import encoder, decoder
@@ -28,6 +30,7 @@ import secrets
 import socket
 import struct
 import sys
+import time
 from datetime import datetime, timezone
 
 from quirk.errors import format_error
@@ -46,6 +49,32 @@ logger = logging.getLogger(__name__)
 # Defined outside the impacket try-block so the module imports without
 # impacket; config.py keeps its own literal (drift-guarded by a test).
 DEFAULT_PROBE_PRINCIPAL = "Administrator"
+
+# KDC port for both the TCP probe and the UDP fallback.  A module constant so
+# the wire tests can point the real transport at a loopback peer.
+KDC_PORT = 88
+
+# 230-REVIEW-R2 CR-01: largest framed TCP reply the probe will read.  The
+# probe's replies (KRB_ERROR with ETYPE-INFO2, or a bare AS-REP) are a few KiB;
+# 64 KiB leaves wide headroom and matches the UDP probe's 65535-byte read.  A
+# larger declared length (e.g. "HTTP" read as 1,213,486,160) is rejected on
+# the prefix alone, without reading.
+MAX_KDC_TCP_REPLY = 64 * 1024
+
+
+class KerberosTransportError(Exception):
+    """The framed TCP exchange with the KDC port failed (230-REVIEW-R2 CR-01).
+
+    ``answered`` is True when the peer sent at least one reply byte (a short
+    read, an implausible length prefix, or a stall mid-reply).  Something
+    answered on the port but not as a KDC, so the caller must not treat it as a
+    plain transport failure.  ``answered`` is False when no reply byte arrived
+    (silent peer, or closed or reset before replying).
+    """
+
+    def __init__(self, message: str, answered: bool):
+        super().__init__(message)
+        self.answered = answered
 
 
 class KerberosPrincipalUnknown(Exception):
@@ -209,7 +238,61 @@ def _parse_preauth_etypes(error_pkt) -> list:
     return etypes
 
 
-def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
+def _recv_exact(sock, n: int, deadline: float, received_before: int) -> bytes:
+    """Read exactly ``n`` bytes before ``deadline`` or raise KerberosTransportError.
+
+    An empty ``recv`` (peer closed) is an error, never a retry; that retry is
+    the impacket ``sendReceive`` busy-loop this replaces (230-REVIEW-R2 CR-01).
+    """
+    buf = b""
+    while len(buf) < n:
+        remaining = deadline - time.monotonic()
+        answered = (received_before + len(buf)) > 0
+        if remaining <= 0:
+            raise KerberosTransportError("KDC reply timed out", answered)
+        sock.settimeout(remaining)
+        try:
+            chunk = sock.recv(n - len(buf))
+        except socket.timeout as exc:
+            raise KerberosTransportError("KDC reply timed out", answered) from exc
+        except OSError as exc:
+            raise KerberosTransportError(
+                f"KDC connection failed mid-reply: {exc}", answered
+            ) from exc
+        if not chunk:
+            raise KerberosTransportError(
+                f"KDC closed the connection after {received_before + len(buf)} "
+                f"of {received_before + n} reply bytes", answered,
+            )
+        buf += chunk
+    return buf
+
+
+def _kdc_tcp_exchange(host: str, port: int, message: bytes, timeout: float) -> bytes:
+    """Send one length-prefixed Kerberos message over TCP; return the reply body.
+
+    RFC 4120 §7.2.2 framing: a 4-byte big-endian length, then the message.
+    ``timeout`` bounds the connect, and separately bounds the whole send plus
+    reply (a deadline, so a peer dripping one byte at a time cannot stretch
+    it).  Connect failures propagate as ``OSError``; failures after connect
+    raise KerberosTransportError, which says whether the peer sent anything.
+    """
+    with socket.create_connection((host, port), timeout=timeout) as sock:
+        deadline = time.monotonic() + timeout
+        try:
+            sock.sendall(struct.pack("!I", len(message)) + message)
+        except OSError as exc:
+            raise KerberosTransportError(f"KDC send failed: {exc}", False) from exc
+        (length,) = struct.unpack("!I", _recv_exact(sock, 4, deadline, 0))
+        if length == 0 or length > MAX_KDC_TCP_REPLY:
+            raise KerberosTransportError(
+                f"implausible KDC reply length {length} "
+                f"(limit {MAX_KDC_TCP_REPLY}); not a Kerberos TCP reply", True,
+            )
+        return _recv_exact(sock, length, deadline, 4)
+
+
+def _probe_kdc(host: str, realm: str, timeout: int, port=None,
                principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
     """Probe a KDC over TCP and parse etypes from PA-ETYPE-INFO2 in KDC_ERR_PREAUTH_REQUIRED.
 
@@ -217,13 +300,19 @@ def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
     Returns [] only if the reply decodes as an AS-REP (no preauth required);
     a reply that is neither KRB_ERROR nor AS-REP raises KerberosUnrecognisedReply.
     Raises KerberosPrincipalUnknown for KDC_ERR_C_PRINCIPAL_UNKNOWN (6),
-    KerberosPreauthNoEtypes for a code-25 reply with no usable etype info, and
-    KerberosError for any other error code or connection failure.
+    KerberosPreauthNoEtypes for a code-25 reply with no usable etype info,
+    KerberosError for any other error code, KerberosTransportError for a failed
+    or malformed exchange after connect, and OSError for a failed connect.
 
-    impacket>=0.13.0 RETURNS the KRB_ERROR 25 reply from sendReceive instead of
-    raising, so the returned reply is decoded here (Phase 230 D-05); the
-    KerberosError branch stays for the older raise shape (D-06).
+    The TCP exchange is QUIRK's own (230-REVIEW-R2 CR-01), with a timeout and an
+    EOF check; impacket's ``sendReceive`` set neither.  Every reply, including
+    KRB_ERROR 25, comes back as bytes and is decoded here (Phase 230 D-05).
+    D-06's raise shape existed only because older impacket's ``sendReceive``
+    raised KerberosError for code 25; with sendReceive gone, no impacket call
+    on this path raises it, so that branch is retired.
     """
+    if port is None:
+        port = KDC_PORT
     client_name = Principal(principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
     server_name = Principal(
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
@@ -233,15 +322,7 @@ def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
 
     preauth_required = constants.ErrorCodes.KDC_ERR_PREAUTH_REQUIRED.value
     principal_unknown = constants.ErrorCodes.KDC_ERR_C_PRINCIPAL_UNKNOWN.value
-    try:
-        r = sendReceive(message, realm, host, port=port)
-    except KerberosError as e:
-        code = e.getErrorCode()
-        if code == preauth_required:
-            return _parse_preauth_etypes(e.getErrorPacket())
-        if code == principal_unknown:
-            raise KerberosPrincipalUnknown(principal, code) from e
-        raise
+    r = _kdc_tcp_exchange(host, port, message, timeout)
 
     try:
         err = decoder.decode(r, asn1Spec=KRB_ERROR())[0]
@@ -265,7 +346,7 @@ def _probe_kdc(host: str, realm: str, timeout: int, port: int = 88,
 
 
 def _probe_kdc_udp(host: str, realm: str, timeout: int,
-                   principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
+                   principal: str = DEFAULT_PROBE_PRINCIPAL, port=None) -> list:
     """UDP fallback for KDC probing.
 
     Sends raw AS-REQ bytes (no length prefix) to port 88 via UDP.
@@ -274,7 +355,10 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
     except a code-25 reply with no usable etype info, which raises
     KerberosPreauthNoEtypes (230-REVIEW CR-02) so it is never read as no-preauth.
     Per Pitfall 1: UDP does NOT use the 4-byte length prefix (only TCP does).
+    Bounded by ``sock.settimeout(timeout)``: one ``sendto`` and one ``recvfrom``.
     """
+    if port is None:
+        port = KDC_PORT
     client_name = Principal(principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
     server_name = Principal(
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
@@ -285,7 +369,7 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     try:
-        sock.sendto(message, (host, 88))
+        sock.sendto(message, (host, port))
         data, _ = sock.recvfrom(65535)
         # Try to decode as KRB_ERROR
         krb_error = decoder.decode(data, asn1Spec=KRB_ERROR())[0]
@@ -408,7 +492,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         etypes = []
         tcp_error = None
 
-        # TCP primary (per D-01, sendReceive uses TCP).
+        # TCP primary (per D-01; QUIRK-framed TCP since 230-REVIEW-R2 CR-01).
         # AUDIT-03: If the TCP probe raises (connection refused, timeout, or any
         # transport failure), control falls through to _probe_kdc_udp below.  This
         # silent TCP→UDP downgrade is intentional standard Kerberos behaviour per
