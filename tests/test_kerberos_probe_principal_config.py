@@ -1204,6 +1204,9 @@ _TCP_OUTCOMES = {
     "asrep-other": (_tcp_raises(lambda: ks.KerberosUnrecognisedReply("mismatch")),
                     True, False, [_UNREC]),
     "boom": (_tcp_raises(lambda: RuntimeError("decoder blew up")), True, False, [_UNREC]),
+    # 230-REVIEW-R10 WR-02/WR-03: nothing was sent; not probed, no UDP.
+    "unbuildable": (_tcp_raises(lambda: ks.KerberosRequestBuildError("cannot build AS-REQ")),
+                    True, False, [_UNREACHABLE]),
     **{
         f"answered-{kind}": (
             _tcp_raises(lambda kind=kind: ks.KerberosTransportError(
@@ -1412,6 +1415,8 @@ def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
     ("kdc.пример", "KDC.XN--E1AFMKFD"),
     ("dc.münchen.de", "XN--MNCHEN-3YA.DE"),
     ("dc01.corp.local", "CORP.LOCAL"),
+    # 230-REVIEW-R10 WR-05: a trailing-dot FQDN used to give "LOCAL.".
+    ("dc.corp.local.", "CORP.LOCAL"),
 ])
 def test_derive_realm_uses_the_idna_a_label(host, realm):
     assert ks._derive_realm(host) == realm
@@ -1447,6 +1452,43 @@ def test_resolve_udp_unencodable_host_is_oserror():
         ks._resolve_udp(UNENCODABLE_HOST, 88)
 
 
-def test_resolve_udp_returns_family_and_sockaddr_ipv4_first():
-    family, sockaddr = ks._resolve_udp("127.0.0.1", 88)
-    assert family == ks.socket.AF_INET and sockaddr[:2] == ("127.0.0.1", 88)
+def test_resolve_udp_prefers_ipv4_over_an_earlier_ipv6_record(monkeypatch):
+    """230-REVIEW-R10 IN-01: getaddrinfo is stubbed to list AAAA first, so the
+    IPv4-first sort is what picks the A record."""
+    v6 = (ks.socket.AF_INET6, ks.socket.SOCK_DGRAM, 17, "", ("::1", 88, 0, 0))
+    v4 = (ks.socket.AF_INET, ks.socket.SOCK_DGRAM, 17, "", ("127.0.0.1", 88))
+    monkeypatch.setattr(ks.socket, "getaddrinfo", lambda *a, **k: [v6, v4])
+    assert ks._resolve_udp("kdc.example", 88) == (ks.socket.AF_INET, ("127.0.0.1", 88))
+    monkeypatch.setattr(ks.socket, "getaddrinfo", lambda *a, **k: [v6])
+    assert ks._resolve_udp("kdc.example", 88) == (ks.socket.AF_INET6, ("::1", 88, 0, 0))
+    monkeypatch.setattr(ks.socket, "getaddrinfo", lambda *a, **k: [])
+    with pytest.raises(OSError, match="no UDP address"):
+        ks._resolve_udp("kdc.example", 88)
+
+
+def test_invalid_targets_are_not_probed_and_padded_targets_are_stripped(monkeypatch):
+    """230-REVIEW-R9 WR-02/WR-03/IN-03 and R10 WR-01/WR-04, in CI: each invalid
+    target gets an invalid_input unreachable row and is never probed (no
+    Kerberos, no LDAP); the loop goes on; a padded valid target is probed, and
+    reported, without its padding."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    probed = []
+
+    def fake_tcp(host, realm, timeout, principal=DEFAULT_PROBE_PRINCIPAL, **k):
+        probed.append(("tcp", host, realm))
+        return [18]
+
+    monkeypatch.setattr(ks, "_probe_kdc", fake_tcp)
+    monkeypatch.setattr(ks, "_probe_kdc_udp",
+                        lambda *a, **k: pytest.fail("UDP must not run"))
+    monkeypatch.setattr(ks, "_probe_ldap_anon",
+                        lambda host, *a, **k: probed.append(("ldap", host)) or {})
+    invalid = [10, None, b"kdc.example", "", "   ", "kdc\x00.corp.example", "kdc corp"]
+    rows = ks.scan_kerberos_targets(invalid + [" dc01.corp.local\n"], timeout=1)
+    bad = rows[:len(invalid)]
+    assert [r.service_detail for r in bad] == ["kerberos-unreachable"] * len(invalid)
+    assert [r.scan_error_category for r in bad] == ["invalid_input"] * len(invalid)
+    assert all(isinstance(r.host, str) and r.scan_error for r in bad)
+    assert probed == [("tcp", "dc01.corp.local", "CORP.LOCAL"),
+                      ("ldap", "dc01.corp.local")]
+    assert {r.host for r in rows[len(invalid):]} == {"dc01.corp.local"}

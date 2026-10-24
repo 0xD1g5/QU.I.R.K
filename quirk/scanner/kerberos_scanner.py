@@ -146,6 +146,17 @@ class KerberosPreauthNoEtypes(Exception):
         self.principal = principal
         self.error_code = error_code
 
+
+class KerberosRequestBuildError(Exception):
+    """The AS-REQ for this target could not be encoded, so nothing was sent.
+
+    230-REVIEW-R10 WR-02/WR-03: deliberately NOT an OSError.  An OSError reads
+    as "no KDC answered" and triggers the UDP fallback and the LDAP probe; a
+    request that cannot be built would fail the same way on UDP, and no network
+    leg ran, so the target is reported as not probed.
+    """
+
+
 # KERBEROS etype severity map (D-08 through D-12)
 # Maps etype int -> (name, severity)
 # CRITICAL: DES-based etypes (RFC 6649 deprecated)
@@ -184,13 +195,17 @@ def _derive_realm(host: str) -> str:
         return stripped.upper()
     except ValueError:
         pass
+    # 230-REVIEW-R10 WR-05: a trailing-dot FQDN is absolute, not a label short.
+    stripped = stripped.rstrip(".")
     # 230-REVIEW-R9 WR-01: RFC 4120 §5.2.1 KerberosString should hold IA5
     # characters only, so an internationalised name's realm is its IDNA
     # A-label; the U-label could not be encoded into the AS-REQ.
     try:
         stripped = stripped.encode("idna").decode("ascii")
     except UnicodeError:
-        pass  # the connect leg reports such a name as unreachable (R8 WR-03)
+        # Keep the U-label.  If it is not Latin-1 the AS-REQ cannot be
+        # encoded and the target is reported as not probed (R10 WR-02).
+        pass
     parts = stripped.split(".")
     if len(parts) >= 2:
         return ".".join(parts[-2:]).upper()
@@ -217,14 +232,20 @@ def _invalid_target_reason(target):
     return None
 
 
-def _encode_as_req(as_req) -> bytes:
-    """Encode the AS-REQ.  A failure here means nothing was sent, so it is an
-    OSError, the not-assessed class, never a reply-decoding error
-    (230-REVIEW-R9 WR-01)."""
+def _encode_as_req(as_req, realm: str) -> bytes:
+    """Encode the AS-REQ (230-REVIEW-R9 WR-01).
+
+    Only the encoder's own failures for an unencodable value are caught
+    (230-REVIEW-R10 WR-03); a programming error still surfaces.  The message
+    names the exception class only: pyasn1's text is a dump of the whole
+    request, about 32 KB (R10 WR-02).
+    """
     try:
         return encoder.encode(as_req)
-    except Exception as exc:  # noqa: BLE001 - nothing reached the wire
-        raise OSError(f"cannot build AS-REQ: {exc}") from exc
+    except (PyAsn1Error, UnicodeError) as exc:
+        raise KerberosRequestBuildError(
+            f"cannot build AS-REQ for realm {realm[:80]!r}: {type(exc).__name__}"
+        ) from exc
 
 
 def _resolve_udp(host: str, port: int):
@@ -481,7 +502,7 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
     )
     as_req = _build_as_req(client_name, server_name, realm)
-    message = _encode_as_req(as_req)
+    message = _encode_as_req(as_req, realm)
 
     r = _kdc_tcp_exchange(host, port, message, timeout, deadline=deadline,
                           peer=peer)
@@ -600,7 +621,7 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
         f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
     )
     as_req = _build_as_req(client_name, server_name, realm)
-    message = _encode_as_req(as_req)
+    message = _encode_as_req(as_req, realm)
 
     try:
         family, sockaddr = _resolve_udp(host, port)
@@ -768,6 +789,28 @@ def _unrecognised_reply_row(target: str, realm: str, timeout: int, logger,
     return row
 
 
+def _not_probed_row(host: str, realm, now, reason: str) -> CryptoEndpoint:
+    """Row for a target that was never probed: an invalid name
+    (230-REVIEW-R9 WR-02/WR-03) or an AS-REQ that cannot be built (R10 WR-02).
+    No Kerberos or LDAP traffic was sent for it.
+    """
+    row = CryptoEndpoint(
+        host=host,
+        port=88,
+        protocol="KERBEROS",
+        cert_pubkey_alg="kerberos-unreachable",
+        service_detail="kerberos-unreachable",
+        scanned_at=now,
+        scan_error=reason,
+        scan_error_category="invalid_input",
+    )
+    row.kerberos_scan_json = json.dumps({
+        "realm": realm, "etypes": [], "etype_details": [],
+        "ldap": {}, "ldap_status": "skipped",
+    })
+    return row
+
+
 def _principal_unknown_row(target: str, realm: str, timeout: int, logger,
                            principal: str, now) -> CryptoEndpoint:
     """Honest row for KDC_ERR_C_PRINCIPAL_UNKNOWN (6), on either transport.
@@ -875,22 +918,12 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         invalid = _invalid_target_reason(target)
         if invalid is not None:
             # 230-REVIEW-R9 WR-02/WR-03: never probed (no Kerberos, no LDAP).
-            row = CryptoEndpoint(
-                host=target if isinstance(target, str) else repr(target),
-                port=88,
-                protocol="KERBEROS",
-                cert_pubkey_alg="kerberos-unreachable",
-                service_detail="kerberos-unreachable",
-                scanned_at=now,
-                scan_error=invalid,
-                scan_error_category="invalid_input",
-            )
-            row.kerberos_scan_json = json.dumps({
-                "realm": None, "etypes": [], "etype_details": [],
-                "ldap": {}, "ldap_status": "skipped",
-            })
-            results.append(row)
+            results.append(_not_probed_row(
+                target if isinstance(target, str) else repr(target), None, now,
+                invalid))
             continue
+        # 230-REVIEW-R10 WR-01: probe and report the name that was validated.
+        target = target.strip()
         realm = _derive_realm(target)
         # 230-08 D-29: None, never [].  Every path below assigns it; a path
         # that does not must read as unreachable.  [] means "matching AS-REP"
@@ -941,6 +974,11 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             # no scan_error, no finding, never "kerberos-no-preauth".
             results.append(_preauth_no_etypes_row(target, realm, timeout, logger,
                                                   principal, now))
+            continue
+        except KerberosRequestBuildError as exc:
+            # 230-REVIEW-R10 WR-02/WR-03: nothing was sent; UDP would fail to
+            # build the same request.  Not probed: no UDP, no LDAP.
+            results.append(_not_probed_row(target, realm, now, str(exc)))
             continue
         except KerberosPrincipalUnknown:
             # Phase 230 D-25: the KDC answered (code 6) but returns no etype data

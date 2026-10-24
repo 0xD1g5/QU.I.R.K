@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,649 lines, in reading order.
+Five guides, 7,651 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4689,8 +4689,8 @@ as the TCP probe. Its outcomes:
   recorded on the row (the KDC answered, so it is not reported as unreachable);
 - an undecodable reply, an empty datagram, or an AS-REP for another realm or principal gives
   `kerberos-etypes-unavailable-unrecognised-reply`;
-- a UDP timeout, a refusal, a send failure, a name that does not resolve or cannot be
-  IDNA-encoded, or a request that cannot be built gives `kerberos-unreachable`, unless the TCP probe had already received a Kerberos error from the KDC,
+- a UDP timeout, a refusal, a send failure, or a name that does not resolve or cannot be
+  IDNA-encoded gives `kerberos-unreachable`, unless the TCP probe had already received a Kerberos error from the KDC,
   in which case the row is `kerberos-etypes-unavailable-krb-error` from that TCP error;
 - `kerberos-no-preauth` comes only from an AS-REP that answers the probe (matching realm and
   principal, compared without regard to case), on either transport.
@@ -4712,10 +4712,12 @@ limits how long that takes.
 
 Kerberos targets need an FQDN whose last two labels are the realm (for example
 `dc01.corp.local` gives realm `CORP.LOCAL`; a deeper name keeps only the last two, so
-`dc.corp.example.com` gives `EXAMPLE.COM`). An internationalised name's realm is its IDNA
-A-label (`kdc.пример` gives `KDC.XN--E1AFMKFD`), because a Kerberos realm string holds ASCII
-characters only. A target that is not a usable host name (empty, not a string, or containing
-a NUL or whitespace) is never probed: it gets a `kerberos-unreachable` row with
+`dc.corp.example.com` gives `EXAMPLE.COM`; a trailing dot is ignored). An internationalised
+name's realm is its IDNA A-label (`kdc.пример` gives `KDC.XN--E1AFMKFD`), because RFC 4120 says
+a Kerberos realm string should hold ASCII characters only. Leading and trailing whitespace is
+removed from a target before it is probed. A target that is not a usable host name (empty, not
+a string, or containing a NUL or inner whitespace), or one whose request cannot be encoded, is
+never probed, over Kerberos or LDAP: it gets a `kerberos-unreachable` row with
 `scan_error_category` `invalid_input`. An IP-literal target is used as the
 realm as-is, and a real KDC answers that the principal is unknown in that realm, so a bare
 IP address yields the principal-unknown row, never the etypes (measured against Samba on

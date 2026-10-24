@@ -457,41 +457,46 @@ class TestKerberosPreauthWire:
         assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
         assert json.loads(rows[0].kerberos_scan_json)["realm"] == "KDC.XN--E1AFMKFD"
 
-    def test_request_build_failure_is_oserror_not_a_reply(self):
-        """230-REVIEW-R9 WR-01: if the AS-REQ cannot be encoded, nothing was
-        sent, so it is an OSError (both legs), never a decoder-class error."""
+    def test_request_build_failure_is_its_own_short_error(self):
+        """230-REVIEW-R10 WR-02/WR-03: an AS-REQ that cannot be encoded raises
+        KerberosRequestBuildError on both legs, not OSError (so it is never read
+        as a network failure) and with a short message, not pyasn1's ~32 KB
+        dump of the request."""
         import quirk.scanner.kerberos_scanner as ks
 
         for probe in (ks._probe_kdc, ks._probe_kdc_udp):
-            with pytest.raises(OSError, match="cannot build AS-REQ"):
+            with pytest.raises(ks.KerberosRequestBuildError) as info:
                 probe("127.0.0.1", "X.\u0436", 1)
+            assert not isinstance(info.value, OSError)
+            assert "cannot build AS-REQ" in str(info.value)
+            assert len(str(info.value)) < 300
 
-    def test_invalid_targets_are_not_probed_and_do_not_abort_the_loop(self, monkeypatch):
-        """230-REVIEW-R9 WR-02/WR-03/IN-03: non-str, empty, NUL and whitespace
-        targets each get an invalid_input unreachable row, nothing resolves or
-        connects for them, and the valid target after them is still scanned."""
+    def test_unbuildable_realm_target_is_not_probed(self, monkeypatch):
+        """230-REVIEW-R10 WR-02/WR-03: a realm that stays unencodable (its label
+        is too long for IDNA, so the U-label is kept) is reported as not probed:
+        invalid_input, a short scan_error, and no TCP, UDP or LDAP traffic."""
         import quirk.scanner.kerberos_scanner as ks
 
-        resolved = []
+        touched = []
 
         def record(host, *a, **k):
-            resolved.append(host[0] if isinstance(host, tuple) else host)
+            touched.append(host)
             raise socket.gaierror(socket.EAI_NONAME, "stubbed NXDOMAIN")
 
         monkeypatch.setattr(ks.socket, "getaddrinfo", record)
         monkeypatch.setattr(ks.socket, "create_connection", record)
         monkeypatch.setattr(ks, "_probe_ldap_anon",
-                            lambda host, *a, **k: resolved.append(("ldap", host)) or {})
-        targets = [10, None, b"kdc.example", "", "kdc\x00.corp.example", "kdc corp",
-                   "ok.example"]
+                            lambda host, *a, **k: touched.append(("ldap", host)) or {})
+        host = "kdc." + "\u043f" * 70 + ".ru"
         rows, exc, _ = kwh.run_with_watchdog(
-            lambda: ks.scan_kerberos_targets(targets, timeout=1), budget=10,
+            lambda: ks.scan_kerberos_targets([host], timeout=1), budget=10,
         )
         assert exc is None
-        assert [r.service_detail for r in rows] == ["kerberos-unreachable"] * len(targets)
-        assert [r.scan_error_category for r in rows[:-1]] == ["invalid_input"] * 6
-        assert all(isinstance(r.host, str) for r in rows)
-        assert set(resolved) == {"ok.example", ("ldap", "ok.example")}
+        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
+        assert rows[0].scan_error_category == "invalid_input"
+        assert "cannot build AS-REQ" in rows[0].scan_error
+        assert len(rows[0].scan_error) < 300
+        assert touched == []
 
     # 230-REVIEW-R3 WR-01: a framed KRB_ERROR-shaped reply whose malformed
     # indefinite-length inner SEQUENCE makes pyasn1 0.6.3 raise IndexError
