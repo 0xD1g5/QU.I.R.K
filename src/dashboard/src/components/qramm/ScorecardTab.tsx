@@ -22,6 +22,11 @@ import {
   DIMENSION_COUNT,
 } from "@/lib/qramm-constants"
 import { getBenchmarks } from "@/lib/qramm-benchmarks"
+import {
+  isDimensionAssessed,
+  ASSESSMENT_LABEL,
+  notAssessedCountLabel,
+} from "@/lib/qramm-assessment"
 import type { QRAMMScoreResponse } from "@/types/api"
 
 interface ScorecardTabProps {
@@ -45,9 +50,26 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
       if (a?.answer_value != null) answered[dim] = (answered[dim] ?? 0) + 1
     }
     return Object.fromEntries(
-      DIMENSIONS.map(d => [d, totals[d] ? Math.round(((answered[d] ?? 0) / totals[d]) * 100) : 0])
-    )
+      DIMENSIONS.map(d => [
+        d,
+        {
+          answered: answered[d] ?? 0,
+          total: totals[d] ?? 0,
+          pct: totals[d] ? Math.round(((answered[d] ?? 0) / totals[d]) * 100) : 0,
+        },
+      ])
+    ) as Record<string, { answered: number; total: number; pct: number }>
   }, [ctx.answers, qnToDim])
+
+  // Phase 231 D-07: assessed = at least one answered question (shared predicate); 0.0 is also SCOREFIX-02's placeholder, so never test the score.
+  const assessedByDim = useMemo(
+    () =>
+      Object.fromEntries(
+        DIMENSIONS.map(d => [d, isDimensionAssessed(completionByDim[d].answered)])
+      ) as Record<string, boolean>,
+    [completionByDim],
+  )
+  const notAssessedCount = DIMENSIONS.filter(d => !assessedByDim[d]).length
 
   // Approximate maturity distribution by bucketing each dimension's score.
   // When every dimension's score is null (Phase 74 "Indeterminate" sentinel),
@@ -57,13 +79,14 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
     const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 }
     if (!ctx.scoreResult) return dist
     for (const dim of DIMENSIONS) {
+      if (!isDimensionAssessed(completionByDim[dim].answered)) continue
       const dscore = ctx.scoreResult.dimensions[dim]?.score
       if (dscore == null) continue
       const bucket = Math.max(1, Math.min(4, Math.round(dscore)))
       dist[bucket] += 1
     }
     return dist
-  }, [ctx.scoreResult])
+  }, [ctx.scoreResult, completionByDim])
 
   const isIndeterminate = useMemo(() => {
     if (!ctx.scoreResult) return false
@@ -213,6 +236,11 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                   </div>
                 )
               })}
+              {ctx.scoreResult && notAssessedCount >= 1 && (
+                <p className="text-xs text-muted-foreground" data-testid="maturity-not-assessed">
+                  {notAssessedCountLabel(notAssessedCount)}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -246,8 +274,12 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                 // Phase 74 "Indeterminate" sentinel: d.score can be null even
                 // when d itself is present. Guard with a numeric typeof check
                 // before invoking .toFixed / Math.round (D-10 null-safety).
-                const dscore = typeof d?.score === "number" ? d.score : null
-                const dweighted = typeof d?.weighted === "number" ? d.weighted : null
+                // D-21a: a not-assessed dimension's stored 0.0 is a placeholder, not a measurement.
+                const notAssessed = ctx.scoreResult != null && !assessedByDim[dim]
+                const dscore =
+                  !notAssessed && typeof d?.score === "number" ? d.score : null
+                const dweighted =
+                  !notAssessed && typeof d?.weighted === "number" ? d.weighted : null
                 const maturityInt =
                   dscore != null
                     ? Math.max(1, Math.min(4, Math.round(dscore)))
@@ -265,7 +297,9 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                       {benchmark != null ? benchmark.toFixed(2) : "—"}
                     </TableCell>
                     <TableCell>
-                      {maturityInt != null ? (
+                      {notAssessed ? (
+                        <Badge variant="secondary">{ASSESSMENT_LABEL["not-assessed"]}</Badge>
+                      ) : maturityInt != null ? (
                         <Badge className={MATURITY_BADGE_CLASS[maturityInt]}>
                           {MATURITY_LABEL[maturityInt]}
                         </Badge>
@@ -274,7 +308,7 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                       )}
                     </TableCell>
                     <TableCell className="font-data">
-                      {completionByDim[dim]}%
+                      {completionByDim[dim].pct}%
                     </TableCell>
                   </TableRow>
                 )
