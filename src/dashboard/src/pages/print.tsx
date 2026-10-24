@@ -6,6 +6,13 @@ import type { QRAMMScoreResponse, QRAMMComplianceMapRow } from "@/types/api"
 import { extractCN } from "@/lib/cert-parse"
 import { formatScanDateTime, formatDateOnly } from "@/lib/datetime"
 import { formatScoreNumber } from "@/lib/utils"
+import {
+  stateFromCoverageStatus,
+  ASSESSMENT_LABEL,
+  ASSESSMENT_PRINT_CLASS,
+  QRAMM_COVERAGE_SENTENCE,
+  type AssessmentState,
+} from "@/lib/qramm-assessment"
 import quirkLogoUrl from "@/assets/brand/quirk-logo.svg"
 
 const FRAMEWORK_DISPLAY: Record<string, string> = {
@@ -62,7 +69,8 @@ const PRINT_CSS = [
   ".score-number{font-size:28px;font-weight:600}",
   ".score-label{font-size:12px;font-weight:600;color:var(--print-muted)}",
   ".tier-scanner{background:var(--ds-accent);color:var(--print-fg-inverse)}",
-  ".tier-manual{background:var(--print-border);color:var(--print-muted)}",
+  ".tier-self{background:transparent;color:var(--print-fg);border:1px solid var(--print-fg)}",
+  ".tier-none{background:transparent;color:var(--print-muted);border:1px dashed var(--print-muted)}",
   ".qramm-radar{margin:16px 0}",
   ".qramm-footnote{font-size:12px;color:var(--print-muted);margin-top:8px;border-top:1px solid var(--print-border);padding-top:8px}",
   ".qramm-detail-section{margin-top:16px}",
@@ -257,12 +265,24 @@ function PrintQRAMM({
   const itrPt  = [cx - (itrScore  / 4) * r, cy] as const
   const polygon = [cviPt, sgrmPt, dpePt, itrPt].map(([x, y]) => `${x},${y}`).join(" ")
 
-  // Tier classification per framework: any row with scanner_informed=true → "Scanner-informed"
-  const frameworkTier: Record<string, "scanner" | "manual"> = {}
-  for (const fw of FRAMEWORK_ORDER) {
-    const rows = complianceRows.filter((row) => row.framework === fw)
-    frameworkTier[fw] = rows.some((row) => row.scanner_informed) ? "scanner" : "manual"
+  // Phase 231 D-21b: a dimension's state comes from its rows' coverage_status (all rows of a
+  // dimension share it); a dimension with no rows at all is Not assessed.
+  const dimensionState: Record<string, AssessmentState> = {}
+  for (const d of QRAMM_DIMS) {
+    const first = complianceRows.find((row) => row.dimension === d)
+    dimensionState[d] = first ? stateFromCoverageStatus(first.coverage_status) : "not-assessed"
   }
+
+  // Phase 231 D-06a: per-framework composition — practice-area rows counted by assessment state.
+  const frameworkCounts: Record<string, Record<AssessmentState, number>> = {}
+  for (const fw of FRAMEWORK_ORDER) {
+    const counts: Record<AssessmentState, number> = { "scanner-measured": 0, "self-assessed": 0, "not-assessed": 0 }
+    for (const row of complianceRows) {
+      if (row.framework === fw) counts[stateFromCoverageStatus(row.coverage_status)] += 1
+    }
+    frameworkCounts[fw] = counts
+  }
+  const COUNT_STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed"]
 
   // Group compliance rows by framework
   const grouped: Record<string, QRAMMComplianceMapRow[]> = {}
@@ -309,23 +329,26 @@ function PrintQRAMM({
       <h3>Dimension Scorecard</h3>
       <table>
         <thead>
-          <tr><th>Dimension</th><th>Raw Score</th><th>Weighted Score</th></tr>
+          <tr><th>Dimension</th><th>Assessment</th><th>Raw Score</th><th>Weighted Score</th></tr>
         </thead>
         <tbody>
           {QRAMM_DIMS.map((d) => {
             const dim = scoreResult.dimensions[d]
             const raw = dim?.score ?? 0
             const weighted = dim?.weighted ?? 0
+            const state = dimensionState[d]
+            const assessed = state !== "not-assessed"
             return (
               <tr key={d}>
                 <td>{d}</td>
-                <td>{raw.toFixed(1)}</td>
-                <td>{weighted.toFixed(2)}</td>
+                <td><span className={`badge ${ASSESSMENT_PRINT_CLASS[state]}`}>{ASSESSMENT_LABEL[state]}</span></td>
+                <td>{assessed ? raw.toFixed(1) : "—"}</td>
+                <td>{assessed ? weighted.toFixed(2) : "—"}</td>
               </tr>
             )
           })}
           <tr>
-            <td colSpan={3} style={{ fontWeight: 600, textAlign: "right" }}>
+            <td colSpan={4} style={{ fontWeight: 600, textAlign: "right" }}>
               Overall maturity: {scoreResult.maturity}
             </td>
           </tr>
@@ -333,27 +356,24 @@ function PrintQRAMM({
       </table>
 
       <h3>Compliance Framework Coverage</h3>
+      <p className="meta">Counts are practice areas per framework, grouped by how each was assessed.</p>
       <table>
         <thead>
-          <tr><th>Framework</th><th>Coverage Tier</th></tr>
+          <tr>
+            <th>Framework</th>
+            {COUNT_STATES.map((st) => <th key={st}>{ASSESSMENT_LABEL[st]}</th>)}
+          </tr>
         </thead>
         <tbody>
-          {FRAMEWORK_ORDER.map((fw) => {
-            const tier = frameworkTier[fw]
-            const label = tier === "scanner" ? "Scanner-informed" : "Manual only"
-            const cls   = tier === "scanner" ? "badge tier-scanner" : "badge tier-manual"
-            return (
-              <tr key={fw}>
-                <td>{FRAMEWORK_DISPLAY[fw]}</td>
-                <td><span className={cls}>{label}</span></td>
-              </tr>
-            )
-          })}
+          {FRAMEWORK_ORDER.map((fw) => (
+            <tr key={fw}>
+              <td>{FRAMEWORK_DISPLAY[fw]}</td>
+              {COUNT_STATES.map((st) => <td key={st}>{frameworkCounts[fw][st]}</td>)}
+            </tr>
+          ))}
         </tbody>
       </table>
-      <p className="qramm-footnote">
-        Coverage reflects QUIRK scanner findings for CVI only — SGRM, DPE, ITR require manual assessment.
-      </p>
+      <p className="qramm-footnote">{QRAMM_COVERAGE_SENTENCE}</p>
 
       {FRAMEWORK_ORDER.map((fw) => {
         const rows = grouped[fw] ?? []
@@ -366,18 +386,21 @@ function PrintQRAMM({
                   <th>Practice Area</th>
                   <th>Dimension</th>
                   <th>Relevance Score</th>
-                  <th>Scanner-Informed</th>
+                  <th>Assessment</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.practice_number}>
-                    <td style={{ fontFamily: "monospace", fontSize: 11 }}>{row.practice_area}</td>
-                    <td>{row.dimension}</td>
-                    <td>{row.relevance_score === null ? "—" : row.relevance_score.toFixed(2)}</td>
-                    <td>{row.scanner_informed ? "Yes" : "No"}</td>
-                  </tr>
-                ))}
+                {rows.map((row) => {
+                  const state = stateFromCoverageStatus(row.coverage_status)
+                  return (
+                    <tr key={row.practice_number}>
+                      <td style={{ fontFamily: "monospace", fontSize: 11 }}>{row.practice_area}</td>
+                      <td>{row.dimension}</td>
+                      <td>{row.relevance_score === null ? "—" : row.relevance_score.toFixed(2)}</td>
+                      <td><span className={`badge ${ASSESSMENT_PRINT_CLASS[state]}`}>{ASSESSMENT_LABEL[state]}</span></td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
