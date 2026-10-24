@@ -231,7 +231,11 @@ def _normalise_target(target: str) -> str:
     IDNA's other full stops read as dots (R12 IN-01)."""
     # 230-REVIEW-R13 WR-01/WR-02: NFKC first, as IDNA does, so full-width
     # look-alikes (":" "/" "[" and dot leaders) are checked as what they become.
-    return unicodedata.normalize("NFKC", target).strip().translate(_IDNA_DOTS).rstrip(".")
+    # R14 CR-01: with IDNA's own Unicode 3.2 tables, not the interpreter's
+    # newer ones, so the probed name is the name getaddrinfo and the
+    # trusted-targets gate resolve.
+    return (unicodedata.ucd_3_2_0.normalize("NFKC", target)
+            .strip().translate(_IDNA_DOTS).rstrip("."))
 
 
 def _invalid_target_reason(target):

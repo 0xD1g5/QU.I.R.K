@@ -1449,7 +1449,7 @@ def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
     ("dc\uff0ecorp\uff61local", "CORP.LOCAL"),
     # 230-REVIEW-R13 WR-02: NFKC folds the other dot look-alikes too.
     ("dc01.corp.local\u2024", "CORP.LOCAL"),
-    ("dc01\ufe52corp\ufe52local", "CORP.LOCAL"),
+    ("dc01.corp.local\ufe52", "CORP.LOCAL"),
 ])
 def test_derive_realm_uses_the_idna_a_label(host, realm):
     assert ks._derive_realm(host) == realm
@@ -1474,7 +1474,7 @@ def test_derive_realm_unencodable_name_does_not_raise():
     # or path-like target never names a host that resolves.
     "dc01.corp.local:88", "[::1]", "dc01.corp.local/x", "\u3002",
     # 230-REVIEW-R13 WR-01: full-width look-alikes IDNA folds to ":" "/" "[".
-    "dc01.corp.local\uff1a88", "dc01.corp.local\uff0fx", "\uff3b::1]",
+    "dc01.corp.local\uff1a88", "dc01.corp.local\uff0fx", "\uff3bdc01.corp.local",
 ])
 def test_invalid_target_reason_rejects(target):
     assert ks._invalid_target_reason(target)
@@ -1712,13 +1712,31 @@ def test_ldap_connection_is_unbound_when_the_bind_is_rejected(monkeypatch):
     assert result["ldap_error"] == "x" * 200
 
 
-def test_ldap_search_failure_is_bounded_and_unbound(monkeypatch):
-    """230-REVIEW-R13 WR-03: the exception path is bounded and still unbinds."""
-    calls = _install_fake_ldap3(monkeypatch, search_error="y" * 5000)
-    result = ks._probe_ldap_anon("dc01.corp.local", 1)
+def test_ldap_search_failure_is_bounded_and_unbound(monkeypatch, caplog):
+    """230-REVIEW-R13 WR-03: the exception path is bounded, in the result and in
+    the warning log, and still unbinds.  R14 WR-01/WR-02: the text is not
+    secret-shaped, so safe_str keeps it and only the bound shortens it."""
+    calls = _install_fake_ldap3(monkeypatch,
+                                search_error="connection reset by peer; " * 300)
+    with caplog.at_level(logging.WARNING, logger=ks.logger.name):
+        result = ks._probe_ldap_anon("dc01.corp.local", 1, logger=ks.logger)
     assert result["ldap_status"] == "skipped"
-    assert 0 < len(result["ldap_error"]) <= 200
+    assert len(result["ldap_error"]) == 200
     assert calls["unbind"] == 1
+    logged = [r.getMessage() for r in caplog.records if "LDAP probe failed" in r.getMessage()]
+    assert logged and all(len(m) < 400 for m in logged)
+
+
+# 230-REVIEW-R14 CR-01: Python's idna codec (and so getaddrinfo and the
+# trusted-targets gate) folds with Unicode 3.2 tables.  Normalising with the
+# interpreter's newer tables folded characters added after 3.2, so the scanner
+# contacted a different name than the gate approved.
+@pytest.mark.parametrize("target", [
+    "\u1d30\u1d9c01.corp.local", "dc\u1d2c01.corp.local", "dc\u03f901.corp.local",
+    "dc01.corp.local", "kdc.пример", "dc01.corp.local\uff0e",
+])
+def test_normalised_target_resolves_to_the_same_name_as_the_raw_target(target):
+    assert ks._normalise_target(target).encode("idna") == target.rstrip(".\uff0e").encode("idna")
 
 
 def test_a_bytes_ldap_value_does_not_lose_the_scan(monkeypatch):
