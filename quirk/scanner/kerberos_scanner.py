@@ -310,16 +310,21 @@ def _invalid_target_reason(target):
             return "KDC target is an IP address with non-ASCII characters"
         addr = ipaddress.ip_address(raw)
         # 230-REVIEW-R20 WR-02: one rule set for the effective address.  An
-        # IPv4-mapped address is unwrapped here, and every rule is explicit
-        # network membership, so the result does not depend on whether this
+        # IPv4-mapped address is unwrapped here, so the rules below never see a
+        # mapped address and the result does not depend on whether this
         # CPython's ipaddress delegates is_* properties for mapped addresses.
         eff = (addr.ipv4_mapped or addr) if addr.version == 6 else addr
         # R20 CR-01: connect() rewrites an unspecified destination to this
         # host's loopback, so "0.0.0.0" or "::" would probe the scanning host
         # under a name the gate checked as something else.
-        if eff.is_unspecified or eff in _V4_THIS_NETWORK:
-            return ("KDC target is the unspecified address (0.0.0.0/8 or ::); the "
+        if eff.is_unspecified:
+            return ("KDC target is the unspecified address (0.0.0.0 or ::); the "
                     "kernel would probe this host instead")
+        # R21 WR-01: the rest of 0.0.0.0/8 ("this network") is never a valid
+        # destination; macOS sends it out unchanged and Linux refuses it.
+        if eff in _V4_THIS_NETWORK:
+            return ("KDC target is in 0.0.0.0/8 (\"this network\"), which is never "
+                    "a valid destination")
         # R19 CR-01/WR-02: macOS reads the second 16-bit group of an fe80::/10
         # address as an embedded zone id ("fe80:1::1" is probed as fe80::1 on
         # lo0), and a zone-free link-local address is unreachable everywhere.

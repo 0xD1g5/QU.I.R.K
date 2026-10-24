@@ -1801,7 +1801,11 @@ def _kernel_peer(raw):
     no packet (R20 WR-01).  None if this host has no route to it."""
     import socket as _s
     fam = _s.AF_INET6 if ":" in raw else _s.AF_INET
-    sock = _s.socket(fam, _s.SOCK_DGRAM)
+    try:
+        # R21 IN-01: inside the try, so a host without IPv6 skips the check.
+        sock = _s.socket(fam, _s.SOCK_DGRAM)
+    except OSError:
+        return None
     try:
         sock.connect((raw, 88))
         return sock.getpeername()
@@ -1849,8 +1853,8 @@ def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
             peer = _kernel_peer(raw)
             if peer is not None:
                 kgot = ks.ipaddress.ip_address(peer[0].split("%")[0])
-                assert kgot == want or getattr(want, "ipv4_mapped", None) == kgot \
-                    or getattr(kgot, "ipv4_mapped", None) == want, (t, peer)
+                # A dual-stack socket reports an IPv4 peer as ::ffff:a.b.c.d.
+                assert kgot == want or getattr(want, "ipv4_mapped", None) == kgot, (t, peer)
                 assert len(peer) == 2 or peer[3] == 0, (t, peer)
         assert not any(c.isspace() or ord(c) < 0x21 for c in wire), repr(t)
         ks._derive_realm(wire)  # never raises for an accepted target
@@ -1986,6 +1990,8 @@ def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, g
     # loopback; mapped forms get the same rule as the IPv4 form; broadcast.
     "0.0.0.0", "::", "0::0", "::ffff:0.0.0.0", "::ffff:0:0", "0.1.2.3",
     "::ffff:224.0.0.1", "255.255.255.255", "::ffff:255.255.255.255",
+    # R21 WR-02: only the explicit unwrap refuses these (is_unspecified does not).
+    "::ffff:0.1.2.3", "::ffff:0.0.0.1",
 ])
 def test_r16_targets_are_not_probed(target):
     assert ks._invalid_target_reason(target)
@@ -2000,6 +2006,7 @@ def test_r16_ascii_ip_literals_and_one_trailing_dot_are_accepted(target):
 @pytest.mark.parametrize("target, words", [
     ("fe80::1%en0", "zone id"), ("fe80:1::1", "link-local"), ("ff02::1", "multicast"),
     ("::", "unspecified"), ("::ffff:0.0.0.0", "unspecified"), ("255.255.255.255", "broadcast"),
+    ("0.1.2.3", "this network"), ("::ffff:0.1.2.3", "this network"),
 ])
 def test_ip_refusals_name_their_rule(target, words):
     """230-REVIEW-R19 IN-01: each IP refusal is asserted by its own message, so a
@@ -2007,7 +2014,8 @@ def test_ip_refusals_name_their_rule(target, words):
     assert words in ks._invalid_target_reason(target)
 
 
-@pytest.mark.parametrize("v4", ["169.254.1.1", "10.0.0.1", "224.0.0.1", "0.0.0.0", "127.0.0.1"])
+@pytest.mark.parametrize("v4", ["169.254.1.1", "10.0.0.1", "224.0.0.1", "0.0.0.0", "127.0.0.1",
+                                "0.1.2.3", "0.0.0.1"])
 def test_ipv4_mapped_form_gets_the_ipv4_disposition(v4):
     """230-REVIEW-R20 WR-02: the same IPv4 destination is accepted or refused
     the same way whether written as a.b.c.d or ::ffff:a.b.c.d."""

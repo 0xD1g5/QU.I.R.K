@@ -4724,14 +4724,14 @@ name (empty, not a string, containing a NUL, a control or surrogate character or
 whitespace, a name IDNA cannot encode, a name with an empty label or more than one trailing
 dot, an IPv6 link-local address (`fe80::/10`) or any IPv6 address with a zone id such as
 `fe80::1%en0` (use the KDC's host name or a global address instead), the unspecified address
-(`0.0.0.0/8`, `::`; the kernel would probe the scanning host itself), a multicast or broadcast
-address (an IPv4-mapped form such as `::ffff:0.0.0.0` is treated as its IPv4 address), or
-any form the
+(`0.0.0.0` or `::`; the kernel would probe the scanning host itself) or anything else in
+`0.0.0.0/8`, a multicast or broadcast address, or any form the
 trusted-targets check would read as a different host, such as `host:port`, `[v6]` or a URL,
 since the KDC port is always 88) is never probed, over Kerberos or LDAP. Neither is a
 target whose request cannot be built, for example because impacket rejects the configured
 `kerberos_probe_principal`. Either way the target gets a `kerberos-unreachable` row with
-`scan_error_category` `invalid_input`. A single target may be written as a YAML scalar
+`scan_error_category` `invalid_input`. An IPv4-mapped address such as `::ffff:0.0.0.0` gets the same
+treatment as its IPv4 form. A single target may be written as a YAML scalar
 (`kerberos_targets: dc01.corp.local`); it is read as a one-item list, and any other value that
 is not a list (a number, a mapping) is one target that is not a host name, so it is not probed. An etype the KDC lists
 twice gives one row. An IP-literal target is used as the
