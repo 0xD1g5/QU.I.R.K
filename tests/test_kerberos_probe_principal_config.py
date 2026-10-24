@@ -1482,8 +1482,8 @@ def test_invalid_target_reason_rejects(target):
 
 @pytest.mark.parametrize("target", [
     "dc01.corp.local", " dc01.corp.local ", "10.0.0.1", "::1", "kdc.пример",
-    # R17 CR-01: a numeric zone, since "en0" exists on macOS but not on CI's Linux.
-    "dc.corp.local.", "10.0.0.1.", "fe80::1%1",
+    # R18: no zone id (every zone id is refused).
+    "dc.corp.local.", "10.0.0.1.", "fe80::1",
 ])
 def test_invalid_target_reason_accepts(target):
     assert ks._invalid_target_reason(target) is None
@@ -1771,9 +1771,10 @@ def _sweep_targets():
                     f"dc01{c}\u00e9.corp.local", f"dc01.corp.local{c}", f"dc:{c}1",
                     # 230-REVIEW-R16 CR-01: IPv6 zone ids.
                     f"fe80::1%{c}", f"fe80::1%en{c}", f"fe80::1%{c}.attacker.example",
-                    # R17 CR-01: a numeric scope, valid on glibc and macOS alike,
-                    # so the accepted IP branch is exercised on every platform.
-                    f"fe80::1%1{c}"]
+                    f"fe80::1%1{c}",
+                    # R18: zone-free literals, so the accepted IP branch is
+                    # exercised (every zone id is refused).
+                    f"2001:db8::1{c}", f"{c}10.0.0.1"]
     marks = [chr(cp) for cp in range(0x300, 0x370) if ucd.category(chr(cp)) == "Mn"]
     marks.append("\u0345")
     for base in [chr(cp) for cp in range(0x1F80, 0x1FB0)]:
@@ -1925,11 +1926,17 @@ def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, g
     "dc01.corp.local\ufe30", "dc01.corp.local.\u2024",
     # R17 CR-01/WR-01/IN-02: a zone that names no interface on this host.
     "fe80::1%en", "fe80::1%no-such-interface", "fe80::1%attacker.example",
+    # R18 CR-01/WR-01/WR-03: macOS truncates a numeric zone to 16 bits
+    # ("%65537" probed lo0), glibc takes any decimal; "%0" is scope 0.  Every
+    # zone id is refused, valid-looking ones included.
+    "fe80::1%65537", "fe80::1%4294967297", "fe80::1%4294967295", "fe80::1%0",
+    "fe80::1%1", "fe80::1%lo0", "fe80::1%lo", "2001:db8::1%1",
 ])
 def test_r16_targets_are_not_probed(target):
     assert ks._invalid_target_reason(target)
 
 
-@pytest.mark.parametrize("target", ["fe80::1%1", "::1", "10.0.0.1", "dc01.corp.local."])
+@pytest.mark.parametrize("target", ["fe80::1", "::1", "10.0.0.1", "2001:db8::1",
+                                    "::ffff:10.0.0.1", "dc01.corp.local."])
 def test_r16_ascii_ip_literals_and_one_trailing_dot_are_accepted(target):
     assert ks._invalid_target_reason(target) is None

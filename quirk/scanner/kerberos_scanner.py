@@ -235,8 +235,8 @@ def _wire_name(target: str) -> str:
     only approximated that codec, so some names were probed as a different
     host than the gate checked.  The scanner now probes the codec's own
     output: an IP literal as written (parsed from the raw string, as the gate
-    parses it, R15 CR-02; ASCII only, so the resolver parses it as a number,
-    R16 CR-01), otherwise the A-label of the stripped string.  A
+    parses it, R15 CR-02; ASCII and without a zone id, so the resolver parses
+    it as a number, R16-R18), otherwise the A-label of the stripped string.  A
     trailing dot is kept: the name stays absolute, as the gate resolved it
     (R15 WR-01).  Raises UnicodeError for a name IDNA cannot encode.
     """
@@ -284,30 +284,19 @@ def _invalid_target_reason(target):
     except ValueError:
         is_ip = False
     if is_ip:
-        # 230-REVIEW-R16 CR-01: ipaddress accepts any IPv6 zone id, so the gate
-        # takes "fe80::1%\u0131.attacker.example" as an IP literal and resolves
-        # nothing, while getaddrinfo IDNA-encodes the non-ASCII string into a
-        # host-name lookup.  An IP literal is only an IP literal in ASCII.
+        # 230-REVIEW-R16..R18: an IPv6 zone id is refused outright.  Each
+        # narrower rule broke on a platform difference: ipaddress accepts any
+        # zone, getaddrinfo IDNA-encodes a non-ASCII one into a name lookup
+        # (R16), glibc accepts only an existing interface name or a number
+        # while macOS maps an unknown zone to scope 0 (R17) and truncates a
+        # numeric zone to 16 bits (R18, "%65537" probed lo0).  A KDC is
+        # reached by host name or a global address; with no zone the
+        # resolver parses the literal as a number on every platform.
+        if "%" in raw:
+            return ("KDC target is an IPv6 address with a zone id; use the KDC's "
+                    "host name or a global address")
         if not raw.isascii():
-            return "KDC target is an IP address with a non-ASCII zone id"
-        try:
-            # R16 WR-01: CPython IDNA-encodes the host before getaddrinfo, so
-            # the text before the first "." must fit a 63-character label.
-            raw.encode("idna")
-            # 230-REVIEW-R17 CR-01/WR-01/IN-02: a zone id must be one the
-            # resolver takes as a number.  AI_NUMERICHOST is a local parse and
-            # never queries DNS.  glibc accepts a zone only as an existing
-            # interface name or a number; macOS maps an unknown zone to scope 0,
-            # which would probe an interface the target does not name.  An IP
-            # literal without a zone always parses (R17 differential fuzz).
-            if "%" in raw:
-                infos = socket.getaddrinfo(raw, KDC_PORT, flags=socket.AI_NUMERICHOST)
-                if not any(len(i[4]) == 4 and i[4][3] for i in infos):
-                    return "KDC target's zone id does not name an interface on this host"
-        except UnicodeError as exc:
-            return f"KDC target is not a valid IP address for the resolver ({exc})"
-        except socket.gaierror:
-            return "KDC target's zone id does not name an interface on this host"
+            return "KDC target is an IP address with non-ASCII characters"
         return None
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.
