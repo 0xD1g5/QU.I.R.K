@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,657 lines, in reading order.
+Five guides, 7,662 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4708,17 +4708,22 @@ makes the TCP leg longer than one attempt. A UDP fallback
 adds up to another 10 s, and the LDAP probe that follows has its own 10 s connect and receive
 timeouts. Name resolution is not covered by these bounds: each leg that connects to a host name
 resolves it first (the TCP retry does not; it reuses the address), and only the system resolver
-limits how long that takes.
+limits how long that takes. The LDAP probe follows no referral, so a directory cannot redirect it to a
+host the trusted-targets check did not see.
 
 Kerberos targets need an FQDN whose last two labels are the realm (for example
 `dc01.corp.local` gives realm `CORP.LOCAL`; a deeper name keeps only the last two, so
 `dc.corp.example.com` gives `EXAMPLE.COM`). An internationalised name's realm is its IDNA
 A-label (`kdc.пример` gives `KDC.XN--E1AFMKFD`), because RFC 4120 says a Kerberos realm string
-should hold ASCII characters only. Leading and trailing whitespace and a trailing dot are
-removed from a target before it is probed and reported. A target that is not a usable host
+should hold ASCII characters only. A target is probed, and reported, under exactly the name
+the system resolver is asked for when the trusted-targets check resolves it: surrounding
+whitespace removed, an IP literal as written, otherwise the IDNA A-label (`kdc.пример` is
+probed and reported as `kdc.xn--e1afmkfd`). A trailing dot is kept in that name, so it stays
+absolute, and is dropped only from the realm. A target that is not a usable host
 name (empty, not a string, containing a NUL, a control or surrogate character or inner
-whitespace, a name IDNA cannot encode, or a `host:port` or bracketed form, since the KDC port
-is always 88) is never probed, over Kerberos or LDAP. Neither is a
+whitespace, a name IDNA cannot encode, a name with an empty label, or any form the
+trusted-targets check would read as a different host, such as `host:port`, `[v6]` or a URL,
+since the KDC port is always 88) is never probed, over Kerberos or LDAP. Neither is a
 target whose request cannot be built, for example because impacket rejects the configured
 `kerberos_probe_principal`. Either way the target gets a `kerberos-unreachable` row with
 `scan_error_category` `invalid_input`. A single target may be written as a YAML scalar

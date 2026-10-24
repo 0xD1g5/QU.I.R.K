@@ -53,6 +53,7 @@ from datetime import datetime, timezone
 from quirk.errors import format_error
 
 from quirk.models import CryptoEndpoint
+from quirk.util.target_trust import _extract_host  # 230-REVIEW-R15 CR-02
 from quirk.util.safe_exc import safe_str  # IN-01: sanitize tcp_error onto unreachable endpoint
 
 # Module-level logger
@@ -198,9 +199,10 @@ def _derive_realm(host: str) -> str:
     Replaced with the stdlib ``ipaddress.ip_address`` strict parser
     (RESEARCH Pattern 4).
     """
-    # 230-REVIEW-R10 WR-05 / R11 IN-05: a trailing dot marks an absolute name,
-    # and goes before the IP-literal check so "10.0.0.1." is an IP literal.
-    stripped = _normalise_target(host)
+    # 230-REVIEW-R10 WR-05 / R11 IN-05: a trailing dot marks an absolute name;
+    # it is not part of the realm, and goes before the IP-literal check so
+    # "10.0.0.1." gives the realm "10.0.0.1".
+    stripped = host.strip().rstrip(".")
     try:
         ipaddress.ip_address(stripped)
         return stripped.upper()
@@ -210,7 +212,9 @@ def _derive_realm(host: str) -> str:
     # characters only, so an internationalised name's realm is its IDNA
     # A-label; the U-label could not be encoded into the AS-REQ.
     try:
-        stripped = stripped.encode("idna").decode("ascii")
+        # The scan loop passes the wire name, already an A-label; direct
+        # callers may pass a U-label.  IDNA's other full stops become "." here.
+        stripped = stripped.encode("idna").decode("ascii").rstrip(".")
     except UnicodeError:
         # Keep the name.  scan_kerberos_targets never gets here: such a
         # target is rejected by _invalid_target_reason (R11 IN-03).
@@ -221,21 +225,27 @@ def _derive_realm(host: str) -> str:
     return stripped.upper()
 
 
-# 230-REVIEW-R12 IN-01: IDNA treats these as label separators like ".".
-_IDNA_DOTS = str.maketrans({"\u3002": ".", "\uff0e": ".", "\uff61": "."})
+def _wire_name(target: str) -> str:
+    """The exact name the resolver is asked for: what the scanner probes and
+    reports.
 
-
-def _normalise_target(target: str) -> str:
-    """The name that is validated, probed and reported: surrounding whitespace
-    and a trailing dot removed (230-REVIEW-R10 WR-01/WR-05, R11 IN-05), with
-    IDNA's other full stops read as dots (R12 IN-01)."""
-    # 230-REVIEW-R13 WR-01/WR-02: NFKC first, as IDNA does, so full-width
-    # look-alikes (":" "/" "[" and dot leaders) are checked as what they become.
-    # R14 CR-01: with IDNA's own Unicode 3.2 tables, not the interpreter's
-    # newer ones, so the probed name is the name getaddrinfo and the
-    # trusted-targets gate resolve.
-    return (unicodedata.ucd_3_2_0.normalize("NFKC", target)
-            .strip().translate(_IDNA_DOTS).rstrip("."))
+    230-REVIEW-R15 CR-01: the trusted-targets gate resolves the configured
+    string with ``getaddrinfo``, which IDNA-encodes it with the stdlib codec.
+    Rounds R12-R14 rewrote the name with look-alike folding (dots, NFKC) that
+    only approximated that codec, so some names were probed as a different
+    host than the gate checked.  The scanner now probes the codec's own
+    output: an IP literal as written (parsed from the raw string, as the gate
+    parses it, R15 CR-02), otherwise the A-label of the stripped string.  A
+    trailing dot is kept: the name stays absolute, as the gate resolved it
+    (R15 WR-01).  Raises UnicodeError for a name IDNA cannot encode.
+    """
+    raw = target.strip()
+    try:
+        ipaddress.ip_address(raw)
+        return raw
+    except ValueError:
+        pass
+    return raw.encode("idna").decode("ascii")
 
 
 def _invalid_target_reason(target):
@@ -248,33 +258,42 @@ def _invalid_target_reason(target):
     """
     if not isinstance(target, str):
         return f"KDC target is not a host name string ({type(target).__name__})"
-    stripped = _normalise_target(target)
-    if not stripped:
+    raw = target.strip()
+    if not raw.rstrip("."):
         return "KDC target is empty"
-    if "\x00" in stripped:
+    if "\x00" in raw:
         return "KDC target contains a NUL character"
     # 230-REVIEW-R11 CR-01/IN-04: a lone surrogate (YAML can load one) breaks
     # the AS-REQ build and the SQLite insert; control characters are never
     # part of a host name.
-    if any(unicodedata.category(c) in ("Cc", "Cs") for c in stripped):
+    if any(unicodedata.category(c) in ("Cc", "Cs") for c in raw):
         return "KDC target contains a control or surrogate character"
-    if any(c.isspace() for c in stripped):
+    if any(c.isspace() for c in raw):
         return "KDC target contains whitespace"
+    # 230-REVIEW-R15 CR-02: the trusted-targets gate reads host:port, [v6] and
+    # URL forms itself.  A target it parses into a different host is refused,
+    # so the gate and the scanner always start from the same string.
+    gate_host = _extract_host(raw)
+    if gate_host != raw:
+        return (f"KDC target must be a bare host name or IP address; the trusted-targets "
+                f"gate reads it as {gate_host!r} (the port is always 88)")
     try:
-        ipaddress.ip_address(stripped)
+        ipaddress.ip_address(raw)
         return None
     except ValueError:
         pass
-    # 230-REVIEW-R12 WR-05: the KDC port is always 88, so a host:port,
-    # bracketed or path-like target names no host that resolves.
-    if any(c in stripped for c in ":[]/"):
-        return "KDC target must be a bare host name or IP address (the port is always 88)"
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.
     try:
-        stripped.encode("idna")
+        wire = _wire_name(raw)
     except UnicodeError as exc:
         return f"KDC target is not a valid host name ({exc})"
+    # Checked on the wire name, after IDNA's own folding (R13 WR-01, R15
+    # CR-01): the port is always 88, so ":" "[" "]" "/" "%" name no host.
+    if any(c in wire for c in ":[]/%") or any(c.isspace() or ord(c) < 0x21 for c in wire):
+        return "KDC target must be a bare host name or IP address (the port is always 88)"
+    if any(not label for label in wire.rstrip(".").split(".")):
+        return "KDC target has an empty label"
     return None
 
 
@@ -728,9 +747,14 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
     conn = None
     try:
         import ldap3
-        server = ldap3.Server(host, port=389, connect_timeout=timeout)
+        # 230-REVIEW-R15 CR-03: follow no referral.  ldap3 defaults to
+        # following one to any host, which the trusted-targets gate never
+        # checked.
+        server = ldap3.Server(host, port=389, connect_timeout=timeout,
+                              allowed_referral_hosts=[])
         conn = ldap3.Connection(
-            server, authentication=ldap3.ANONYMOUS, receive_timeout=timeout
+            server, authentication=ldap3.ANONYMOUS, receive_timeout=timeout,
+            auto_referrals=False,
         )
         if not conn.bind():
             return {
@@ -1004,8 +1028,9 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 target if isinstance(target, str) else repr(target), None, now,
                 invalid))
             continue
-        # 230-REVIEW-R10 WR-01: probe and report the name that was validated.
-        target = _normalise_target(target)
+        # 230-REVIEW-R10 WR-01 / R15 CR-01: probe and report the exact name
+        # the trusted-targets gate resolved.
+        target = _wire_name(target)
         realm = _derive_realm(target)
         # 230-08 D-29: None, never [].  Every path below assigns it; a path
         # that does not must read as unreachable.  [] means "matching AS-REP"

@@ -1532,9 +1532,11 @@ def test_invalid_targets_are_not_probed_and_padded_targets_are_stripped(monkeypa
     assert [r.service_detail for r in bad] == ["kerberos-unreachable"] * len(invalid)
     assert [r.scan_error_category for r in bad] == ["invalid_input"] * len(invalid)
     assert all(isinstance(r.host, str) and r.scan_error for r in bad)
-    assert probed == [("tcp", "dc01.corp.local", "CORP.LOCAL"),
-                      ("ldap", "dc01.corp.local")]
-    assert {r.host for r in rows[len(invalid):]} == {"dc01.corp.local"}
+    # 230-REVIEW-R15 WR-01: the trailing dot stays in the probed name (an
+    # absolute name, as the gate resolves it); only the realm drops it.
+    assert probed == [("tcp", "dc01.corp.local.", "CORP.LOCAL"),
+                      ("ldap", "dc01.corp.local.")]
+    assert {r.host for r in rows[len(invalid):]} == {"dc01.corp.local."}
 
 
 def test_udp_leg_build_failure_is_not_probed(monkeypatch):
@@ -1680,7 +1682,18 @@ def _install_fake_ldap3(monkeypatch, *, bind_ok=True, enc_value=None,
         def unbind(self):
             calls["unbind"] += 1
 
-    mod = types.SimpleNamespace(Server=lambda *a, **k: object(), Connection=Connection,
+    def Server(*a, **k):
+        calls["server_kwargs"] = k
+        return object()
+
+    _conn_init = Connection.__init__
+
+    def _init(self, *a, **k):
+        calls["connection_kwargs"] = k
+        _conn_init(self, *a, **k)
+
+    Connection.__init__ = _init
+    mod = types.SimpleNamespace(Server=Server, Connection=Connection,
                                 ANONYMOUS="ANONYMOUS", NONE="NONE")
     monkeypatch.setitem(sys.modules, "ldap3", mod)
     return calls
@@ -1727,16 +1740,95 @@ def test_ldap_search_failure_is_bounded_and_unbound(monkeypatch, caplog):
     assert logged and all(len(m) < 400 for m in logged)
 
 
-# 230-REVIEW-R14 CR-01: Python's idna codec (and so getaddrinfo and the
-# trusted-targets gate) folds with Unicode 3.2 tables.  Normalising with the
-# interpreter's newer tables folded characters added after 3.2, so the scanner
-# contacted a different name than the gate approved.
+# 230-REVIEW-R14 CR-01 / R15 CR-01/CR-02: the scanner probes exactly the name
+# getaddrinfo resolves for the trusted-targets gate (the stdlib idna codec's
+# A-label), and refuses any target the gate parses into a different host.  The
+# inputs are generated from Python's own Unicode 3.2 tables (the ones the idna
+# codec uses), not from a hand list: every code point that NFKC or case
+# folding changes, at the start, inside a label, and next to a non-ASCII
+# character, plus Greek ypogegrammeni x combining-mark pairs.
+
+def _ucd32_changing_code_points():
+    import unicodedata
+    ucd = unicodedata.ucd_3_2_0
+    out = []
+    for cp in range(0x80, 0x30000):
+        c = chr(cp)
+        if ucd.category(c) in ("Cn", "Cs", "Co"):
+            continue
+        if ucd.normalize("NFKC", c) != c or c.casefold() != c:
+            out.append(c)
+    return out
+
+
+def _sweep_targets():
+    import unicodedata
+    ucd = unicodedata.ucd_3_2_0
+    targets = []
+    for c in _ucd32_changing_code_points():
+        targets += [f"{c}dc01.corp.local", f"dc{c}01.corp.local",
+                    f"dc01{c}\u00e9.corp.local", f"dc01.corp.local{c}", f"dc:{c}1"]
+    marks = [chr(cp) for cp in range(0x300, 0x370) if ucd.category(chr(cp)) == "Mn"]
+    marks.append("\u0345")
+    for base in [chr(cp) for cp in range(0x1F80, 0x1FB0)]:
+        for m in marks:
+            targets.append(f"dc01{base}{m}.corp.local")
+    return targets
+
+
+def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
+    from quirk.util import target_trust as tt
+
+    checked = 0
+    for t in _sweep_targets():
+        if ks._invalid_target_reason(t) is not None:
+            continue
+        checked += 1
+        raw = t.strip()
+        assert tt._extract_host(t) == raw, repr(t)
+        wire = ks._wire_name(t)
+        try:
+            ks.ipaddress.ip_address(raw)
+            expected = raw
+        except ValueError:
+            expected = raw.encode("idna").decode("ascii")
+        assert wire == expected, repr(t)
+        assert not any(c.isspace() or ord(c) < 0x21 for c in wire), repr(t)
+        ks._derive_realm(wire)  # never raises for an accepted target
+    assert checked > 1000, checked
+
+
 @pytest.mark.parametrize("target", [
-    "\u1d30\u1d9c01.corp.local", "dc\u1d2c01.corp.local", "dc\u03f901.corp.local",
-    "dc01.corp.local", "kdc.пример", "dc01.corp.local\uff0e",
+    # R15 CR-01 measured examples (each was probed as a different name than the
+    # gate resolved): a leading spacing diacritic, a dot producer beside a
+    # non-ASCII character, and a ypogegrammeni + combining-mark sequence.
+    "\u00b4dc01.corp.local", "dc01\u2024\u00e9.corp.local", "dc01\u1f80\u0300.corp.local",
+    # R15 CR-02: a full-width/small colon the gate reads as host:port.
+    "dc:\uff1a1", "fe80:\ufe551%en0", "0:\uff1affff\uff1aa00\uff1a1",
 ])
-def test_normalised_target_resolves_to_the_same_name_as_the_raw_target(target):
-    assert ks._normalise_target(target).encode("idna") == target.rstrip(".\uff0e").encode("idna")
+def test_r15_divergent_targets_are_rejected_or_probed_as_the_gate_resolves(target):
+    from quirk.util import target_trust as tt
+
+    if ks._invalid_target_reason(target) is None:
+        assert tt._extract_host(target) == target.strip()
+        assert ks._wire_name(target) == target.strip().encode("idna").decode("ascii")
+
+
+def test_scan_probes_the_wire_name(monkeypatch):
+    """The loop probes and reports _wire_name(target), so a later change to the
+    loop cannot reintroduce a look-alike rewrite (R15 CR-01)."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    probed = []
+    monkeypatch.setattr(ks, "_probe_kdc",
+                        lambda host, realm, *a, **k: probed.append((host, realm)) or [18])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {})
+    targets = ["kdc.пример", " dc01.corp.local. ", "dc01\u2024\u00e9.corp.local"]
+    rows = ks.scan_kerberos_targets(targets, timeout=1)
+    expected = [ks._wire_name(t) for t in targets if ks._invalid_target_reason(t) is None]
+    assert [h for h, _ in probed] == expected
+    assert [r.host for r in rows] == expected
+    assert ("kdc.xn--e1afmkfd", "KDC.XN--E1AFMKFD") in probed
+    assert ("dc01.corp.local.", "CORP.LOCAL") in probed
 
 
 def test_a_bytes_ldap_value_does_not_lose_the_scan(monkeypatch):
@@ -1782,3 +1874,27 @@ def test_unbuildable_principal_is_not_probed_without_impacket(monkeypatch):
     assert [(r.service_detail, r.scan_error_category) for r in rows] == [
         ("kerberos-unreachable", "invalid_input")]
     assert touched == []
+
+
+
+def test_ldap_leg_follows_no_referrals(monkeypatch):
+    """230-REVIEW-R15 CR-03: ldap3 follows a peer-supplied referral to any host by
+    default (auto_referrals=True, allowed_referral_hosts=[('*', True)]), so a
+    trusted KDC could make the scanner open LDAP connections to a host the
+    trusted-targets gate never checked.  Referrals are now off."""
+    calls = _install_fake_ldap3(monkeypatch, enc_value=24)
+    ks._probe_ldap_anon("dc01.corp.local", 1)
+    assert calls["connection_kwargs"].get("auto_referrals") is False
+    assert calls["server_kwargs"].get("allowed_referral_hosts") == []
+
+
+@pytest.mark.parametrize("target, gate_host", [
+    ("dc01.corp.local:88", "dc01.corp.local"), ("[::1]", "::1"),
+    ("ldap://dc01.corp.local", "dc01.corp.local"), ("dc:\uff1a1", "dc"),
+])
+def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, gate_host):
+    """230-REVIEW-R15 CR-02: the structural guard (refuse what the gate parses
+    into a different host) names the gate's reading, so it is tested on its
+    own and not only through the later wire-name character check."""
+    reason = ks._invalid_target_reason(target)
+    assert reason and f"gate reads it as {gate_host!r}" in reason
