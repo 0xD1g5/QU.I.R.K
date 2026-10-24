@@ -36,7 +36,10 @@ from quirk.qramm.compliance_map import (
     PRACTICE_AREA_TO_DIMENSION,
     QRAMM_COMPLIANCE_WEIGHTS,
     SCANNER_COVERAGE,
-    SCANNER_COVERAGE_STATUS,
+)
+from quirk.qramm.assessment_state import (
+    answered_by_dimension,
+    row_coverage_status,
 )
 from quirk.qramm.evidence_bridge import populate_cvi_suggestions
 from quirk.qramm.model_meta import QRAMM_MODEL
@@ -196,8 +199,12 @@ class ComplianceMapRow(BaseModel):
     relevance_score: Optional[float]
     scanner_informed: bool
     # Phase 74-03 D-10 (WR-11): coverage status for this row's dimension.
-    # 'covered' | 'partial' | 'pending' | 'n/a'. 'pending'/'n/a' rows are
-    # excluded from the rollup; 'partial' contributes at half-weight.
+    # 'covered' | 'partial' | 'self-assessed' | 'pending' | 'n/a'.
+    # 'pending'/'n/a' rows are excluded from the rollup; 'partial'
+    # contributes at half-weight. Phase 231 D-02/D-03: 'self-assessed' is an
+    # answered manual dimension (SGRM/DPE/ITR) scored at full weight with no
+    # scanner ceiling; any dimension with zero answered questions is
+    # 'pending' (D-02a). Derived per session (quirk.qramm.assessment_state).
     coverage_status: Optional[str] = None
 
 
@@ -696,9 +703,9 @@ def get_compliance_map(
 
     Returns 96 rows (12 practice areas × 8 frameworks). When the session has
     no score_json, every row carries relevance_score=None (HTTP 200 — never
-    404/409 per Phase 55 D-03). When scored, raw = static_weight ×
-    dimension_score, capped at SCANNER_COVERAGE[dimension] × static_weight
-    per Phase 55 D-07.
+    404/409 per Phase 55 D-03). Each row's coverage_status is derived per
+    session from the answered questions (Phase 231 D-02); see
+    build_compliance_rows for the relevance formulas.
     """
     session = _get_session_or_404(db, session_id)
 
@@ -709,14 +716,44 @@ def get_compliance_map(
         except (TypeError, ValueError):
             score_data = None
 
+    # Phase 231 D-02: one query of the session's answered question numbers,
+    # mapped to dimensions through the QRAMM_QUESTIONS catalog (D-09).
+    answered_qns = [
+        qn for (qn,) in db.query(QRAMMAnswer.question_number).filter(
+            QRAMMAnswer.session_id == session_id,
+            QRAMMAnswer.answer_value.isnot(None),
+        )
+    ]
+    answered = answered_by_dimension(answered_qns)
+    return build_compliance_rows(score_data, answered)
+
+
+def build_compliance_rows(
+    score_data: Optional[Dict[str, Any]],
+    answered: Dict[str, int],
+) -> List[ComplianceMapRow]:
+    """Pure row builder behind GET /compliance-map (Phase 231).
+
+    ``answered`` is the per-dimension answered-question count. Per row:
+    - no dimension score (unscored session) -> relevance_score None;
+    - 'pending' / 'n/a' (zero answered, D-02a) -> None (Phase 74-03 D-10);
+    - 'self-assessed' -> static_weight × (score / 4.0), full weight, no
+      SCANNER_COVERAGE cap and no half-weight (Phase 231 D-03);
+    - 'covered' / 'partial' -> static_weight × (score / 4.0), capped at
+      SCANNER_COVERAGE[dimension] × static_weight (Phase 55 D-07), halved
+      for 'partial' (Phase 74-03 D-10a).
+    scanner_informed stays SCANNER_COVERAGE[dimension] > 0.0 (D-04).
+    """
     rows: List[ComplianceMapRow] = []
     # Sort practice areas for stable ordering across responses.
     for practice_area in sorted(QRAMM_COMPLIANCE_WEIGHTS.keys()):
         dimension = PRACTICE_AREA_TO_DIMENSION[practice_area]
         ceiling = SCANNER_COVERAGE.get(dimension, 0.0)
         scanner_informed = ceiling > 0.0
-        # Phase 74-03 D-10 (WR-11): explicit coverage status.
-        coverage_status = SCANNER_COVERAGE_STATUS.get(dimension)
+        # Phase 231 D-02: per-session status from the answered count.
+        coverage_status = row_coverage_status(
+            dimension, answered.get(dimension, 0)
+        )
 
         # Read raw dimension score (0.0–4.0 scale) — see Phase 55
         # RESEARCH Pitfall 2: read ["score"], NOT ["weighted"].
@@ -738,6 +775,9 @@ def get_compliance_map(
             elif coverage_status in ("pending", "n/a"):
                 # Phase 74-03 D-10: pending / n/a rows excluded from rollup.
                 relevance_score = None
+            elif coverage_status == "self-assessed":
+                # Phase 231 D-03: full weight, no scanner ceiling.
+                relevance_score = static_weight * (dim_score / 4.0)
             else:
                 # Normalize dim_score from 0.0–4.0 to 0.0–1.0 before
                 # multiplying by weight, so output stays in 0.0–1.0 range.
