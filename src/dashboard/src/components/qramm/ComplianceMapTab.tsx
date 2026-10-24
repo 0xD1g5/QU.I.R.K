@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect, useContext, useRef } from "react"
 import { Loader2 } from "lucide-react"
 import {
   Card, CardContent, CardHeader, CardTitle,
@@ -87,11 +87,17 @@ export function ComplianceMapTab() {
   const [error, setError] = useState<string | null>(null)
   const [scoring, setScoring] = useState(false)
   const [scoreError, setScoreError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [statusMessage, setStatusMessage] = useState("")
+  // Set only by a successful Calculate Score, so the initial mount and a
+  // sessionId-change refetch never announce (Phase 231 D-21c).
+  const announceNextLoad = useRef(false)
 
   async function handleCalculate() {
     if (!ctx.sessionId) return
     setScoring(true)
     setScoreError(null)
+    setStatusMessage("")
     try {
       const resp = await fetchApi(`/api/qramm/sessions/${ctx.sessionId}/score`, {
         method: "POST",
@@ -104,6 +110,8 @@ export function ComplianceMapTab() {
       }
       const json: QRAMMScoreResponse = await resp.json()
       ctx.setScoreResult(json)
+      announceNextLoad.current = true
+      setReloadKey((k) => k + 1)
     } catch {
       setScoreError("Could not calculate score — check your connection and try again.")
     } finally {
@@ -125,6 +133,10 @@ export function ComplianceMapTab() {
         if (cancelled) return
         setRows(data)
         setLoading(false)
+        if (announceNextLoad.current) {
+          setStatusMessage("Compliance map updated.")
+          announceNextLoad.current = false
+        }
       })
       .catch(() => {
         if (cancelled) return
@@ -137,7 +149,9 @@ export function ComplianceMapTab() {
     // D-07 (WR-13): scoreResult intentionally omitted — compliance rows are
     // framework-question mapping, independent of scored values. Re-fetching
     // on every scoreResult mutation produced a spurious refetch loop.
-  }, [ctx.sessionId])
+    // Phase 231 D-10: reloadKey is an explicit post-score trigger; scoreResult
+    // stays out of the deps so a context update cannot loop.
+  }, [ctx.sessionId, reloadKey])
 
   const grouped = groupRows(rows)
   const isUnscored = rows.length === 0 || rows.every(
@@ -184,6 +198,9 @@ export function ComplianceMapTab() {
             <CardTitle>Compliance Framework Coverage</CardTitle>
           </CardHeader>
           <CardContent className="min-h-[200px]">
+            <p className="sr-only" role="status" aria-live="polite">
+              {statusMessage}
+            </p>
             {loading ? (
               <div
                 className="flex items-center justify-center min-h-[200px]"
