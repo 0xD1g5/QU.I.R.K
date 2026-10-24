@@ -291,9 +291,23 @@ def _invalid_target_reason(target):
         if not raw.isascii():
             return "KDC target is an IP address with a non-ASCII zone id"
         try:
+            # R16 WR-01: CPython IDNA-encodes the host before getaddrinfo, so
+            # the text before the first "." must fit a 63-character label.
             raw.encode("idna")
-        except UnicodeError as exc:  # R16 WR-01: e.g. a zone id over 63 chars
+            # 230-REVIEW-R17 CR-01/WR-01/IN-02: a zone id must be one the
+            # resolver takes as a number.  AI_NUMERICHOST is a local parse and
+            # never queries DNS.  glibc accepts a zone only as an existing
+            # interface name or a number; macOS maps an unknown zone to scope 0,
+            # which would probe an interface the target does not name.  An IP
+            # literal without a zone always parses (R17 differential fuzz).
+            if "%" in raw:
+                infos = socket.getaddrinfo(raw, KDC_PORT, flags=socket.AI_NUMERICHOST)
+                if not any(len(i[4]) == 4 and i[4][3] for i in infos):
+                    return "KDC target's zone id does not name an interface on this host"
+        except UnicodeError as exc:
             return f"KDC target is not a valid IP address for the resolver ({exc})"
+        except socket.gaierror:
+            return "KDC target's zone id does not name an interface on this host"
         return None
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.
