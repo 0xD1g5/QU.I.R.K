@@ -1767,7 +1767,9 @@ def _sweep_targets():
     targets = []
     for c in _ucd32_changing_code_points():
         targets += [f"{c}dc01.corp.local", f"dc{c}01.corp.local",
-                    f"dc01{c}\u00e9.corp.local", f"dc01.corp.local{c}", f"dc:{c}1"]
+                    f"dc01{c}\u00e9.corp.local", f"dc01.corp.local{c}", f"dc:{c}1",
+                    # 230-REVIEW-R16 CR-01: IPv6 zone ids.
+                    f"fe80::1%{c}", f"fe80::1%en{c}", f"fe80::1%{c}.attacker.example"]
     marks = [chr(cp) for cp in range(0x300, 0x370) if ucd.category(chr(cp)) == "Mn"]
     marks.append("\u0345")
     for base in [chr(cp) for cp in range(0x1F80, 0x1FB0)]:
@@ -1787,12 +1789,19 @@ def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
         raw = t.strip()
         assert tt._extract_host(t) == raw, repr(t)
         wire = ks._wire_name(t)
+        # 230-REVIEW-R16 WR-02: an oracle independent of _wire_name.  The bytes
+        # the scanner hands the resolver equal the bytes getaddrinfo(raw) sends
+        # for the gate (CPython IDNA-encodes a str host), and a target taken
+        # as an IP literal parses as a number without any name lookup.
+        assert wire.encode("idna") == raw.encode("idna"), repr(t)
         try:
             ks.ipaddress.ip_address(raw)
-            expected = raw
+            is_ip = True
         except ValueError:
-            expected = raw.encode("idna").decode("ascii")
-        assert wire == expected, repr(t)
+            is_ip = False
+        if is_ip:
+            assert raw.isascii(), repr(t)
+            ks.socket.getaddrinfo(raw, 88, flags=ks.socket.AI_NUMERICHOST)
         assert not any(c.isspace() or ord(c) < 0x21 for c in wire), repr(t)
         ks._derive_realm(wire)  # never raises for an accepted target
     assert checked > 1000, checked
@@ -1898,3 +1907,20 @@ def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, g
     own and not only through the later wire-name character check."""
     reason = ks._invalid_target_reason(target)
     assert reason and f"gate reads it as {gate_host!r}" in reason
+
+
+@pytest.mark.parametrize("target", [
+    # 230-REVIEW-R16 CR-01: ipaddress accepts any zone id, so the gate took
+    # these as IP literals and resolved nothing, while getaddrinfo IDNA-encoded
+    # the non-ASCII string into a host-name lookup (xn--fe80::1%-0kb.attacker.example).
+    "fe80::1%\u0131.attacker.example", "fe80::1%en\u0131", "::ffff:1.2.3.4%\u00e9",
+    # R16 WR-01: more than one trailing dot, and a zone id IDNA cannot encode.
+    "dc01.corp.local\u2025", "dc01.corp.local..", "fe80::1%" + "a" * 64,
+])
+def test_r16_targets_are_not_probed(target):
+    assert ks._invalid_target_reason(target)
+
+
+@pytest.mark.parametrize("target", ["fe80::1%en0", "::1", "10.0.0.1", "dc01.corp.local."])
+def test_r16_ascii_ip_literals_and_one_trailing_dot_are_accepted(target):
+    assert ks._invalid_target_reason(target) is None

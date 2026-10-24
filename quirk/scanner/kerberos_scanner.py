@@ -235,7 +235,8 @@ def _wire_name(target: str) -> str:
     only approximated that codec, so some names were probed as a different
     host than the gate checked.  The scanner now probes the codec's own
     output: an IP literal as written (parsed from the raw string, as the gate
-    parses it, R15 CR-02), otherwise the A-label of the stripped string.  A
+    parses it, R15 CR-02; ASCII only, so the resolver parses it as a number,
+    R16 CR-01), otherwise the A-label of the stripped string.  A
     trailing dot is kept: the name stays absolute, as the gate resolved it
     (R15 WR-01).  Raises UnicodeError for a name IDNA cannot encode.
     """
@@ -279,9 +280,21 @@ def _invalid_target_reason(target):
                 f"gate reads it as {gate_host!r} (the port is always 88)")
     try:
         ipaddress.ip_address(raw)
-        return None
+        is_ip = True
     except ValueError:
-        pass
+        is_ip = False
+    if is_ip:
+        # 230-REVIEW-R16 CR-01: ipaddress accepts any IPv6 zone id, so the gate
+        # takes "fe80::1%\u0131.attacker.example" as an IP literal and resolves
+        # nothing, while getaddrinfo IDNA-encodes the non-ASCII string into a
+        # host-name lookup.  An IP literal is only an IP literal in ASCII.
+        if not raw.isascii():
+            return "KDC target is an IP address with a non-ASCII zone id"
+        try:
+            raw.encode("idna")
+        except UnicodeError as exc:  # R16 WR-01: e.g. a zone id over 63 chars
+            return f"KDC target is not a valid IP address for the resolver ({exc})"
+        return None
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.
     try:
@@ -292,7 +305,9 @@ def _invalid_target_reason(target):
     # CR-01): the port is always 88, so ":" "[" "]" "/" "%" name no host.
     if any(c in wire for c in ":[]/%") or any(c.isspace() or ord(c) < 0x21 for c in wire):
         return "KDC target must be a bare host name or IP address (the port is always 88)"
-    if any(not label for label in wire.rstrip(".").split(".")):
+    # R16 WR-01: one trailing dot (an absolute name) is allowed, not more.
+    name = wire[:-1] if wire.endswith(".") else wire
+    if any(not label for label in name.split(".")):
         return "KDC target has an empty label"
     return None
 
