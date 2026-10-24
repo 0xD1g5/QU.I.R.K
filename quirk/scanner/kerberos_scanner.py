@@ -15,13 +15,21 @@ try:
     # timeout and spins forever on a short read); QUIRK frames TCP itself.
     from impacket.krb5.kerberosv5 import KerberosError
     from impacket.krb5 import constants
-    from impacket.krb5.types import KerberosTime, Principal
+    from impacket.krb5.types import KerberosException, KerberosTime, Principal
     from pyasn1.codec.ber import encoder, decoder
     from pyasn1.error import PyAsn1Error
     IMPACKET_AVAILABLE = True
 except ImportError:
     IMPACKET_AVAILABLE = False
-    PyAsn1Error = Exception  # type: ignore[assignment,misc]  # fallback when impacket/pyasn1 absent
+
+    # 230-REVIEW-R11 IN-02: sentinels that nothing raises, never ``Exception``,
+    # so an ``except (PyAsn1Error, KerberosException)`` stays narrow without
+    # impacket, the configuration CI runs.
+    class PyAsn1Error(Exception):  # type: ignore[no-redef]
+        """Stand-in so ``except PyAsn1Error`` resolves without pyasn1."""
+
+    class KerberosException(Exception):  # type: ignore[no-redef]
+        """Stand-in so ``except KerberosException`` resolves without impacket."""
 
     class KerberosError(Exception):  # type: ignore[no-redef]
         """Stand-in so ``except KerberosError`` resolves without impacket."""
@@ -32,6 +40,7 @@ except ImportError:
             self.packet = packet
 
 import ipaddress  # Phase 77 D-06 — closes scanners-protocol/IN-06
+import unicodedata
 import json
 import logging
 import secrets
@@ -189,22 +198,22 @@ def _derive_realm(host: str) -> str:
     Replaced with the stdlib ``ipaddress.ip_address`` strict parser
     (RESEARCH Pattern 4).
     """
-    stripped = host.strip()
+    # 230-REVIEW-R10 WR-05 / R11 IN-05: a trailing dot marks an absolute name,
+    # and goes before the IP-literal check so "10.0.0.1." is an IP literal.
+    stripped = host.strip().rstrip(".")
     try:
         ipaddress.ip_address(stripped)
         return stripped.upper()
     except ValueError:
         pass
-    # 230-REVIEW-R10 WR-05: a trailing-dot FQDN is absolute, not a label short.
-    stripped = stripped.rstrip(".")
     # 230-REVIEW-R9 WR-01: RFC 4120 §5.2.1 KerberosString should hold IA5
     # characters only, so an internationalised name's realm is its IDNA
     # A-label; the U-label could not be encoded into the AS-REQ.
     try:
         stripped = stripped.encode("idna").decode("ascii")
     except UnicodeError:
-        # Keep the U-label.  If it is not Latin-1 the AS-REQ cannot be
-        # encoded and the target is reported as not probed (R10 WR-02).
+        # Keep the name.  scan_kerberos_targets never gets here: such a
+        # target is rejected by _invalid_target_reason (R11 IN-03).
         pass
     parts = stripped.split(".")
     if len(parts) >= 2:
@@ -222,29 +231,54 @@ def _invalid_target_reason(target):
     """
     if not isinstance(target, str):
         return f"KDC target is not a host name string ({type(target).__name__})"
-    stripped = target.strip()
+    stripped = target.strip().rstrip(".")
     if not stripped:
         return "KDC target is empty"
     if "\x00" in stripped:
         return "KDC target contains a NUL character"
+    # 230-REVIEW-R11 CR-01/IN-04: a lone surrogate (YAML can load one) breaks
+    # the AS-REQ build and the SQLite insert; control characters are never
+    # part of a host name.
+    if any(unicodedata.category(c) in ("Cc", "Cs") for c in stripped):
+        return "KDC target contains a control or surrogate character"
     if any(c.isspace() for c in stripped):
         return "KDC target contains whitespace"
+    try:
+        ipaddress.ip_address(stripped)
+        return None
+    except ValueError:
+        pass
+    # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
+    # yield an ASCII realm, so it is rejected here, before any probe.
+    try:
+        stripped.encode("idna")
+    except UnicodeError as exc:
+        return f"KDC target is not a valid host name ({exc})"
     return None
 
 
-def _encode_as_req(as_req, realm: str) -> bytes:
-    """Encode the AS-REQ (230-REVIEW-R9 WR-01).
+def _build_request(principal: str, realm: str):
+    """``(client_name, encoded AS-REQ)`` for one probe (230-REVIEW-R9 WR-01).
 
-    Only the encoder's own failures for an unencodable value are caught
-    (230-REVIEW-R10 WR-03); a programming error still surfaces.  The message
-    names the exception class only: pyasn1's text is a dump of the whole
-    request, about 32 KB (R10 WR-02).
+    230-REVIEW-R11 CR-01: every build step is covered, not only the encode.
+    ``Principal()`` raises KerberosException for a principal impacket rejects
+    (config accepts any non-blank string), and the realm can fail inside
+    ``_build_as_req``.  Only those library failures are caught (R10 WR-03); a
+    programming error still surfaces.  The message names the exception class
+    only: pyasn1's text is a dump of the whole request, about 32 KB (R10 WR-02).
     """
     try:
-        return encoder.encode(as_req)
-    except (PyAsn1Error, UnicodeError) as exc:
+        client_name = Principal(
+            principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+        server_name = Principal(
+            f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
+        )
+        return client_name, encoder.encode(
+            _build_as_req(client_name, server_name, realm))
+    except (PyAsn1Error, UnicodeError, KerberosException) as exc:
         raise KerberosRequestBuildError(
-            f"cannot build AS-REQ for realm {realm[:80]!r}: {type(exc).__name__}"
+            f"cannot build AS-REQ for principal {principal[:80]!r} in realm "
+            f"{realm[:80]!r}: {type(exc).__name__}"
         ) from exc
 
 
@@ -497,12 +531,7 @@ def _probe_kdc(host: str, realm: str, timeout: int, port=None,
     """
     if port is None:
         port = KDC_PORT
-    client_name = Principal(principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
-    server_name = Principal(
-        f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
-    )
-    as_req = _build_as_req(client_name, server_name, realm)
-    message = _encode_as_req(as_req, realm)
+    client_name, message = _build_request(principal, realm)
 
     r = _kdc_tcp_exchange(host, port, message, timeout, deadline=deadline,
                           peer=peer)
@@ -616,12 +645,7 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
     """
     if port is None:
         port = KDC_PORT
-    client_name = Principal(principal, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
-    server_name = Principal(
-        f"krbtgt/{realm}", type=constants.PrincipalNameType.NT_SRV_INST.value
-    )
-    as_req = _build_as_req(client_name, server_name, realm)
-    message = _encode_as_req(as_req, realm)
+    client_name, message = _build_request(principal, realm)
 
     try:
         family, sockaddr = _resolve_udp(host, port)
@@ -923,7 +947,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 invalid))
             continue
         # 230-REVIEW-R10 WR-01: probe and report the name that was validated.
-        target = target.strip()
+        target = target.strip().rstrip(".")
         realm = _derive_realm(target)
         # 230-08 D-29: None, never [].  Every path below assigns it; a path
         # that does not must read as unreachable.  [] means "matching AS-REP"
@@ -978,7 +1002,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         except KerberosRequestBuildError as exc:
             # 230-REVIEW-R10 WR-02/WR-03: nothing was sent; UDP would fail to
             # build the same request.  Not probed: no UDP, no LDAP.
-            results.append(_not_probed_row(target, realm, now, str(exc)))
+            results.append(_not_probed_row(target, realm, now, safe_str(exc)))
             continue
         except KerberosPrincipalUnknown:
             # Phase 230 D-25: the KDC answered (code 6) but returns no etype data
@@ -1020,6 +1044,11 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             # returns [].
             try:
                 etypes = _probe_kdc_udp(target, realm, timeout, principal=principal)
+            except KerberosRequestBuildError as udp_exc:
+                # 230-REVIEW-R11 IN-01: nothing was sent on this leg either.
+                results.append(_not_probed_row(target, realm, now,
+                                               safe_str(udp_exc)))
+                continue
             except KerberosPreauthNoEtypes:
                 results.append(_preauth_no_etypes_row(target, realm, timeout, logger,
                                                       principal, now))

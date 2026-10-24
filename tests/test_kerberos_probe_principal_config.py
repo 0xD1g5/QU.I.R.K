@@ -1276,6 +1276,14 @@ def test_no_preauth_iff_matching_as_rep(monkeypatch, tcp, udp):
         monkeypatch.setattr(ks, "KDC_PORT",
                             peer.port if peer else kwh.closed_udp_port())
     tracker = _SocketSpy(monkeypatch, {})
+    ldap_calls = []
+    monkeypatch.setattr(ks, "_probe_ldap_anon",
+                        lambda host, *a, **k: ldap_calls.append(host) or {})
+    if terminal:
+        # 230-REVIEW-R11 WR-01: a terminal TCP outcome must not reach UDP.
+        def no_udp(*a, **k):
+            raise AssertionError("terminal TCP outcome reached the UDP leg")
+        monkeypatch.setattr(ks, "_probe_kdc_udp", no_udp)
     if udp is not None and _UDP_OUTCOMES[udp][0] == "gaierror":
         def no_name(*a, **k):
             raise socket_mod.gaierror(8, "nodename nor servname provided")
@@ -1298,6 +1306,10 @@ def test_no_preauth_iff_matching_as_rep(monkeypatch, tcp, udp):
         if tcp == "err68" and udp in _UDP_TRANSPORT:
             expected = [_KRB_ERR]  # the KDC answered over TCP
     assert details == expected
+    if tcp == "unbuildable":
+        # 230-REVIEW-R11 WR-01: not probed, so invalid_input and no LDAP leg.
+        assert [r.scan_error_category for r in rows] == ["invalid_input"]
+        assert ldap_calls == []
     assert (_NO_PREAUTH in details) == delivered, (
         f"{_NO_PREAUTH} must appear iff a matching AS-REP was delivered: {details}"
     )
@@ -1334,13 +1346,26 @@ def _matrix_transport_kinds():
 
 def test_invariant_matrix_covers_every_exception_class_in_the_source():
     """Re-derived from the scanner source at run time: a new Kerberos* exception
-    class with no matrix case turns this red."""
+    class that the module raises, with no matrix case, turns this red.
+
+    230-REVIEW-R11: the set is the Kerberos* classes some ``raise`` statement
+    constructs, so a never-raised fallback sentinel (``KerberosException``
+    without impacket) is not a reachable outcome and needs no case.
+    """
     tree = _module_tree()
     declared = {n.name for n in ast.walk(tree)
                 if isinstance(n, ast.ClassDef) and n.name.startswith("Kerberos")}
+    raised = set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Raise) and n.exc is not None:
+            target = n.exc.func if isinstance(n.exc, ast.Call) else n.exc
+            name = getattr(target, "id", getattr(target, "attr", None))
+            if name:
+                raised.add(name)
+    declared &= raised
     assert declared >= {"KerberosTransportError", "KerberosPrincipalUnknown",
                         "KerberosUnrecognisedReply", "KerberosPreauthNoEtypes",
-                        "KerberosError"}, declared
+                        "KerberosError", "KerberosRequestBuildError"}, declared
     missing = declared - _matrix_exception_classes()
     assert not missing, f"no invariant case raises {sorted(missing)}"
 
@@ -1417,6 +1442,8 @@ def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
     ("dc01.corp.local", "CORP.LOCAL"),
     # 230-REVIEW-R10 WR-05: a trailing-dot FQDN used to give "LOCAL.".
     ("dc.corp.local.", "CORP.LOCAL"),
+    # 230-REVIEW-R11 IN-05: the dot goes before the IP-literal check.
+    ("10.0.0.1.", "10.0.0.1"),
 ])
 def test_derive_realm_uses_the_idna_a_label(host, realm):
     assert ks._derive_realm(host) == realm
@@ -1433,6 +1460,10 @@ def test_derive_realm_unencodable_name_does_not_raise():
 # host would be probed under this target's name; "" resolves to the local host.
 @pytest.mark.parametrize("target", [
     10, None, b"kdc.example", "", "   ", "kdc\x00.corp.example", "kdc corp",
+    # 230-REVIEW-R11 CR-01/IN-03/IN-04/IN-05: a lone surrogate (YAML can load
+    # one), a control character, a name IDNA cannot encode, and dots only.
+    "kdc.\udcff.local", "kdc\x1b.local", "a" * 64 + ".example.com",
+    "dc." + "\u00fc" * 70 + ".de", ".", "...",
 ])
 def test_invalid_target_reason_rejects(target):
     assert ks._invalid_target_reason(target)
@@ -1440,6 +1471,7 @@ def test_invalid_target_reason_rejects(target):
 
 @pytest.mark.parametrize("target", [
     "dc01.corp.local", " dc01.corp.local ", "10.0.0.1", "::1", "kdc.пример",
+    "dc.corp.local.", "10.0.0.1.", "fe80::1%en0",
 ])
 def test_invalid_target_reason_accepts(target):
     assert ks._invalid_target_reason(target) is None
@@ -1484,7 +1516,7 @@ def test_invalid_targets_are_not_probed_and_padded_targets_are_stripped(monkeypa
     monkeypatch.setattr(ks, "_probe_ldap_anon",
                         lambda host, *a, **k: probed.append(("ldap", host)) or {})
     invalid = [10, None, b"kdc.example", "", "   ", "kdc\x00.corp.example", "kdc corp"]
-    rows = ks.scan_kerberos_targets(invalid + [" dc01.corp.local\n"], timeout=1)
+    rows = ks.scan_kerberos_targets(invalid + [" dc01.corp.local.\n"], timeout=1)
     bad = rows[:len(invalid)]
     assert [r.service_detail for r in bad] == ["kerberos-unreachable"] * len(invalid)
     assert [r.scan_error_category for r in bad] == ["invalid_input"] * len(invalid)
@@ -1492,3 +1524,34 @@ def test_invalid_targets_are_not_probed_and_padded_targets_are_stripped(monkeypa
     assert probed == [("tcp", "dc01.corp.local", "CORP.LOCAL"),
                       ("ldap", "dc01.corp.local")]
     assert {r.host for r in rows[len(invalid):]} == {"dc01.corp.local"}
+
+
+def test_udp_leg_build_failure_is_not_probed(monkeypatch):
+    """230-REVIEW-R11 IN-01: if the UDP leg's request cannot be built, the row is
+    the not-probed one (invalid_input, no LDAP), not the UDP catch-all."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    ldap_calls = []
+
+    def tcp_refused(*a, **k):
+        raise ConnectionRefusedError("refused")
+
+    def udp_unbuildable(*a, **k):
+        raise ks.KerberosRequestBuildError("cannot build AS-REQ")
+
+    monkeypatch.setattr(ks, "_probe_kdc", tcp_refused)
+    monkeypatch.setattr(ks, "_probe_kdc_udp", udp_unbuildable)
+    monkeypatch.setattr(ks, "_probe_ldap_anon",
+                        lambda host, *a, **k: ldap_calls.append(host) or {})
+    rows = ks.scan_kerberos_targets(["dc01.corp.local"], timeout=1)
+    assert [(r.service_detail, r.scan_error_category) for r in rows] == [
+        ("kerberos-unreachable", "invalid_input")]
+    assert ldap_calls == []
+
+
+def test_request_build_catch_is_narrow_without_impacket():
+    """230-REVIEW-R11 IN-02: the build-failure catch names PyAsn1Error and
+    KerberosException.  Without impacket (the configuration CI runs) they are
+    sentinel classes, never ``Exception``, so the catch stays narrow there too;
+    with impacket they are the libraries' own classes."""
+    assert ks.PyAsn1Error is not Exception
+    assert ks.KerberosException is not Exception

@@ -423,19 +423,28 @@ class TestKerberosPreauthWire:
         assert udp_calls == [1]
         assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
 
-    def test_unencodable_host_is_unreachable_not_unrecognised(self, monkeypatch):
-        """230-REVIEW-R8 WR-03: a target name IDNA cannot encode (a 64-character
-        label) never resolved on either leg, so nothing answered: the row is
-        kerberos-unreachable carrying the UDP error, not unrecognised-reply."""
+    def test_unencodable_host_is_not_probed(self, monkeypatch):
+        """230-REVIEW-R8 WR-03, tightened by R11 IN-03: a target name IDNA cannot
+        encode (a 64-character label) is rejected before any probe: the row is
+        kerberos-unreachable with invalid_input, and no name is resolved."""
         import quirk.scanner.kerberos_scanner as ks
 
+        touched = []
+
+        def record(host, *a, **k):
+            touched.append(host)
+            raise socket.gaierror(socket.EAI_NONAME, "stubbed NXDOMAIN")
+
+        monkeypatch.setattr(ks.socket, "getaddrinfo", record)
+        monkeypatch.setattr(ks.socket, "create_connection", record)
         host = "a" * 64 + ".example.com"
         rows, exc, _ = kwh.run_with_watchdog(
             lambda: ks.scan_kerberos_targets([host], timeout=1), budget=10,
         )
         assert exc is None
-        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
-        assert "cannot be encoded" in json.loads(rows[0].kerberos_scan_json)["udp_error"]
+        assert [(r.service_detail, r.scan_error_category) for r in rows] == [
+            ("kerberos-unreachable", "invalid_input")]
+        assert touched == []
 
     def test_idn_target_is_probed_with_its_a_label_realm(self, monkeypatch):
         """230-REVIEW-R9 WR-01: a non-Latin-1 IDN target used to fail while the
@@ -471,12 +480,18 @@ class TestKerberosPreauthWire:
             assert "cannot build AS-REQ" in str(info.value)
             assert len(str(info.value)) < 300
 
-    def test_unbuildable_realm_target_is_not_probed(self, monkeypatch):
-        """230-REVIEW-R10 WR-02/WR-03: a realm that stays unencodable (its label
-        is too long for IDNA, so the U-label is kept) is reported as not probed:
-        invalid_input, a short scan_error, and no TCP, UDP or LDAP traffic."""
+    def test_unbuildable_principal_is_not_probed(self, monkeypatch):
+        """230-REVIEW-R11 CR-01: a probe principal impacket's Principal() rejects
+        (config accepts any non-blank string) used to fail before the encode
+        step and give the "a peer answered" row plus an LDAP bind for every
+        target.  It is now the not-probed row: invalid_input, a short error,
+        and no TCP, UDP or LDAP traffic."""
         import quirk.scanner.kerberos_scanner as ks
+        from impacket.krb5.types import KerberosException, Principal
 
+        principal = "a\\"  # a trailing backslash: impacket's "invalid principal syntax"
+        with pytest.raises(KerberosException):
+            Principal(principal, type=1)
         touched = []
 
         def record(host, *a, **k):
@@ -487,13 +502,13 @@ class TestKerberosPreauthWire:
         monkeypatch.setattr(ks.socket, "create_connection", record)
         monkeypatch.setattr(ks, "_probe_ldap_anon",
                             lambda host, *a, **k: touched.append(("ldap", host)) or {})
-        host = "kdc." + "\u043f" * 70 + ".ru"
         rows, exc, _ = kwh.run_with_watchdog(
-            lambda: ks.scan_kerberos_targets([host], timeout=1), budget=10,
+            lambda: ks.scan_kerberos_targets(["dc01.corp.local"], timeout=1,
+                                             principal=principal), budget=10,
         )
         assert exc is None
-        assert [r.service_detail for r in rows] == ["kerberos-unreachable"]
-        assert rows[0].scan_error_category == "invalid_input"
+        assert [(r.service_detail, r.scan_error_category) for r in rows] == [
+            ("kerberos-unreachable", "invalid_input")]
         assert "cannot build AS-REQ" in rows[0].scan_error
         assert len(rows[0].scan_error) < 300
         assert touched == []
