@@ -10,7 +10,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { QRAMMContext } from "@/context/QRAMMContext"
 import { fetchApi } from "@/lib/api"
-import type { QRAMMComplianceMapRow, QRAMMScoreResponse } from "@/types/api"
+import {
+  ASSESSMENT_BADGE_VARIANT,
+  ASSESSMENT_LABEL,
+  QRAMM_COVERAGE_SENTENCE,
+  stateFromCoverageStatus,
+} from "@/lib/qramm-assessment"
+import type { AssessmentState } from "@/lib/qramm-assessment"
+import type {
+  QRAMMComplianceMapRow,
+  QRAMMRowCoverageStatus,
+  QRAMMScoreResponse,
+} from "@/types/api"
 
 const FRAMEWORK_KEYS = [
   "NIST_PQC", "NSM10", "CNSA2", "ISO27001",
@@ -43,17 +54,35 @@ const PRACTICE_AREA_NAMES: Record<string, string> = {
   "4.3": "Testing & Validation",
 }
 
-const FOOTNOTE =
-  "Coverage reflects QUIRK scanner findings for CVI only — " +
-  "SGRM, DPE, ITR require manual assessment."
-
 const UNSCORED_BANNER =
   "Run and score a QRAMM assessment to see session-derived relevance scores."
+
+// Phase 231 D-05/D-06a: legend rows in UI-SPEC order; labels come from the
+// shared vocabulary, descriptions are the UI-SPEC copy.
+const TIER_LEGEND: Array<{ state: AssessmentState; description: string }> = [
+  {
+    state: "scanner-measured",
+    description: "CVI practice areas, scored with QUIRK scanner evidence.",
+  },
+  {
+    state: "self-assessed",
+    description:
+      "SGRM, DPE and ITR practice areas scored from answers entered by hand. " +
+      "No scanner evidence backs these scores.",
+  },
+  {
+    state: "not-assessed",
+    description:
+      "No question in this dimension has been answered yet, so its practice " +
+      "areas have no score.",
+  },
+]
 
 interface PracticeRow {
   practice_area: string
   dimension: string
   scanner_informed: boolean
+  coverage_status: QRAMMRowCoverageStatus | null
   scores: Record<string, number | null>
 }
 
@@ -65,6 +94,7 @@ function groupRows(rows: QRAMMComplianceMapRow[]): PracticeRow[] {
         practice_area: r.practice_area,
         dimension: r.dimension,
         scanner_informed: r.scanner_informed,
+        coverage_status: r.coverage_status,
         scores: {},
       }
     }
@@ -221,6 +251,9 @@ export function ComplianceMapTab() {
                       <TableHead className="text-xs font-semibold uppercase tracking-[0.08em]">
                         Dimension
                       </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-[0.08em]">
+                        Assessment
+                      </TableHead>
                       {FRAMEWORK_KEYS.map((fw) => (
                         <TableHead
                           key={fw}
@@ -232,30 +265,40 @@ export function ComplianceMapTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {grouped.map((row) => (
-                      <TableRow key={row.practice_area}>
-                        <TableCell className="text-sm">
-                          <span className="font-data mr-2">
-                            {row.practice_area}
-                          </span>
-                          {PRACTICE_AREA_NAMES[row.practice_area]}
-                        </TableCell>
-                        <TableCell className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                          {row.dimension}
-                        </TableCell>
-                        {FRAMEWORK_KEYS.map((fw) => (
-                          <TableCell key={fw} className="font-data text-sm">
-                            {row.scanner_informed
-                              ? formatScore(row.scores[fw] ?? null)
-                              : "—"}
+                    {grouped.map((row) => {
+                      // Phase 231 D-01: the tier comes from coverage_status,
+                      // never scanner_informed (true for an unanswered CVI too).
+                      const state = stateFromCoverageStatus(row.coverage_status)
+                      return (
+                        <TableRow key={row.practice_area}>
+                          <TableCell className="text-sm">
+                            <span className="font-data mr-2">
+                              {row.practice_area}
+                            </span>
+                            {PRACTICE_AREA_NAMES[row.practice_area]}
                           </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                          <TableCell className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                            {row.dimension}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={ASSESSMENT_BADGE_VARIANT[state]}>
+                              {ASSESSMENT_LABEL[state]}
+                            </Badge>
+                          </TableCell>
+                          {FRAMEWORK_KEYS.map((fw) => (
+                            <TableCell key={fw} className="font-data text-sm">
+                              {state === "not-assessed"
+                                ? "—"
+                                : formatScore(row.scores[fw] ?? null)}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
                 <p className="text-xs text-muted-foreground mt-4">
-                  {FOOTNOTE}
+                  {QRAMM_COVERAGE_SENTENCE}
                 </p>
               </>
             )}
@@ -270,22 +313,19 @@ export function ComplianceMapTab() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <Badge variant="default" title="Scanner-informed">
-                  Scanner-informed
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  At least one relevant dimension is scanner-informed (CVI)
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary" title="Manual only">
-                  Manual only
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  All relevant dimensions require manual assessment
-                </span>
-              </div>
+              {TIER_LEGEND.map(({ state, description }) => (
+                <div key={state} className="flex items-center gap-3">
+                  <Badge
+                    variant={ASSESSMENT_BADGE_VARIANT[state]}
+                    title={ASSESSMENT_LABEL[state]}
+                  >
+                    {ASSESSMENT_LABEL[state]}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {description}
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
