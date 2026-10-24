@@ -3,6 +3,7 @@ import type {
   QRAMMSessionSummary,
   QRAMMScoreResponse,
   QRAMMComplianceMapRow,
+  QRAMMSessionDetail,
 } from "@/types/api"
 import { fetchApi } from "@/lib/api"
 
@@ -61,8 +62,11 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
           return
         }
 
+        // Phase 231 D-20: GET .../score is POST-only; the SPA fallback answered 200 text/html, the PDF
+        // export then timed out waiting for data-ready. The persisted score lives on the session detail.
+        const sessionPath = `/api/qramm/sessions/${scored.session_id}`
         const [scoreResp, mapResp] = await Promise.all([
-          fetchApi(`/api/qramm/sessions/${scored.session_id}/score`),
+          fetchApi(sessionPath),
           fetchApi(`/api/qramm/sessions/${scored.session_id}/compliance-map`),
         ])
 
@@ -105,10 +109,24 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
           return
         }
 
-        const score: QRAMMScoreResponse = await scoreResp.json()
+        let detail: QRAMMSessionDetail
+        try {
+          detail = await scoreResp.json()
+        } catch {
+          // A non-JSON body (e.g. the SPA fallback's HTML) is an API error, not an unhandled throw.
+          if (!cancelled) setError(`API error: unexpected response from ${sessionPath}`)
+          return
+        }
+        if (cancelled) return
+        if (detail.score == null) {
+          // D-20: a summary can say scored while the detail has no score; that is no assessment, not an error
+          setScoreResult(null)
+          setComplianceRows(null)
+          return
+        }
         const rows: QRAMMComplianceMapRow[] = await mapResp.json()
         if (!cancelled) {
-          setScoreResult(score)
+          setScoreResult(detail.score)
           setComplianceRows(rows)
         }
       } catch (err) {

@@ -552,6 +552,15 @@ export interface QRAMMComplianceMapRow {
   coverage_status: QRAMMRowCoverageStatus | null
 }
 
+// Phase 231 D-20: GET /api/qramm/sessions/{id} (routes/qramm.py SessionRead). `score` is the
+// persisted score_json dict, or null when the session has never been scored. Only the fields
+// the print hook reads are declared.
+export interface QRAMMSessionDetail {
+  session_id: number
+  status: string | null
+  score: QRAMMScoreResponse | null
+}
+
 // Phase 193 Plan 07 (PARITY-02): mirrors
 // quirk/dashboard/api/schemas.py ConnectorAvailabilityEntry/Response.
 export interface ConnectorAvailabilityEntry {
