@@ -1447,6 +1447,9 @@ def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
     # 230-REVIEW-R12 IN-01: IDNA's other full stops are label separators too.
     ("dc.corp.local\u3002", "CORP.LOCAL"),
     ("dc\uff0ecorp\uff61local", "CORP.LOCAL"),
+    # 230-REVIEW-R13 WR-02: NFKC folds the other dot look-alikes too.
+    ("dc01.corp.local\u2024", "CORP.LOCAL"),
+    ("dc01\ufe52corp\ufe52local", "CORP.LOCAL"),
 ])
 def test_derive_realm_uses_the_idna_a_label(host, realm):
     assert ks._derive_realm(host) == realm
@@ -1470,6 +1473,8 @@ def test_derive_realm_unencodable_name_does_not_raise():
     # 230-REVIEW-R12 WR-05: the KDC port is always 88; a host:port, bracketed
     # or path-like target never names a host that resolves.
     "dc01.corp.local:88", "[::1]", "dc01.corp.local/x", "\u3002",
+    # 230-REVIEW-R13 WR-01: full-width look-alikes IDNA folds to ":" "/" "[".
+    "dc01.corp.local\uff1a88", "dc01.corp.local\uff0fx", "\uff3b::1]",
 ])
 def test_invalid_target_reason_rejects(target):
     assert ks._invalid_target_reason(target)
@@ -1566,6 +1571,40 @@ def test_request_build_catch_is_narrow_without_impacket():
 
 # --- 230-REVIEW-R12: the ends of the path (config input, LDAP leg) ---------
 
+@pytest.mark.parametrize("value, expected", [
+    # 230-REVIEW-R13 CR-01/CR-02: every non-list YAML shape is one target, so
+    # the trust gate and the scanner see the same value.  "" keeps its old
+    # meaning, no targets (R13 IN-01).
+    (1, [1]), (10.5, [10.5]), (True, [True]),
+    ({"dc01.evil.example": 1}, [{"dc01.evil.example": 1}]), ("", []),
+])
+def test_non_list_kerberos_targets_load_as_one_item(tmp_path, value, expected):
+    cfg = load_config(_write_cfg(tmp_path, {
+        "enable_kerberos": True, "kerberos_targets": value}))
+    assert cfg.connectors.kerberos_targets == expected
+
+
+@pytest.mark.parametrize("targets", [
+    1, 10.5, True, {"dc01.evil.example": 1}, {"host": "dc01.corp.local"},
+])
+def test_scan_given_a_non_list_sends_nothing_and_never_raises(monkeypatch, targets):
+    """230-REVIEW-R13 CR-01/CR-02: a number raised TypeError out of the scan; a
+    mapping passed enforce_trusted_targets (no host found in it) while the
+    scanner probed its keys.  Each is now one not-probed invalid_input row."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    probed = []
+    monkeypatch.setattr(ks, "_probe_kdc",
+                        lambda host, *a, **k: probed.append(host) or [18])
+    monkeypatch.setattr(ks, "_probe_kdc_udp",
+                        lambda host, *a, **k: probed.append(host) or [18])
+    monkeypatch.setattr(ks, "_probe_ldap_anon",
+                        lambda host, *a, **k: probed.append(("ldap", host)) or {})
+    rows = ks.scan_kerberos_targets(targets, timeout=1)
+    assert probed == []
+    assert [(r.service_detail, r.scan_error_category) for r in rows] == [
+        ("kerberos-unreachable", "invalid_input")]
+
+
 def test_scalar_kerberos_targets_load_as_one_target(tmp_path):
     """230-REVIEW-R12 CR-01: ``kerberos_targets: dc01.corp.local`` (a scalar)
     used to reach the scanner as a str, iterated one character at a time: "0"
@@ -1611,7 +1650,8 @@ class _FakeAttr:
         self.value = value
 
 
-def _install_fake_ldap3(monkeypatch, *, bind_ok=True, enc_value=None):
+def _install_fake_ldap3(monkeypatch, *, bind_ok=True, enc_value=None,
+                        last_error="bind rejected by the peer", search_error=None):
     """A stand-in ldap3 module (CI may or may not have ldap3) whose Connection
     records unbind() and serves one msDS-SupportedEncryptionTypes value."""
     import sys
@@ -1622,12 +1662,14 @@ def _install_fake_ldap3(monkeypatch, *, bind_ok=True, enc_value=None):
     class Connection:
         def __init__(self, *a, **k):
             self.entries = []
-            self.last_error = "bind rejected by the peer"
+            self.last_error = last_error
 
         def bind(self):
             return bind_ok
 
         def search(self, base, flt, attributes=()):
+            if search_error is not None:
+                raise RuntimeError(search_error)
             if base == "":
                 entry = _FakeLdapEntry()
                 entry.defaultNamingContext = _FakeAttr("DC=corp,DC=local")
@@ -1661,12 +1703,22 @@ def test_ldap_result_is_always_json_and_an_int_or_none(monkeypatch, value, expec
 
 def test_ldap_connection_is_unbound_when_the_bind_is_rejected(monkeypatch):
     """230-REVIEW-R12 WR-02: the connection is closed on every return path, and
-    the peer's error text is bounded (IN-03)."""
-    calls = _install_fake_ldap3(monkeypatch, bind_ok=False)
+    the peer's error text is bounded (IN-03; R13 WR-03: a long peer text, so
+    removing the bound turns this red)."""
+    calls = _install_fake_ldap3(monkeypatch, bind_ok=False, last_error="x" * 5000)
     result = ks._probe_ldap_anon("dc01.corp.local", 1)
     assert result["ldap_status"] == "anonymous-bind-rejected"
     assert calls["unbind"] == 1
-    assert len(result["ldap_error"]) <= 200
+    assert result["ldap_error"] == "x" * 200
+
+
+def test_ldap_search_failure_is_bounded_and_unbound(monkeypatch):
+    """230-REVIEW-R13 WR-03: the exception path is bounded and still unbinds."""
+    calls = _install_fake_ldap3(monkeypatch, search_error="y" * 5000)
+    result = ks._probe_ldap_anon("dc01.corp.local", 1)
+    assert result["ldap_status"] == "skipped"
+    assert 0 < len(result["ldap_error"]) <= 200
+    assert calls["unbind"] == 1
 
 
 def test_a_bytes_ldap_value_does_not_lose_the_scan(monkeypatch):

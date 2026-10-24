@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,656 lines, in reading order.
+Five guides, 7,657 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4722,7 +4722,8 @@ is always 88) is never probed, over Kerberos or LDAP. Neither is a
 target whose request cannot be built, for example because impacket rejects the configured
 `kerberos_probe_principal`. Either way the target gets a `kerberos-unreachable` row with
 `scan_error_category` `invalid_input`. A single target may be written as a YAML scalar
-(`kerberos_targets: dc01.corp.local`); it is read as a one-item list. An etype the KDC lists
+(`kerberos_targets: dc01.corp.local`); it is read as a one-item list, and any other value that
+is not a list (a number, a mapping) is one target that is not a host name, so it is not probed. An etype the KDC lists
 twice gives one row. An IP-literal target is used as the
 realm as-is, and a real KDC answers that the principal is unknown in that realm, so a bare
 IP address yields the principal-unknown row, never the etypes (measured against Samba on

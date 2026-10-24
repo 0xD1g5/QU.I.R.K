@@ -229,7 +229,9 @@ def _normalise_target(target: str) -> str:
     """The name that is validated, probed and reported: surrounding whitespace
     and a trailing dot removed (230-REVIEW-R10 WR-01/WR-05, R11 IN-05), with
     IDNA's other full stops read as dots (R12 IN-01)."""
-    return target.strip().translate(_IDNA_DOTS).rstrip(".")
+    # 230-REVIEW-R13 WR-01/WR-02: NFKC first, as IDNA does, so full-width
+    # look-alikes (":" "/" "[" and dot leaders) are checked as what they become.
+    return unicodedata.normalize("NFKC", target).strip().translate(_IDNA_DOTS).rstrip(".")
 
 
 def _invalid_target_reason(target):
@@ -765,7 +767,8 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
     except Exception as exc:
         if logger:
             logger.warning(
-                "Kerberos LDAP probe failed for %s: %s (skipped)", host, exc
+                "Kerberos LDAP probe failed for %s: %s (skipped)", host,
+                safe_str(exc)[:200],
             )
         return {"ldap_status": "skipped", "ldap_error": safe_str(exc)[:200]}
     finally:
@@ -982,9 +985,11 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         return []
 
     now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
-    # 230-REVIEW-R12 CR-01: a bare string is one target, never a sequence of
-    # one-character targets.
-    if isinstance(targets, (str, bytes)):
+    # 230-REVIEW-R12 CR-01 / R13 CR-01/CR-02: anything that is not a list is
+    # one target (a str is never a sequence of one-character targets, a dict
+    # never a set of key targets); a non-str target then gets the not-probed
+    # row.
+    if not isinstance(targets, (list, tuple, set, frozenset)):
         targets = [targets]
     results = []
     for target in targets:

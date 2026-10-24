@@ -831,13 +831,16 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
                 if k in _KNOWN_CONNECTOR_KEYS}
     # Coerce broker list fields through _as_str_list to guard against scalar YAML values
     # (T-33-03: user-supplied namespace/region strings must be proper lists before hostname construction)
-    # 230-REVIEW-R12 CR-01: a scalar ``kerberos_targets: dc01.corp.local`` is
-    # one target.  Iterating the str probed each character ("0" resolves to
-    # 0.0.0.0) while enforce_trusted_targets checked the whole string.  List
-    # elements are kept as they are: the scanner rejects any that is not a
-    # usable host name, where _as_str_list would turn None into "None".
-    if isinstance(conn_raw.get("kerberos_targets"), (str, bytes)):
-        conn_raw["kerberos_targets"] = [conn_raw["kerberos_targets"]]
+    # 230-REVIEW-R12 CR-01 / R13 CR-01/CR-02: any value that is not a list is
+    # one target.  A str was iterated one character at a time ("0" resolves
+    # to 0.0.0.0), a number raised in the scan, and a mapping's keys were
+    # probed while enforce_trusted_targets found no host in it and passed.
+    # Elements are kept as they are: the scanner rejects any that is not a
+    # usable host name, where _as_str_list would turn None into "None".  An
+    # empty string still means no targets.
+    _kt = conn_raw.get("kerberos_targets")
+    if _kt is not None and not isinstance(_kt, (list, tuple)):
+        conn_raw["kerberos_targets"] = [_kt] if _kt != "" else []
     if "broker_azure_namespaces" in conn_raw:
         conn_raw["broker_azure_namespaces"] = _as_str_list(conn_raw["broker_azure_namespaces"])
     if "broker_sqs_regions" in conn_raw:

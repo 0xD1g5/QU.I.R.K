@@ -28,7 +28,13 @@ Only `kerberos_targets` and `broker_targets` are coerced.
 **UNVERIFIED per consumer:** whether each scanner iterates the value directly. Some may wrap it themselves. Measure each one; do not assume.
 
 - [ ] For each of the 11 fields, load a scalar YAML value and record what reaches the scanner and what the trust gate checked.
-- [ ] Coerce scalars at load time in one place, a loop over every `*_targets` field derived from `ConnectorsCfg`, not a hand list. Keep list elements as they are, because `_as_str_list` turns `None` into `"None"`.
+- [ ] Coerce at load time, in one place: a loop over every `*_targets` field derived from `ConnectorsCfg`, not a hand list.
+  - Wrap **every** value that is not a list, not only strings, because R13 measured two more shapes on `kerberos_targets`:
+    - a number raised `TypeError` in the scan;
+    - a mapping such as `{dc01.evil.example: 1}` passed `enforce_trusted_targets` (no host found in it) while its keys were probed.
+  - Keep list elements as they are, because `_as_str_list` turns `None` into `"None"`.
+  - Keep `""` meaning no targets.
+  - Phase 230 did exactly this for `kerberos_targets` (`quirk/config.py`).
 - [ ] Add a run-time test that enumerates the `*_targets` fields and asserts that a scalar loads as a one-element list for each.
 
 ## Feasibility & Effort
