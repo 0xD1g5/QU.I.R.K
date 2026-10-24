@@ -1,0 +1,1271 @@
+{
+  "_comment": "Phase 231 D-09 assessed-state contract: hand-authored test input read by both tests/test_qramm_assessment_parity.py (pytest, real API) and src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx (vitest); not a generator artifact.",
+  "answers": [
+    {
+      "question_number": 1,
+      "answer_value": 3
+    },
+    {
+      "question_number": 2,
+      "answer_value": 3
+    },
+    {
+      "question_number": 3,
+      "answer_value": 3
+    },
+    {
+      "question_number": 31,
+      "answer_value": 2
+    },
+    {
+      "question_number": 32,
+      "answer_value": 2
+    },
+    {
+      "question_number": 33,
+      "answer_value": 2
+    },
+    {
+      "question_number": 34,
+      "answer_value": 2
+    },
+    {
+      "question_number": 35,
+      "answer_value": 2
+    },
+    {
+      "question_number": 36,
+      "answer_value": 2
+    },
+    {
+      "question_number": 37,
+      "answer_value": 2
+    },
+    {
+      "question_number": 38,
+      "answer_value": 2
+    },
+    {
+      "question_number": 39,
+      "answer_value": 2
+    },
+    {
+      "question_number": 40,
+      "answer_value": 2
+    },
+    {
+      "question_number": 41,
+      "answer_value": 2
+    },
+    {
+      "question_number": 42,
+      "answer_value": 2
+    },
+    {
+      "question_number": 43,
+      "answer_value": 2
+    },
+    {
+      "question_number": 44,
+      "answer_value": 2
+    },
+    {
+      "question_number": 45,
+      "answer_value": 2
+    },
+    {
+      "question_number": 46,
+      "answer_value": 2
+    },
+    {
+      "question_number": 47,
+      "answer_value": 2
+    },
+    {
+      "question_number": 48,
+      "answer_value": 2
+    },
+    {
+      "question_number": 49,
+      "answer_value": 2
+    },
+    {
+      "question_number": 50,
+      "answer_value": 2
+    },
+    {
+      "question_number": 51,
+      "answer_value": 2
+    },
+    {
+      "question_number": 52,
+      "answer_value": 2
+    },
+    {
+      "question_number": 53,
+      "answer_value": 2
+    },
+    {
+      "question_number": 54,
+      "answer_value": 2
+    },
+    {
+      "question_number": 55,
+      "answer_value": 2
+    },
+    {
+      "question_number": 56,
+      "answer_value": 2
+    },
+    {
+      "question_number": 57,
+      "answer_value": 2
+    },
+    {
+      "question_number": 58,
+      "answer_value": 2
+    },
+    {
+      "question_number": 59,
+      "answer_value": 2
+    },
+    {
+      "question_number": 60,
+      "answer_value": 2
+    },
+    {
+      "question_number": 61,
+      "answer_value": 4
+    },
+    {
+      "question_number": 62,
+      "answer_value": 4
+    },
+    {
+      "question_number": 63,
+      "answer_value": 4
+    },
+    {
+      "question_number": 64,
+      "answer_value": 4
+    },
+    {
+      "question_number": 65,
+      "answer_value": 4
+    }
+  ],
+  "question_dimensions": {
+    "1": "CVI",
+    "2": "CVI",
+    "3": "CVI",
+    "4": "CVI",
+    "5": "CVI",
+    "6": "CVI",
+    "7": "CVI",
+    "8": "CVI",
+    "9": "CVI",
+    "10": "CVI",
+    "11": "CVI",
+    "12": "CVI",
+    "13": "CVI",
+    "14": "CVI",
+    "15": "CVI",
+    "16": "CVI",
+    "17": "CVI",
+    "18": "CVI",
+    "19": "CVI",
+    "20": "CVI",
+    "21": "CVI",
+    "22": "CVI",
+    "23": "CVI",
+    "24": "CVI",
+    "25": "CVI",
+    "26": "CVI",
+    "27": "CVI",
+    "28": "CVI",
+    "29": "CVI",
+    "30": "CVI",
+    "31": "SGRM",
+    "32": "SGRM",
+    "33": "SGRM",
+    "34": "SGRM",
+    "35": "SGRM",
+    "36": "SGRM",
+    "37": "SGRM",
+    "38": "SGRM",
+    "39": "SGRM",
+    "40": "SGRM",
+    "41": "SGRM",
+    "42": "SGRM",
+    "43": "SGRM",
+    "44": "SGRM",
+    "45": "SGRM",
+    "46": "SGRM",
+    "47": "SGRM",
+    "48": "SGRM",
+    "49": "SGRM",
+    "50": "SGRM",
+    "51": "SGRM",
+    "52": "SGRM",
+    "53": "SGRM",
+    "54": "SGRM",
+    "55": "SGRM",
+    "56": "SGRM",
+    "57": "SGRM",
+    "58": "SGRM",
+    "59": "SGRM",
+    "60": "SGRM",
+    "61": "DPE",
+    "62": "DPE",
+    "63": "DPE",
+    "64": "DPE",
+    "65": "DPE",
+    "66": "DPE",
+    "67": "DPE",
+    "68": "DPE",
+    "69": "DPE",
+    "70": "DPE",
+    "71": "DPE",
+    "72": "DPE",
+    "73": "DPE",
+    "74": "DPE",
+    "75": "DPE",
+    "76": "DPE",
+    "77": "DPE",
+    "78": "DPE",
+    "79": "DPE",
+    "80": "DPE",
+    "81": "DPE",
+    "82": "DPE",
+    "83": "DPE",
+    "84": "DPE",
+    "85": "DPE",
+    "86": "DPE",
+    "87": "DPE",
+    "88": "DPE",
+    "89": "DPE",
+    "90": "DPE",
+    "91": "ITR",
+    "92": "ITR",
+    "93": "ITR",
+    "94": "ITR",
+    "95": "ITR",
+    "96": "ITR",
+    "97": "ITR",
+    "98": "ITR",
+    "99": "ITR",
+    "100": "ITR",
+    "101": "ITR",
+    "102": "ITR",
+    "103": "ITR",
+    "104": "ITR",
+    "105": "ITR",
+    "106": "ITR",
+    "107": "ITR",
+    "108": "ITR",
+    "109": "ITR",
+    "110": "ITR",
+    "111": "ITR",
+    "112": "ITR",
+    "113": "ITR",
+    "114": "ITR",
+    "115": "ITR",
+    "116": "ITR",
+    "117": "ITR",
+    "118": "ITR",
+    "119": "ITR",
+    "120": "ITR"
+  },
+  "score": {
+    "CVI": {
+      "score": 0.0,
+      "weighted": 0.0
+    },
+    "SGRM": {
+      "score": 2.0,
+      "weighted": 2.0
+    },
+    "DPE": {
+      "score": 0.0,
+      "weighted": 0.0
+    },
+    "ITR": {
+      "score": 0.0,
+      "weighted": 0.0
+    }
+  },
+  "expected_coverage_status": {
+    "CVI": "covered",
+    "SGRM": "self-assessed",
+    "DPE": "self-assessed",
+    "ITR": "pending"
+  },
+  "expected_dimension_state": {
+    "CVI": "scanner-measured",
+    "SGRM": "self-assessed",
+    "DPE": "self-assessed",
+    "ITR": "not-assessed"
+  },
+  "rows": [
+    {
+      "practice_number": "1.1-NIST_PQC",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "NIST_PQC",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-NSM10",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "NSM10",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-CNSA2",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "CNSA2",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-ISO27001",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "ISO27001",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-ETSI_QS",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "ETSI_QS",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-PCI_DSS",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "PCI_DSS",
+      "static_weight": 0.5,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-CC",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "CC",
+      "static_weight": 0.4,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.1-BSI_TR",
+      "practice_area": "1.1",
+      "dimension": "CVI",
+      "framework": "BSI_TR",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-NIST_PQC",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "NIST_PQC",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-NSM10",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "NSM10",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-CNSA2",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "CNSA2",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-ISO27001",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "ISO27001",
+      "static_weight": 0.6,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-ETSI_QS",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "ETSI_QS",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-PCI_DSS",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "PCI_DSS",
+      "static_weight": 0.4,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-CC",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "CC",
+      "static_weight": 0.5,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.2-BSI_TR",
+      "practice_area": "1.2",
+      "dimension": "CVI",
+      "framework": "BSI_TR",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-NIST_PQC",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "NIST_PQC",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-NSM10",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "NSM10",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-CNSA2",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "CNSA2",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-ISO27001",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "ISO27001",
+      "static_weight": 0.6,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-ETSI_QS",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "ETSI_QS",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-PCI_DSS",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "PCI_DSS",
+      "static_weight": 0.5,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-CC",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "CC",
+      "static_weight": 0.5,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "1.3-BSI_TR",
+      "practice_area": "1.3",
+      "dimension": "CVI",
+      "framework": "BSI_TR",
+      "static_weight": 0.6,
+      "relevance_score": 0.0,
+      "scanner_informed": true,
+      "coverage_status": "covered"
+    },
+    {
+      "practice_number": "2.1-NIST_PQC",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "NIST_PQC",
+      "static_weight": 0.4,
+      "relevance_score": 0.2,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-NSM10",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "NSM10",
+      "static_weight": 0.5,
+      "relevance_score": 0.25,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-CNSA2",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "CNSA2",
+      "static_weight": 0.5,
+      "relevance_score": 0.25,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-ISO27001",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "ISO27001",
+      "static_weight": 0.9,
+      "relevance_score": 0.45,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-ETSI_QS",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "ETSI_QS",
+      "static_weight": 0.4,
+      "relevance_score": 0.2,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-PCI_DSS",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "PCI_DSS",
+      "static_weight": 0.6,
+      "relevance_score": 0.3,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-CC",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "CC",
+      "static_weight": 0.6,
+      "relevance_score": 0.3,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.1-BSI_TR",
+      "practice_area": "2.1",
+      "dimension": "SGRM",
+      "framework": "BSI_TR",
+      "static_weight": 0.7,
+      "relevance_score": 0.35,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-NIST_PQC",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "NIST_PQC",
+      "static_weight": 0.4,
+      "relevance_score": 0.2,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-NSM10",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "NSM10",
+      "static_weight": 0.5,
+      "relevance_score": 0.25,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-CNSA2",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "CNSA2",
+      "static_weight": 0.5,
+      "relevance_score": 0.25,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-ISO27001",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "ISO27001",
+      "static_weight": 0.9,
+      "relevance_score": 0.45,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-ETSI_QS",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "ETSI_QS",
+      "static_weight": 0.4,
+      "relevance_score": 0.2,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-PCI_DSS",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "PCI_DSS",
+      "static_weight": 0.8,
+      "relevance_score": 0.4,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-CC",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "CC",
+      "static_weight": 0.7,
+      "relevance_score": 0.35,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.2-BSI_TR",
+      "practice_area": "2.2",
+      "dimension": "SGRM",
+      "framework": "BSI_TR",
+      "static_weight": 0.8,
+      "relevance_score": 0.4,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-NIST_PQC",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "NIST_PQC",
+      "static_weight": 0.4,
+      "relevance_score": 0.2,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-NSM10",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "NSM10",
+      "static_weight": 0.5,
+      "relevance_score": 0.25,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-CNSA2",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "CNSA2",
+      "static_weight": 0.5,
+      "relevance_score": 0.25,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-ISO27001",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "ISO27001",
+      "static_weight": 0.8,
+      "relevance_score": 0.4,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-ETSI_QS",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "ETSI_QS",
+      "static_weight": 0.4,
+      "relevance_score": 0.2,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-PCI_DSS",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "PCI_DSS",
+      "static_weight": 0.7,
+      "relevance_score": 0.35,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-CC",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "CC",
+      "static_weight": 0.6,
+      "relevance_score": 0.3,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "2.3-BSI_TR",
+      "practice_area": "2.3",
+      "dimension": "SGRM",
+      "framework": "BSI_TR",
+      "static_weight": 0.7,
+      "relevance_score": 0.35,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-NIST_PQC",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "NIST_PQC",
+      "static_weight": 0.5,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-NSM10",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "NSM10",
+      "static_weight": 0.6,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-CNSA2",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "CNSA2",
+      "static_weight": 0.6,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-ISO27001",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "ISO27001",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-ETSI_QS",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "ETSI_QS",
+      "static_weight": 0.5,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-PCI_DSS",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "PCI_DSS",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-CC",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "CC",
+      "static_weight": 0.6,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.1-BSI_TR",
+      "practice_area": "3.1",
+      "dimension": "DPE",
+      "framework": "BSI_TR",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-NIST_PQC",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "NIST_PQC",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-NSM10",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "NSM10",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-CNSA2",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "CNSA2",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-ISO27001",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "ISO27001",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-ETSI_QS",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "ETSI_QS",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-PCI_DSS",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "PCI_DSS",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-CC",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "CC",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.2-BSI_TR",
+      "practice_area": "3.2",
+      "dimension": "DPE",
+      "framework": "BSI_TR",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-NIST_PQC",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "NIST_PQC",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-NSM10",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "NSM10",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-CNSA2",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "CNSA2",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-ISO27001",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "ISO27001",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-ETSI_QS",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "ETSI_QS",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-PCI_DSS",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "PCI_DSS",
+      "static_weight": 0.9,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-CC",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "CC",
+      "static_weight": 0.7,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "3.3-BSI_TR",
+      "practice_area": "3.3",
+      "dimension": "DPE",
+      "framework": "BSI_TR",
+      "static_weight": 0.8,
+      "relevance_score": 0.0,
+      "scanner_informed": false,
+      "coverage_status": "self-assessed"
+    },
+    {
+      "practice_number": "4.1-NIST_PQC",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "NIST_PQC",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-NSM10",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "NSM10",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-CNSA2",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "CNSA2",
+      "static_weight": 0.8,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-ISO27001",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "ISO27001",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-ETSI_QS",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "ETSI_QS",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-PCI_DSS",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "PCI_DSS",
+      "static_weight": 0.6,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-CC",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "CC",
+      "static_weight": 0.6,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.1-BSI_TR",
+      "practice_area": "4.1",
+      "dimension": "ITR",
+      "framework": "BSI_TR",
+      "static_weight": 0.8,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-NIST_PQC",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "NIST_PQC",
+      "static_weight": 0.9,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-NSM10",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "NSM10",
+      "static_weight": 0.8,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-CNSA2",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "CNSA2",
+      "static_weight": 0.9,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-ISO27001",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "ISO27001",
+      "static_weight": 0.6,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-ETSI_QS",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "ETSI_QS",
+      "static_weight": 0.9,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-PCI_DSS",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "PCI_DSS",
+      "static_weight": 0.6,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-CC",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "CC",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.2-BSI_TR",
+      "practice_area": "4.2",
+      "dimension": "ITR",
+      "framework": "BSI_TR",
+      "static_weight": 0.8,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-NIST_PQC",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "NIST_PQC",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-NSM10",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "NSM10",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-CNSA2",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "CNSA2",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-ISO27001",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "ISO27001",
+      "static_weight": 0.6,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-ETSI_QS",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "ETSI_QS",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-PCI_DSS",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "PCI_DSS",
+      "static_weight": 0.7,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-CC",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "CC",
+      "static_weight": 0.9,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    },
+    {
+      "practice_number": "4.3-BSI_TR",
+      "practice_area": "4.3",
+      "dimension": "ITR",
+      "framework": "BSI_TR",
+      "static_weight": 0.9,
+      "relevance_score": null,
+      "scanner_informed": false,
+      "coverage_status": "pending"
+    }
+  ]
+}
