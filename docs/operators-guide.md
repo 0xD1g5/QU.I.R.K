@@ -1474,7 +1474,7 @@ machine-readable signal:
 quirk doctor
 ```
 
-It takes no flags (extra arguments are ignored). Invoke before each client engagement.
+It takes no arguments: `quirk doctor --help` prints usage and exits 0 without running any check, and any extra argument is a usage error (exit status 2). Invoke before each client engagement.
 
 #### Categories
 
@@ -4032,7 +4032,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk compliance cmvp` | Inspect the CMVP attestation cache (actions `status` and `refresh`; use only `status`) | `status`, `refresh` | CLI only |
 | `quirk compliance cmvp status` | Print CMVP cache freshness (read-only) | `--format` (`text` or `json`) | CLI only |
 | `quirk compliance cmvp refresh` | Refresh CMVP cache from NIST. **Do not run it**: see the warning below the table | `--dry-run` | CLI only |
-| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries, compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (arguments are ignored) | CLI only |
+| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries, compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (`-h`/`--help` only; extra arguments exit 2) | CLI only |
 | `quirk schedule` | Manage scheduled scans | `add`, `list`, `enable`, `disable`, `remove` | Schedules page (list, enable, disable, delete); the page cannot create a schedule |
 | `quirk schedule add` | Add a new scheduled scan | `--name`, `--cron`, `--target`, `--check-in` | `POST /api/schedules` also creates one, but no page calls it: the Schedules page's Add Schedule sheet only prints this command |
 | `quirk schedule list` | List all scheduled scans | `--config` | Schedules page: `GET /api/schedules` |
@@ -4041,10 +4041,10 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk schedule remove` | Remove a scheduled scan | `name`, `--config` | Schedules page delete: `DELETE /api/schedules/{schedule_id}` |
 | `quirk scheduler` | Run the scheduled-scan dispatcher (action `run`) | `run` | CLI only |
 | `quirk scheduler run` | Start the scheduler dispatch loop | `--config`, `--scan-config`, `--once` | CLI only |
-| `quirk qramm` | Dispatcher for `quirk qramm status`; it has no help of its own | `status` | CLI only |
-| `quirk qramm status` | Print the QRAMM model version, last_verified date, days remaining and freshness status | none | CLI only |
-| `quirk cve` | Dispatcher for `quirk cve status`; it has no help of its own | `status` | CLI only |
-| `quirk cve status` | Print the firmware CVE catalog source, last_verified date, days remaining and freshness status | `--format json` | CLI only |
+| `quirk qramm` | QRAMM model utilities (action `status`); `quirk qramm --help` lists actions, an unknown or missing action exits 2 | `status` | CLI only |
+| `quirk qramm status` | Print the QRAMM model version, last_verified date, days remaining and freshness status | none (`--help`) | CLI only |
+| `quirk cve` | Firmware CVE catalog utilities (action `status`); `quirk cve --help` lists actions, an unknown or missing action exits 2 | `status` | CLI only |
+| `quirk cve status` | Print the firmware CVE catalog source, last_verified date, days remaining and freshness status | `--format` (`text` or `json`) | CLI only |
 | `quirk analyze-token` | Decode and classify a bearer/JWT token; passive: no signature verification, no network requests, no DB writes | `--json`, `TOKEN`, `@FILE` or `-` (stdin) | CLI only |
 | `quirk token` | Dashboard API token management (actions `generate`, `rotate`, `show`) | `generate`, `rotate`, `show` | CLI only |
 | `quirk token generate` | Generate and persist a new dashboard API token | `--config` | CLI only |
@@ -4070,7 +4070,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk db` | Database maintenance subcommands (action `migrate`) | `migrate` | CLI only |
 | `quirk db migrate` | Idempotent, additive-only schema migration of an existing quirk.db; see the warning below the table | `--db`, `--config`, `--dry-run` | CLI only |
 
-**Three commands do not print help.** `quirk doctor --help` ignores its arguments and runs the health check (exit status 1 when a check fails); `quirk qramm --help` and `quirk cve --help` print the scan CLI usage instead, and `quirk qramm status --help` and `quirk cve status --help` run the status report; `quirk cve status` takes `--format json` through hand-written argument handling, so no usage text lists it.
+**`doctor`, `qramm` and `cve` parse their arguments (Phase 231, QRAMM-20).** All three now parse arguments like the other subcommands. `--help` works at both levels (`quirk qramm --help`, `quirk qramm status --help`, `quirk cve status --help`) and prints usage without running anything. An unknown action or an extra argument is a usage error with exit status 2. `quirk cve status --format=json` now emits JSON (before Phase 231 it printed the text table), and an invalid `--format` value exits 2. Scripts that passed extra arguments to `quirk doctor` now fail with exit status 2; no script in this repository did.
 
 **Never run `quirk compliance cmvp refresh`.** It rewrites the CMVP attestation cache from NIST, and an earlier version of it silently emptied algorithm lists it could not parse (RVW-022, fixed in commit `a7cf302`); re-verify the cache by hand against its source URL instead, and use `quirk compliance cmvp status` for the read-only check.
 
@@ -4079,3 +4079,40 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 **`quirk db migrate` needs an explicit `--db`.** Without `--db` or `--config` it falls back to `./quirk.db`, not the dashboard's `./quirk-output/quirk.db`, and creates an empty database there; pass `--db quirk-output/quirk.db`. `--dry-run` can stop with `NoSuchTableError` on a database created by an older release (see the upgrade guide).
 
 **Flag and path gotchas.** `quirk export` and `quirk ticket create` search `./output` for the latest `findings-*.json` unless `--input` or `--output-dir` is given; `quirk sensor enroll` needs the `--sensor-id` that `quirk console enroll` printed; `quirk sensor merge` has no `--output-dir` option.
+
+---
+
+## 22. QRAMM Assessment Tabs: Compliance Map and Scorecard (Phase 231, QRAMM-17/18/19)
+
+The dashboard's QRAMM Assessment page (`/qramm/assessment`, reached from **QRAMM Assessment** in the sidebar) has one tab per dimension (CVI, SGRM, DPE, ITR), then **Scorecard** and **Compliance Map**. Both of the last two tabs mark how each dimension was assessed, using the same three states:
+
+| State | Meaning |
+|-------|---------|
+| **Scanner-measured** | CVI with at least one answered question. Scored with QUIRK scanner evidence, capped by the scanner coverage ceiling. |
+| **Self-assessed** | SGRM, DPE or ITR with at least one answered question. Scored from the answers entered by hand, at full weight (static weight x dimension score / 4) with no scanner ceiling. No scanner evidence backs these scores. |
+| **Not assessed** | Any dimension, CVI included, with no answered question. It has no score and is never counted as maturity level 1. |
+
+A dimension counts as assessed as soon as one of its questions is answered. A score of 0.0 does not make it Not assessed, and a partly answered dimension is assessed.
+
+### Compliance Map tab
+
+- **Calculate Score refreshes the table.** Until the session is scored, the tab shows a banner with a **Calculate Score** button. After a successful Calculate Score the table refetches in place and screen readers hear "Compliance map updated." A failed Calculate Score shows the error line under the button and leaves the table as it was.
+- **Assessment column.** Each practice-area row carries a text badge, Scanner-measured, Self-assessed or Not assessed, so the state never depends on colour alone. Scanner-measured and Self-assessed rows show their framework scores. Not assessed rows show "—".
+- **Coverage Tiers legend** lists the three badges with a one-line description of each.
+- **Footnote.** The table ends with the same sentence the print/PDF page uses:
+
+> CVI rows are measured from QUIRK scanner evidence; SGRM, DPE and ITR rows show self-assessed answers; any dimension with no answered question reads "Not assessed".
+
+### Scorecard tab
+
+- A dimension with no answered question shows a **Not assessed** badge in the Maturity Level column of the Dimension Summary table, and "—" for its Raw and Weighted Score. The stored 0.0 is a placeholder, not a measurement.
+- Not assessed dimensions are left out of the Maturity Distribution buckets, and a line under the buckets reads "1 dimension not assessed" or "N dimensions not assessed".
+- The Dimension Radar still plots an unanswered dimension at 0. That is unchanged in Phase 231.
+
+### Answering after scoring
+
+The state comes from the live answers and the scores from the last Calculate Score. If you answer a dimension's first question after scoring, both tabs immediately read that dimension as assessed, but its score is still the 0.0 placeholder until you run **Calculate Score** again. Re-run Calculate Score after answering more questions.
+
+### Print / PDF
+
+The dashboard's Export PDF (the `/print` page) uses the same three states in its QRAMM section: an Assessment column on the Dimension Scorecard, per-framework counts in place of the old coverage tier, and a chip on every practice-area row. See `docs/report-interpretation.md` §9. Before Phase 231, a print export of a scored session failed to load its QRAMM data. It now reads the persisted score from `GET /api/qramm/sessions/{id}`.
