@@ -535,8 +535,12 @@ export interface QRAMMScoreResponse {
   profile_multiplier: number
 }
 
+// Phase 231 D-02: mirrors quirk.qramm.compliance_map.RowCoverageStatus
+export type QRAMMRowCoverageStatus = "covered" | "partial" | "self-assessed" | "pending" | "n/a"
+
 // Phase 55 QRAMM-15: Compliance Map row returned by
 // GET /api/qramm/sessions/{id}/compliance-map
+// Phase 231: coverage_status carries the per-session assessment state; scanner_informed stays scanner-only (D-04).
 export interface QRAMMComplianceMapRow {
   practice_number: string
   practice_area: string
@@ -545,6 +549,7 @@ export interface QRAMMComplianceMapRow {
   static_weight: number
   relevance_score: number | null
   scanner_informed: boolean
+  coverage_status: QRAMMRowCoverageStatus | null
 }
 
 // Phase 193 Plan 07 (PARITY-02): mirrors
