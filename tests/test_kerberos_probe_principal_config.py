@@ -1775,14 +1775,40 @@ def _sweep_targets():
                     # R18: zone-free literals, so the accepted IP branch is
                     # exercised (every zone id is refused).
                     f"2001:db8::1{c}", f"{c}10.0.0.1",
-                    # R19 WR-01: macOS's embedded-scope link-local shape.
-                    f"fe80:{c}::1", f"2001:db8:{c}::1"]
+                    ]
     marks = [chr(cp) for cp in range(0x300, 0x370) if ucd.category(chr(cp)) == "Mn"]
     marks.append("\u0345")
     for base in [chr(cp) for cp in range(0x1F80, 0x1FB0)]:
         for m in marks:
             targets.append(f"dc01{base}{m}.corp.local")
+    # 230-REVIEW-R20 WR-01: IP literals come from ASCII hex, not the Unicode
+    # table ({c} above is never ASCII, so those templates are never IPs).
+    # Every class a platform treats specially: macOS's embedded-scope shapes
+    # (fe80/ff01/ff02 with a non-zero second group), site-local, unique-local,
+    # global, IPv4-mapped/compatible, and the unspecified and broadcast forms.
+    for x in list(range(0, 0x10000, 0x101)) + [1, 7, 0xffff]:
+        targets += [f"fe80:{x:x}::1", f"febf:{x:x}::1", f"ff02:{x:x}::1",
+                    f"ff01:{x:x}::1", f"fec0:{x:x}::1", f"fd00:{x:x}::1",
+                    f"2001:db8:{x:x}::1", f"::ffff:{x >> 8}.{x & 0xff}.0.1"]
+    targets += ["::", "0::0", "0.0.0.0", "0.1.2.3", "::ffff:0.0.0.0", "::ffff:0:0",
+                "255.255.255.255", "::ffff:255.255.255.255", "::0.0.0.0",
+                "127.0.0.1", "::1", "169.254.1.1", "::ffff:169.254.1.1"]
     return targets
+
+
+def _kernel_peer(raw):
+    """The address a UDP connect() to ``raw`` targets: a route lookup that sends
+    no packet (R20 WR-01).  None if this host has no route to it."""
+    import socket as _s
+    fam = _s.AF_INET6 if ":" in raw else _s.AF_INET
+    sock = _s.socket(fam, _s.SOCK_DGRAM)
+    try:
+        sock.connect((raw, 88))
+        return sock.getpeername()
+    except OSError:
+        return None
+    finally:
+        sock.close()
 
 
 def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
@@ -1818,6 +1844,14 @@ def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
                 got = ks.ipaddress.ip_address(sa[0])
                 assert got == want or getattr(want, "ipv4_mapped", None) == got, (t, sa)
                 assert len(sa) == 2 or sa[3] == 0, (t, sa)
+            # R20 CR-01/WR-01: and what the kernel actually targets.  An
+            # unspecified destination is rewritten to loopback by connect().
+            peer = _kernel_peer(raw)
+            if peer is not None:
+                kgot = ks.ipaddress.ip_address(peer[0].split("%")[0])
+                assert kgot == want or getattr(want, "ipv4_mapped", None) == kgot \
+                    or getattr(kgot, "ipv4_mapped", None) == want, (t, peer)
+                assert len(peer) == 2 or peer[3] == 0, (t, peer)
         assert not any(c.isspace() or ord(c) < 0x21 for c in wire), repr(t)
         ks._derive_realm(wire)  # never raises for an accepted target
     assert checked > 1000, checked
@@ -1948,6 +1982,10 @@ def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, g
     # is unreachable everywhere) and multicast (a KDC is unicast).
     "fe80::1", "fe80:1::1", "fe80:7::1", "febf:1::1", "FE80:1:0:0:0:0:0:1",
     "ff02::1", "224.0.0.1",
+    # R20 CR-01/WR-02/IN-01: connect() rewrites an unspecified destination to
+    # loopback; mapped forms get the same rule as the IPv4 form; broadcast.
+    "0.0.0.0", "::", "0::0", "::ffff:0.0.0.0", "::ffff:0:0", "0.1.2.3",
+    "::ffff:224.0.0.1", "255.255.255.255", "::ffff:255.255.255.255",
 ])
 def test_r16_targets_are_not_probed(target):
     assert ks._invalid_target_reason(target)
@@ -1961,8 +1999,17 @@ def test_r16_ascii_ip_literals_and_one_trailing_dot_are_accepted(target):
 
 @pytest.mark.parametrize("target, words", [
     ("fe80::1%en0", "zone id"), ("fe80:1::1", "link-local"), ("ff02::1", "multicast"),
+    ("::", "unspecified"), ("::ffff:0.0.0.0", "unspecified"), ("255.255.255.255", "broadcast"),
 ])
 def test_ip_refusals_name_their_rule(target, words):
     """230-REVIEW-R19 IN-01: each IP refusal is asserted by its own message, so a
     later reordering cannot silently move it onto a different rule."""
     assert words in ks._invalid_target_reason(target)
+
+
+@pytest.mark.parametrize("v4", ["169.254.1.1", "10.0.0.1", "224.0.0.1", "0.0.0.0", "127.0.0.1"])
+def test_ipv4_mapped_form_gets_the_ipv4_disposition(v4):
+    """230-REVIEW-R20 WR-02: the same IPv4 destination is accepted or refused
+    the same way whether written as a.b.c.d or ::ffff:a.b.c.d."""
+    assert (ks._invalid_target_reason(v4) is None) == \
+        (ks._invalid_target_reason(f"::ffff:{v4}") is None)

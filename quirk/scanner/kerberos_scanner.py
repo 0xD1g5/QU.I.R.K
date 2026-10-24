@@ -225,6 +225,15 @@ def _derive_realm(host: str) -> str:
     return stripped.upper()
 
 
+# 230-REVIEW-R19/R20: address blocks a KDC target may not be in, by explicit
+# network membership (see _invalid_target_reason).
+_V4_THIS_NETWORK = ipaddress.ip_network("0.0.0.0/8")
+_V6_LINK_LOCAL = ipaddress.ip_network("fe80::/10")
+_V4_MULTICAST = ipaddress.ip_network("224.0.0.0/4")
+_V6_MULTICAST = ipaddress.ip_network("ff00::/8")
+_V4_BROADCAST = ipaddress.ip_address("255.255.255.255")
+
+
 def _wire_name(target: str) -> str:
     """The exact name the resolver is asked for: what the scanner probes and
     reports.
@@ -300,16 +309,26 @@ def _invalid_target_reason(target):
             # and every zone id is refused above (R19 IN-01).
             return "KDC target is an IP address with non-ASCII characters"
         addr = ipaddress.ip_address(raw)
-        # 230-REVIEW-R19 CR-01/WR-02: macOS reads the second 16-bit group of an
-        # fe80::/10 address as an embedded zone id, so "fe80:1::1" is probed as
-        # fe80::1 on lo0, an address the gate never checked.  Without a zone a
-        # link-local address is unreachable on every platform (EHOSTUNREACH,
-        # EINVAL), so it is refused.  A KDC is unicast, so multicast is too.
-        if addr.version == 6 and addr.is_link_local:
+        # 230-REVIEW-R20 WR-02: one rule set for the effective address.  An
+        # IPv4-mapped address is unwrapped here, and every rule is explicit
+        # network membership, so the result does not depend on whether this
+        # CPython's ipaddress delegates is_* properties for mapped addresses.
+        eff = (addr.ipv4_mapped or addr) if addr.version == 6 else addr
+        # R20 CR-01: connect() rewrites an unspecified destination to this
+        # host's loopback, so "0.0.0.0" or "::" would probe the scanning host
+        # under a name the gate checked as something else.
+        if eff.is_unspecified or eff in _V4_THIS_NETWORK:
+            return ("KDC target is the unspecified address (0.0.0.0/8 or ::); the "
+                    "kernel would probe this host instead")
+        # R19 CR-01/WR-02: macOS reads the second 16-bit group of an fe80::/10
+        # address as an embedded zone id ("fe80:1::1" is probed as fe80::1 on
+        # lo0), and a zone-free link-local address is unreachable everywhere.
+        if eff in _V6_LINK_LOCAL:
             return ("KDC target is a link-local IPv6 address; use the KDC's "
                     "host name or a global address")
-        if addr.is_multicast:
-            return "KDC target is a multicast address; a KDC is a unicast host"
+        # A KDC is a unicast host (R19; R20 IN-01 adds limited broadcast).
+        if eff in _V4_MULTICAST or eff in _V6_MULTICAST or eff == _V4_BROADCAST:
+            return "KDC target is a multicast or broadcast address; a KDC is a unicast host"
         return None
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.

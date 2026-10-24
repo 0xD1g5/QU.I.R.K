@@ -1327,7 +1327,9 @@ absolute, and is dropped only from the realm. A target that is not a usable host
 name (empty, not a string, containing a NUL, a control or surrogate character or inner
 whitespace, a name IDNA cannot encode, a name with an empty label or more than one trailing
 dot, an IPv6 link-local address (`fe80::/10`) or any IPv6 address with a zone id such as
-`fe80::1%en0` (use the KDC's host name or a global address instead), a multicast address, or
+`fe80::1%en0` (use the KDC's host name or a global address instead), the unspecified address
+(`0.0.0.0/8`, `::`; the kernel would probe the scanning host itself), a multicast or broadcast
+address (an IPv4-mapped form such as `::ffff:0.0.0.0` is treated as its IPv4 address), or
 any form the
 trusted-targets check would read as a different host, such as `host:port`, `[v6]` or a URL,
 since the KDC port is always 88) is never probed, over Kerberos or LDAP. Neither is a
