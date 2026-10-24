@@ -47,25 +47,24 @@ def _resolve_today() -> datetime.date:
     return datetime.date.today()
 
 
-def run_cve_status(argv: "list[str] | None" = None) -> None:
-    """Print CVE snapshot staleness table and exit 0 (FRESH) or 1 (STALE).
+def run_cve_status(fmt: str = "text") -> None:
+    """Print CVE snapshot staleness and exit 0 (FRESH) or 1 (STALE).
 
-    Accepts an optional "--format json" pass-through delegating to
-    hw_cve.status_report("json").
+    ``fmt`` is ``"text"`` (the staleness table) or ``"json"`` (delegates to
+    ``hw_cve.status_report("json")``). Argument parsing lives in
+    ``run_scan.py`` (Phase 231 QRAMM-20): argparse validates ``--format``
+    against ``{text,json}`` and accepts both ``--format json`` and
+    ``--format=json``.
     """
-    argv = argv or []
-    if "--format" in argv:
-        idx = argv.index("--format")
-        fmt = argv[idx + 1] if idx + 1 < len(argv) else "text"
-        if fmt == "json":
-            status_report("json")
-            today = _resolve_today()
-            last_verified = datetime.date.fromisoformat(
-                CVE_TABLE_META["last_verified"]
-            )
-            age = (today - last_verified).days
-            fresh = age <= STALENESS_THRESHOLD_DAYS
-            sys.exit(0 if fresh else 1)
+    if fmt == "json":
+        status_report("json")
+        today = _resolve_today()
+        last_verified = datetime.date.fromisoformat(
+            CVE_TABLE_META["last_verified"]
+        )
+        age = (today - last_verified).days
+        fresh = age <= STALENESS_THRESHOLD_DAYS
+        sys.exit(0 if fresh else 1)
 
     today = _resolve_today()
     last_verified = datetime.date.fromisoformat(CVE_TABLE_META["last_verified"])

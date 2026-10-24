@@ -1410,8 +1410,19 @@ def main():
             return
         return
 
-    # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10) ---
+    # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10, Phase 231 QRAMM-20) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "doctor":
+        doctor_parser = argparse.ArgumentParser(
+            prog="quirk doctor",
+            description=(
+                "Pre-engagement health check: Python, scanner binaries, "
+                "compliance freshness, QRAMM module, database, config, "
+                "network and dashboard checks"
+            ),
+            allow_abbrev=False,
+        )
+        # Parse BEFORE the lazy import so --help runs no check (T-231-03).
+        doctor_parser.parse_args(_sys.argv[2:])
         from quirk.cli.doctor_cmd import run_doctor
         run_doctor()
         return
@@ -1428,21 +1439,55 @@ def main():
         run_scheduler(_sys.argv[2:])
         return
 
-    # --- qramm subcommand: intercept before scan argparse (Phase 55 QRAMM-07) ---
+    # --- qramm subcommand: intercept before scan argparse (Phase 55 QRAMM-07, Phase 231 QRAMM-20) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "qramm":
-        if len(_sys.argv) > 2 and _sys.argv[2] == "status":
+        qramm_parser = argparse.ArgumentParser(
+            prog="quirk qramm",
+            description="QRAMM assessment model utilities",
+            allow_abbrev=False,
+        )
+        qramm_sub = qramm_parser.add_subparsers(dest="action", required=True)
+        qramm_sub.add_parser(
+            "status",
+            help=(
+                "Print the QRAMM model version, last_verified date and "
+                "freshness (exit 1 when stale)"
+            ),
+            allow_abbrev=False,
+        )
+        qramm_args = qramm_parser.parse_args(_sys.argv[2:])
+        if qramm_args.action == "status":
             from quirk.cli.qramm_cmd import run_qramm_status
             run_qramm_status()
-            return
-        # Future: other `quirk qramm <action>` subcommands route here.
+        return
 
-    # --- cve subcommand: intercept before scan argparse (Phase 142 CVE-02) ---
+    # --- cve subcommand: intercept before scan argparse (Phase 142 CVE-02, Phase 231 QRAMM-20) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "cve":
-        if len(_sys.argv) > 2 and _sys.argv[2] == "status":
+        cve_parser = argparse.ArgumentParser(
+            prog="quirk cve",
+            description="Firmware CVE correlation catalog utilities",
+            allow_abbrev=False,
+        )
+        cve_sub = cve_parser.add_subparsers(dest="action", required=True)
+        cve_status = cve_sub.add_parser(
+            "status",
+            help=(
+                "Print the CVE catalog's last_verified date and freshness "
+                "(exit 1 when stale)"
+            ),
+            allow_abbrev=False,
+        )
+        cve_status.add_argument(
+            "--format",
+            choices=["text", "json"],
+            default="text",
+            help="Output format (default: text)",
+        )
+        cve_args = cve_parser.parse_args(_sys.argv[2:])
+        if cve_args.action == "status":
             from quirk.cli.cve_cmd import run_cve_status
-            run_cve_status(_sys.argv[3:])
-            return
-        # Future: other `quirk cve <action>` subcommands route here.
+            run_cve_status(fmt=cve_args.format)
+        return
 
     # --- analyze-token subcommand: intercept before scan argparse (Phase 94 TOKEN-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "analyze-token":

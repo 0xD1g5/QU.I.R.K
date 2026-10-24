@@ -81,6 +81,15 @@ def _install_sentinels(monkeypatch, calls: list) -> None:
     monkeypatch.setattr("quirk.cli.doctor_cmd.run_doctor", _boom)
     monkeypatch.setattr("quirk.cli.qramm_cmd.run_qramm_status", _boom)
     monkeypatch.setattr("quirk.cli.cve_cmd.run_cve_status", _boom)
+    # The side effects doctor would have (DNS lookup, 127.0.0.1:8512 probe,
+    # DB open) are sentinelled directly too, so a help path that reached
+    # them by any route -- not only via the handler -- is caught (T-231-03).
+    monkeypatch.setattr("socket.gethostbyname", _boom)
+    monkeypatch.setattr("socket.create_connection", _boom)
+    monkeypatch.setattr("urllib.request.urlopen", _boom)
+    monkeypatch.setattr("quirk.cli.doctor_cmd.urlopen", _boom)
+    monkeypatch.setattr("quirk.cli.doctor_cmd.socket.gethostbyname", _boom)
+    monkeypatch.setattr("sqlite3.connect", _boom)
 
 
 @pytest.mark.parametrize(
