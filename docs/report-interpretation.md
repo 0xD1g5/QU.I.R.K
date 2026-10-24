@@ -464,11 +464,14 @@ The dashboard's Export PDF (the `/print` page) includes a QRAMM (Quantum Readine
 
 ### What the section contains
 
-- **Radar chart (inline SVG)** — Rendered first in the section. A four-axis polygon plotting the four QRAMM dimensions: CVI (Cryptographic Visibility & Inventory), SGRM (Strategic Governance & Risk Management), DPE (Data Protection Engineering), and ITR (Implementation & Technical Readiness). The polygon shows the session's raw dimension scores on a 0–4 scale; closer to the outer edge means higher maturity.
+- **Radar chart (inline SVG)** — Rendered first in the section. A four-axis polygon plotting the four QRAMM dimensions: CVI (Cryptographic Visibility & Inventory), SGRM (Strategic Governance & Risk Management), DPE (Data Protection Engineering), and ITR (Implementation & Technical Readiness). The polygon shows the session's raw dimension scores on a 0–4 scale; closer to the outer edge means higher maturity. A Not assessed dimension is still plotted at 0.
 - **Executive intro paragraph** — A one-sentence summary identifying that the section reflects the most recent completed QRAMM assessment.
-- **Dimension Scorecard table** — Four rows (one per dimension) with raw score and weighted score, followed by one "Overall maturity" line.
-- **Compliance Framework Coverage summary** — An 8-row table mapping the assessment to NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Each framework shows a coverage tier badge: **Scanner-informed** (the QUIRK scanner contributes signal — currently CVI only) or **Manual only** (the framework's relevance is derived purely from manual assessment answers).
-- **Per-framework practice detail** — Below the summary table, eight subsections (one per framework) flow continuously, with no forced page break between them. Each shows every practice area's relevance score and whether it was scanner-informed.
+- **Dimension Scorecard table** — Four rows (one per dimension) with an Assessment chip (Scanner-measured, Self-assessed or Not assessed), raw score and weighted score, followed by one "Overall maturity" line. A Not assessed row shows "—" for both scores, because the stored 0.0 is a placeholder, not a measurement.
+- **Compliance Framework Coverage summary** — An 8-row table, one row per framework: NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Its columns are Scanner-measured, Self-assessed and Not assessed, and each cell is the integer count of that framework's practice areas in that state, so a reader can see how much of each framework rests on scanner evidence and how much on self-assessment. The caption above the table reads "Counts are practice areas per framework, grouped by how each was assessed." The footnote below it is the sentence quoted under Coverage caveat.
+- **Per-framework practice detail** — Below the summary table, eight subsections (one per framework) flow continuously, with no forced page break between them. Each lists every practice area with its dimension, relevance score and an Assessment chip. A Not assessed row shows "—" for its relevance score.
+- **Assessment chips** — The three states print differently in black and white: Scanner-measured is a solid filled chip, Self-assessed a solid outline, and Not assessed a dashed grey outline. The state is always written out as text, never shown by colour alone.
+
+Before Phase 231, a print export of a scored session failed to load its QRAMM data: the page requested the score with a GET on a POST-only route, so the page never finished loading and the PDF export timed out. The page now reads the persisted score from `GET /api/qramm/sessions/{id}`.
 
 ### When no QRAMM assessment has been completed
 
@@ -480,12 +483,16 @@ This keeps the PDF structure consistent across all engagements and signals that 
 
 ### Coverage caveat
 
-QUIRK's scanner directly informs the CVI dimension (cryptographic visibility from real findings). SGRM, DPE, and ITR require manual assessment input via the dashboard's QRAMM questionnaire. The footnote in the PDF reflects this:
+CVI is scanner-measured: QUIRK's scanner informs it with cryptographic visibility from real findings. Answered SGRM, DPE and ITR dimensions are the operator's self-assessment from the dashboard's QRAMM questionnaire. They are scored at full weight, but no scanner evidence backs them, so read them as the client's own account of its governance. Any dimension with no answered question, CVI included, is Not assessed: the scorecard shows no score for it instead of a 0.0 that reads as maturity level 1. The QRAMM score itself is unchanged by Phase 231, so the "Overall maturity" line still averages all four dimensions and counts a Not assessed dimension as 0. The footnote in the PDF states this:
 
-> "Coverage reflects QUIRK scanner findings for CVI only — SGRM, DPE, ITR require manual assessment."
+> CVI rows are measured from QUIRK scanner evidence; SGRM, DPE and ITR rows show self-assessed answers; any dimension with no answered question reads "Not assessed".
 
 > **Client Conversation — QRAMM Governance Assessment:**
 > "The QRAMM section of the PDF gives you the governance layer — how your organization's policies, processes, and readiness posture map to the cryptographic risks we found in the technical scan. The radar chart shows maturity across four dimensions. CVI — Cryptographic Visibility — is the only dimension informed directly by the scanner findings. The other three dimensions reflect your answers in the assessment questionnaire. If you haven't completed an assessment yet, that section will show a placeholder — we can walk through it together after the technical findings review."
+
+### Dashboard QRAMM tabs
+
+The dashboard's QRAMM Assessment page uses the same three states on its Compliance Map and Scorecard tabs, with the same footnote sentence, so the dashboard and the PDF never disagree about which dimensions were assessed. See `docs/operators-guide.md` §22 for how the tabs behave, including the refresh after Calculate Score.
 
 ---
 

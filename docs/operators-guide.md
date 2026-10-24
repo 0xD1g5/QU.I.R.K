@@ -4084,15 +4084,15 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 
 ## 22. QRAMM Assessment Tabs: Compliance Map and Scorecard (Phase 231, QRAMM-17/18/19)
 
-The dashboard's QRAMM Assessment page (`/qramm/assessment`, reached from **QRAMM Assessment** in the sidebar) has one tab per dimension (CVI, SGRM, DPE, ITR), then **Scorecard** and **Compliance Map**. Both of the last two tabs mark how each dimension was assessed, using the same three states:
+The dashboard's QRAMM Assessment page (`/qramm/assessment`; **QRAMM Assessment** in the sidebar opens the organization profile at `/qramm`, and starting or continuing an assessment there opens this page) has one tab per dimension (CVI, SGRM, DPE, ITR), then **Scorecard** and **Compliance Map**. Both of the last two tabs mark how each dimension was assessed, using the same three states:
 
 | State | Meaning |
 |-------|---------|
 | **Scanner-measured** | CVI with at least one answered question. Scored with QUIRK scanner evidence, capped by the scanner coverage ceiling. |
 | **Self-assessed** | SGRM, DPE or ITR with at least one answered question. Scored from the answers entered by hand, at full weight (static weight x dimension score / 4) with no scanner ceiling. No scanner evidence backs these scores. |
-| **Not assessed** | Any dimension, CVI included, with no answered question. It has no score and is never counted as maturity level 1. |
+| **Not assessed** | Any dimension, CVI included, with no answered question. The tabs show no score and no maturity level for it, instead of a 0.0 that reads as level 1. |
 
-A dimension counts as assessed as soon as one of its questions is answered. A score of 0.0 does not make it Not assessed, and a partly answered dimension is assessed.
+A dimension counts as assessed as soon as one of its questions is answered. A score of 0.0 does not make it Not assessed, and a partly answered dimension is assessed. The QRAMM score itself is unchanged by Phase 231: the overall score still averages all four dimensions and counts a Not assessed dimension as 0.
 
 ### Compliance Map tab
 
