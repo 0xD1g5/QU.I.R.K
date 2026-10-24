@@ -200,7 +200,7 @@ def _derive_realm(host: str) -> str:
     """
     # 230-REVIEW-R10 WR-05 / R11 IN-05: a trailing dot marks an absolute name,
     # and goes before the IP-literal check so "10.0.0.1." is an IP literal.
-    stripped = host.strip().rstrip(".")
+    stripped = _normalise_target(host)
     try:
         ipaddress.ip_address(stripped)
         return stripped.upper()
@@ -221,6 +221,17 @@ def _derive_realm(host: str) -> str:
     return stripped.upper()
 
 
+# 230-REVIEW-R12 IN-01: IDNA treats these as label separators like ".".
+_IDNA_DOTS = str.maketrans({"\u3002": ".", "\uff0e": ".", "\uff61": "."})
+
+
+def _normalise_target(target: str) -> str:
+    """The name that is validated, probed and reported: surrounding whitespace
+    and a trailing dot removed (230-REVIEW-R10 WR-01/WR-05, R11 IN-05), with
+    IDNA's other full stops read as dots (R12 IN-01)."""
+    return target.strip().translate(_IDNA_DOTS).rstrip(".")
+
+
 def _invalid_target_reason(target):
     """Why ``target`` is not a usable KDC host name, or None if it is.
 
@@ -231,7 +242,7 @@ def _invalid_target_reason(target):
     """
     if not isinstance(target, str):
         return f"KDC target is not a host name string ({type(target).__name__})"
-    stripped = target.strip().rstrip(".")
+    stripped = _normalise_target(target)
     if not stripped:
         return "KDC target is empty"
     if "\x00" in stripped:
@@ -248,6 +259,10 @@ def _invalid_target_reason(target):
         return None
     except ValueError:
         pass
+    # 230-REVIEW-R12 WR-05: the KDC port is always 88, so a host:port,
+    # bracketed or path-like target names no host that resolves.
+    if any(c in stripped for c in ":[]/"):
+        return "KDC target must be a bare host name or IP address (the port is always 88)"
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.
     try:
@@ -677,12 +692,34 @@ def _probe_kdc_udp(host: str, realm: str, timeout: int,
         raise
 
 
+def _enc_types_int(value):
+    """``msDS-SupportedEncryptionTypes`` as an int, or None.
+
+    230-REVIEW-R12 CR-02: the value is peer-supplied.  ldap3 hands back raw
+    bytes for an undecodable value, and the result reaches ``json.dumps``, so
+    anything that is not an integer (or a decimal string) becomes None.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
 def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
     """Attempt anonymous LDAP bind on port 389 to read msDS-SupportedEncryptionTypes.
 
-    Returns dict with 'ldap_status' key. Always succeeds (never raises).
+    Returns dict with 'ldap_status' key. Always succeeds (never raises), and
+    every value is JSON-serialisable (230-REVIEW-R12 CR-02).
     Per KERB-03: gracefully degrades if unreachable or auth required.
+    The connection is unbound on every path (R12 WR-02).
     """
+    conn = None
     try:
         import ldap3
         server = ldap3.Server(host, port=389, connect_timeout=timeout)
@@ -692,7 +729,8 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
         if not conn.bind():
             return {
                 "ldap_status": "anonymous-bind-rejected",
-                "ldap_error": str(conn.last_error),
+                # 230-REVIEW-R12 IN-03: peer-supplied text, bounded.
+                "ldap_error": str(conn.last_error)[:200],
             }
 
         # Try to read defaultNamingContext
@@ -712,7 +750,8 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
             if conn.entries:
                 enc_types_val = None
                 if 'msDS-SupportedEncryptionTypes' in conn.entries[0]:
-                    enc_types_val = conn.entries[0]['msDS-SupportedEncryptionTypes'].value
+                    enc_types_val = _enc_types_int(
+                        conn.entries[0]['msDS-SupportedEncryptionTypes'].value)
                 return {
                     "ldap_status": "ok",
                     "msDS-SupportedEncryptionTypes": enc_types_val,
@@ -728,7 +767,13 @@ def _probe_ldap_anon(host: str, timeout: int, logger=None) -> dict:
             logger.warning(
                 "Kerberos LDAP probe failed for %s: %s (skipped)", host, exc
             )
-        return {"ldap_status": "skipped", "ldap_error": str(exc)}
+        return {"ldap_status": "skipped", "ldap_error": safe_str(exc)[:200]}
+    finally:
+        if conn is not None:
+            try:
+                conn.unbind()
+            except Exception:  # noqa: BLE001 - best-effort close
+                pass
 
 
 def _preauth_no_etypes_row(target: str, realm: str, timeout: int, logger,
@@ -937,6 +982,10 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         return []
 
     now = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    # 230-REVIEW-R12 CR-01: a bare string is one target, never a sequence of
+    # one-character targets.
+    if isinstance(targets, (str, bytes)):
+        targets = [targets]
     results = []
     for target in targets:
         invalid = _invalid_target_reason(target)
@@ -947,7 +996,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 invalid))
             continue
         # 230-REVIEW-R10 WR-01: probe and report the name that was validated.
-        target = target.strip().rstrip(".")
+        target = _normalise_target(target)
         realm = _derive_realm(target)
         # 230-08 D-29: None, never [].  Every path below assigns it; a path
         # that does not must read as unreachable.  [] means "matching AS-REP"
@@ -1116,6 +1165,9 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         # Build per-etype CryptoEndpoints
         target_endpoints = []
         etype_details = []
+        # 230-REVIEW-R12 WR-03: e-data with both PA-ETYPE-INFO2 and PA-ETYPE-INFO
+        # names an etype twice; one row each, so the weak count is not doubled.
+        etypes = list(dict.fromkeys(etypes))
         for etype in etypes:
             name, severity = KERBEROS_ETYPE_MAP.get(
                 etype, (f"unknown-etype-{etype}", "MEDIUM")

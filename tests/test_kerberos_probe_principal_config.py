@@ -1444,6 +1444,9 @@ def test_tcp_exchange_unencodable_host_is_a_connect_oserror():
     ("dc.corp.local.", "CORP.LOCAL"),
     # 230-REVIEW-R11 IN-05: the dot goes before the IP-literal check.
     ("10.0.0.1.", "10.0.0.1"),
+    # 230-REVIEW-R12 IN-01: IDNA's other full stops are label separators too.
+    ("dc.corp.local\u3002", "CORP.LOCAL"),
+    ("dc\uff0ecorp\uff61local", "CORP.LOCAL"),
 ])
 def test_derive_realm_uses_the_idna_a_label(host, realm):
     assert ks._derive_realm(host) == realm
@@ -1464,6 +1467,9 @@ def test_derive_realm_unencodable_name_does_not_raise():
     # one), a control character, a name IDNA cannot encode, and dots only.
     "kdc.\udcff.local", "kdc\x1b.local", "a" * 64 + ".example.com",
     "dc." + "\u00fc" * 70 + ".de", ".", "...",
+    # 230-REVIEW-R12 WR-05: the KDC port is always 88; a host:port, bracketed
+    # or path-like target never names a host that resolves.
+    "dc01.corp.local:88", "[::1]", "dc01.corp.local/x", "\u3002",
 ])
 def test_invalid_target_reason_rejects(target):
     assert ks._invalid_target_reason(target)
@@ -1555,3 +1561,154 @@ def test_request_build_catch_is_narrow_without_impacket():
     with impacket they are the libraries' own classes."""
     assert ks.PyAsn1Error is not Exception
     assert ks.KerberosException is not Exception
+
+
+
+# --- 230-REVIEW-R12: the ends of the path (config input, LDAP leg) ---------
+
+def test_scalar_kerberos_targets_load_as_one_target(tmp_path):
+    """230-REVIEW-R12 CR-01: ``kerberos_targets: dc01.corp.local`` (a scalar)
+    used to reach the scanner as a str, iterated one character at a time: "0"
+    and other single letters were probed (0 resolves to 0.0.0.0) while the
+    trusted-targets gate checked the whole string."""
+    cfg = load_config(_write_cfg(tmp_path, {
+        "enable_kerberos": True, "kerberos_targets": "dc01.corp.local"}))
+    assert cfg.connectors.kerberos_targets == ["dc01.corp.local"]
+
+
+def test_scan_given_a_bare_string_probes_that_one_host(monkeypatch):
+    """CR-01 at the scanner's own boundary: a str is one target, not a sequence."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    probed = []
+    monkeypatch.setattr(ks, "_probe_kdc",
+                        lambda host, *a, **k: probed.append(host) or [18])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {})
+    rows = ks.scan_kerberos_targets("dc01.corp.local", timeout=1)
+    assert probed == ["dc01.corp.local"]
+    assert {r.host for r in rows} == {"dc01.corp.local"}
+
+
+def test_repeated_etypes_give_one_row_each(monkeypatch):
+    """230-REVIEW-R12 WR-03: e-data carrying both PA-ETYPE-INFO2 and PA-ETYPE-INFO
+    lists an etype twice; each etype is one row, so the weak count is not
+    doubled."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: [23, 18, 23])
+    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {})
+    rows = ks.scan_kerberos_targets(["dc01.corp.local"], timeout=1)
+    details = [r.service_detail for r in rows if r.service_detail.startswith("etype:")]
+    assert [d.split(":")[1] for d in details] == ["23", "18"]
+    assert json.loads(rows[0].kerberos_scan_json)["etypes"] == [23, 18]
+
+
+class _FakeLdapEntry(dict):
+    def __getattr__(self, name):
+        raise AttributeError(name)
+
+
+class _FakeAttr:
+    def __init__(self, value):
+        self.value = value
+
+
+def _install_fake_ldap3(monkeypatch, *, bind_ok=True, enc_value=None):
+    """A stand-in ldap3 module (CI may or may not have ldap3) whose Connection
+    records unbind() and serves one msDS-SupportedEncryptionTypes value."""
+    import sys
+    import types
+
+    calls = {"unbind": 0}
+
+    class Connection:
+        def __init__(self, *a, **k):
+            self.entries = []
+            self.last_error = "bind rejected by the peer"
+
+        def bind(self):
+            return bind_ok
+
+        def search(self, base, flt, attributes=()):
+            if base == "":
+                entry = _FakeLdapEntry()
+                entry.defaultNamingContext = _FakeAttr("DC=corp,DC=local")
+                self.entries = [entry]
+            else:
+                self.entries = [{"msDS-SupportedEncryptionTypes": _FakeAttr(enc_value)}]
+
+        def unbind(self):
+            calls["unbind"] += 1
+
+    mod = types.SimpleNamespace(Server=lambda *a, **k: object(), Connection=Connection,
+                                ANONYMOUS="ANONYMOUS", NONE="NONE")
+    monkeypatch.setitem(sys.modules, "ldap3", mod)
+    return calls
+
+
+@pytest.mark.parametrize("value, expected", [
+    (b"\xff\xfe", None), ("24", 24), (24, 24), (None, None), ("x", None),
+])
+def test_ldap_result_is_always_json_and_an_int_or_none(monkeypatch, value, expected):
+    """230-REVIEW-R12 CR-02: a peer-supplied msDS-SupportedEncryptionTypes that
+    is not an integer (ldap3 hands back raw bytes for an undecodable value) used
+    to reach json.dumps in the scan loop and raise, losing every Kerberos row
+    in the scan.  The LDAP result is now an int or None, always serialisable."""
+    calls = _install_fake_ldap3(monkeypatch, enc_value=value)
+    result = ks._probe_ldap_anon("dc01.corp.local", 1)
+    json.dumps(result)
+    assert result["msDS-SupportedEncryptionTypes"] == expected
+    assert calls["unbind"] == 1
+
+
+def test_ldap_connection_is_unbound_when_the_bind_is_rejected(monkeypatch):
+    """230-REVIEW-R12 WR-02: the connection is closed on every return path, and
+    the peer's error text is bounded (IN-03)."""
+    calls = _install_fake_ldap3(monkeypatch, bind_ok=False)
+    result = ks._probe_ldap_anon("dc01.corp.local", 1)
+    assert result["ldap_status"] == "anonymous-bind-rejected"
+    assert calls["unbind"] == 1
+    assert len(result["ldap_error"]) <= 200
+
+
+def test_a_bytes_ldap_value_does_not_lose_the_scan(monkeypatch):
+    """CR-02 end to end: a KDC that answered code 25 keeps its etype rows."""
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: [18])
+    _install_fake_ldap3(monkeypatch, enc_value=b"\xff\xfe")
+    rows = ks.scan_kerberos_targets(["dc01.corp.local", "dc02.corp.local"], timeout=1)
+    assert sorted({r.host for r in rows}) == ["dc01.corp.local", "dc02.corp.local"]
+    assert all(r.service_detail.startswith("etype:18") for r in rows)
+
+
+def test_unbuildable_principal_is_not_probed_without_impacket(monkeypatch):
+    """230-REVIEW-R12 WR-04: R11 CR-01's fix (Principal() inside the build
+    catch), checked in CI.  Principal is stubbed to raise KerberosException as
+    impacket does for "a\\", so a revert that moves Principal() out of the
+    try turns this red without impacket installed."""
+    import types
+
+    def bad_principal(*a, **k):
+        raise ks.KerberosException("invalid principal syntax")
+
+    name_type = types.SimpleNamespace(NT_PRINCIPAL=types.SimpleNamespace(value=1),
+                                      NT_SRV_INST=types.SimpleNamespace(value=2))
+    monkeypatch.setattr(ks, "Principal", bad_principal, raising=False)
+    monkeypatch.setattr(ks, "constants",
+                        types.SimpleNamespace(PrincipalNameType=name_type), raising=False)
+    with pytest.raises(ks.KerberosRequestBuildError):
+        ks._build_request("a\\", "CORP.LOCAL")
+
+    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+    touched = []
+
+    def record(host, *a, **k):
+        touched.append(host)
+        raise OSError("must not be reached")
+
+    monkeypatch.setattr(ks.socket, "getaddrinfo", record)
+    monkeypatch.setattr(ks.socket, "create_connection", record)
+    monkeypatch.setattr(ks, "_probe_ldap_anon",
+                        lambda host, *a, **k: touched.append(("ldap", host)) or {})
+    rows = ks.scan_kerberos_targets(["dc01.corp.local"], timeout=1, principal="a\\")
+    assert [(r.service_detail, r.scan_error_category) for r in rows] == [
+        ("kerberos-unreachable", "invalid_input")]
+    assert touched == []
