@@ -1482,8 +1482,8 @@ def test_invalid_target_reason_rejects(target):
 
 @pytest.mark.parametrize("target", [
     "dc01.corp.local", " dc01.corp.local ", "10.0.0.1", "::1", "kdc.пример",
-    # R18: no zone id (every zone id is refused).
-    "dc.corp.local.", "10.0.0.1.", "fe80::1",
+    # R18/R19: no zone id and not link-local.
+    "dc.corp.local.", "10.0.0.1.", "2001:db8::1",
 ])
 def test_invalid_target_reason_accepts(target):
     assert ks._invalid_target_reason(target) is None
@@ -1774,7 +1774,9 @@ def _sweep_targets():
                     f"fe80::1%1{c}",
                     # R18: zone-free literals, so the accepted IP branch is
                     # exercised (every zone id is refused).
-                    f"2001:db8::1{c}", f"{c}10.0.0.1"]
+                    f"2001:db8::1{c}", f"{c}10.0.0.1",
+                    # R19 WR-01: macOS's embedded-scope link-local shape.
+                    f"fe80:{c}::1", f"2001:db8:{c}::1"]
     marks = [chr(cp) for cp in range(0x300, 0x370) if ucd.category(chr(cp)) == "Mn"]
     marks.append("\u0345")
     for base in [chr(cp) for cp in range(0x1F80, 0x1FB0)]:
@@ -1804,9 +1806,18 @@ def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
             is_ip = True
         except ValueError:
             is_ip = False
+        assert "%" not in raw, repr(t)
         if is_ip:
+            # R19 WR-01: what it parses to, not only that it parses.  The
+            # resolver must give back the written address, with no scope, so
+            # no platform reads part of the address as an interface.
             assert raw.isascii(), repr(t)
-            ks.socket.getaddrinfo(raw, 88, flags=ks.socket.AI_NUMERICHOST)
+            want = ks.ipaddress.ip_address(raw)
+            for info in ks.socket.getaddrinfo(raw, 88, flags=ks.socket.AI_NUMERICHOST):
+                sa = info[4]
+                got = ks.ipaddress.ip_address(sa[0])
+                assert got == want or getattr(want, "ipv4_mapped", None) == got, (t, sa)
+                assert len(sa) == 2 or sa[3] == 0, (t, sa)
         assert not any(c.isspace() or ord(c) < 0x21 for c in wire), repr(t)
         ks._derive_realm(wire)  # never raises for an accepted target
     assert checked > 1000, checked
@@ -1919,24 +1930,39 @@ def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, g
     # these as IP literals and resolved nothing, while getaddrinfo IDNA-encoded
     # the non-ASCII string into a host-name lookup (xn--fe80::1%-0kb.attacker.example).
     "fe80::1%\u0131.attacker.example", "fe80::1%en\u0131", "::ffff:1.2.3.4%\u00e9",
-    # R16 WR-01: more than one trailing dot, and a zone id IDNA cannot encode.
+    # R16 WR-01: more than one trailing dot; and a long zone id (history: it was
+    # refused by an IDNA label check, now by the R18 every-zone rule).
     "dc01.corp.local\u2025", "dc01.corp.local..", "fe80::1%" + "a" * 64,
     # R17 IN-03: these fold to two trailing dots only after IDNA, so only the
     # one-trailing-dot rule refuses them.
     "dc01.corp.local\ufe30", "dc01.corp.local.\u2024",
-    # R17 CR-01/WR-01/IN-02: a zone that names no interface on this host.
+    # R17 CR-01/WR-01/IN-02 cases (history: refused by an interface check that
+    # R18 replaced with the every-zone rule).
     "fe80::1%en", "fe80::1%no-such-interface", "fe80::1%attacker.example",
     # R18 CR-01/WR-01/WR-03: macOS truncates a numeric zone to 16 bits
     # ("%65537" probed lo0), glibc takes any decimal; "%0" is scope 0.  Every
     # zone id is refused, valid-looking ones included.
     "fe80::1%65537", "fe80::1%4294967297", "fe80::1%4294967295", "fe80::1%0",
     "fe80::1%1", "fe80::1%lo0", "fe80::1%lo", "2001:db8::1%1",
+    # R19 CR-01/WR-02: link-local (macOS reads fe80:X:: as zone X; zone-free it
+    # is unreachable everywhere) and multicast (a KDC is unicast).
+    "fe80::1", "fe80:1::1", "fe80:7::1", "febf:1::1", "FE80:1:0:0:0:0:0:1",
+    "ff02::1", "224.0.0.1",
 ])
 def test_r16_targets_are_not_probed(target):
     assert ks._invalid_target_reason(target)
 
 
-@pytest.mark.parametrize("target", ["fe80::1", "::1", "10.0.0.1", "2001:db8::1",
-                                    "::ffff:10.0.0.1", "dc01.corp.local."])
+@pytest.mark.parametrize("target", ["::1", "10.0.0.1", "2001:db8::1", "2001:db8:1::1",
+                                    "::ffff:10.0.0.1", "169.254.1.1", "dc01.corp.local."])
 def test_r16_ascii_ip_literals_and_one_trailing_dot_are_accepted(target):
     assert ks._invalid_target_reason(target) is None
+
+
+@pytest.mark.parametrize("target, words", [
+    ("fe80::1%en0", "zone id"), ("fe80:1::1", "link-local"), ("ff02::1", "multicast"),
+])
+def test_ip_refusals_name_their_rule(target, words):
+    """230-REVIEW-R19 IN-01: each IP refusal is asserted by its own message, so a
+    later reordering cannot silently move it onto a different rule."""
+    assert words in ks._invalid_target_reason(target)

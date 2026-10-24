@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,664 lines, in reading order.
+Five guides, 7,665 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4722,8 +4722,9 @@ probed and reported as `kdc.xn--e1afmkfd`). A trailing dot is kept in that name,
 absolute, and is dropped only from the realm. A target that is not a usable host
 name (empty, not a string, containing a NUL, a control or surrogate character or inner
 whitespace, a name IDNA cannot encode, a name with an empty label or more than one trailing
-dot, an IPv6 address with a zone id such as `fe80::1%en0` (use the KDC's host name or a
-global address instead), or any form the
+dot, an IPv6 link-local address (`fe80::/10`) or any IPv6 address with a zone id such as
+`fe80::1%en0` (use the KDC's host name or a global address instead), a multicast address, or
+any form the
 trusted-targets check would read as a different host, such as `host:port`, `[v6]` or a URL,
 since the KDC port is always 88) is never probed, over Kerberos or LDAP. Neither is a
 target whose request cannot be built, for example because impacket rejects the configured

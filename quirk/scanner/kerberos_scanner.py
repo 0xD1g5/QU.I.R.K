@@ -296,7 +296,20 @@ def _invalid_target_reason(target):
             return ("KDC target is an IPv6 address with a zone id; use the KDC's "
                     "host name or a global address")
         if not raw.isascii():
+            # Defence in depth: ipaddress accepts only ASCII outside a zone id,
+            # and every zone id is refused above (R19 IN-01).
             return "KDC target is an IP address with non-ASCII characters"
+        addr = ipaddress.ip_address(raw)
+        # 230-REVIEW-R19 CR-01/WR-02: macOS reads the second 16-bit group of an
+        # fe80::/10 address as an embedded zone id, so "fe80:1::1" is probed as
+        # fe80::1 on lo0, an address the gate never checked.  Without a zone a
+        # link-local address is unreachable on every platform (EHOSTUNREACH,
+        # EINVAL), so it is refused.  A KDC is unicast, so multicast is too.
+        if addr.version == 6 and addr.is_link_local:
+            return ("KDC target is a link-local IPv6 address; use the KDC's "
+                    "host name or a global address")
+        if addr.is_multicast:
+            return "KDC target is a multicast address; a KDC is a unicast host"
         return None
     # 230-REVIEW-R11 IN-03: a name IDNA cannot encode can neither resolve nor
     # yield an ASCII realm, so it is rejected here, before any probe.
