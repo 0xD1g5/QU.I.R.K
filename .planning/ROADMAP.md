@@ -124,7 +124,7 @@ tag. Phases 228–232 have no hard ordering among themselves beyond the dependen
 - [x] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
 - [x] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
 - [x] **Phase 230: Findings That Fire** - Code-signing EKU, Kerberos etype, JWKS auth, `--auth-basic` and `alg: none` detection work in real scans
-- [ ] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
+- [x] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
 - [ ] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
 - [ ] **Phase 233: P2b Measurement Instrument** - A third, independent instrument measures scan-depth dilution on the calibration ladder and its result is recorded before any fix is chosen
 - [ ] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
@@ -284,7 +284,7 @@ Plans:
   2. All five calibration-ladder rungs are re-measured after the change and recorded beside their Phase 233 pre-change values.
   3. For the same scan, the CLI report and the dashboard show the same new readiness score.
   4. Re-running the Phase 233 instrument on the changed model shows no score increase from adding only healthy endpoints, and `999.120` is closed with the commit cited.
-  5. (SCORE-10, added 2026-10-25) The overall QRAMM score no longer counts a "Not assessed" dimension as 0, and the CLI, dashboard and print/PDF surfaces show the same overall for the same session. This is a separate QRAMM-model change, not part of the P2b fix.
+  5. (SCORE-10, added 2026-10-25) The overall QRAMM score no longer counts a "Not assessed" dimension as 0, and the CLI, dashboard and print/PDF surfaces show the same overall for the same session. A dimension score saved before newer answers is never shown labelled "Self-assessed" or counted as a maturity level (Phase 231 R1 WR-01, todo `261025-qramm-stale-score-labelled-self-assessed`). This is a separate QRAMM-model change, not part of the P2b fix.
 **Plans**: TBD
 **UI hint**: yes
 
@@ -308,7 +308,7 @@ Plans:
 | 228. Cross-Surface Score Parity | 10/10 | Complete (verified passed 5/5 at 0e25abca; code review 1 Critical + 1 Warning fixed in-phase (dab89ffc, 3b1d286c), WR-01..06 deferred to owned todos; CI green at 0e25abca, Python CI 38834562847 + Dashboard Quality 38834564861) | 2026-10-15 |
 | 229. Finding & State Correctness | 12/12 | Complete (verified passed 10/10 at 1848635e after 5 verifier gaps closed in-phase (false-closure paths: co-resident rows, legacy chains x2, per-host evidence, blocked mail ports); 3-iteration code review; CI green, Python CI 38916184370 + Dashboard Quality 38916187404) | 2026-10-16 |
 | 230. Findings That Fire | 8/8 | Complete (verified passed 5/5 at 1072cdf4 after gap closure 230-08 (UDP fallback shares the TCP classifier; 0/65 false no-preauth live); review rounds R8-R22 hardened the Kerberos target path (gate/scanner same-address, IDNA wire name, zone/link-local/unspecified refusals, LDAP referrals off), R21/R22 0 blockers; follow-ups owned by 999.136; CI green, Python CI 40062953209 + Dashboard Quality 40062954891) | 2026-10-24 |
-| 231. QRAMM Scoring Surfaces | 0/TBD | Not started | - |
+| 231. QRAMM Scoring Surfaces | 10/10 | Complete (verified passed 5/5 at c09a809b; live print/PDF re-check passed with artifacts kept; review R1 0 blockers, WR-01 owned by SCORE-10 (Phase 234), WR-02/IN-01..04/IN-06 by 999.137, IN-05 by 999.136; 231-10 fixed the allow_abbrev gate 231-02 broke; CI green, Python CI 40207661100 + Dashboard Quality 40207663143) | 2026-10-25 |
 | 232. Post-Launch Visible Fixes | 0/TBD | Not started | - |
 | 233. P2b Measurement Instrument | 0/TBD | Not started | - |
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 0/TBD | Not started | - |

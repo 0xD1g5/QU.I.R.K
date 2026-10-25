@@ -62,7 +62,9 @@ HORIZON prose:
       Found by 231-08 and left out of Phase 231 on purpose (that phase changes no scoring). The fix
       defines how an unassessed dimension enters the overall (excluded from the denominator, or the
       overall is pending until every dimension is assessed), and the CLI, dashboard and print/PDF
-      surfaces agree on the result for the same session. Added 2026-10-25 (operator).
+      surfaces agree on the result for the same session. A dimension score saved before newer
+      answers is never shown labelled "Self-assessed" or counted as a maturity level (Phase 231 R1
+      WR-01, todo `261025-qramm-stale-score-labelled-self-assessed`). Added 2026-10-25 (operator).
 
 ### Cross-surface score parity (XSURF)
 
