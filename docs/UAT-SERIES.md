@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -8829,7 +8829,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires multi-step interactive UI navigation to answer QRAMM questions and calculate a score, not practically automatable headless in this pass)
 **Date:** __________  **Tester:** __________
-**Notes:** UAT-55-03
+**Notes:** UAT-55-03. Phase 231 changed this behaviour (SGRM/DPE/ITR rows now show self-assessed scores; the print tiers are Scanner-measured / Self-assessed / Not assessed); see Series 231.
 
 ---
 
@@ -8890,7 +8890,7 @@ The compliance map maintenance cadence and upgrade procedure for regulator revis
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires a scored QRAMM session reached via multi-step interactive UI, not practically automatable headless in this pass)
 **Date:** __________  **Tester:** __________
-**Notes:** UAT-56-01
+**Notes:** UAT-56-01. Phase 231 changed this behaviour (SGRM/DPE/ITR rows now show self-assessed scores; the print tiers are Scanner-measured / Self-assessed / Not assessed); see Series 231.
 
 ---
 
@@ -33557,3 +33557,189 @@ gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomO
 **Result:** - [x] PASS (2026-10-23 209 passed — covered by `tests/test_kerberos_probe_principal_config.py` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_configured_principal_is_sent_on_the_wire` and `tests/test_kerberos_preauth_wire.py::TestKerberosPreauthWire::test_principal_unknown_reply_yields_honest_row` -- CI-EXEMPT: the TestKerberosPreauthWire nodes need impacket, which CI's Linux Full Suite excludes because .[all] omits the identity extra, registered as ci_extras_gap in tests/skip_registry.py, so they honestly skip in CI and run locally; adding an [identity] CI leg is operator-reserved)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-23  **Tester:** automated
 **Notes:** Plan 230-02 (D-24/D-25). The config file (207 passed after 230-08 added the UDP-leg tests and the invariant; 72 after the 230-REVIEW rounds; 10 at plan close) is CI-visible and needs no impacket; the two wire nodes (2 passed) are LOCAL-ONLY and skip in CI (ci_extras_gap), same as UAT-230-03. The principal-unknown row's two effects (counts as assessed in identity and coverage) are pinned, not endorsed, by test_principal_unknown_row_counts_as_assessed_pinned and owned by todo 261023-detect-kerberos-placeholder-rows-count-as-assessed (999.120). kerberos_probe_principal is YAML-only; dashboard parity is todo 261023-detect-kerberos-probe-principal-dashboard-parity (999.121).
+
+## Series 231: QRAMM Scoring Surfaces (Phase 231 — v5.28)
+
+**Last Updated:** 2026-10-25 (Phase 231)
+
+### UAT-231-01: The compliance map refetches after a successful Calculate Score and announces the update
+
+**ID:** UAT-231-01
+**Title:** The compliance map refetches after a successful Calculate Score and announces the update
+**Maps to:** QRAMM-17
+
+**What to test:** After a successful Calculate Score the Compliance Map tab issues a second /compliance-map request through fetchApi and a polite status region announces "Compliance map updated."; a failed or thrown Calculate Score triggers no refetch and no announcement; the WR-13 guard still holds, so a scoreResult change with a stable sessionId does not refetch.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/qramm/__tests__/compliance-map-tab.test.tsx
+```
+
+**Pass Criteria:** The run reports 10 passed.
+
+**Result:** - [x] PASS (2026-10-25 10 passed — covered by `src/dashboard/src/components/qramm/__tests__/compliance-map-tab.test.tsx::"refetches the compliance map after a successful Calculate Score"` and `src/dashboard/src/components/qramm/__tests__/compliance-map-tab.test.tsx::"does not refetch when scoreResult mutates but sessionId is stable"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-05 (fix commit e280eb48). The 10 passed is the whole file: the three pre-existing WR-13 cases unmodified, plus the refetch-on-success, no-refetch-on-failure, no-refetch-on-throw and four status-region cases. Closes todo 261002 Cause B.
+
+### UAT-231-02: An unanswered dimension reads Not assessed on the scorecard and is left out of the Maturity Distribution
+
+**ID:** UAT-231-02
+**Title:** An unanswered dimension reads Not assessed on the scorecard and is left out of the Maturity Distribution
+**Maps to:** QRAMM-18
+
+**What to test:** A dimension with no answered question shows a secondary "Not assessed" badge and "—" for its Raw and Weighted scores, is excluded from the Maturity Distribution buckets, and is counted in the "N dimensions not assessed" line; a partially answered dimension is bucketed by its score; the decision follows the live answered count, never the stored score.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/qramm/__tests__/scorecard-maturity.test.tsx
+```
+
+**Pass Criteria:** The run reports 18 passed.
+
+**Result:** - [x] PASS (2026-10-25 18 passed — covered by `src/dashboard/src/components/qramm/__tests__/scorecard-maturity.test.tsx::"renders Not assessed for a dimension with no answered question"` and `src/dashboard/src/components/qramm/__tests__/scorecard-maturity.test.tsx::"excludes a not-assessed dimension from the Maturity Distribution"` and `src/dashboard/src/components/qramm/__tests__/scorecard-maturity.test.tsx::"buckets a partially answered dimension by its score"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-04 (fix commit 63a35a33). The 18 passed is the whole file: 9 pre-existing cases, which gained real answer fixtures with no assertion removed, plus 9 new cases. The overall QRAMM score is unchanged by this phase and still averages a Not assessed dimension in as 0; that is tracked separately as SCORE-10 for Phase 234.
+
+### UAT-231-03: The compliance-map endpoint returns self-assessed SGRM/DPE/ITR rows and leaves unanswered dimensions unscored
+
+**ID:** UAT-231-03
+**Title:** The compliance-map endpoint returns self-assessed SGRM/DPE/ITR rows and leaves unanswered dimensions unscored
+**Maps to:** QRAMM-19
+
+**What to test:** An answered SGRM, DPE or ITR dimension comes back with coverage_status self-assessed and a relevance score of static_weight × dimension score / 4, at full weight with no scanner ceiling; any dimension with zero answered questions, CVI included, comes back pending with a null score; the static scanner-coverage dict never gains the self-assessed value.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_qramm_compliance_map.py::test_answered_manual_dimension_is_self_assessed \
+  tests/test_qramm_compliance_map.py::test_self_assessed_score_is_full_weight_without_ceiling \
+  tests/test_qramm_compliance_map.py::test_unanswered_manual_dimension_stays_pending \
+  tests/test_qramm_compliance_map.py::test_unanswered_cvi_is_pending_not_covered_zero \
+  tests/test_qramm_compliance_map.py::test_compliance_map_endpoint_reads_live_answers \
+  tests/test_compliance_coverage_status.py
+```
+
+**Pass Criteria:** The run reports 11 passed.
+
+**Result:** - [x] PASS (2026-10-25 11 passed — covered by `tests/test_qramm_compliance_map.py::test_answered_manual_dimension_is_self_assessed` and `tests/test_qramm_compliance_map.py::test_self_assessed_score_is_full_weight_without_ceiling` and `tests/test_qramm_compliance_map.py::test_unanswered_manual_dimension_stays_pending` and `tests/test_qramm_compliance_map.py::test_unanswered_cvi_is_pending_not_covered_zero` and `tests/test_qramm_compliance_map.py::test_compliance_map_endpoint_reads_live_answers` and `tests/test_compliance_coverage_status.py`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-01 (commits 75ab5aa4, 7bdbd355), implementing operator decision D-01 (show manually assessed rows, marked self-assessed) and D-02a (an unanswered CVI is pending too). The 11 passed is the five named endpoint nodes plus the whole coverage-status file (6). The live-answers node seeds real answers through the database and reads them back through the TestClient endpoint. Closes todo 261002 Cause A at the API layer.
+
+### UAT-231-04: The Compliance Map tab labels every row Scanner-measured, Self-assessed or Not assessed in text
+
+**ID:** UAT-231-04
+**Title:** The Compliance Map tab labels every row Scanner-measured, Self-assessed or Not assessed in text
+**Maps to:** QRAMM-19
+
+**What to test:** Every practice-area row carries an Assessment text badge taken from coverage_status, never from scanner_informed; self-assessed SGRM/DPE rows show their scores; not-assessed rows show em dashes; a null coverage_status reads Not assessed; the legend shows three titled tiers and the footnote is the shared coverage sentence.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/components/qramm/__tests__/compliance-map-self-assessed.test.tsx
+```
+
+**Pass Criteria:** The run reports 8 passed.
+
+**Result:** - [x] PASS (2026-10-25 8 passed — covered by `src/dashboard/src/components/qramm/__tests__/compliance-map-self-assessed.test.tsx::"labels self-assessed rows with text and shows their scores"` and `src/dashboard/src/components/qramm/__tests__/compliance-map-self-assessed.test.tsx::"labels unanswered rows Not assessed and shows em dashes"` and `src/dashboard/src/components/qramm/__tests__/compliance-map-self-assessed.test.tsx::"renders the shared coverage sentence as the footnote"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-05 (fix commit fd6889ba), on the vocabulary module from plan 231-03 (commit a641951e). The rows are the real 96-row D-09 contract fixture. The marker is text, not colour alone (D-05).
+
+### UAT-231-05: The print/PDF QRAMM page reads the persisted score and shows the Assessment column, per-framework counts and chips
+
+**ID:** UAT-231-05
+**Title:** The print/PDF QRAMM page reads the persisted score and shows the Assessment column, per-framework counts and chips
+**Maps to:** QRAMM-19
+
+**What to test:** The print hook reads the persisted score from GET /api/qramm/sessions/{id} through the real fetchApi, never the POST-only /score route, and surfaces a non-JSON body as an error rather than a crash; the print Dimension Scorecard has an Assessment column; the retired Coverage Tier column is replaced by Scanner-measured, Self-assessed and Not assessed counts per framework; every detail row carries a text chip.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/hooks/__tests__/useQRAMMPrintData.test.ts src/pages/__tests__/print-qramm-self-assessed.test.tsx
+```
+
+**Pass Criteria:** The run reports 11 passed.
+
+**Result:** - [x] PASS (2026-10-25 11 passed — covered by `src/dashboard/src/pages/__tests__/print-qramm-self-assessed.test.tsx::"shows an Assessment column on the print Dimension Scorecard"` and `src/dashboard/src/pages/__tests__/print-qramm-self-assessed.test.tsx::"shows per-framework composition counts"` and `src/dashboard/src/pages/__tests__/print-qramm-self-assessed.test.tsx::"labels every detail row with an assessment chip"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-06 (commits d4295641 for the D-20 hook fix, 54e0952a for the rendering, eabc6cf2 for the fixture-coverage reasons). The 11 passed is the hook file (4) plus the print file (7). The hook half is `src/dashboard/src/hooks/__tests__/useQRAMMPrintData.test.ts`, whose node "reads the persisted score from the session endpoint" stubs only global fetch with real Response objects, so the real hook and the real fetchApi run. That file is a .test.ts, outside the citation guard's .test.tsx vitest dialect, so it is named here in Notes rather than as a guarded citation; the run above executed it.
+
+### UAT-231-06: Every QRAMM surface agrees on the assessed state of each dimension over one shared contract
+
+**ID:** UAT-231-06
+**Title:** Every QRAMM surface agrees on the assessed state of each dimension over one shared contract
+**Maps to:** QRAMM-18, QRAMM-19
+
+**What to test:** The compliance-map endpoint, the Compliance Map tab, the Scorecard tab and the print page all read the committed contract fixture and agree on which dimensions are scanner-measured, self-assessed and not assessed; the endpoint's rows equal the contract rows; the tab and the print page carry the same coverage sentence.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_qramm_assessment_parity.py
+cd src/dashboard && npx vitest run src/components/qramm/__tests__/qramm-assessment-parity.test.tsx
+```
+
+**Pass Criteria:** The pytest run reports 5 passed and the vitest run reports 5 passed.
+
+**Result:** - [x] PASS (2026-10-25 5 passed pytest and 5 passed vitest — covered by `tests/test_qramm_assessment_parity.py::test_endpoint_rows_match_contract` and `tests/test_qramm_assessment_parity.py::test_endpoint_dimension_states_match_contract` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"every QRAMM surface agrees with the contract's dimension states"` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"every QRAMM surface marks the same dimensions Not assessed"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plans 231-01 (commit c74b3fcd, pytest half and the contract fixture) and 231-07 (commit 6d55c5b1, vitest half). D-09: one mutation of the contract fixture turns both halves red. The fixture is src/dashboard/src/lib/__fixtures__/qramm-assessment-contract.json.
+
+### UAT-231-07: A live Export PDF of a scored session reaches data-ready and renders Self-assessed
+
+**ID:** UAT-231-07
+**Title:** A live Export PDF of a scored session reaches data-ready and renders Self-assessed
+**Maps to:** QRAMM-19
+
+**What to test:** On a running `quirk serve`, /print for a scored QRAMM session reaches body data-ready without any request to the POST-only /score route, the QRAMM section shows all three assessment labels, and POST /api/export/pdf returns a PDF instead of timing out (D-20).
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/hooks/__tests__/useQRAMMPrintData.test.ts src/pages/__tests__/print-qramm-self-assessed.test.tsx
+```
+
+**Pass Criteria:** The run reports 11 passed, and the recorded live check shows data-ready reached, no /score request, and an HTTP 200 application/pdf export.
+
+**Result:** - [x] PASS (2026-10-25 11 passed — covered by `src/dashboard/src/pages/__tests__/print-qramm-self-assessed.test.tsx::"labels every detail row with an assessment chip"` with the live leg observed by plan 231-07 on 2026-10-24, see Notes)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** The hook node is `src/dashboard/src/hooks/__tests__/useQRAMMPrintData.test.ts` "reads the persisted score from the session endpoint", run above in the same 11 passed. LIVE LEG, observed by plan 231-07 on 2026-10-24 against a sqlite-backup snapshot, never the canonical DB: `quirk serve` on 127.0.0.1:8613 from the rebuilt bundle of commit e92144df; a session answered with the contract's 38 answers and scored; /print in headless Chromium reached body data-ready="true" 1.08 s after a networkidle goto; its API requests were /api/config, /api/scans, /api/scan/latest, /api/qramm/sessions, /api/qramm/sessions/2 and /api/qramm/sessions/2/compliance-map, with no /score request; the page text contained Self-assessed, Not assessed and Scanner-measured and no Manual only or Coverage Tier; POST /api/export/pdf returned HTTP 200 application/pdf, 205340 bytes, in 1.39 s, and its extracted text contained Self-assessed 51 times. No source or bundle file changed between that check and this disposition (git log e92144df..HEAD -- src/dashboard quirk/ run_scan.py is empty). Before the D-20 fix the hook sent a GET to the POST-only /score, the SPA fallback answered HTML, data-ready was never set and the PDF export timed out after 15 s.
+
+### UAT-231-08: quirk doctor, quirk qramm and quirk cve print their own help and run nothing
+
+**ID:** UAT-231-08
+**Title:** quirk doctor, quirk qramm and quirk cve print their own help and run nothing
+**Maps to:** QRAMM-20
+
+**What to test:** `quirk doctor --help`, `quirk qramm --help`, `quirk qramm status --help`, `quirk cve --help` and `quirk cve status --help` print their own usage and exit 0 with no health check, DNS lookup, dashboard probe or database access; `cve status --help` lists `--format {text,json}`.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_cli_help_doctor_qramm_cve.py::test_help_prints_own_usage_and_exits_zero \
+  tests/test_cli_help_doctor_qramm_cve.py::test_help_runs_nothing_in_process \
+  tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_help_lists_format
+```
+
+**Pass Criteria:** The run reports 11 passed.
+
+**Result:** - [x] PASS (2026-10-25 11 passed — covered by `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_help_lists_format` and the two parametrized help tests named in Notes)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-02 (test commit 9506a036, fix commit 50f78b82). The 11 passed is the Steps command above: test_help_prints_own_usage_and_exits_zero and test_help_runs_nothing_in_process in the same file, each parametrized over the five help invocations, plus the cited format-help node, so 5 + 5 + 1. Those two are named here without their file prefix on purpose: every one of their parametrize ids contains a space, such as doctor --help, and the citation guard's collect-only line pattern in tests/test_uat_disposition_integrity.py keeps only node ids with no whitespace, so a citation of either base would be reported unresolvable although pytest selects it. That guard limitation is recorded for follow-up, not worked around. The in-process node also sentinels socket, urlopen and sqlite3.connect, so help is proven to do no I/O. Closes todo 261012.
+
+### UAT-231-09: Unknown actions and extra arguments are usage errors, and cve status --format=json emits JSON
+
+**ID:** UAT-231-09
+**Title:** Unknown actions and extra arguments are usage errors, and cve status --format=json emits JSON
+**Maps to:** QRAMM-20
+
+**What to test:** `quirk qramm foo`, `quirk cve foo`, bare `quirk qramm` and `quirk cve`, `quirk doctor extra`, `quirk qramm status extra` and `quirk cve status --format xml` exit 2 with the command's own usage on stderr and never fall through to the scan parser; `quirk cve status --format=json` and `--format json` both emit JSON, and the handler receives the format value.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_cli_help_doctor_qramm_cve.py::test_unknown_action_or_argument_is_usage_error \
+  tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_format_equals_json_emits_json \
+  tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_format_space_json_emits_json \
+  tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_passes_format_to_handler
+```
+
+**Pass Criteria:** The run reports 10 passed.
+
+**Result:** - [x] PASS (2026-10-25 10 passed — covered by `tests/test_cli_help_doctor_qramm_cve.py::test_unknown_action_or_argument_is_usage_error` and `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_format_equals_json_emits_json` and `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_format_space_json_emits_json` and `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_passes_format_to_handler`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-25  **Tester:** automated
+**Notes:** Plan 231-02 (fix commit 50f78b82, D-12 and D-12a). The usage-error test is parametrized over seven invocations, so the run reports 7 + 1 + 1 + 1. Behaviour changes, recorded in changelog.d/phase-231.bugfix.md: extra arguments to doctor used to be ignored and now exit 2; `--format=json` used to print text; `--format xml` used to exit 0. No tracked script, workflow or lab file passes extra arguments to doctor.
