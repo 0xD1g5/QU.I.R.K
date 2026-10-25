@@ -31,9 +31,9 @@ HORIZON prose:
    evidence. A requirement here closes its todo, and the todo moves to `todos/completed/` with the
    closing commit cited.
 3. **QRAMM Cause A is an open product decision**, recorded in
-   `.planning/todos/pending/261002-qramm-compliance-map-scores-never-populate.md`. The operator
-   deferred it to the QRAMM phase discuss (2026-10-15). Cause B (no refetch) is a bug whatever the
-   Cause A answer is.
+   `.planning/todos/completed/261002-qramm-compliance-map-scores-never-populate.md`. The operator
+   deferred it to the QRAMM phase discuss (2026-10-15), and decided 2026-10-24: shown, marked
+   self-assessed (Phase 231 D-01). Cause B (no refetch) is a bug whatever the Cause A answer is.
 4. **117 of the 118 `doc224` todos have no owner field.**
    `tests/test_backlog_reconciliation_gate.py::test_no_pending_todo_points_at_a_closed_owner` cannot
    police a todo with no owner, so the pool is invisible to every gate.
@@ -106,12 +106,12 @@ HORIZON prose:
 
 ### QRAMM (QRAMM)
 
-- [ ] **QRAMM-17**: After a successful Calculate Score, the compliance map tab refetches and shows
+- [x] **QRAMM-17**: After a successful Calculate Score, the compliance map tab refetches and shows
       the new rows without a remount, and the existing no-refetch-loop test stays green (todo `261002`
       Cause B).
-- [ ] **QRAMM-18**: A dimension with no answers shows as "Not assessed" on the scorecard and is not
+- [x] **QRAMM-18**: A dimension with no answers shows as "Not assessed" on the scorecard and is not
       counted as level 1 in the Maturity Distribution (todo `261002` scorecard flaw).
-- [ ] **QRAMM-19**: The compliance map's treatment of manually assessed SGRM, DPE and ITR is decided
+- [x] **QRAMM-19**: The compliance map's treatment of manually assessed SGRM, DPE and ITR is decided
       by the operator in the phase discuss (shown and marked self-assessed, or excluded with a clearer
       explanation) and implemented on every surface that reads those rows, including the print/PDF
       QRAMM page (todo `261002` Cause A).
@@ -199,9 +199,9 @@ Deferred from this milestone with an owner:
 | DETECT-03 | Phase 230 | Complete |
 | DETECT-04 | Phase 230 | Complete |
 | DETECT-05 | Phase 230 | Complete |
-| QRAMM-17 | Phase 231 | Pending |
-| QRAMM-18 | Phase 231 | Pending |
-| QRAMM-19 | Phase 231 | Pending |
+| QRAMM-17 | Phase 231 | Complete |
+| QRAMM-18 | Phase 231 | Complete |
+| QRAMM-19 | Phase 231 | Complete |
 | QRAMM-20 | Phase 231 | Complete |
 | POLISH-01 | Phase 232 | Pending |
 | POLISH-02 | Phase 232 | Pending |
