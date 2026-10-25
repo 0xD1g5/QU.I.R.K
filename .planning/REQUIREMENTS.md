@@ -56,6 +56,13 @@ HORIZON prose:
       and its skip-registry row is removed. All five calibration-ladder rungs are re-measured after
       the change and recorded beside the pre-change values, and the CLI report and dashboard agree
       on the new score for the same scan.
+- [ ] **SCORE-10**: The overall QRAMM score does not count a "Not assessed" dimension as 0.
+      `compute_overall_score` (`quirk/qramm/scoring.py`) averages all four dimensions, so a dimension
+      with zero answers drags the overall maturity down instead of being left out of the average.
+      Found by 231-08 and left out of Phase 231 on purpose (that phase changes no scoring). The fix
+      defines how an unassessed dimension enters the overall (excluded from the denominator, or the
+      overall is pending until every dimension is assessed), and the CLI, dashboard and print/PDF
+      surfaces agree on the result for the same session. Added 2026-10-25 (operator).
 
 ### Cross-surface score parity (XSURF)
 
@@ -179,6 +186,7 @@ Deferred from this milestone with an owner:
 |-------------|-------|--------|
 | SCORE-08 | Phase 233 | Pending |
 | SCORE-09 | Phase 234 | Pending |
+| SCORE-10 | Phase 234 | Pending |
 | XSURF-05 | Phase 228 | Complete |
 | XSURF-06 | Phase 228 | Complete |
 | XSURF-07 | Phase 228 | Complete |

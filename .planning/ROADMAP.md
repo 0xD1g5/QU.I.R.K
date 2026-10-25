@@ -103,7 +103,7 @@ insistence on a real, correctly-formed tag rather than another silent gap.
 **Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
 The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
 scoring surfaces work.
-Requirements: `.planning/REQUIREMENTS.md` (28, incl. LAUNCH-01..05 added 2026-10-16: SCORE-08..09, XSURF-05..08, FIND-11..13,
+Requirements: `.planning/REQUIREMENTS.md` (29, incl. LAUNCH-01..05 added 2026-10-16 and SCORE-10 added 2026-10-25: SCORE-08..10, XSURF-05..08, FIND-11..13,
 DETECT-01..05, QRAMM-17..20, POLISH-01..04, OWN-01).
 
 **Sequencing.** OWN-01 opens the milestone (Phase 227) because it is small and independent, and
@@ -278,12 +278,13 @@ Plans:
 ### Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement
 **Goal**: The readiness score no longer rewards scan depth: adding healthy endpoints to an observation does not raise it, and the whole calibration ladder is re-measured on the changed model so every rung's new value is known and agreed across surfaces.
 **Depends on**: Phase 233 (the fix shape is the one Phase 233's measurement supports)
-**Requirements**: SCORE-09
+**Requirements**: SCORE-09, SCORE-10
 **Success Criteria** (what must be TRUE):
   1. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` passes without `xfail`, and its `known_open_defect` row in `tests/skip_registry.py` is removed.
   2. All five calibration-ladder rungs are re-measured after the change and recorded beside their Phase 233 pre-change values.
   3. For the same scan, the CLI report and the dashboard show the same new readiness score.
   4. Re-running the Phase 233 instrument on the changed model shows no score increase from adding only healthy endpoints, and `999.120` is closed with the commit cited.
+  5. (SCORE-10, added 2026-10-25) The overall QRAMM score no longer counts a "Not assessed" dimension as 0, and the CLI, dashboard and print/PDF surfaces show the same overall for the same session. This is a separate QRAMM-model change, not part of the P2b fix.
 **Plans**: TBD
 **UI hint**: yes
 
