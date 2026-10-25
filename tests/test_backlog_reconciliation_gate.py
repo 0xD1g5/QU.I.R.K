@@ -822,6 +822,7 @@ def test_narrowing_is_not_vacuous_on_the_real_corpus():
 # ---------------------------------------------------------------------------
 
 TODOS_PENDING_DIR = REPO_ROOT / ".planning" / "todos" / "pending"
+TODOS_COMPLETED_DIR = REPO_ROOT / ".planning" / "todos" / "completed"
 ROADMAP_PATH = REPO_ROOT / ".planning" / "ROADMAP.md"
 
 _CLOSED_PHASE_RE = re.compile(r"^\s*-\s*\[[xX]\]\s*\*\*Phase\s+(\d+(?:\.\d+)*)\b", re.M)
@@ -1091,7 +1092,13 @@ def test_every_doc224_todo_has_a_live_owner():
 
     owners = [_owner_of(p.read_text(encoding="utf-8", errors="replace"))[0] for p in todo_paths]
     n_backlog = sum(1 for o in owners if o and o.startswith("999."))
-    n_req = sum(1 for o in owners if o and not o.startswith("999."))
+    # Phase 231: QRAMM-20 closed the last requirement-owned pending doc224 todo; liveness_owners
+    # proves requirement-owner parsing on completed/ todos; offender checks stay pending-only.
+    liveness_owners = [
+        _owner_of(p.read_text(encoding="utf-8", errors="replace"))[0]
+        for p in sorted(TODOS_PENDING_DIR.glob(DOC224_GLOB)) + sorted(TODOS_COMPLETED_DIR.glob(DOC224_GLOB))
+    ]
+    n_req = sum(1 for o in liveness_owners if o and not o.startswith("999."))
     assert todo_paths and req_states and rows and n_req >= 1 and n_backlog >= 1, (
         f"vacuous: {len(todo_paths)} doc224 todos, {len(req_states)} requirement states, "
         f"{len(rows)} HORIZON 999.* rows, {n_req} requirement owners, {n_backlog} 999.* owners "

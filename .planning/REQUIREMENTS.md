@@ -115,7 +115,7 @@ HORIZON prose:
       by the operator in the phase discuss (shown and marked self-assessed, or excluded with a clearer
       explanation) and implemented on every surface that reads those rows, including the print/PDF
       QRAMM page (todo `261002` Cause A).
-- [ ] **QRAMM-20**: `quirk qramm --help`, `quirk doctor --help` and `quirk cve --help` print their
+- [x] **QRAMM-20**: `quirk qramm --help`, `quirk doctor --help` and `quirk cve --help` print their
       own usage and exit 0 without running anything, an unknown action is an error, and
       `cve status --format` is listed (todo `261012-doc224-doctor-qramm-cve-do-not-implement-help`).
 
@@ -202,7 +202,7 @@ Deferred from this milestone with an owner:
 | QRAMM-17 | Phase 231 | Pending |
 | QRAMM-18 | Phase 231 | Pending |
 | QRAMM-19 | Phase 231 | Pending |
-| QRAMM-20 | Phase 231 | Pending |
+| QRAMM-20 | Phase 231 | Complete |
 | POLISH-01 | Phase 232 | Pending |
 | POLISH-02 | Phase 232 | Pending |
 | POLISH-03 | Phase 232 | Pending |
