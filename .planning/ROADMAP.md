@@ -240,16 +240,16 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 231-01-PLAN.md — QRAMM-19: per-session assessed state; endpoint emits `self-assessed` at full weight, zero-answer dimensions `pending`/null (D-01..D-04, D-02a); shared contract fixture + pytest parity half; print data from `GET /sessions/{id}` server half (D-20) (wave 1)
-- [ ] 231-02-PLAN.md — QRAMM-20: argparse for `doctor`/`qramm`/`cve`; `--help` runs nothing, unknown action exits 2, `cve status --format {text,json}` (D-11, D-12, D-12a) (wave 1)
-- [ ] 231-03-PLAN.md — QRAMM-18/19: `lib/qramm-assessment.ts` shared labels, predicate and coverage sentence; `coverage_status` on the row type (D-05, D-07, D-07a, D-09) (wave 1)
-- [ ] 231-04-PLAN.md — QRAMM-18: scorecard "Not assessed", excluded from Maturity Distribution, "—" scores; existing cases re-fixtured, assertions kept (D-07, D-08, D-21a) (wave 2)
-- [ ] 231-05-PLAN.md — QRAMM-17/19: compliance map refetch via `reloadKey` + sr-only status; Assessment column, three-tier legend, shared sentence (D-10, D-05, D-06a, D-21c) (wave 2)
-- [ ] 231-06-PLAN.md — QRAMM-19: print hook reads `GET /sessions/{id}` through the real hook; print Assessment column, per-framework counts, chips (D-20, D-06a, D-21a/b) (wave 2)
-- [ ] 231-07-PLAN.md — Cross-surface parity vitest; single bundle rebuild; live print/PDF check on a scratch DB (D-09, D-15, D-20) (wave 3)
-- [ ] 231-08-PLAN.md — Docs: operators-guide §21 + new §22 QRAMM tabs, report-interpretation §9; ledger rows enumerated from source and re-verified; master guide, vault (D-13, D-18) (wave 4)
-- [ ] 231-09-PLAN.md — UAT Series 231; requirement flips with todo closures; owner-gate liveness kept non-vacuous (D-18, D-19) (wave 5)
-- [ ] 231-10-PLAN.md — Full-suite baseline compare, Python 3.11 run, dashboard gates, VALIDATION sign-off, Obsidian phase note (D-16) (wave 6)
+- [x] 231-01-PLAN.md — QRAMM-19: per-session assessed state; endpoint emits `self-assessed` at full weight, zero-answer dimensions `pending`/null (D-01..D-04, D-02a); shared contract fixture + pytest parity half; print data from `GET /sessions/{id}` server half (D-20) (wave 1)
+- [x] 231-02-PLAN.md — QRAMM-20: argparse for `doctor`/`qramm`/`cve`; `--help` runs nothing, unknown action exits 2, `cve status --format {text,json}` (D-11, D-12, D-12a) (wave 1)
+- [x] 231-03-PLAN.md — QRAMM-18/19: `lib/qramm-assessment.ts` shared labels, predicate and coverage sentence; `coverage_status` on the row type (D-05, D-07, D-07a, D-09) (wave 1)
+- [x] 231-04-PLAN.md — QRAMM-18: scorecard "Not assessed", excluded from Maturity Distribution, "—" scores; existing cases re-fixtured, assertions kept (D-07, D-08, D-21a) (wave 2)
+- [x] 231-05-PLAN.md — QRAMM-17/19: compliance map refetch via `reloadKey` + sr-only status; Assessment column, three-tier legend, shared sentence (D-10, D-05, D-06a, D-21c) (wave 2)
+- [x] 231-06-PLAN.md — QRAMM-19: print hook reads `GET /sessions/{id}` through the real hook; print Assessment column, per-framework counts, chips (D-20, D-06a, D-21a/b) (wave 2)
+- [x] 231-07-PLAN.md — Cross-surface parity vitest; single bundle rebuild; live print/PDF check on a scratch DB (D-09, D-15, D-20) (wave 3)
+- [x] 231-08-PLAN.md — Docs: operators-guide §21 + new §22 QRAMM tabs, report-interpretation §9; ledger rows enumerated from source and re-verified; master guide, vault (D-13, D-18) (wave 4)
+- [x] 231-09-PLAN.md — UAT Series 231; requirement flips with todo closures; owner-gate liveness kept non-vacuous (D-18, D-19) (wave 5)
+- [x] 231-10-PLAN.md — Full-suite baseline compare, Python 3.11 run, dashboard gates, VALIDATION sign-off, Obsidian phase note (D-16) (wave 6)
 
 ### Phase 232: Post-Launch Visible Fixes
 **Goal**: The small defects a public user sees first are gone: the dashboard's own font loads, install hints work when pasted into zsh, the report header carries the current brand, and the README works on PyPI.
