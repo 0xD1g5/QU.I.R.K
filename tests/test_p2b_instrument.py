@@ -45,16 +45,38 @@ here reads ``quirk-output/`` or touches the network; the snapshot node uses
 
 This file carries NO skip, skipif, xfail or slow marker: every node runs in
 the fast suite, so ``tests/test_skip_registry.py`` needs no registry entry
-(D-14). The only literal sweep values asserted are 212's recorded R5 computed
-pair 71 (+0) / 74 (+20) for the continuity reading (D-10). Every other number
-is a measurement plan 233-04 records, not a target (D-12).
+(D-14). No sweep value is asserted as a literal; the continuity reading is
+asserted FLAT (Phase 234 D-08), and 212's 71/74/78/82 is kept as history in
+that node's comment. Every number is a measurement the phase records, not a
+target (D-12).
+
+THE P2B GATE (Phase 234)
+------------------------
+Three gate nodes carry SCORE-09 (Phase 234 CONTEXT O-1: the gate is this
+instrument across all rungs and readings, not only the property xfail):
+
+* ``test_p2b_non_increase_all_rungs_all_readings`` (D-07(a)): over R1..R5 x
+  the four readings x +0/+20/+100/+500, neither emitted nor computed ever
+  rises. Red on scoring 3.0.
+* ``test_p2b_weakness_rows_lower_the_score`` (D-07(b), D-22): the
+  non-vacuity control. Adding weakness rows strictly lowers the score on
+  R2..R5 and pulls R1 below 100. It is green on 3.0 too (3.0 also lowers the
+  score when weakness is added), so its red proof is a mutation that zeroes
+  every weight, recorded in the 234-01 SUMMARY.
+* ``test_scan_error_rows_do_not_dilute`` (D-03): scan-error rows plus the
+  healthy sweep never raise emitted, computed, hygiene or modern_tls. The
+  scan-error rate sites are outside the ratio terms, so the sweep alone could
+  not see them. Red on scoring 3.0.
 
 WHEN THIS FILE GOES RED ON PURPOSE
 ----------------------------------
-When Phase 234 changes ``quirk/intelligence/scoring.py``, the closed-form
-nodes are EXPECTED to go red until the written spec in
-``scripts/p2b_closed_form.py`` is updated to the new model (D-10). That is the
-cross-check working, not a flake; update the spec, never the comparison.
+When ``quirk/intelligence/scoring.py`` changes, the closed-form nodes are
+EXPECTED to go red until the written spec in ``scripts/p2b_closed_form.py``
+matches the new model (D-10). That is the cross-check working, not a flake;
+update the spec, never the comparison. Phase 234 ran this in the other order
+(D-06, spec-first): the 4.0 spec was committed BEFORE the scorer changed, so
+the closed-form nodes were red against 3.0 until plan 234-03 landed the
+scorer.
 """
 from __future__ import annotations
 
@@ -91,12 +113,11 @@ from tests.test_score_properties import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLOSED_FORM_PATH = REPO_ROOT / "scripts" / "p2b_closed_form.py"
 
-# Numerator values for the one-field term probes on the R3 base (E = C = 40).
-# Never above 40, so no ratio exceeds 1.
-PROBE_VALUES = (1, 3, 7, 13, 20, 40)
-# Same probes on the R5 base (E = 38, C = 17), where E != C, so a RATIO_TERMS
-# row carrying the wrong denominator disagrees. Never above min(E, C) = 17.
-PROBE_VALUES_E_NE_C = (1, 3, 7, 13, 17)
+# Count values for the one-field term probes, used on BOTH bases (R3 and R5).
+# 39/40/41/80 straddle the N_REF = 40 saturation knee of the 4.0 count curve.
+# Denominators no longer exist (scoring 4.0, D-01), so the old E != C probe
+# set is retired; the R5 base stays only as a second evidence context.
+PROBE_VALUES = (1, 3, 7, 13, 20, 39, 40, 41, 80)
 
 # Fields every measure_point() result must carry (the pinned contract).
 POINT_KEYS = {
@@ -266,7 +287,7 @@ HEALTHY_ALLOWED_MOVES = {
 
 def _probe_paths(cf) -> List[Tuple[str, ...]]:
     paths: List[Tuple[str, ...]] = []
-    for _domain, path, _denom, _weight, _sign in cf.RATIO_TERMS:
+    for _domain, path, _weight, _sign in cf.COUNT_TERMS:
         if tuple(path) not in paths:
             paths.append(tuple(path))
     if ("motion_email_starttls_missing_count",) not in paths:
@@ -297,11 +318,33 @@ def _branch_probes(cf) -> Dict[str, Dict[str, Any]]:
 
     ev = _r3_typical_enterprise()
     ev["scan_error"] = {"count": 16, "rate": 0.4}
-    probes["scan-error-0.4"] = ev
+    probes["scan-error-count-16"] = ev
+
+    # A rate with no count: 4.0 reads the count only (D-03), so no penalty.
+    ev = _r3_typical_enterprise()
+    ev["scan_error"] = {"rate": 0.4}
+    probes["scan-error-rate-only"] = ev
 
     ev = _r3_typical_enterprise()
     ev["cert_key_type_counts"]["ECDSA"] = 1
     probes["ecdsa-1"] = ev
+
+    ev = _r3_typical_enterprise()
+    ev["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0, "PQC": 1}
+    probes["pqc-cert-1"] = ev
+
+    ev = _r3_typical_enterprise()
+    ev["cert_key_type_counts"]["PQC"] = 1
+    probes["pqc-cert-with-rsa"] = ev
+
+    # Only a placeholder Kerberos row: identity must be unassessed (D-11).
+    ev = _r3_typical_enterprise()
+    ev["certificate_observations"]["certs_observed"] = 0
+    for key in cf.IDENTITY_KEYS:
+        ev["protocol_counts"][key] = 0
+    ev["protocol_counts"]["KERBEROS"] = 1
+    ev["kerberos_placeholder_count"] = 1
+    probes["kerberos-placeholder-only"] = ev
 
     ev = _r3_typical_enterprise()
     ev["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0}
@@ -329,7 +372,7 @@ def _all_probes(cf) -> Dict[str, Tuple[Dict[str, Any], Dict[str, Any]]]:
     out: Dict[str, Tuple[Dict[str, Any], Dict[str, Any]]] = {}
     bases = (
         ("R3", _r3_typical_enterprise, PROBE_VALUES),
-        ("R5", _multihost_evidence, PROBE_VALUES_E_NE_C),
+        ("R5", _multihost_evidence, PROBE_VALUES),
     )
     for base_name, builder, values in bases:
         for path in _probe_paths(cf):
@@ -501,15 +544,36 @@ def test_closed_form_term_probes(cf):
     """
     empty = build_evidence_summary([], [])
     unresolved = [
-        ".".join(path) for _d, path, _den, _w, _s in cf.RATIO_TERMS
+        ".".join(path) for _d, path, _w, _s in cf.COUNT_TERMS
         if not _resolves(empty, tuple(path))
     ]
     assert not unresolved, (
-        "RATIO_TERMS key paths absent from build_evidence_summary([], []) "
-        f"output (a mistyped key hides behind a zero numerator): {unresolved}"
+        "COUNT_TERMS key paths absent from build_evidence_summary([], []) "
+        f"output (a mistyped key hides behind a zero count): {unresolved}"
     )
-    for _domain, _path, denom, _weight, _sign in cf.RATIO_TERMS:
-        assert denom in ("E", "C"), f"RATIO_TERMS denominator {denom!r}"
+    assert len(cf.COUNT_TERMS) == 35, (
+        f"COUNT_TERMS has {len(cf.COUNT_TERMS)} rows; the 35 ratio sites "
+        "each become one count term (D-01)"
+    )
+    for row in cf.COUNT_TERMS:
+        assert len(row) == 4, f"COUNT_TERMS row {row!r} is not 4 fields"
+        _domain, _path, weight, sign = row
+        assert weight > 0, f"COUNT_TERMS row {row!r}: weight {weight} <= 0"
+        assert sign in (-1, 1), f"COUNT_TERMS row {row!r}: sign {sign}"
+    # The 4.0 spec reads three keys the 3.0 evidence may not carry yet; a
+    # mistyped or missing key would hide behind a zero read.
+    extra_unresolved = [
+        ".".join(path) for path in (
+            ("scan_error", "count"),
+            ("cert_key_type_counts", "PQC"),
+            ("kerberos_placeholder_count",),
+        )
+        if not _resolves(empty, path)
+    ]
+    assert not extra_unresolved, (
+        "4.0 spec key paths absent from build_evidence_summary([], []) "
+        f"output: {extra_unresolved}"
+    )
 
     missing_e = copy.deepcopy(_r3_typical_enterprise())
     del missing_e["assessable_endpoint_count"]
@@ -623,12 +687,142 @@ def test_closed_form_is_independent():
 
 
 def test_continuity_reproduces_212(inst):
-    """D-06/D-10: 212's recorded R5 computed values, a record not a prediction."""
-    at_zero = inst.measure_point("R5", "mutator_212", 0)["computed"]
-    at_twenty = inst.measure_point("R5", "mutator_212", 20)["computed"]
-    assert at_zero == 71, f"R5|mutator_212|0: computed {at_zero}, 212 recorded 71"
-    assert at_twenty == 74, (
-        f"R5|mutator_212|20: computed {at_twenty}, 212 recorded 74"
+    """D-08: the 212 continuity reading is FLAT under scoring 4.0.
+
+    The node name is kept because UAT-233-04 cites it. History, not an
+    assertion: Phase 212 recorded R5 computed 71 (+0) -> 74 (+20) -> 78
+    (+100) -> 82 (+500) under scoring 3.0. That rise WAS the P2b defect;
+    4.0 makes the reading flat.
+    """
+    points = [inst.measure_point("R5", "mutator_212", extra)
+              for extra in inst.POINTS]
+    assert len(points) == 4, f"expected 4 points, got {len(points)}"
+    for key in ("computed", "emitted"):
+        seq = [p[key] for p in points]
+        assert len(set(seq)) == 1, (
+            f"R5|mutator_212|{key}: not flat over points "
+            f"{list(inst.POINTS)}: {seq}"
+        )
+
+
+def test_p2b_non_increase_all_rungs_all_readings(sweep_all):
+    """D-07(a): healthy endpoints never raise emitted or computed.
+
+    Every rung x every reading x +0/+20/+100/+500.
+    """
+    groups: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    for point in sweep_all:
+        groups.setdefault((point["rung"], point["reading"]), []).append(point)
+    # Non-vacuity: a zero-match grouping would pass every check below.
+    assert len(groups) == 20, (
+        f"expected 20 (rung, reading) groups: {sorted(groups)}"
+    )
+    for key, pts in groups.items():
+        assert len(pts) == 4, f"{key}: expected 4 points, got {len(pts)}"
+
+    rising = []
+    for (rung, reading), pts in sorted(groups.items()):
+        pts = sorted(pts, key=lambda p: p["extra"])
+        for key in ("emitted", "computed"):
+            seq = [(p["extra"], p[key]) for p in pts]
+            for (x0, v0), (x1, v1) in zip(seq, seq[1:]):
+                if v1 > v0:
+                    rising.append(
+                        f"{rung}|{reading}|{key}: +{x0}={v0} -> +{x1}={v1} "
+                        f"(sequence {[v for _x, v in seq]})"
+                    )
+    assert not rising, (
+        f"{len(rising)} rise(s) from adding healthy endpoints: "
+        + "; ".join(rising)
+    )
+
+
+def _weak_row(inst, j: int):
+    """TLSv1.1 + expired + self-signed + RSA (D-22: legacy TLS alone is not
+    enough to move R5's emitted score)."""
+    row = inst._row(
+        host=f"weak-{j}.p2b.example", port=443, protocol="TLS",
+        tls_version="TLSv1.1", tls_supported_versions="TLSv1.1,TLSv1.2",
+        cipher_suite=inst.AEAD_CIPHER,
+    )
+    row.cert_not_after = inst.EXPIRED
+    row.cert_subject = f"CN=w{j}"
+    row.cert_issuer = f"CN=w{j}"
+    row.cert_pubkey_alg = "RSA"
+    return row
+
+
+def test_p2b_weakness_rows_lower_the_score(inst):
+    """D-07(b)/D-22: the non-vacuity control for the non-increase gate.
+
+    Adding weakness rows strictly lowers emitted and computed on R2..R5; R1
+    sits at the ceiling, where flat proves nothing, so it must drop below
+    100. Green on 3.0 as well; its red proof is a zero-weights mutation.
+    """
+    weak_rows = [_weak_row(inst, j) for j in range(20)]
+    for rung in inst.RUNGS:
+        rows, findings = inst.rung_rows(rung)
+        base = inst.read_score(build_evidence_summary(
+            rows, findings, reference_utc=inst.REF))
+        weak = inst.read_score(build_evidence_summary(
+            rows + weak_rows, findings, reference_utc=inst.REF))
+        if rung == "R1":
+            assert weak["emitted"] < 100, (
+                f"R1|+20 weak: emitted {weak['emitted']} (base "
+                f"{base['emitted']}) did not drop below 100"
+            )
+            continue
+        for key in ("emitted", "computed"):
+            assert weak[key] < base[key], (
+                f"{rung}|+20 weak: {key} {base[key]} -> {weak[key]}; adding "
+                "weakness must strictly lower it"
+            )
+
+
+def test_scan_error_rows_do_not_dilute(inst):
+    """D-03: scan-error rows plus healthy endpoints never raise the score.
+
+    The two scan-error sites read a rate over all endpoints, outside the
+    ratio terms, so the sweep alone cannot see them. Subscores are asserted
+    too: a computed score can hide a single-domain rise.
+    """
+    err_rows = [
+        inst._row(host=f"err-{j}.p2b.example", port=443, protocol="TLS",
+                  scan_error="timeout")
+        for j in range(4)
+    ]
+    rising = []
+    for rung in inst.RUNGS:
+        rows, findings = inst.rung_rows(rung)
+        series: Dict[str, List[Tuple[int, Any]]] = {
+            "emitted": [], "computed": [], "hygiene": [], "modern_tls": [],
+        }
+        for extra in inst.POINTS:
+            h_rows, h_findings = inst._healthy(extra, "ecdsa")
+            evidence = build_evidence_summary(
+                rows + err_rows + h_rows, findings + h_findings,
+                reference_utc=inst.REF)
+            # Non-vacuity: the four error rows must reach the evidence.
+            assert evidence["scan_error"]["count"] == 4, (
+                f"{rung}|+{extra}: scan_error.count "
+                f"{evidence['scan_error']['count']} != 4"
+            )
+            score = inst.read_score(evidence)
+            series["emitted"].append((extra, score["emitted"]))
+            series["computed"].append((extra, score["computed"]))
+            series["hygiene"].append((extra, score["subscores"]["hygiene"]))
+            series["modern_tls"].append(
+                (extra, score["subscores"]["modern_tls"]))
+        for key, seq in series.items():
+            for (x0, v0), (x1, v1) in zip(seq, seq[1:]):
+                if v1 > v0:
+                    rising.append(
+                        f"{rung}|scan_error+4|{key}: +{x0}={v0} -> +{x1}={v1} "
+                        f"(sequence {[v for _x, v in seq]})"
+                    )
+    assert not rising, (
+        f"{len(rising)} rise(s) with 4 scan-error rows plus healthy "
+        "endpoints: " + "; ".join(rising)
     )
 
 
@@ -686,7 +880,7 @@ def test_healthy_rows_are_healthy(inst):
 
     # WR-03: the WHOLE evidence summary, flattened, may move only where a
     # healthy row is expected to move it. Anything else that moves (e.g.
-    # mtls_present_count, scan_error.rate, protocol_counts.UNKNOWN) fails.
+    # mtls_present_count, scan_error.count, protocol_counts.UNKNOWN) fails.
     relevant = set(inst.SCORE_RELEVANT_PATHS)
     for kind, allowed in HEALTHY_ALLOWED_MOVES.items():
         must_move = HEALTHY_SCORED_MOVES[kind]
