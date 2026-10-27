@@ -247,7 +247,8 @@ def test_sample_arrays_capped_at_5(db):
 # Phase 228 (XSURF-07): trend score derives findings (consequence ceilings)
 # ---------------------------------------------------------------------------
 
-PINNED_CEILING_SCORE = 27
+# Scoring 4.0 (Phase 234): 27 -> 31, still capped <= 34 by the CRITICAL ceiling.
+PINNED_CEILING_SCORE = 31
 
 
 def _seed_expired_session(db, ts):

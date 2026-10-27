@@ -585,7 +585,7 @@ def test_drift_band_applies_ceiling(tmp_path):
             curr_ts, prev_ts, db, findings_deriver=lambda eps: []
         ).current_score
 
-    PINNED_HEADLINE = 27
+    PINNED_HEADLINE = 31  # scoring 4.0 (Phase 234): was 27 on 3.0
     assert report.current_score == PINNED_HEADLINE
     summary = build_drift_summary(report)
     assert summary.score_band == _score_to_band(PINNED_HEADLINE)

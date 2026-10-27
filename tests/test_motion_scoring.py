@@ -304,7 +304,7 @@ def test_refused_email_rows_do_not_dilute_coverage():
     assert ev["assessable_endpoint_count"] == 2
     assert ev["assessed_crypto_count"] == 2
     assert compute_readiness_score(ev)["score"] == compute_readiness_score(base)["score"]
-    assert compute_readiness_score(ev)["score"] == 73  # measured; RESEARCH measured 69 on a different fixture shape
+    assert compute_readiness_score(ev)["score"] == 81  # measured; scoring 4.0 (Phase 234): was 73 on 3.0
 
 
 def test_scan_error_email_row_still_counts():

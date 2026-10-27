@@ -160,6 +160,16 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         for _PROTOCOL_KEYS and the coverage counters, so it should pin whatever the real pipeline
         emits end-to-end, ceilings included. Isolating it would narrow exactly the surface it
         exists to watch.
+
+        Phase 234 (scoring 4.0, a deliberate recorded decision) moved the pin a FOURTH time,
+        76 -> 72. Two 4.0 changes reach this fixture. (1) The absolute-count curve
+        (penalty = weight x min(1, count / 40) ** 0.5) replaces the share-of-endpoints ratio:
+        a count of 1 on a 7-endpoint fixture is now a smaller penalty, so `modern_tls` moves
+        22 -> 23 and `data_in_motion` 20 -> 23. (2) The classical-key rule (O-2): this fixture
+        carries one RSA and one ECDSA certificate key, which on 3.0 earned the +4 has-ECDSA
+        bonus; on 4.0 every classical key costs a flat -8, so `agility_signals` moves 25 -> 16
+        (-8 classical, -1 unknown service). `hygiene` stays 24. sum(24, 23, 16, 23) = 86 ->
+        COMPUTED 86; the PQC ceiling compresses it: round(84 * 86 / 100) = round(72.24) = 72.
         """
         evidence = build_evidence_summary(_build_endpoints(), [])
 
@@ -185,19 +195,19 @@ class EvidenceCoverageRegressionTests(unittest.TestCase):
         )
 
         score = compute_readiness_score(evidence)
-        self.assertEqual(score["score"], 76)   # 999.115: was 96, see docstring
+        self.assertEqual(score["score"], 72)   # Phase 234 scoring 4.0: was 76, see docstring
         # Pin the per-domain subscores too, so a future move lands on the domain that
         # actually moved instead of only on the aggregate. This is what would have
         # localised the 96 -> 76 move to curve D without a probe.
         self.assertEqual(score["subscores"]["hygiene"], 24)
-        self.assertEqual(score["subscores"]["modern_tls"], 22)
-        self.assertEqual(score["subscores"]["agility_signals"], 25)
-        self.assertEqual(score["subscores"]["data_in_motion"], 20)
+        self.assertEqual(score["subscores"]["modern_tls"], 23)
+        self.assertEqual(score["subscores"]["agility_signals"], 16)
+        self.assertEqual(score["subscores"]["data_in_motion"], 23)
         # And pin the disclosed pre-cap number, so a ceiling change is distinguishable
         # from a subscore change at the assertion site.
         self.assertEqual(
             score["rating_cap_reason"],
-            "no post-quantum key exchange observed — score limited to 76 (computed 91)",
+            "no post-quantum key exchange observed — score limited to 72 (computed 86)",
         )
         self.assertEqual(score["domains_assessed"], 4)
         self.assertEqual(score["domains_total"], 6)

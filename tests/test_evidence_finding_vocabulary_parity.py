@@ -144,7 +144,9 @@ _LEGACY_TLS_ENDPOINTS = _ALL_ENDPOINTS + [_TLS_LEGACY_VIA_VERSION, _TLS_LEGACY_V
 # CLI-side value -- the CLI generator already emitted a LOW finding for both
 # legacy-TLS endpoints, so its old severity-proxy and the new endpoint-derived
 # counter agree at 2 either way; only the DASHBOARD side moves (0 -> 2).
-_EXPECTED_MODERN_TLS_SUBSCORE = 18
+# Scoring 4.0 (Phase 234): 18 -> 22 (absolute-count curve, N_REF = 40, replaces
+# the share-of-endpoints ratio); both pipelines still agree.
+_EXPECTED_MODERN_TLS_SUBSCORE = 22
 
 
 def _cli_findings(endpoints):

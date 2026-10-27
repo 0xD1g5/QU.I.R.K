@@ -582,7 +582,8 @@ def _ceiling_sensors():
     return [_sensor(f"s{i}", datetime(2026, 5, 25, 12, 0, 0)) for i in range(4)]
 
 
-PINNED_MERGE_CEILING_SCORE = 27
+# Scoring 4.0 (Phase 234): 27 -> 31, still capped <= 34 (POOR) by the CRITICAL ceiling.
+PINNED_MERGE_CEILING_SCORE = 31
 
 
 def test_merge_score_applies_critical_ceiling(tmp_path):

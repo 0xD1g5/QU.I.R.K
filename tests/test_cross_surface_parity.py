@@ -686,15 +686,17 @@ _XSURF0508_RUN_ID = "2026-10-15T11:00:00"
 # scored 74 and the dashboard 61, but a regression that moves BOTH surfaces
 # (e.g. one shared helper counting a refused mail port as plaintext) keeps
 # a == b true. The literals are what catch that.
-_EXPECTED_XSURF0508_SCORE = 73
+# Scoring 4.0 (Phase 234): 73 -> 76, absolute-count curve; both surfaces moved together.
+_EXPECTED_XSURF0508_SCORE = 76
 # HIGH count: SMIME RSA-1024 is NOT a TLS cert row (D-05) so it must add no
 # HIGH; near-expiry is MEDIUM (D-01), not HIGH; refused/timeout mail rows add
 # no finding (D-14).
 _EXPECTED_XSURF0508_HIGH_COUNT = 0
-# The no-PQC-key-exchange cap applies (computed 87 -> displayed 73); a
+# The no-PQC-key-exchange cap applies (computed 91 -> displayed 76 under
+# scoring 4.0, Phase 234; was computed 87 -> displayed 73 on 3.0); a
 # CRITICAL-ceiling reason here would mean a CRITICAL leaked in.
 _EXPECTED_XSURF0508_CAP_REASON = (
-    "no post-quantum key exchange observed \u2014 score limited to 73 (computed 87)"
+    "no post-quantum key exchange observed \u2014 score limited to 76 (computed 91)"
 )
 # Lift for the `high-impact-findings` slug; None == slug absent.
 _EXPECTED_XSURF0508_HIGH_IMPACT_LIFT = None
@@ -835,13 +837,16 @@ _XSURF07_RUN_ID = "2026-10-15T12:00:00"
 # the fix trends/timeline/merge scored the same rows with NO findings and
 # showed ~78+ -- the surfaces disagreed with the headline by 40+ points, but a
 # bare a == b between two findings-less surfaces would never see it.
-_EXPECTED_XSURF07_HEADLINE = 32
+# Scoring 4.0 (Phase 234): 32 -> 33, still capped <= 34 by the CRITICAL ceiling.
+_EXPECTED_XSURF07_HEADLINE = 33
 # seg-a holds the expired row; seg-b is healthy so it is NOT capped.
-_EXPECTED_XSURF07_SEG_A = 31
+# Scoring 4.0 (Phase 234): seg-a 31 -> 33, still capped <= 34.
+_EXPECTED_XSURF07_SEG_A = 33
 _EXPECTED_XSURF07_SEG_B = 100
 # /compare side B (the XSURF-04 SAML-CRITICAL scan): identity findings must be
-# included (D-23), which caps it at 31 (the XSURF-04 headline after the 228-07 coverage rows; 32 before).
-_EXPECTED_XSURF07_COMPARE_B = 31
+# included (D-23), which caps it at 30 (the XSURF-04 headline under scoring 4.0, Phase 234;
+# 31 after the 228-07 coverage rows on 3.0, 32 before).
+_EXPECTED_XSURF07_COMPARE_B = 30
 
 
 def _xsurf07_seed(TestingSession):
