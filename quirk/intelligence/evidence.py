@@ -32,8 +32,14 @@ from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 EVIDENCE_SCHEMA_VERSION = "1.4.0"
 
 # Phase 234 O-4: substrings that mark a post-quantum (ML-DSA / SLH-DSA, or a
-# composite containing one) certificate key, matched after "_" -> "-".
-_PQC_CERT_KEY_TOKENS = ("ML-DSA", "MLDSA", "SLH-DSA", "SLHDSA")
+# composite containing one) certificate key, matched after "_" -> "-" on the
+# upper-cased name. Phase 234 review D-31 (IN-05) adds the pre-FIPS and other
+# PQC signature names: DILITHIUM (oqs names before ML-DSA), FALCON / FN-DSA,
+# and SPHINCS (SPHINCS+, the pre-FIPS SLH-DSA).
+_PQC_CERT_KEY_TOKENS = (
+    "ML-DSA", "MLDSA", "SLH-DSA", "SLHDSA", "DILITHIUM", "FALCON", "FN-DSA",
+    "FNDSA", "SPHINCS",
+)
 
 # Phase 184.1 SCORE-01 D-06/D-07 — protocols that are not scanned assets and must be
 # excluded from both the coverage numerator (assessed_crypto_count) and denominator
@@ -340,10 +346,19 @@ def build_evidence_summary(
         # ML-DSA leaf certificates cannot reach this today, because
         # `cryptography` raises "Unknown key type" in tls_scanner._pubkey_info
         # (Phase 234 D-20; follow-up todo filed by plan 234-08).
-        if isinstance(cert_not_after, datetime) and any(
+        # Phase 234 review D-31 (IN-06): a PQC or composite NAME on a row with
+        # no certificate lands in no bucket. It earns no certificate credit
+        # (above), and it must not fall through to the RSA/EC prefix checks
+        # either: "RSA3072_MLDSA44" on a KMS row used to count as an RSA
+        # certificate key (the -8 and the PQC-certificate roadmap item for a
+        # key that is not a certificate). Plain classical names keep their
+        # bucket on any row, as before (KMS RSA keys still count).
+        is_pqc_name = any(
             token in key_alg.replace("_", "-") for token in _PQC_CERT_KEY_TOKENS
-        ):
-            cert_key_type_counts["PQC"] += 1
+        )
+        if is_pqc_name:
+            if isinstance(cert_not_after, datetime):
+                cert_key_type_counts["PQC"] += 1
         elif key_alg.startswith("RSA"):
             cert_key_type_counts["RSA"] += 1
         elif key_alg.startswith(("EC", "ECDSA")):

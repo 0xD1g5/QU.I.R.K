@@ -301,6 +301,39 @@ def test_kerberos_placeholder_rows_counted_not_assessed():
     assert real["assessable_endpoint_count"] == 1
 
 
+def test_pqc_bucket_counts_legacy_and_other_pqc_signature_names():
+    """Phase 234 review D-31 (IN-05): pre-FIPS and other PQC signature names
+    reach the PQC bucket too: Dilithium (oqs names before ML-DSA), Falcon /
+    FN-DSA, and SPHINCS+ (the pre-FIPS SLH-DSA name), whichever separator
+    or case the scanner reports. They used to read as undetermined (-8, no
+    credit)."""
+    counts = _cert_key_counts(
+        "dilithium3", "Dilithium2_AES", "falcon512", "FALCON-1024",
+        "FN-DSA-512", "fndsa1024", "sphincssha2128fsimple", "SPHINCS+-SHAKE",
+        "p256_dilithium2",
+    )
+    assert counts == {"RSA": 0, "ECDSA": 0, "PQC": 9}
+
+
+def test_composite_name_on_a_certless_row_lands_in_no_bucket():
+    """Phase 234 review D-31 (IN-06): a composite key name (classical + PQC)
+    on a row with no certificate (a KMS key, a JWT signing key) is not a
+    certificate key, so it earns no PQC credit (O-4, T-234-03) and must not
+    fall through to the classical prefix checks either. "RSA3072_MLDSA44"
+    used to count as an RSA certificate key: the -8 and the PQC-certificate
+    roadmap item for a key that is not a certificate. A plain classical name
+    on a certless row keeps its old bucket (KMS RSA keys still count)."""
+    ev = build_evidence_summary([
+        _Ep(host="kms1", port=443, protocol="TLS", cert_pubkey_alg="RSA3072_MLDSA44"),
+        _Ep(host="kms2", port=443, protocol="TLS", cert_pubkey_alg="ECDSA-P256-MLDSA65"),
+    ])
+    assert ev["cert_key_type_counts"] == {"RSA": 0, "ECDSA": 0, "PQC": 0}
+    plain = build_evidence_summary([
+        _Ep(host="kms3", port=443, protocol="TLS", cert_pubkey_alg="RSA"),
+    ])
+    assert plain["cert_key_type_counts"]["RSA"] == 1
+
+
 def test_kerberos_scan_error_rows_counted_for_the_identity_gate():
     """Phase 234 review D-30 (WR-01): a Kerberos row that carries a
     scan_error (an unreachable KDC, a never-probed invalid target, an
