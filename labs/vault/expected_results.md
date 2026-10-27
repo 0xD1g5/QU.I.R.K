@@ -54,10 +54,12 @@ connectors:
 
 Evidence summary additions:
 - `dar_vault_weak_count`: 2  (PKI/pki HIGH + auth/token HIGH; D-11 — MEDIUM rows do NOT count)
-- `dar_vault_weak_ratio`: 2 / total_endpoints
+- `dar_vault_weak_ratio`: 2 / total_endpoints (still emitted as evidence; scoring 4.0 does not read it)
 
-Scoring impact:
-- `data_at_rest` subscore drops by `_ratio(2, total_endpoints) * 8.0` points (D-12 weight)
+Scoring impact (scoring 4.0, Phase 234):
+- `data_at_rest` subscore drops by `8.0 x min(1, count / 40) ** 0.5` with count = `dar_vault_weak_count`,
+  so 2 weak rows cost `8.0 x sqrt(2 / 40)` = 1.79 points (D-12 weight; `N_REF` = 40), whatever the
+  total endpoint count
 
 CBOM impact:
 - `RSA-2048` registered as algorithm component via Pass 1 (D-14 — transit keys NOT skipped)

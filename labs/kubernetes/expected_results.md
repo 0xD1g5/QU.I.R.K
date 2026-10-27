@@ -115,12 +115,16 @@ Plan 02 enforces this invariant).
 Evidence summary additions:
 - `dar_k8s_unencrypted_count`: count of `EKS/unencrypted` + `GKE/unencrypted` rows
 - `dar_k8s_inaccessible_count`: count of `AKS/platform-managed` rows + rows with `scan_error=encryption-config-inaccessible` + rows with `scan_error=insufficient-rbac-privileges`
-- `dar_k8s_unencrypted_ratio`: count / total endpoints
-- `dar_k8s_inaccessible_ratio`: count / total endpoints
+- `dar_k8s_unencrypted_ratio` and `dar_k8s_inaccessible_ratio`: each count divided by the total endpoints
+  (still emitted as evidence; scoring 4.0 does not read them)
 
-Readiness score impacts (balanced profile):
-- `dar_k8s_unencrypted_ratio` x **10.0** weight (etcd plaintext = high impact, narrower scope than DB-wide plaintext)
-- `dar_k8s_inaccessible_ratio` x **4.0** weight (compliance gap, not active weakness)
+Readiness score impacts (balanced profile, scoring 4.0, Phase 234; `N_REF` = 40):
+- `10.0 x min(1, count / 40) ** 0.5` with count = `dar_k8s_unencrypted_count` (weight key
+  `dar_k8s_unencrypted_ratio`, **10.0**: etcd plaintext = high impact, narrower scope than DB-wide
+  plaintext); one unencrypted cluster costs `10.0 x sqrt(1 / 40)` = 1.58 points
+- `4.0 x min(1, count / 40) ** 0.5` with count = `dar_k8s_inaccessible_count` (weight key
+  `dar_k8s_inaccessible_ratio`, **4.0**: compliance gap, not active weakness); one such row costs
+  `4.0 x sqrt(1 / 40)` = 0.63 points
 - drivers list contains `Kubernetes etcd unencrypted` or `Kubernetes etcd encryption inaccessible`
 
 ## Expected CBOM Output
