@@ -40,16 +40,10 @@
       border-bottom: 2px solid var(--accent);
       padding: 24px 40px;
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: 20px;
     }
-    .wordmark {
-      font-size: 28px;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      font-family: 'Courier New', Courier, monospace;
-    }
+    .report-header-logo { height: 28px; width: auto; display: block; }
     .report-meta {
       color: var(--text-muted);
       font-size: 12px;
@@ -322,7 +316,7 @@
 <body>
 
 <header class="report-header">
-  <span class="wordmark">QU.I.R.K.</span>
+  {% if colophon_logo_b64 %}<img class="report-header-logo" src="data:image/svg+xml;base64,{{ colophon_logo_b64 }}" alt="QU.I.R.K.">{% endif %}
   <span class="report-meta">Quantum Readiness Report &nbsp;|&nbsp; {{ org_name | sanitize }} &nbsp;|&nbsp; {{ generated_at }}</span>
   {#- Phase 200 / RPT-01: identity carries into the running header beyond the
      cover page. Each piece is independently optional — absent field emits
