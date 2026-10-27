@@ -42,6 +42,11 @@ from quirk.severity_bands import (
 #     earned by a PQC/hybrid key exchange OR a PQC certificate key (D-04, O-2,
 #     O-4).
 # Kerberos placeholder rows also stop counting as identity evidence (D-11).
+# The Phase 234 code review corrected three 4.0 rules before release (so the
+# version stays 4.0; no 4.0 score has shipped): the mTLS bonus is a presence
+# credit, not a count curve (D-28); the "key types undetermined" -8 applies
+# whenever undetermined certificates exist, independent of PQC (D-29); and
+# Kerberos rows carrying a scan error are not identity evidence (D-30).
 # Decision record: .planning/decisions/234-p2b-fix-and-ladder-remeasurement.md
 SCORING_VERSION = "4.0"
 SCORING_VERSION_NOTE = "scoring v4 — not comparable with v3 or earlier scores"
@@ -579,7 +584,14 @@ def compute_readiness_score(
         ("Expired certificates", -_count_curve(expired_count) * w["identity_expired_ratio"]),
         ("Expiring certificates", -_count_curve(expiring_count) * w["identity_expiring_ratio"]),
         ("Self-signed certificates", -_count_curve(self_signed_count) * w["identity_self_signed_ratio"]),
-        ("mTLS enforcement signals", _count_curve(mtls_present_count) * w["identity_mtls_ratio_bonus"]),
+        # Phase 234 review D-28: a PRESENCE credit, +6 once when any mTLS
+        # endpoint is observed. D-02 had made it a count curve, so every
+        # further mTLS-enforcing endpoint raised identity_trust up to N_REF:
+        # observing more healthy endpoints raised the score, which SCORE-09
+        # forbids. Same single-step shape as the PQC credit (D-04). The weight
+        # key keeps its `_ratio_bonus` name because calibration_overrides
+        # address weights by name.
+        ("mTLS enforcement signals", (w["identity_mtls_ratio_bonus"] if mtls_present_count > 0 else 0.0)),
         ("RC4/DES Kerberos etypes detected", -_count_curve(kerberos_weak_count) * w["identity_kerberos_weak_etype_ratio"]),
         ("Weak SAML signing key", -_count_curve(saml_weak_count) * w["identity_saml_weak_signing_ratio"]),
         ("Weak DNSSEC signing algorithm", -_count_curve(dnssec_weak_count) * w["identity_dnssec_weak_algo_ratio"]),
