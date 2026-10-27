@@ -104,8 +104,8 @@ from scripts.p2b_closed_form import (
     IDENTITY_KEYS,
     LEGACY_TLS_PATH,
     MOTION_KEYS,
+    COUNT_TERMS,
     NUMERATOR_ADDENDS,
-    RATIO_TERMS,
     closed_form,
 )
 from tests.test_score_properties import (
@@ -175,9 +175,9 @@ _DICT_BUILDERS = {
 }
 
 
-def _ratio_paths() -> List[Tuple[str, ...]]:
+def _count_paths() -> List[Tuple[str, ...]]:
     paths: List[Tuple[str, ...]] = []
-    for _domain, path, _denom, _weight, _sign in RATIO_TERMS:
+    for _domain, path, _weight, _sign in COUNT_TERMS:
         path = tuple(path)
         if path == tuple(LEGACY_TLS_PATH):
             continue  # projected through the derived "legacy_tls" entry
@@ -195,7 +195,7 @@ _FIXED_PATHS: Tuple[Tuple[str, ...], ...] = (
     ("plaintext_http_count",),
     ("http_on_tls_port_count",),
     ("mtls_present_count",),
-    ("scan_error", "rate"),
+    ("scan_error", "count"),
     ("protocol_counts", "UNKNOWN"),
     ("certificate_observations", "certs_observed"),
     ("certificate_observations", "expired_count"),
@@ -204,9 +204,11 @@ _FIXED_PATHS: Tuple[Tuple[str, ...], ...] = (
     ("cert_key_type_counts", "RSA"),
     ("cert_key_type_counts", "ECDSA"),
     ("pqc_hybrid_endpoint_count",),
+    ("cert_key_type_counts", "PQC"),
+    ("kerberos_placeholder_count",),
 )
 _PROJECTED_PATHS: Tuple[Tuple[str, ...], ...] = tuple(
-    list(_FIXED_PATHS) + [p for p in _ratio_paths() if p not in _FIXED_PATHS]
+    list(_FIXED_PATHS) + [p for p in _count_paths() if p not in _FIXED_PATHS]
 )
 _DERIVED = (
     "legacy_tls", "CRITICAL", "HIGH",
