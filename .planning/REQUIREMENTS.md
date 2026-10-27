@@ -133,7 +133,7 @@ HORIZON prose:
 - [x] **POLISH-03**: The HTML/PDF report header no longer renders the old electric-blue `QU.I.R.K.`
       wordmark; it follows `BRAND-GUIDELINES.md` (todo `261003-brand-identity-non-dashboard-residue`,
       report-header leg).
-- [ ] **POLISH-04**: Every README link resolves on the PyPI project page (todo
+- [x] **POLISH-04**: Every README link resolves on the PyPI project page (todo
       `261014-readme-relative-links-dont-resolve-on-pypi`).
 
 ### Release and launch gate (LAUNCH)
@@ -210,7 +210,7 @@ Deferred from this milestone with an owner:
 | POLISH-01 | Phase 232 | Complete |
 | POLISH-02 | Phase 232 | Complete |
 | POLISH-03 | Phase 232 | Complete |
-| POLISH-04 | Phase 232 | Pending |
+| POLISH-04 | Phase 232 | Complete |
 | OWN-01 | Phase 227 | Complete |
 | LAUNCH-01 | Phase 235 | Pending |
 | LAUNCH-02 | Phase 235 | Pending |
