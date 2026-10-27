@@ -381,6 +381,48 @@ def test_adcs_only_identity_evidence_marks_identity_assessed():  # 188 review WR
     assert result["subscores"]["identity_trust"] < 25
 
 
+def test_kerberos_scan_error_row_does_not_make_identity_assessed():
+    """Phase 234 review D-30 (WR-01): a Kerberos row that carries a
+    scan_error is not identity evidence.
+
+    WR-01 reproduction: 40 legacy-TLS rows (no certificate) plus the
+    scanner's own ``_not_probed_row`` (an invalid target: no Kerberos traffic
+    was sent). D-11 subtracted only scan_error-free placeholder rows, so this
+    row still made identity_trust assessed at a clean 25/25 and raised the
+    headline 68 -> 71 on zero evidence.
+    """
+    from datetime import datetime
+
+    from quirk.scanner.kerberos_scanner import _not_probed_row
+
+    now = datetime(2026, 10, 1, 12, 0, 0)
+    tls = [
+        CryptoEndpoint(host=f"t{i}.d30.example", port=443, protocol="TLS",
+                       tls_version="TLSv1.1",
+                       tls_supported_versions="TLSv1.1,TLSv1.2",
+                       scanned_at=now)
+        for i in range(40)
+    ]
+    kdc = _not_probed_row("bad name!", "D30.EXAMPLE", now, "invalid target")
+    assert kdc.protocol == "KERBEROS" and kdc.scan_error
+
+    without = compute_readiness_score(build_evidence_summary(tls, [], reference_utc=now))
+    ev = build_evidence_summary(tls + [kdc], [], reference_utc=now)
+    # Non-vacuity: the row reached protocol_counts, and no certificate exists.
+    assert ev["protocol_counts"]["KERBEROS"] == 1
+    assert ev["certificate_observations"]["certs_observed"] == 0
+    with_kdc = compute_readiness_score(ev)
+    assert with_kdc["subscores"]["identity_trust"] is None, (
+        f"a scan-error Kerberos row made identity assessed: "
+        f"{with_kdc['subscores']['identity_trust']}"
+    )
+    assert with_kdc["domains_assessed"] == without["domains_assessed"]
+    assert with_kdc["score"] <= without["score"], (
+        f"a never-probed KDC raised the score {without['score']} -> "
+        f"{with_kdc['score']}"
+    )
+
+
 def test_smime_only_identity_evidence_marks_identity_assessed():  # 188 review WR-01
     """SMIME sibling of the ADCS case above (same predicate blind spot)."""
     endpoints = [

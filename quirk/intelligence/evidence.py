@@ -28,7 +28,8 @@ from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 
 # 1.3.0 (Phase 234, additive): cert_key_type_counts.PQC and
 # kerberos_placeholder_count.
-EVIDENCE_SCHEMA_VERSION = "1.3.0"
+# 1.4.0 (Phase 234 code review, additive): kerberos_scan_error_count (D-30).
+EVIDENCE_SCHEMA_VERSION = "1.4.0"
 
 # Phase 234 O-4: substrings that mark a post-quantum (ML-DSA / SLH-DSA, or a
 # composite containing one) certificate key, matched after "_" -> "-".
@@ -195,6 +196,8 @@ def build_evidence_summary(
     assessable_endpoint_count = 0
     # Phase 234 D-11: Kerberos rows the KDC answered without etype data.
     kerberos_placeholder_count = 0
+    # Phase 234 review D-30: Kerberos rows that carry a scan_error.
+    kerberos_scan_error_count = 0
 
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
@@ -306,6 +309,15 @@ def build_evidence_summary(
         )
         if is_kerberos_placeholder:
             kerberos_placeholder_count += 1
+        # Phase 234 review D-30 (WR-01): a KERBEROS row that carries a
+        # scan_error (kerberos-unreachable with a TCP error, a never-probed
+        # invalid target, an unrecognised reply, a KRB-ERROR) has no etype
+        # data either. It was already outside assessed_crypto_count; this
+        # counter lets the scorer's identity gate subtract it as well, the
+        # same way it subtracts D-11 placeholders. protocol_counts is never
+        # edited, because reports, the CBOM and the dashboard read it.
+        if proto == "KERBEROS" and scan_error:
+            kerberos_scan_error_count += 1
 
         # Phase 184.1 SCORE-01 D-01/D-02/D-05/D-06/D-07/D-09 — coverage counters.
         if proto not in _NON_ASSET_PROTOCOLS:
@@ -630,6 +642,7 @@ def build_evidence_summary(
         "assessed_crypto_count": assessed_crypto_count,
         "assessable_endpoint_count": assessable_endpoint_count,
         "kerberos_placeholder_count": kerberos_placeholder_count,
+        "kerberos_scan_error_count": kerberos_scan_error_count,
         "plaintext_http_count": len(plaintext_http_targets),
         "http_on_tls_port_count": len(http_on_tls_port_targets),
         "mtls_present_count": len(mtls_targets),

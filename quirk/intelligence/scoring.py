@@ -420,6 +420,7 @@ def _identity_assessed(
     cert_obs: Mapping[str, Any],
     protocol_counts: Mapping[str, Any],
     placeholders: int = 0,
+    kerberos_errors: int = 0,
 ) -> bool:
     """identity_trust was assessed iff a certificate was observed or any
     identity protocol produced real evidence.
@@ -430,6 +431,13 @@ def _identity_assessed(
     evidence's `kerberos_placeholder_count`; it is subtracted from the
     KERBEROS count only, floored at 0. `protocol_counts` itself is never
     edited, because reports, the CBOM and the dashboard read it.
+
+    Phase 234 review D-30 (WR-01): Kerberos rows that carry a scan_error (an
+    unreachable or never-probed KDC, an unrecognised reply, a KRB-ERROR) are
+    not identity evidence either. `kerberos_errors` is evidence's
+    `kerberos_scan_error_count`, subtracted the same way. Without it a failed
+    or unprobed KDC made identity_trust assessed at a clean 25/25 on zero
+    evidence and raised the headline.
     """
     if _as_int(cert_obs.get("certs_observed", 0)) > 0:
         return True
@@ -437,7 +445,10 @@ def _identity_assessed(
     for k in _IDENTITY_PROTOCOL_KEYS:
         value = max(0, _as_int(protocol_counts.get(k, 0)))
         if k == "KERBEROS":
-            value = max(0, value - max(0, _as_int(placeholders)))
+            value = max(
+                0,
+                value - max(0, _as_int(placeholders)) - max(0, _as_int(kerberos_errors)),
+            )
         total += value
     return total > 0
 
@@ -737,6 +748,7 @@ def compute_readiness_score(
         cert_obs,
         protocol_counts,
         placeholders=max(0, _as_int(evidence.get("kerberos_placeholder_count", 0))),
+        kerberos_errors=max(0, _as_int(evidence.get("kerberos_scan_error_count", 0))),
     )
     dar_assessed = _dar_assessed(protocol_counts)
     motion_assessed = _motion_assessed(protocol_counts)

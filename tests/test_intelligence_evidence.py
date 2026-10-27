@@ -301,5 +301,31 @@ def test_kerberos_placeholder_rows_counted_not_assessed():
     assert real["assessable_endpoint_count"] == 1
 
 
+def test_kerberos_scan_error_rows_counted_for_the_identity_gate():
+    """Phase 234 review D-30 (WR-01): a Kerberos row that carries a
+    scan_error (an unreachable KDC, a never-probed invalid target, an
+    unrecognised reply or a KRB-ERROR) has no etype data, so evidence counts it
+    in kerberos_scan_error_count for the identity gate to subtract. It is not a
+    placeholder (D-11 placeholders carry no scan_error) and it stays outside
+    assessed crypto, as before. A real etype row is unaffected."""
+    errors = build_evidence_summary([
+        _Ep(host="kdc1", port=88, protocol="KERBEROS",
+            service_detail="kerberos-unreachable", scan_error="timed out"),
+        _Ep(host="kdc2", port=88, protocol="KERBEROS",
+            service_detail="kerberos-etypes-unavailable-krb-error",
+            scan_error="KDC_ERR_S_PRINCIPAL_UNKNOWN"),
+    ])
+    assert errors["kerberos_scan_error_count"] == 2
+    assert errors["kerberos_placeholder_count"] == 0
+    assert errors["assessed_crypto_count"] == 0
+    assert errors["protocol_counts"]["KERBEROS"] == 2
+
+    real = build_evidence_summary([
+        _Ep(host="kdc", port=88, protocol="KERBEROS",
+            service_detail="etype:18:aes256-cts-hmac-sha1-96:SAFE"),
+    ])
+    assert real["kerberos_scan_error_count"] == 0
+
+
 if __name__ == "__main__":
     unittest.main()
