@@ -65,6 +65,13 @@ earlier, where the 228-230 evidence changes live.
 - the winning ceiling's source and value (`consequence`, `pqc_readiness` or `none`);
 - the losing ceilings.
 
+Only the winning **source** is read from the scorer, and even that is parsed from its
+`rating_cap_reason` prose; the scorer exposes nothing else about its ceilings. The ceiling
+**value** and the **losing ceilings** are the closed form's values (`_score_point` copies them from
+the closed-form result), so they are spec-derived, not observed. The scorer checks the value only
+indirectly: emitted equality plus the ceiling identity below hold within integer rounding (code
+review IN-02, 2026-10-27).
+
 It also checks the ceiling identity `emitted == round(c x computed / 100)`. That identity held at
 all 80 points (`results[*].ceiling_identity_holds`). This meets the third-instrument specification
 Phase 212 set out (212 record `:135-146`, `:206-212`):
@@ -76,7 +83,8 @@ Phase 212 set out (212 record `:135-146`, `:206-212`):
 > "...or instruments the ceiling-selection call site directly (e.g. logging which candidate ceiling
 > won at each sweep point, not just the final `total_score`)."
 
-It meets the **second** branch: it identifies the winning and losing ceilings at every point. It
+It meets the **second** branch: it identifies the winning ceiling at every point from the scorer,
+and the losing ceilings from the closed form, which agrees with the scorer at every point. It
 does not meet the first branch, because no fixture was engineered to unbind the consequence
 ceiling. The ladder fixtures were not edited (D-07). §10 shows the second branch is enough to rule
 on ceiling-shaped candidates.
@@ -101,8 +109,10 @@ leaves at zero. 233-02 ran 395 probes and 0 disagreed.
 `scripts/p2b_closed_form.py`. **Its independence is of mechanism (it shares no code at run time),
 not of origin.**
 
-- **What agreement shows:** the instrument reads the scorer correctly (computed score, ceiling
-  source and value). It also shows that D-12's arithmetic model (ratio curve, per-domain clamp,
+- **What agreement shows:** the instrument reads the scorer correctly (emitted and computed
+  score, subscores, winning ceiling source). The ceiling value is not compared directly: it and the
+  losing ceilings come from the closed form, and the scorer agrees with that value only through
+  emitted equality, within rounding (IN-02). It also shows that D-12's arithmetic model (ratio curve, per-domain clamp,
   rescale, linear squeeze) matches the code.
 - **What agreement cannot show:** whether the code departs from its intent. The spec was derived
   from the code, so a defect in intent would be copied into the spec (memory
@@ -452,7 +462,9 @@ computed score, it cannot make `wider_computed <= base_computed` pass
 (`tests/test_score_properties.py:646`) by construction.
 
 Per rung, across all four readings and all four points (`results[*].ceiling_source`,
-`ceiling_value`, `losing_ceilings`):
+`ceiling_value`, `losing_ceilings`). The winning source is read from the scorer. The ceiling value
+and the losing-ceiling column come from the closed form, not the scorer (§3, IN-02), and the scorer
+agrees with them only through emitted equality and the ceiling identity:
 
 | Rung | Winning ceiling, all 16 cells | Losing ceilings, all 16 cells | Condition held? |
 |---|---|---|---|
