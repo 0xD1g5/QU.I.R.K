@@ -104,14 +104,16 @@ def _evidence() -> dict:
 
 def _clamp_binding_evidence() -> dict:
     """Same shape as `_evidence`, but with hygiene-subscore penalties
-    (plaintext HTTP + HTTP-on-TLS-port ratios, against only 2 endpoints)
-    deliberately exceeding the 25-point clamp headroom, verified below by
+    (plaintext HTTP + HTTP-on-TLS-port counts) deliberately exceeding the
+    25-point clamp headroom, verified below by
     `test_clamp_binding_fixture_actually_binds`.
 
-    Unclamped hygiene penalty at these values:
-        plaintext_ratio(2/2=1.0)*18 + http_on_tls_ratio(2/2=1.0)*16
-            + scan_error_rate(0.5)*6
-        = 18 + 16 + 3 = 37 > 25 (score_cap) -> hygiene clamps to 0.
+    Phase 234 (scoring 4.0): penalties follow the absolute-count curve
+    `min(1, count / 40) ** 0.5`, so the clamp only binds when the counts reach
+    N_REF = 40. Unclamped hygiene penalty at these values:
+        curve(40)*18 + curve(40)*16 + curve(20)*6
+        = 18 + 16 + 4.24 = 38.24 > 25 (score_cap) -> hygiene clamps to 0.
+    (3.0 used the share of 2 endpoints: 2/2 * 18 + 2/2 * 16 + 0.5 * 6 = 37.)
 
     Live scratch run recorded during execution (201-01-SUMMARY.md) confirmed:
     base score=33 (hygiene=0, clamped from an unclamped -12), and resolving
@@ -120,10 +122,10 @@ def _clamp_binding_evidence() -> dict:
     the non-additivity this fixture exists to prove.
     """
     return {
-        "totals": {"endpoints": 2, "findings": 5},
+        "totals": {"endpoints": 40, "findings": 5},
         "protocol_counts": {"KERBEROS": 1, "UNKNOWN": 1},
-        "plaintext_http_count": 2,
-        "http_on_tls_port_count": 2,
+        "plaintext_http_count": 40,
+        "http_on_tls_port_count": 40,
         "mtls_present_count": 0,
         "certificate_observations": {
             "expired_count": 1,
@@ -132,7 +134,7 @@ def _clamp_binding_evidence() -> dict:
             "certs_observed": 3,
         },
         "cert_key_type_counts": {"RSA": 3, "ECDSA": 0},
-        "scan_error": {"rate": 0.5},
+        "scan_error": {"rate": 0.5, "count": 20},
         "finding_severity_counts": {
             "CRITICAL": 0,
             "HIGH": 1,
@@ -187,14 +189,21 @@ def _items(evidence: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
+def _count_curve(count: int) -> float:
+    """Independent restatement of the scoring-4.0 absolute-count curve
+    (N_REF = 40, exponent 0.5), written here rather than imported so the
+    fixture check does not lean on the module it guards."""
+    if count <= 0:
+        return 0.0
+    return min(1.0, count / 40) ** 0.5
+
+
 def test_clamp_binding_fixture_actually_binds() -> None:
     evidence = _clamp_binding_evidence()
-    denom = max(0, evidence["totals"]["endpoints"]) or 1
-    plaintext_ratio = evidence["plaintext_http_count"] / denom
-    http_on_tls_ratio = evidence["http_on_tls_port_count"] / denom
-    scan_error_rate = evidence["scan_error"]["rate"]
     unclamped_hygiene_penalty = (
-        plaintext_ratio * 18.0 + http_on_tls_ratio * 16.0 + scan_error_rate * 6.0
+        _count_curve(evidence["plaintext_http_count"]) * 18.0
+        + _count_curve(evidence["http_on_tls_port_count"]) * 16.0
+        + _count_curve(evidence["scan_error"]["count"]) * 6.0
     )
     assert unclamped_hygiene_penalty > 25.0, (
         "clamp-binding fixture does not actually exceed the 25-point hygiene "
@@ -408,7 +417,9 @@ def test_lifts_are_not_additive_on_a_clamp_binding_fixture() -> None:
     999.115 — the non-additivity still holds and is if anything larger, but its
     DIRECTION flipped, so the assertion moved from `>` to `<`. Measured on this
     fixture: sum(lifts) = 54 against an aggregate delta of 64 (base 20 ->
-    projected 84).
+    projected 84). Phase 234 (scoring 4.0, fixture counts raised to N_REF so
+    the clamp still binds): sum(lifts) = 41 against an aggregate delta of 47
+    (base 37, ceiling-bound by 1 open HIGH from computed 54 -> projected 84).
 
     Why it flipped. Two non-linearities act on this fixture and they pull
     opposite ways. The per-subscore 25-point clamp (the one this fixture is

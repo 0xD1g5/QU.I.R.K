@@ -341,13 +341,25 @@ def test_adcs_only_identity_evidence_marks_identity_assessed():  # 188 review WR
     SMIME/ADCS were absent from _PROTOCOL_KEYS/_IDENTITY_PROTOCOL_KEYS, so the
     computed adcs_* penalties were silently discarded and the headline
     rescaled UPWARD over the remaining domains (false-negative assessed
-    determination -> overstated score)."""
-    endpoints = [
-        CryptoEndpoint(
-            host="ca.example.com", port=389, protocol="ADCS",
+    determination -> overstated score).
+
+    Phase 234 (scoring 4.0, O-3 small-estate lenience): the ADCS terms weigh 2
+    points each on the absolute-count curve, so n rows cost 2 x sqrt(n / 40),
+    which is under 0.5 for n <= 2 and rounds away. The domain is assessed at
+    one row (asserted first, below); the penalty lands at n >= 3, so the
+    fixture carries three ESC1 rows for the "< 25" assertion."""
+    def _esc1_row(i: int) -> CryptoEndpoint:
+        return CryptoEndpoint(
+            host=f"ca{i}.example.com", port=389, protocol="ADCS",
             service_detail="esc1-enrollee-supplies-subject|template=WebServer",
-        ),
-    ]
+        )
+
+    one_row = compute_readiness_score(build_evidence_summary([_esc1_row(0)], []))
+    assert one_row["subscores"]["identity_trust"] is not None, (
+        "WR-01 REGRESSION: a single ADCS row no longer marks identity_trust assessed."
+    )
+
+    endpoints = [_esc1_row(i) for i in range(3)]
     evidence = build_evidence_summary(endpoints, [])
     assert evidence["protocol_counts"].get("ADCS", 0) > 0, (
         "Fixture precondition failed: ADCS rows must register in protocol_counts."
@@ -364,7 +376,8 @@ def test_adcs_only_identity_evidence_marks_identity_assessed():  # 188 review WR
         "scan — its computed adcs_* penalties are being discarded and the "
         "headline rescaled upward."
     )
-    # The penalty must actually land: identity subscore below the clean 25.
+    # The penalty must actually land: identity subscore below the clean 25
+    # (three rows: 2 x sqrt(3 / 40) = 0.55 rounds to a 1-point drop).
     assert result["subscores"]["identity_trust"] < 25
 
 
