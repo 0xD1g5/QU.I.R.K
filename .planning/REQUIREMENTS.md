@@ -127,7 +127,7 @@ HORIZON prose:
 
 - [x] **POLISH-01**: The dashboard serves its bundled JetBrains Mono font: `/fonts/*` returns the
       font file, not `index.html`, and a test probes it (audit W15).
-- [ ] **POLISH-02**: Every runtime `quirk-scanner[extra]` install hint is shell-safe when pasted into
+- [x] **POLISH-02**: Every runtime `quirk-scanner[extra]` install hint is shell-safe when pasted into
       zsh, and the guard test covers every hint form, not only bare `quirk[` (todo
       `261015-install-hints-unquoted-and-guard-scope`, WR-01..03).
 - [ ] **POLISH-03**: The HTML/PDF report header no longer renders the old electric-blue `QU.I.R.K.`
@@ -208,7 +208,7 @@ Deferred from this milestone with an owner:
 | QRAMM-19 | Phase 231 | Complete |
 | QRAMM-20 | Phase 231 | Complete |
 | POLISH-01 | Phase 232 | Complete |
-| POLISH-02 | Phase 232 | Pending |
+| POLISH-02 | Phase 232 | Complete |
 | POLISH-03 | Phase 232 | Pending |
 | POLISH-04 | Phase 232 | Pending |
 | OWN-01 | Phase 227 | Complete |
