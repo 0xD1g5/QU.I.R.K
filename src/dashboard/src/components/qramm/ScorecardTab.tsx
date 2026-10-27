@@ -359,7 +359,9 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                 // when d itself is present. Guard with a numeric typeof check
                 // before invoking .toFixed / Math.round (D-10 null-safety).
                 // D-21a: a not-assessed dimension's stored 0.0 is a placeholder, not a measurement.
-                const notAssessed = ctx.scoreResult != null && !assessedByDim[dim]
+                // Phase 234: both read from the shared rule (dimensionStateFromAnswered), so its
+                // pending-first precedence holds here too; never re-derived locally.
+                const notAssessed = ctx.scoreResult != null && stateByDim[dim] === "not-assessed"
                 // D-15: a stale dimension's saved score no longer describes its answers.
                 const stale = staleByDim[dim]
                 const dscore =
