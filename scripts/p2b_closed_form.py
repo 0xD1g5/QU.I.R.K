@@ -1,12 +1,18 @@
-"""SCORE-08 (Phase 233): an independent closed-form model of the readiness score.
+"""SCORE-08 (Phase 233): a mechanism-independent closed-form model of the readiness score.
 
 WHY THIS FILE EXISTS
 --------------------
 The P2b instrument (``scripts/p2b_instrument.py``) diffs this model against
 ``quirk.intelligence.scoring.compute_readiness_score`` at every sweep point
 and on a set of one-field probes (``tests/test_p2b_instrument.py``). The
-model is written from a WRITTEN SPEC (the prose below), not from the code it
-audits. If it imported or copied that code, agreement would prove nothing
+model implements the WRITTEN SPEC below. That spec was derived by reading
+``quirk/intelligence/scoring.py`` at ``e0064b02`` (RESEARCH Q4), and the
+research prototype was ported into it, so this file is independent of the
+scorer in MECHANISM, not in ORIGIN: it shares no code with the scorer at run
+time. Agreement therefore validates the instrument's reading of the scorer
+(that the scorer computes what that spec says), not the scorer's intent; a
+defect copied into the spec from the code would agree with the code. If this
+file imported or called that code, agreement would prove nothing at all
 (CONTEXT D-03). So this file must never import anything from ``quirk``: it
 imports only allowlisted stdlib modules, every constant is restated here, and
 ``tests/test_p2b_instrument.py::test_closed_form_is_independent`` checks that
@@ -24,8 +30,9 @@ WHEN THE SCORER CHANGES (Phase 234 and later)
 ---------------------------------------------
 When ``quirk/intelligence/scoring.py`` changes, the closed-form test nodes are
 expected to go red. Update the written spec below, and the code under it, to
-the NEW INTENDED formula. Do not copy the code (D-10): the value of this file
-is that it is a second, independent statement of what the score should be.
+the NEW INTENDED formula. Do not copy or import the code (D-10): the value of
+this file is that it is a second implementation, sharing no code with the
+scorer, of a separately written statement of the formula.
 
 THE SPEC
 --------

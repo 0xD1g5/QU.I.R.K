@@ -24,12 +24,16 @@ computed score. This one differs on three axes:
 * D-02: it records emitted + computed + the winning ceiling, so a
   ceiling-shaped fix candidate is visible instead of masked.
 * D-03: ``scripts/p2b_closed_form.py`` re-derives the score from a WRITTEN
-  SPEC without importing anything from ``quirk``. Every point is diffed
-  against ``compute_readiness_score``; a disagreement is a finding recorded in
-  ``KNOWN_DISAGREEMENTS``, never something to tune away. Independence is
-  checked three ways here: an import allowlist, an AST ban on dynamic-import /
-  exec routes and on non-docstring strings naming the audited code, and a
-  fresh subprocess that proves no ``quirk`` module was loaded.
+  SPEC without importing anything from ``quirk``. The spec was read from
+  ``scoring.py`` at ``e0064b02`` (RESEARCH Q4), so the closed form is
+  independent in mechanism, not in origin: agreement validates the
+  instrument's reading of the scorer, not the scorer's intent. Every point is
+  diffed against ``compute_readiness_score``; a disagreement is a finding
+  recorded in ``KNOWN_DISAGREEMENTS``, never something to tune away.
+  Mechanism independence is checked four ways here: an import allowlist, an
+  AST ban on dynamic-import / exec / reflection names, an AST ban on
+  non-docstring strings naming the audited code, and a fresh subprocess that
+  proves no ``quirk`` module was loaded.
 
 WHAT IS DELIBERATELY ABSENT
 ---------------------------
