@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,722 lines, in reading order.
+Five guides, 7,738 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3657,7 +3657,8 @@ unassessed and what to do about it:
   `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. `hygiene`,
   `modern_tls` and `agility_signals` are assessed whenever the scan finds at least one assessable
   endpoint; `identity_trust` also needs an observed certificate or a Kerberos, SAML, DNSSEC,
-  S/MIME or AD CS endpoint. The two domains most often left unassessed are:
+  S/MIME or AD CS endpoint (a Kerberos endpoint counts only when it returned encryption types; see
+  the Kerberos scanner section). The two domains most often left unassessed are:
   - `data_at_rest` — needs a database, RDS, S3, Azure Blob, Kubernetes or Vault connector
     scanner (§6) enabled and reachable.
   - `data_in_motion` — needs the email or broker scanners (§6.2) enabled and reachable.
@@ -3678,7 +3679,11 @@ unassessed and what to do about it:
   to 18 (computed 71) under v4. Small estates score somewhat higher than under v3, and estates whose
   score was propped up by many healthy endpoints score lower. The first clean result in a domain
   that was not assessed before can still raise the score, because that domain joins the average.
-  See `docs/report-interpretation.md` §3 and §3.6.
+  The Phase 234 code review corrected three v4 rules before release, without moving any of the
+  numbers above: the +6 mTLS credit is granted once, when any service requires mutual TLS, not per
+  mTLS service; the "certificate key types undetermined" −8 applies even when other certificates
+  are post-quantum; and a Kerberos result that records an error is not identity evidence. The
+  scoring version stays 4.0. See `docs/report-interpretation.md` §3 and §3.6.
 - **Scoring v3 (5.25.0) lowered scores substantially, by design.** Expect a large drop on estates carrying
   open CRITICAL/HIGH findings, and a cap at the top of GOOD on any estate with no observed hybrid
   post-quantum key exchange. Two changes drive it: consequence is now **absolute** rather than
@@ -4142,7 +4147,10 @@ scoring engine over a copy of the scan's evidence, never a fixed points table. I
 resolution changes no scoring input (the three process/governance items, "Increase TLS
 enumeration coverage" and "Standardize mTLS lifecycle operations") show no badge at all, and neither
 does a modelable item whose rescore gains nothing. A badge is shown only for a positive gain, never
-as `0 pts`. A separate "Projected score if all items resolved:
+as `0 pts`. "Increase scan coverage" appears whenever any probed endpoint recorded a scan error,
+because that count is what the score penalises, and its badge is the points those errors cost
+(since the Phase 234 code review; it used to need 20% or more of the probed endpoints in error).
+The score driver behind it is labelled "Scan errors". A separate "Projected score if all items resolved:
 {N}" figure is one additional independent rescore with everything resolved at once — it is
 usually smaller than summing the individual badges, because the score's six domain subscores are
 each capped at 25 and can only give up so much headroom. Neither number ever changes the
@@ -4657,6 +4665,14 @@ assessed endpoint. The KDC did answer, so the row is still a scan target, and it
 coverage (and therefore its confidence) instead of raising it. Before 4.0 such a row counted as
 Kerberos evidence and as an assessed endpoint. To get a real assessment, set
 `kerberos_probe_principal` to an account that exists.
+
+A Kerberos row that records an error is not identity evidence either (Phase 234 code review).
+That covers `kerberos-unreachable` with a connection error, a target that was never probed because
+its name was invalid, `kerberos-etypes-unavailable-unrecognised-reply` and
+`kerberos-etypes-unavailable-krb-error`. Before the fix such a row made the identity domain
+assessed at a clean 25 out of 25 with no evidence, so a failed or unprobed KDC could raise the
+score. It was already left out of the assessed endpoints, and it still counts as a scan error,
+which lowers the hygiene and modern TLS subscores.
 
 If the KDC answers that pre-authentication is required but its reply lists no encryption types
 (no error data, error data that cannot be decoded, or error data that carries only other
@@ -7520,8 +7536,8 @@ A dimension counts as assessed as soon as one of its questions is answered. A sc
 - A dimension with no answered question shows a **Not assessed** badge in the Maturity Level column of the Dimension Summary table, and "—" for its Raw and Weighted Score. The stored 0.0 is a placeholder, not a measurement.
 - Not assessed dimensions are left out of the Maturity Distribution buckets, and a line under the buckets reads "1 dimension not assessed" or "N dimensions not assessed".
 - The Dimension Radar still plots an unanswered dimension at 0. That is unchanged in Phase 231.
-- An **Overall Maturity** card, shown once the session has a score, reads the overall score, the maturity level and "N of 4 dimensions assessed" (for example 0.67, Basic, "3 of 4 dimensions assessed"). With no dimension assessed it reads "—" and "Indeterminate".
-- A dimension whose answers changed after the score was saved shows a **Stale — recalculate** badge, "—" for its Raw and Weighted Score, and is left out of the Maturity Distribution. The card then adds the line "Stale — recalculate: answers changed after this score was saved". Staleness is detected by comparing answered-question **counts**: changing the value of a question that was already answered does not mark the dimension stale, so run **Calculate Score** after any change to the answers.
+- An **Overall Maturity** card, shown once the session has a score, reads the overall score, the maturity level and "N of 4 dimensions assessed" (for example 0.67, Below Basic, "3 of 4 dimensions assessed"). With no dimension assessed it reads "—" and "Indeterminate". The level follows the QRAMM maturity levels (Basic from 1.0, Developing from 1.5, Established from 2.5, Advanced from 3.5, Optimizing from 3.95); an overall below 1.0 reads **Below Basic**, because it is under Basic's own floor. Partly answered dimensions often score 0.0, because a dimension's score is its weakest practice area and an unanswered practice scores 0, so a 0.x overall is common early in an assessment.
+- A dimension whose answers changed after the score was saved shows a **Stale — recalculate** badge, "—" for its Raw and Weighted Score, and is left out of the Maturity Distribution. The card's overall itself reads "Stale — recalculate", with no number, maturity level or "N of 4 dimensions assessed", because the saved overall no longer describes the answers either, and the card adds the line "Stale — recalculate: answers changed after this score was saved". Staleness is detected by comparing answered-question **counts**: changing the value of a question that was already answered does not mark the dimension stale, so run **Calculate Score** after any change to the answers.
 - A score saved before Phase 234 carries no answer counts, and its stored overall still averaged a Not assessed dimension in as 0. Its overall reads "Recalculate to apply the updated overall" instead of a maturity level, and every answered dimension reads "Stale — recalculate", because newer answers cannot be ruled out. Both clear when you run **Calculate Score**. Today you see this state on the print/PDF page, which reads the saved score; the Scorecard tab shows a score only after a fresh Calculate Score.
 
 #### Answering after scoring
@@ -7530,7 +7546,7 @@ The state comes from the live answers and the scores from the last Calculate Sco
 
 #### Print / PDF
 
-The dashboard's Export PDF (the `/print` page) uses the same states in its QRAMM section: an Assessment column on the Dimension Scorecard, an "Overall maturity" line that ends with "N of 4 dimensions assessed" (or reads "Recalculate to apply the updated overall" for a score saved before Phase 234), per-framework counts in place of the old coverage tier, and a chip on every practice-area row. See `docs/report-interpretation.md` §9. Before Phase 231, a print export of a scored session failed to load its QRAMM data. It now reads the persisted score from `GET /api/qramm/sessions/{id}`.
+The dashboard's Export PDF (the `/print` page) uses the same states in its QRAMM section: an Assessment column on the Dimension Scorecard, an "Overall maturity" line that ends with "N of 4 dimensions assessed" (or reads "Stale — recalculate" when answers changed after the score was saved, and "Recalculate to apply the updated overall" for a score saved before Phase 234), per-framework counts in place of the old coverage tier, and a chip on every practice-area row. See `docs/report-interpretation.md` §9. Before Phase 231, a print export of a scored session failed to load its QRAMM data. It now reads the persisted score from `GET /api/qramm/sessions/{id}`.
 
 
 ---
