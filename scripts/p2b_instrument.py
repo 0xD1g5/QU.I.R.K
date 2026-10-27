@@ -78,6 +78,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -620,18 +621,71 @@ def provenance() -> Dict[str, Optional[str]]:
     }
 
 
+class SnapshotError(RuntimeError):
+    """The source DB could not be snapshotted; nothing was left behind."""
+
+
+# WR-02: ``Connection.backup`` retries SQLITE_BUSY/LOCKED forever, so a
+# source held by a running app or scan would hang ``--real-db`` silently.
+# Read at call time so a test can shorten them.
+SNAPSHOT_LOCK_TIMEOUT_S = 5.0
+SNAPSHOT_DEADLINE_S = 30.0
+
+
+def _is_lock_error(exc: sqlite3.OperationalError) -> bool:
+    text = str(exc).lower()
+    return "locked" in text or "busy" in text
+
+
 def snapshot_db(src: Any, dst_dir: Any) -> Path:
-    """Copy ``src`` through the backup API from a read-only connection."""
+    """Copy ``src`` through the backup API from a read-only connection.
+
+    Fails closed: a source still locked after ``SNAPSHOT_LOCK_TIMEOUT_S``, or
+    a copy still blocked at ``SNAPSHOT_DEADLINE_S``, raises ``SnapshotError``
+    and removes any partial snapshot. A missing source raises
+    ``sqlite3.OperationalError`` from the ``mode=ro`` open and creates
+    nothing.
+    """
+    lock_timeout = float(SNAPSHOT_LOCK_TIMEOUT_S)
+    deadline_s = float(SNAPSHOT_DEADLINE_S)
     dst_dir = Path(dst_dir)
-    dst_dir.mkdir(parents=True, exist_ok=True)
     dst = dst_dir / "quirk-snapshot.db"
-    source = sqlite3.connect(Path(src).resolve().as_uri() + "?mode=ro", uri=True)
+    source = sqlite3.connect(Path(src).resolve().as_uri() + "?mode=ro",
+                             uri=True, timeout=lock_timeout)
     try:
-        target = sqlite3.connect(str(dst))
         try:
-            source.backup(target)
-        finally:
-            target.close()
+            # A shared-lock read first: a held write lock fails here after
+            # lock_timeout, before any snapshot file exists.
+            source.execute("SELECT count(*) FROM sqlite_master").fetchone()
+        except sqlite3.OperationalError as exc:
+            if _is_lock_error(exc):
+                raise SnapshotError(
+                    f"source DB {src} stayed locked for {lock_timeout:g}s "
+                    "(an app or scan is writing to it); snapshot aborted, "
+                    "nothing written") from exc
+            raise
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        deadline = time.monotonic() + deadline_s
+
+        def _progress(_status: int, _remaining: int, _total: int) -> None:
+            if time.monotonic() > deadline:
+                raise SnapshotError(
+                    f"source DB {src} stayed locked during the copy for "
+                    f"{deadline_s:g}s; snapshot aborted, partial copy removed")
+
+        try:
+            target = sqlite3.connect(str(dst))
+            try:
+                source.backup(target, progress=_progress)
+            finally:
+                target.close()
+        except BaseException:
+            for leftover in (dst, dst.with_name(dst.name + "-journal")):
+                try:
+                    leftover.unlink()
+                except FileNotFoundError:
+                    pass
+            raise
     finally:
         source.close()
     return dst

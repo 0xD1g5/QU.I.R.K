@@ -63,6 +63,8 @@ import os
 import re
 import sqlite3
 import sys
+import threading
+import time
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -772,3 +774,55 @@ def test_real_db_snapshot_is_read_only(inst, tmp_path):
     assert rows == [("h.p2b.example", 443)], f"snapshot rows: {rows}"
     after = hashlib.sha256(src.read_bytes()).hexdigest()
     assert after == before, "snapshot_db modified its source database"
+
+
+def test_real_db_snapshot_fails_fast_on_a_locked_source(inst, tmp_path,
+                                                        monkeypatch):
+    """WR-02: a write-locked source fails promptly and leaves no snapshot.
+
+    ``Connection.backup`` retries SQLITE_BUSY forever, so without a bound a
+    running app or scan holding the canonical DB would hang ``--real-db``
+    with no message. The call runs in a daemon thread so an unbounded
+    implementation fails this node instead of hanging the suite.
+    """
+    src = tmp_path / "locked.db"
+    holder = sqlite3.connect(str(src), isolation_level=None)
+    holder.execute("CREATE TABLE t (x INTEGER)")
+    holder.execute("INSERT INTO t VALUES (1)")
+    monkeypatch.setattr(inst, "SNAPSHOT_LOCK_TIMEOUT_S", 0.5, raising=False)
+    monkeypatch.setattr(inst, "SNAPSHOT_DEADLINE_S", 2.0, raising=False)
+    snap_dir = tmp_path / "snap"
+    outcome: Dict[str, Any] = {}
+
+    def _call():
+        try:
+            outcome["returned"] = inst.snapshot_db(src, snap_dir)
+        except BaseException as exc:  # recorded and asserted on below
+            outcome["raised"] = exc
+
+    holder.execute("BEGIN EXCLUSIVE")
+    holder.execute("INSERT INTO t VALUES (2)")
+    try:
+        started = time.monotonic()
+        worker = threading.Thread(target=_call, daemon=True)
+        worker.start()
+        worker.join(15)
+        elapsed = time.monotonic() - started
+        assert not worker.is_alive(), (
+            f"snapshot_db still blocked after {elapsed:.1f}s on a write-locked "
+            "source; it must fail fast"
+        )
+    finally:
+        holder.execute("ROLLBACK")
+        holder.close()
+
+    assert "returned" not in outcome, (
+        f"snapshot_db returned {outcome.get('returned')!r} from a locked source"
+    )
+    exc = outcome.get("raised")
+    assert isinstance(exc, inst.SnapshotError), (
+        f"expected SnapshotError, got {exc!r}"
+    )
+    assert "locked" in str(exc), f"error does not say the source is locked: {exc}"
+    leftovers = sorted(p.name for p in snap_dir.glob("*")) if snap_dir.exists() else []
+    assert not leftovers, f"partial snapshot left behind: {leftovers}"
