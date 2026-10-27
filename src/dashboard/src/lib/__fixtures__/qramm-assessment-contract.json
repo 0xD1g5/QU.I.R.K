@@ -1,5 +1,5 @@
 {
-  "_comment": "Phase 231 D-09 assessed-state contract, extended by Phase 234 SCORE-10: hand-authored test input read by both tests/test_qramm_assessment_parity.py (pytest, real API) and src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx (vitest); not a generator artifact. Three cases: (1) the top-level scenario (rows, statuses, and the D-14 overall over assessed dimensions only: expected_overall = mean(CVI 0.0, SGRM 2.0, DPE 0.0) = 0.6667, ITR not assessed and excluded); (2) stale_case (D-15: answers saved after the score make the dimension stale, never self-assessed); (3) legacy_score_json (D-25: a score_json without answered_by_dimension reads stale per answered dimension and the overall reads recalculate).",
+  "_comment": "Phase 231 D-09 assessed-state contract, extended by Phase 234 SCORE-10: hand-authored test input read by both tests/test_qramm_assessment_parity.py (pytest, real API) and src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx (vitest); not a generator artifact. Three cases: (1) the top-level scenario (rows, statuses, and the D-14 overall over assessed dimensions only: expected_overall = mean(CVI 0.0, SGRM 2.0, DPE 0.0) = 0.6667, ITR not assessed and excluded); (2) stale_case (D-15: answers saved after the score make the dimension stale, never self-assessed); (3) legacy_score_json (D-25: a score_json without answered_by_dimension reads stale per answered dimension and the overall reads recalculate). Phase 234 review D-31 (WR-05): overall_maturity_levels is the one overall maturity mapping (CSNP levels from Basic = 1.0 up; a mean below 1.0 reads 'Below Basic', never 'Basic'); Python quirk.qramm.scoring and the TS twin are both pinned to it by overall_maturity_probes, so expected_maturity for the 0.6667 scenario is 'Below Basic'.",
   "answers": [
     {
       "question_number": 1,
@@ -307,7 +307,22 @@
     "ITR": "not-assessed"
   },
   "expected_overall": 0.6667,
-  "expected_maturity": "Basic",
+  "expected_maturity": "Below Basic",
+  "overall_maturity_levels": [
+    {"min": 3.95, "label": "Optimizing"},
+    {"min": 3.5, "label": "Advanced"},
+    {"min": 2.5, "label": "Established"},
+    {"min": 1.5, "label": "Developing"},
+    {"min": 1.0, "label": "Basic"},
+    {"min": 0.0, "label": "Below Basic"}
+  ],
+  "overall_maturity_unscored_label": "Indeterminate",
+  "overall_maturity_probes": [
+    [0.0, "Below Basic"], [0.5, "Below Basic"], [0.6667, "Below Basic"], [0.99, "Below Basic"],
+    [1.0, "Basic"], [1.49, "Basic"], [1.5, "Developing"], [2.49, "Developing"],
+    [2.5, "Established"], [3.49, "Established"], [3.5, "Advanced"], [3.94, "Advanced"],
+    [3.95, "Optimizing"], [4.0, "Optimizing"]
+  ],
   "expected_assessed_dimensions": [
     "CVI",
     "SGRM",

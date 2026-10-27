@@ -318,3 +318,25 @@ def test_legacy_score_json_rows_and_overall_read_recalculate() -> None:
     assert session_body["score_overall_state"] == (
         case["expected_overall_state"]
     )
+
+
+# ---------- Phase 234 code review D-31 (WR-05) ----------
+
+
+def test_overall_maturity_mapping_matches_contract() -> None:
+    """D-31 (WR-05): the overall maturity label comes from ONE mapping,
+    shared with the TS twin through the contract fixture. CSNP's levels start
+    at Basic = 1.0, so a mean below 1.0 (the common SCOREFIX-02 case, e.g.
+    the scenario's 0.6667) reads "Below Basic", never "Basic"."""
+    from quirk.qramm.scoring import OVERALL_MATURITY_LEVELS, _maturity_label
+
+    contract = _contract()
+    assert [
+        {"min": floor, "label": label} for floor, label in OVERALL_MATURITY_LEVELS
+    ] == contract["overall_maturity_levels"]
+    for score, label in contract["overall_maturity_probes"]:
+        assert _maturity_label(score) == label, score
+    assert _maturity_label(None) == contract["overall_maturity_unscored_label"]
+    assert _maturity_label(contract["expected_overall"]) == (
+        contract["expected_maturity"]
+    )

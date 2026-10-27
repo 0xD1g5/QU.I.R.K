@@ -3,10 +3,12 @@
 // sentence is hard-coded here once, as the UI-SPEC contract; no other test should retype it.
 
 import { describe, it, expect } from "vitest"
+import contract from "@/lib/__fixtures__/qramm-assessment-contract.json"
 import {
   ASSESSMENT_BADGE_VARIANT,
   ASSESSMENT_LABEL,
   ASSESSMENT_PRINT_CLASS,
+  OVERALL_MATURITY_LEVELS,
   QRAMM_COVERAGE_SENTENCE,
   RECALCULATE_OVERALL_LABEL,
   SCANNER_MEASURED_DIMENSIONS,
@@ -16,6 +18,7 @@ import {
   isDimensionAssessed,
   notAssessedCountLabel,
   overallDisplayState,
+  overallMaturityLabel,
   stateFromCoverageStatus,
   suppressedOverallLabel,
 } from "@/lib/qramm-assessment"
@@ -159,6 +162,18 @@ describe("overallDisplayState", () => {
     // A legacy score stays recalculate even when stale (same precedence as Python overall_state).
     expect(overallDisplayState({}, true)).toBe("recalculate")
     expect(overallDisplayState(null, true)).toBeNull()
+  })
+})
+
+describe("overallMaturityLabel", () => {
+  // Phase 234 review D-31 (WR-05): the one overall mapping, shared with Python through the contract.
+  it("uses the contract's overall maturity levels, so a mean below 1.0 never reads Basic", () => {
+    expect(OVERALL_MATURITY_LEVELS).toEqual(contract.overall_maturity_levels)
+    for (const [score, label] of contract.overall_maturity_probes as Array<[number, string]>) {
+      expect({ score, label: overallMaturityLabel(score) }).toEqual({ score, label })
+    }
+    expect(overallMaturityLabel(null)).toBe(contract.overall_maturity_unscored_label)
+    expect(overallMaturityLabel(undefined)).toBe(contract.overall_maturity_unscored_label)
   })
 })
 

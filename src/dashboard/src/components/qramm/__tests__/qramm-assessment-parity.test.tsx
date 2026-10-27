@@ -541,6 +541,22 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
     }
   })
 
+  it("the overall maturity label comes from the shared mapping, so a mean below 1.0 never reads Basic", async () => {
+    // Phase 234 review D-31 (WR-05): a score persisted before the fix stored maturity "Basic" for
+    // its 0.67 mean. Both surfaces derive the label from the overall through the contract's one
+    // mapping, so they read the contract's expected_maturity, never the stale stored word.
+    expect(contract.expected_overall).toBeLessThan(1)
+    const persisted: ScoreResult = { ...SCORE, maturity: "Basic" }
+    renderScorecard(persisted)
+    expect(screen.queryByTestId("qramm-overall-maturity")?.textContent ?? null).toBe(
+      contract.expected_maturity,
+    )
+    cleanup()
+    const section = await renderPrintSection(persisted)
+    const overallRow = printOverallRow(section)
+    expect(overallRow.startsWith(`Overall maturity: ${contract.expected_maturity} (`)).toBe(true)
+  })
+
   it("an answered but unscored session shows no stale dimension", () => {
     // W2: with no score there is nothing to be stale (Python's score_data-is-None branch).
     renderScorecard(null, contractAnswers())
