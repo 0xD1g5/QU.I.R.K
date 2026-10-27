@@ -59,3 +59,21 @@ between fixture and reality is small now; nothing keeps it small.
 Third instance in this project of a hand-maintained record drifting from the source it claims to
 describe. The fixture's own docstring is what made it credible; the docstring was not the
 measurement. Re-derive from `intelligence-*.json` at write time rather than transcribing.
+
+## Phase 233 note (2026-10-27)
+
+Phase 233's instrument (`python -m scripts.p2b_instrument --real-db ... --real-json ...`, local-only, read through
+a sqlite `.backup` snapshot) measured the **re-derivation gap** at HEAD `2571917018452c10d595d35700b830a7678d0438`:
+
+- The recorded `intelligence-20260914-142606.json` scores **15/61** (emitted/computed).
+- The same run's 370 rows, re-assembled through `build_evidence_summary` at that sha, score **17/69**.
+- What differs, measured: 5 vs 7 open CRITICAL; modern_tls 10 vs 19; identity_trust 10 vs 11. Hygiene 10,
+  agility 25 and data_at_rest 21 are equal.
+- The field-level causes come from Phase 233 RESEARCH Q5: `legacy_tls_count` 0 in the rows vs the LOW-proxy 16 in
+  the pre-Phase-211 JSON, the CRITICAL composer change, and `saml_weak_signing_count` 1 vs 2.
+
+R5 itself carries the same `legacy_tls` LOW proxy: the dict has no `legacy_tls_count`, so the scorer falls back to
+LOW 16. The real 2026-09-14 rows have **0** legacy-TLS endpoints. R5 and the ladder fixtures were not edited in
+Phase 233, and no R6 was added (D-07). This todo stays open for Phase 234 or later.
+
+Record: `.planning/decisions/233-p2b-third-instrument-measurement.md` §8-§9.

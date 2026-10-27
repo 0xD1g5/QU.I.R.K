@@ -107,3 +107,24 @@ own standing caveat, verify the control reproduces the baseline before trusting 
 999.113 D5 — **never tune to a target.** Fitting to the operator's blind-set calibration bands is
 the ladder's intended use; adjusting a denominator because a number demos well is not, and the two
 are easy to confuse now that a fitting harness exists.
+
+## Phase 233 note (2026-10-27)
+
+Measured by a third, row-level instrument (`python -m scripts.p2b_instrument`, SCORE-08) at HEAD
+`2571917018452c10d595d35700b830a7678d0438`. Record: `.planning/decisions/233-p2b-third-instrument-measurement.md`.
+
+**Verdict line:** none of 212's candidates is supported (distinct hosts, absolute exposure, scan-scope
+normalisation), and no ceiling-shaped candidate can be. The dilution has three components:
+
+- the endpoint denominator E;
+- the certificate denominator C;
+- the agility key-type branch, which steps by up to 12 raw points on one observed ECDSA certificate.
+
+On R5, primary ECDSA reading, at +20 the split is about 3 / 3 / 6 of +12 computed. On R2 the whole +6 is C and key
+type. The data point to a new two-part shape, effort **L**: (a) denominator-free absolute-count penalties at the 35
+ratio sites; (b) a key-type rule that does not reward a single healthy observation. That shape is unmeasured.
+
+**Gate for Phase 234 (D-20):** re-run the instrument across all five rungs and all four readings (rows_ecdsa,
+rows_rsa, rows_certless, mutator_212). Diff the result against the record's §4-§5. The fix passes only if computed
+and emitted are non-increasing on R2-R5 in every reading. The xfail going green is necessary, not sufficient,
+because it reads the 212 mutator only, which moves E alone.

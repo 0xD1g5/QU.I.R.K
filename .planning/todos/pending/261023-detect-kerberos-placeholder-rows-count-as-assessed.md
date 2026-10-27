@@ -44,3 +44,14 @@ the P1 operator-reserved row, so the owner choice here is a recommendation the o
   so it is a SCORING_VERSION and ladder question: it belongs inside the P2b work, not a standalone patch.
 - **UNKNOWN**: how many golden fixtures or ladder rungs carry a Kerberos placeholder (none found in 230-04's fixture grep for bearer; not grepped for Kerberos).
 - **Spike**: no; fold into the Phase 233 measurement.
+
+## Phase 233 note (2026-10-27)
+
+None of the five calibration rungs (R1-R5) carries a Kerberos placeholder row. In the Phase 233 row rebuild,
+every rung's KERBEROS row has a real etype detail. `tests/test_p2b_instrument.py::test_healthy_rows_are_healthy`
+asserts this, and asserts that the row exists, so the check is not vacuous. So the P2b measurement was not taken on
+a model that counts an unassessed KDC as assessed.
+
+This todo is **not fixed in Phase 233**: changing the behaviour moves scores, and Phase 233 was measurement-only
+(D-15). The wording above, "before or in Phase 233", now means **Phase 234**. Record:
+`.planning/decisions/233-p2b-third-instrument-measurement.md` §12.
