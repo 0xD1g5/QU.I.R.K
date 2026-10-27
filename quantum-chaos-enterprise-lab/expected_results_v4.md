@@ -683,6 +683,13 @@ misleading" caveat — it described v2.
 `chaoslab-mh-prober` image silently reproduces the old 91/100 (see the rebuild note in the command
 block above). The two models differ by **76 points** on identical evidence.
 
+**Under scoring v4 (Phase 234, measured 2026-10-27), v3 is no longer current:** the prober must
+print `SCORING_VERSION` **4.0**, and one that prints 3.0 is stale in the same way. The same
+2026-09-14 run (370 endpoint rows), rescored from its stored endpoints without a new scan, reads
+**18/100 POOR** (`7 open CRITICAL findings — score limited to 18 (computed 71)`) under v4 and
+17/100 (`computed 69`) under v3 on that same rescoring path; the v3 rows above are the
+2026-09-14 record as written to that run's intelligence file.
+
 #### Cross-surface parity — RESOLVED in Phase 210 (was: open defects, recorded 2026-09-14)
 
 **Update (2026-09-27, Phase 210 / XSURF-01..04):** the three divergences this section originally
