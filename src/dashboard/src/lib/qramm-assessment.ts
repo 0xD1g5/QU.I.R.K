@@ -106,6 +106,26 @@ export function suppressedOverallLabel(state: OverallDisplayState | null): strin
   return null
 }
 
+// Phase 234 review D-31 (WR-05): the one overall maturity mapping, TS twin of Python
+// quirk/qramm/scoring.py OVERALL_MATURITY_LEVELS; both are pinned to the contract fixture's
+// overall_maturity_levels. CSNP levels start at Basic = 1.0, so a mean below 1.0 reads
+// "Below Basic", never "Basic". Surfaces derive the overall label from the number with this
+// mapping, so a label persisted before the fix cannot show.
+export const OVERALL_MATURITY_LEVELS: ReadonlyArray<{ min: number; label: string }> = [
+  { min: 3.95, label: "Optimizing" },
+  { min: 3.5, label: "Advanced" },
+  { min: 2.5, label: "Established" },
+  { min: 1.5, label: "Developing" },
+  { min: 1.0, label: "Basic" },
+  { min: 0.0, label: "Below Basic" },
+]
+
+export function overallMaturityLabel(overall: number | null | undefined): string {
+  if (typeof overall !== "number") return "Indeterminate"
+  for (const level of OVERALL_MATURITY_LEVELS) if (overall >= level.min) return level.label
+  return OVERALL_MATURITY_LEVELS[OVERALL_MATURITY_LEVELS.length - 1].label
+}
+
 // Phase 234 D-23 / D-14: "N of 4 dimensions assessed".
 export function dimensionsAssessedLabel(n: number, total: number): string {
   return `${n} of ${total} dimensions assessed`

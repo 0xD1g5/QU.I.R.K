@@ -119,15 +119,22 @@ def test_d09_isolation_no_forbidden_imports():
 @pytest.mark.parametrize("raw_score", [i * 0.5 for i in range(0, 9)])
 def test_maturity_label_no_gaps_no_overlaps(raw_score):
     """SCORE-04: every score in [0.0, 4.0] at 0.5-step increments maps to
-    exactly one of the five canonical QRAMM maturity labels — no gaps, no
-    fall-throughs, no None returns.
+    exactly one overall maturity label — no gaps, no fall-throughs, no None
+    returns.
+
+    The labels are the five canonical CSNP levels plus "Below Basic" for a
+    mean under Basic's 1.0 floor (Phase 234 review D-31, WR-05: 0.0 and 0.5
+    used to fall through to "Basic").
 
     Steps: 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 (9 values)
     Per CONTEXT.md D-09.
     """
     from quirk.qramm.scoring import _maturity_label
 
-    VALID_LABELS = {"Basic", "Developing", "Established", "Advanced", "Optimizing"}
+    VALID_LABELS = {
+        "Below Basic", "Basic", "Developing", "Established", "Advanced",
+        "Optimizing",
+    }
     label = _maturity_label(raw_score)
     assert label is not None, f"_maturity_label({raw_score}) returned None"
     assert label in VALID_LABELS, (
@@ -136,15 +143,19 @@ def test_maturity_label_no_gaps_no_overlaps(raw_score):
 
 
 def test_maturity_label_covers_all_five_levels():
-    """Sanity check: the 9-step sweep produces all five canonical labels at
-    least once, confirming full coverage of the maturity band."""
+    """Sanity check: the 9-step sweep produces all five canonical CSNP labels
+    at least once, confirming full coverage of the maturity band. Since the
+    Phase 234 review (D-31, WR-05) the sweep's 0.0 and 0.5 read "Below Basic",
+    the one label outside the five, so it is the only other label seen."""
     from quirk.qramm.scoring import _maturity_label
 
     scores = [i * 0.5 for i in range(0, 9)]
     labels_seen = {_maturity_label(s) for s in scores}
     expected = {"Basic", "Developing", "Established", "Advanced", "Optimizing"}
-    assert labels_seen == expected, (
-        f"Not all labels covered. Missing: {expected - labels_seen}, "
+    assert expected <= labels_seen, (
+        f"Not all labels covered. Missing: {expected - labels_seen}"
+    )
+    assert labels_seen - expected == {"Below Basic"}, (
         f"Unexpected: {labels_seen - expected}"
     )
 
@@ -164,7 +175,8 @@ def test_overall_mean_over_assessed_dimensions_only():
         assessed={"CVI", "SGRM", "DPE"},
     )
     assert result["overall"] == pytest.approx(0.6667, abs=1e-4)
-    assert result["maturity"] == "Basic"
+    # Phase 234 review D-31 (WR-05): below Basic's 1.0 floor.
+    assert result["maturity"] == "Below Basic"
     assert result["assessed_dimensions"] == ["CVI", "SGRM", "DPE"]
     assert result["dimensions_assessed"] == 3
     assert result["dimensions_total"] == 4

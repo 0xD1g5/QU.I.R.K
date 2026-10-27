@@ -30,6 +30,7 @@ import {
   dimensionsAssessedLabel,
   notAssessedCountLabel,
   overallDisplayState,
+  overallMaturityLabel,
   suppressedOverallLabel,
   type AssessmentState,
 } from "@/lib/qramm-assessment"
@@ -309,9 +310,7 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
               </span>
               {overallSuppressed == null && (
                 <span className="text-sm font-semibold" data-testid="qramm-overall-maturity">
-                  {typeof ctx.scoreResult.overall === "number"
-                    ? ctx.scoreResult.maturity
-                    : "Indeterminate"}
+                  {overallMaturityLabel(ctx.scoreResult.overall)}
                 </span>
               )}
             </div>

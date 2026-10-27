@@ -16,7 +16,7 @@ design (QRAMM-12).
 """
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 
 def compute_practice_score(answers: List[int], practice_id: str = "") -> float:
@@ -96,11 +96,31 @@ def compute_overall_score(
     }
 
 
+# The one overall maturity mapping, (floor, label), highest first. Phase 234
+# code review D-31 (WR-05): the CSNP levels start at Basic = 1.0, so a mean
+# below 1.0 has no CSNP level; it used to fall through to "Basic", beside a
+# number below Basic's own floor. Under SCOREFIX-02 a partly answered
+# dimension scores 0.0 (weakest link over its placeholder practices), so
+# sub-1.0 overalls are common (the shared contract's 0.6667). They now read
+# "Below Basic". The TS twin (src/dashboard/src/lib/qramm-assessment.ts
+# OVERALL_MATURITY_LEVELS) and this table are both pinned to the contract
+# fixture's overall_maturity_levels, so neither can drift alone.
+OVERALL_MATURITY_LEVELS: Tuple[Tuple[float, str], ...] = (
+    (3.95, "Optimizing"),
+    (3.5, "Advanced"),
+    (2.5, "Established"),
+    (1.5, "Developing"),
+    (1.0, "Basic"),
+    (0.0, "Below Basic"),
+)
+
+
 def _maturity_label(score: float | None) -> str:
     """Map aggregated score to CSNP maturity level name.
 
     Thresholds verified from github.com/csnp/qramm/framework/maturity-levels.md:
       None:    Indeterminate  (D-03 / WR-05: no algos found → cannot grade)
+      <1.0:    Below Basic    (Phase 234 review D-31: below CSNP's Basic floor)
       1.0-1.4: Basic
       1.5-2.4: Developing
       2.5-3.4: Established
@@ -109,12 +129,7 @@ def _maturity_label(score: float | None) -> str:
     """
     if score is None:
         return "Indeterminate"
-    if score >= 3.95:
-        return "Optimizing"
-    if score >= 3.5:
-        return "Advanced"
-    if score >= 2.5:
-        return "Established"
-    if score >= 1.5:
-        return "Developing"
-    return "Basic"
+    for floor, label in OVERALL_MATURITY_LEVELS:
+        if score >= floor:
+            return label
+    return OVERALL_MATURITY_LEVELS[-1][1]

@@ -13,6 +13,7 @@ import {
   QRAMM_COVERAGE_SENTENCE,
   dimensionsAssessedLabel,
   overallDisplayState,
+  overallMaturityLabel,
   suppressedOverallLabel,
   type OverallDisplayState,
   type AssessmentState,
@@ -304,12 +305,12 @@ function PrintQRAMM({
     overallText = suppressed
   } else if (typeof scoreResult.dimensions_assessed === "number") {
     const overall = typeof scoreResult.overall === "number" ? scoreResult.overall.toFixed(2) : "—"
-    overallText = `${scoreResult.maturity} (${overall}) — ${dimensionsAssessedLabel(
+    overallText = `${overallMaturityLabel(scoreResult.overall)} (${overall}) — ${dimensionsAssessedLabel(
       scoreResult.dimensions_assessed,
       scoreResult.dimensions_total ?? QRAMM_DIMS.length,
     )}`
   } else {
-    overallText = scoreResult.maturity
+    overallText = overallMaturityLabel(scoreResult.overall)
   }
 
   // Group compliance rows by framework
