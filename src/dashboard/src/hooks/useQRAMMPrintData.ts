@@ -12,7 +12,7 @@ interface UseQRAMMPrintDataResult {
   complianceRows: QRAMMComplianceMapRow[] | null
   // Phase 234 D-15/D-25: from GET /api/qramm/sessions/{id} (SessionRead).
   scoreStale: boolean
-  scoreOverallState: "current" | "recalculate" | null
+  scoreOverallState: "current" | "recalculate" | "stale" | null
   loading: boolean
   error: string | null
 }
@@ -21,7 +21,7 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
   const [scoreResult, setScoreResult] = useState<QRAMMScoreResponse | null>(null)
   const [complianceRows, setComplianceRows] = useState<QRAMMComplianceMapRow[] | null>(null)
   const [scoreStale, setScoreStale] = useState(false)
-  const [scoreOverallState, setScoreOverallState] = useState<"current" | "recalculate" | null>(null)
+  const [scoreOverallState, setScoreOverallState] = useState<"current" | "recalculate" | "stale" | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

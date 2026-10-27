@@ -11,9 +11,10 @@ import {
   ASSESSMENT_LABEL,
   ASSESSMENT_PRINT_CLASS,
   QRAMM_COVERAGE_SENTENCE,
-  RECALCULATE_OVERALL_LABEL,
   dimensionsAssessedLabel,
   overallDisplayState,
+  suppressedOverallLabel,
+  type OverallDisplayState,
   type AssessmentState,
 } from "@/lib/qramm-assessment"
 import quirkLogoUrl from "@/assets/brand/quirk-logo.svg"
@@ -245,10 +246,13 @@ function PrintQRAMM({
   scoreResult,
   complianceRows,
   scoreStale = false,
+  overallState,
 }: {
   scoreResult: QRAMMScoreResponse | null
   complianceRows: QRAMMComplianceMapRow[] | null
   scoreStale?: boolean
+  // Phase 234 review IN-03: the server's SessionRead.score_overall_state.
+  overallState?: OverallDisplayState | null
 }) {
   if (!scoreResult || !complianceRows) {
     return (
@@ -289,12 +293,15 @@ function PrintQRAMM({
   }
   const COUNT_STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed", "stale"]
 
-  // Phase 234 D-14/D-23/D-25: the overall over assessed dimensions with "N of 4"; a legacy score
-  // (no answered_by_dimension) reads Recalculate, never a maturity level.
-  const overallState = overallDisplayState(scoreResult)
+  // Phase 234 D-14/D-23/D-25/D-27: the overall over assessed dimensions with "N of 4"; a legacy
+  // score (no answered_by_dimension) reads Recalculate and a stale one reads Stale, never a
+  // maturity level. The server's state is authoritative (IN-03); the TS twin derives it only when
+  // the session detail carries none.
+  const state = overallState ?? overallDisplayState(scoreResult, scoreStale)
+  const suppressed = suppressedOverallLabel(state)
   let overallText: string
-  if (overallState === "recalculate") {
-    overallText = RECALCULATE_OVERALL_LABEL
+  if (suppressed != null) {
+    overallText = suppressed
   } else if (typeof scoreResult.dimensions_assessed === "number") {
     const overall = typeof scoreResult.overall === "number" ? scoreResult.overall.toFixed(2) : "—"
     overallText = `${scoreResult.maturity} (${overall}) — ${dimensionsAssessedLabel(
@@ -443,6 +450,7 @@ export function PrintPage() {
     scoreResult,
     complianceRows,
     scoreStale,
+    scoreOverallState,
     loading: qrammLoading,
     error: qrammError,
   } = useQRAMMPrintData()
@@ -610,6 +618,7 @@ export function PrintPage() {
             scoreResult={qrammError ? null : scoreResult}
             complianceRows={qrammError ? null : complianceRows}
             scoreStale={scoreStale === true}
+            overallState={scoreOverallState ?? null}
           />
         </div>
 

@@ -10,12 +10,14 @@ import {
   QRAMM_COVERAGE_SENTENCE,
   RECALCULATE_OVERALL_LABEL,
   SCANNER_MEASURED_DIMENSIONS,
+  STALE_OVERALL_LABEL,
   dimensionStateFromAnswered,
   dimensionsAssessedLabel,
   isDimensionAssessed,
   notAssessedCountLabel,
   overallDisplayState,
   stateFromCoverageStatus,
+  suppressedOverallLabel,
 } from "@/lib/qramm-assessment"
 
 describe("isDimensionAssessed", () => {
@@ -148,6 +150,25 @@ describe("overallDisplayState", () => {
 
   it("is current for a score that carries answered_by_dimension", () => {
     expect(overallDisplayState({ answered_by_dimension: { CVI: 3, SGRM: 30, DPE: 5, ITR: 0 } })).toBe("current")
+  })
+
+  it("is stale for a current-format score whose answers changed after it was saved", () => {
+    const counts = { answered_by_dimension: { CVI: 3, SGRM: 30, DPE: 5, ITR: 0 } }
+    expect(overallDisplayState(counts, true)).toBe("stale")
+    expect(overallDisplayState(counts, false)).toBe("current")
+    // A legacy score stays recalculate even when stale (same precedence as Python overall_state).
+    expect(overallDisplayState({}, true)).toBe("recalculate")
+    expect(overallDisplayState(null, true)).toBeNull()
+  })
+})
+
+describe("suppressedOverallLabel", () => {
+  it("replaces the overall for recalculate and stale, never for current", () => {
+    expect(suppressedOverallLabel("recalculate")).toBe(RECALCULATE_OVERALL_LABEL)
+    expect(suppressedOverallLabel("stale")).toBe("Stale — recalculate")
+    expect(STALE_OVERALL_LABEL).toBe(ASSESSMENT_LABEL.stale)
+    expect(suppressedOverallLabel("current")).toBeNull()
+    expect(suppressedOverallLabel(null)).toBeNull()
   })
 })
 

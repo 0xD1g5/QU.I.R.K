@@ -26,11 +26,11 @@ import {
   isDimensionAssessed,
   ASSESSMENT_LABEL,
   ASSESSMENT_BADGE_VARIANT,
-  RECALCULATE_OVERALL_LABEL,
   dimensionStateFromAnswered,
   dimensionsAssessedLabel,
   notAssessedCountLabel,
   overallDisplayState,
+  suppressedOverallLabel,
   type AssessmentState,
 } from "@/lib/qramm-assessment"
 import type { QRAMMScoreResponse } from "@/types/api"
@@ -106,7 +106,9 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
     [ctx.scoreResult, stateByDim],
   )
   const anyStale = DIMENSIONS.some(d => staleByDim[d])
-  const overallState = overallDisplayState(ctx.scoreResult)
+  // D-25/D-27: a legacy or stale score's overall never reads as a maturity level.
+  const overallState = overallDisplayState(ctx.scoreResult, anyStale)
+  const overallSuppressed = suppressedOverallLabel(overallState)
 
   // Approximate maturity distribution by bucketing each dimension's score.
   // When every dimension's score is null (Phase 74 "Indeterminate" sentinel),
@@ -292,19 +294,20 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
           </CardHeader>
           <CardContent className="space-y-1">
             {/* D-25: a score saved before Phase 234 averaged unassessed dimensions in as 0, so it
-                shows Recalculate and no maturity level or count. */}
+                shows Recalculate; D-27: a score whose answers changed since it was saved shows
+                Stale. Neither shows a maturity level or a count. */}
             <div className="flex items-baseline gap-3">
               <span
-                className={overallState === "recalculate" ? "text-sm font-semibold" : "font-data text-2xl"}
+                className={overallSuppressed != null ? "text-sm font-semibold" : "font-data text-2xl"}
                 data-testid="qramm-overall"
               >
-                {overallState === "recalculate"
-                  ? RECALCULATE_OVERALL_LABEL
+                {overallSuppressed != null
+                  ? overallSuppressed
                   : typeof ctx.scoreResult.overall === "number"
                     ? ctx.scoreResult.overall.toFixed(2)
                     : "—"}
               </span>
-              {overallState !== "recalculate" && (
+              {overallSuppressed == null && (
                 <span className="text-sm font-semibold" data-testid="qramm-overall-maturity">
                   {typeof ctx.scoreResult.overall === "number"
                     ? ctx.scoreResult.maturity
@@ -312,7 +315,7 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                 </span>
               )}
             </div>
-            {overallState !== "recalculate" &&
+            {overallSuppressed == null &&
               typeof ctx.scoreResult.dimensions_assessed === "number" && (
                 <p className="text-xs text-muted-foreground" data-testid="qramm-dimensions-assessed">
                   {dimensionsAssessedLabel(

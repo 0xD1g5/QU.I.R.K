@@ -568,8 +568,9 @@ export interface QRAMMSessionDetail {
   score: QRAMMScoreResponse | null
   // Phase 234 D-15/D-25: live answers differ from the saved counts, or the score is legacy.
   score_stale?: boolean
-  // Phase 234 D-25: "current" | "recalculate" (legacy score), null when unscored.
-  score_overall_state?: "current" | "recalculate" | null
+  // Phase 234 D-25/D-27: "current" | "recalculate" (legacy score) | "stale" (answers changed after
+  // the score), null when unscored. Print consumes it (234 review IN-03).
+  score_overall_state?: "current" | "recalculate" | "stale" | null
 }
 
 // Phase 193 Plan 07 (PARITY-02): mirrors

@@ -135,24 +135,36 @@ def score_answered_counts(
     return counts
 
 
-def overall_state(score_data: Optional[Mapping[str, Any]]) -> Optional[str]:
-    """State of a saved QRAMM overall (Phase 234 D-25).
+def overall_state(
+    score_data: Optional[Mapping[str, Any]],
+    *,
+    stale: bool = False,
+) -> Optional[str]:
+    """State of a saved QRAMM overall (Phase 234 D-25, D-27).
 
     - None: the session is unscored (no score to describe).
     - "recalculate": the score carries no dict-valued
       ``answered_by_dimension``, i.e. it was saved before Phase 234, when the
       overall still averaged a Not-assessed dimension in as 0. Every surface
       shows "Recalculate to apply the updated overall", never a maturity
-      level.
-    - "current": the score was saved with its answered counts (D-14 overall).
+      level. Checked first: such a score cannot even rule out newer answers.
+    - "stale" (Phase 234 review D-27, CR-01): a current-format score whose
+      answers changed after it was saved (``stale`` is ``is_score_stale``'s
+      result). Its overall no longer describes the answers, so every surface
+      shows "Stale — recalculate", never a maturity level or "N of 4
+      dimensions assessed".
+    - "current": the score was saved with its answered counts (D-14 overall)
+      and the live answers still match them.
     """
     if score_data is None:
         return None
-    if isinstance(score_data, Mapping) and isinstance(
+    if not (isinstance(score_data, Mapping) and isinstance(
         score_data.get("answered_by_dimension"), Mapping
-    ):
-        return "current"
-    return "recalculate"
+    )):
+        return "recalculate"
+    if stale:
+        return "stale"
+    return "current"
 
 
 def is_score_stale(

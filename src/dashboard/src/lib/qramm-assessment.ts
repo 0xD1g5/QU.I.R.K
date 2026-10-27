@@ -81,12 +81,29 @@ export function notAssessedCountLabel(n: number): string {
 // dimension in as 0, so its overall is never shown as a maturity level. TS twin of Python overall_state.
 export const RECALCULATE_OVERALL_LABEL = "Recalculate to apply the updated overall"
 
+// Phase 234 review D-27 (CR-01): a current-format score whose answers changed after it was saved.
+export const STALE_OVERALL_LABEL = ASSESSMENT_LABEL.stale
+
+export type OverallDisplayState = "current" | "recalculate" | "stale"
+
+// Same precedence as Python overall_state: unscored -> null; no saved counts (legacy) ->
+// recalculate; answers changed after the score -> stale; else current. Only "current" may show a
+// maturity level or "N of 4 dimensions assessed".
 export function overallDisplayState(
   score: { answered_by_dimension?: Record<string, number> | null } | null | undefined,
-): "current" | "recalculate" | null {
+  stale = false,
+): OverallDisplayState | null {
   if (score == null) return null
   const counts = score.answered_by_dimension
-  return counts != null && typeof counts === "object" ? "current" : "recalculate"
+  if (!(counts != null && typeof counts === "object")) return "recalculate"
+  return stale ? "stale" : "current"
+}
+
+// The text shown in place of the overall when it must not read as a maturity level, else null.
+export function suppressedOverallLabel(state: OverallDisplayState | null): string | null {
+  if (state === "recalculate") return RECALCULATE_OVERALL_LABEL
+  if (state === "stale") return STALE_OVERALL_LABEL
+  return null
 }
 
 // Phase 234 D-23 / D-14: "N of 4 dimensions assessed".

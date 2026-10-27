@@ -110,9 +110,10 @@ class SessionRead(BaseModel):
     # the score predates persisted counts (D-25). Surfaces show
     # "Stale — recalculate" instead of the saved values.
     score_stale: bool = False
-    # Phase 234 D-25: None (unscored) | "current" | "recalculate" (a score
-    # saved before Phase 234, whose overall still averaged a Not-assessed
-    # dimension in as 0; never shown as a maturity level).
+    # Phase 234 D-25 / D-27: None (unscored) | "current" | "recalculate" (a
+    # score saved before Phase 234, whose overall still averaged a
+    # Not-assessed dimension in as 0) | "stale" (answers changed after the
+    # score was saved). Only "current" is ever shown as a maturity level.
     score_overall_state: Optional[str] = None
 
 
@@ -383,7 +384,7 @@ def read_session(session_id: int, db: Session = Depends(get_db)) -> SessionRead:
         score=score,
         answers_count=answers_count,
         score_stale=score_stale,
-        score_overall_state=overall_state(score),
+        score_overall_state=overall_state(score, stale=score_stale),
     )
 
 
