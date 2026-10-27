@@ -160,6 +160,12 @@ def build_phased_roadmap(
     )
     rsa_count = max(0, _as_int(cert_keys.get("RSA", 0)))
     ecdsa_count = max(0, _as_int(cert_keys.get("ECDSA", 0)))
+    # Phase 234 O-4: the certificate-key item fires exactly when the scorer's
+    # key-type penalty fires (scoring.py: classical keys present, or certificates
+    # observed with no PQC key), so PQC certificate count and certs observed are
+    # read with the same coercion the scorer uses.
+    pqc_cert_count = max(0, _as_int(cert_keys.get("PQC", 0)))
+    certs_observed = max(0, _as_int(cert_obs.get("certs_observed", 0)))
 
     reasons = _driver_reasons(scoring)
     items: Dict[str, Dict[str, Any]] = {}
@@ -311,17 +317,28 @@ def build_phased_roadmap(
             priority=90,
         )
 
-    if rsa_count > 0 and ecdsa_count == 0:
+    # Phase 234 O-4: retargeted from the ECDSA-adoption title. Under scoring 4.0
+    # every classical certificate key (RSA/ECDSA/EdDSA) is quantum-vulnerable,
+    # so recommending ECDSA as an improvement would be wrong advice. The item
+    # now recommends PQC/hybrid certificates and fires on the same condition as
+    # the scorer's key-type penalty, ECDSA-only estates included. Its slug stays
+    # `ecdsa-adoption-planning` (remediation.py, D-01: the slug is identity).
+    if rsa_count + ecdsa_count > 0 or (certs_observed > 0 and pqc_cert_count == 0):
         _add_candidate(
             items,
             phase="LATER",
-            title="Plan ECDSA adoption",
+            title="Plan post-quantum (PQC/hybrid) certificate adoption",
             why=_why(
                 (
-                    "Certificate portfolio appears RSA-only; introduce ECDSA "
-                    "rollout planning for agility."
+                    "Certificate keys are classical (RSA/ECDSA/EdDSA) or "
+                    "undetermined, and all classical keys are quantum-vulnerable; "
+                    "plan migration to ML-DSA or composite (hybrid) certificates "
+                    "as CA and client support allows."
                 ),
-                _driver_hint(reasons, ("rsa-only", "ecdsa adoption")),
+                _driver_hint(
+                    reasons,
+                    ("quantum-vulnerable certificate", "certificate key types undetermined"),
+                ),
             ),
             owner_placeholder="[owner: cryptography-architecture]",
             dependencies=("CA support validation", "Client support matrix"),

@@ -160,7 +160,10 @@ def _absence_evidence() -> dict:
         "mtls_present_count": 1,
         "tls_enum_coverage_ratio": 0.5,
         "certificate_observations": {"certs_observed": 3},
-        "cert_key_type_counts": {"RSA": 0, "ECDSA": 0},
+        # Phase 234 O-4: every observed certificate carries a PQC key, so the
+        # retargeted PQC/hybrid certificate item (which now also fires on
+        # certificates with undetermined key types) stays out of this fixture.
+        "cert_key_type_counts": {"RSA": 0, "ECDSA": 0, "PQC": 3},
     }
 
 
@@ -301,7 +304,11 @@ _DELTA_APPLICATIONS = {
     "expired-certificates": lambda e: e["certificate_observations"].__setitem__(
         "expired_count", 0
     ),
-    "scan-reliability": lambda e: e["scan_error"].__setitem__("rate", 0.0),
+    # Phase 234 D-03: scoring 4.0 reads scan_error.count, so both are zeroed.
+    "scan-reliability": lambda e: (
+        e["scan_error"].__setitem__("rate", 0.0),
+        e["scan_error"].__setitem__("count", 0),
+    ),
     "unknown-open-services": lambda e: e["protocol_counts"].__setitem__("UNKNOWN", 0),
     "near-expiry-certificates": lambda e: e["certificate_observations"].__setitem__(
         "expiring_count", 0
@@ -310,8 +317,21 @@ _DELTA_APPLICATIONS = {
         "self_signed_count", 0
     ),
     "legacy-tls-versions": lambda e: e["finding_severity_counts"].__setitem__("LOW", 0),
-    "ecdsa-adoption-planning": lambda e: e["cert_key_type_counts"].__setitem__("ECDSA", 1),
+    # Phase 234 O-4: the slug now names PQC/hybrid certificate adoption; the
+    # independent model is "all classical certificate keys migrated".
+    "ecdsa-adoption-planning": lambda e: _migrate_all_cert_keys_to_pqc(e),
 }
+
+
+def _migrate_all_cert_keys_to_pqc(evidence: dict) -> None:
+    """Independent mirror of the O-4 resolver: RSA = ECDSA = 0 and
+    PQC = max(1, RSA + ECDSA, certs_observed)."""
+    keys = evidence.setdefault("cert_key_type_counts", {})
+    classical = int(keys.get("RSA", 0)) + int(keys.get("ECDSA", 0))
+    observed = int(evidence.get("certificate_observations", {}).get("certs_observed", 0))
+    keys["RSA"] = 0
+    keys["ECDSA"] = 0
+    keys["PQC"] = max(1, classical, observed)
 
 
 def _independently_resolve_all(evidence: dict, items: list) -> dict:
@@ -325,6 +345,43 @@ def _independently_resolve_all(evidence: dict, items: list) -> dict:
     for slug in present_slugs & _MODELABLE_SLUGS:
         _DELTA_APPLICATIONS[slug](resolved)
     return resolved
+
+
+def test_pqc_certificate_adoption_lift_is_positive_on_r2() -> None:
+    """Phase 234 O-4: on the R2 calibration rung (40 RSA certificates, no PQC)
+    the retargeted item projects a real, strictly positive lift. Under the
+    pre-234 resolver (add one ECDSA key) the 4.0 lift was 0: ECDSA is a
+    classical key and takes the same penalty as RSA."""
+    from tests.test_score_properties import _r2_well_run_no_pqc
+
+    evidence = _r2_well_run_no_pqc()
+    base = compute_readiness_score(evidence)["score"]
+    resolved = copy.deepcopy(evidence)
+    _migrate_all_cert_keys_to_pqc(resolved)
+    expected_lift = compute_readiness_score(resolved)["score"] - base
+    assert expected_lift > 0, f"migrate-all-to-PQC lift on R2 is {expected_lift}"
+
+    items = _items(evidence)
+    assert "ecdsa-adoption-planning" in {slug_for_title(i["title"]) for i in items}
+    lifts = compute_item_lifts(evidence, items)
+    assert lifts.get("ecdsa-adoption-planning") == expected_lift
+
+
+def test_scan_reliability_lift_follows_the_count_input() -> None:
+    """Phase 234 D-03: the scorer reads scan_error.count, so the "Increase scan
+    coverage" lift must be positive when only the count is populated."""
+    evidence = _evidence()
+    # rate >= 0.2 triggers the roadmap item; count is what the 4.0 scorer reads.
+    evidence["scan_error"] = {"rate": 0.4, "count": 4}
+    items = _items(evidence)
+    assert "scan-reliability" in {slug_for_title(i["title"]) for i in items}
+    base = compute_readiness_score(evidence)["score"]
+    resolved = copy.deepcopy(evidence)
+    resolved["scan_error"]["rate"] = 0.0
+    resolved["scan_error"]["count"] = 0
+    expected_lift = compute_readiness_score(resolved)["score"] - base
+    assert expected_lift > 0
+    assert compute_item_lifts(evidence, items).get("scan-reliability") == expected_lift
 
 
 def test_aggregate_projection_equals_one_independent_rescore() -> None:

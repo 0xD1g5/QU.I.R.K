@@ -75,6 +75,9 @@ def _resolve_self_signed_certificates(evidence: Dict[str, Any]) -> None:
 def _resolve_scan_reliability(evidence: Dict[str, Any]) -> None:
     scan_error = _ensure(evidence, "scan_error")
     scan_error["rate"] = 0.0
+    # Phase 234 D-03: scoring 4.0 reads scan_error.count, not rate, so the
+    # count must be zeroed too or the "Increase scan coverage" lift is 0.
+    scan_error["count"] = 0
 
 
 def _resolve_unknown_open_services(evidence: Dict[str, Any]) -> None:
@@ -89,10 +92,28 @@ def _resolve_legacy_tls_versions(evidence: Dict[str, Any]) -> None:
 
 
 def _resolve_ecdsa_adoption_planning(evidence: Dict[str, Any]) -> None:
+    # Phase 234 O-4: the slug kept its history name, but the item is now
+    # "Plan post-quantum (PQC/hybrid) certificate adoption". Model "all
+    # classical certificate keys migrated": RSA = ECDSA = 0 and every observed
+    # certificate carries a PQC (ML-DSA / composite) key, which removes the
+    # classical-key / undetermined penalty and earns the single PQC credit.
     cert_keys = _ensure(evidence, "cert_key_type_counts")
-    # Flip the flat RSA-only penalty to the flat has-ECDSA bonus. Magnitude
-    # is count-independent, so 1 suffices; RSA is left untouched.
-    cert_keys["ECDSA"] = 1
+    cert_obs = evidence.get("certificate_observations")
+    certs_observed = 0
+    if isinstance(cert_obs, Mapping):
+        try:
+            certs_observed = max(0, int(cert_obs.get("certs_observed", 0) or 0))
+        except (TypeError, ValueError):
+            certs_observed = 0
+    classical = 0
+    for key in ("RSA", "ECDSA"):
+        try:
+            classical += max(0, int(cert_keys.get(key, 0) or 0))
+        except (TypeError, ValueError):
+            pass
+    cert_keys["RSA"] = 0
+    cert_keys["ECDSA"] = 0
+    cert_keys["PQC"] = max(1, classical, certs_observed)
 
 
 _DELTAS: Dict[str, Callable[[Dict[str, Any]], None]] = {

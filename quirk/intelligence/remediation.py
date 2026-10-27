@@ -39,7 +39,9 @@ REMEDIATION_KIND_SLUGS: Dict[str, str] = {
     "Migrate self-signed certificates to managed PKI": "self-signed-certificates",           # NEXT   70
     "Disable legacy TLS versions": "legacy-tls-versions",                                   # NEXT   80
     "Increase TLS enumeration coverage": "tls-enum-coverage",                               # NEXT   90
-    "Plan ECDSA adoption": "ecdsa-adoption-planning",                                       # LATER  100
+    # Phase 234 O-4: retargeted from the ECDSA-adoption title to PQC/hybrid certificate
+    # adoption; the slug is identity, not description (D-01), so history is not re-keyed.
+    "Plan post-quantum (PQC/hybrid) certificate adoption": "ecdsa-adoption-planning",       # LATER  100
     "Standardize mTLS lifecycle operations": "mtls-lifecycle-operations",                   # LATER  110
     "Assign remediation owners and SLAs": "assign-owners-and-slas",                         # NOW    900
     "Automate evidence refresh cadence": "automate-evidence-refresh",                       # NEXT   910
