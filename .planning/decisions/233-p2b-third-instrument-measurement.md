@@ -413,8 +413,18 @@ rescale over 5 assessed domains (10 of 125 raw points). The field-level causes a
 from RESEARCH Q5, not from this instrument's JSON:
 
 - `legacy_tls_count` is 0 in the rows, against the LOW proxy of 16 in the pre-Phase-211 JSON;
-- the CRITICAL count is 7 vs 5 (6 "TLS certificate expired" plus 1 SAML RSA-1024 from today's
-  composer);
+- the CRITICAL count is 7 vs 5: 6 "TLS certificate expired" plus 1 SAML RSA-1024 from today's
+  composer. **One of the six expired-certificate CRITICALs is a clock artifact, not a composer
+  change** (corrected after code review WR-01, 2026-10-27). Real-estate mode builds evidence with
+  `reference_utc` = the scan time (2026-09-14 14:26), but `derive_report_findings` checks expiry
+  against the wall clock. Of the 17 certificates, 5 had expired at scan time and 6 have expired
+  as of 2026-10-27; the extra one has notAfter 2026-09-15 14:20, one day after the scan. So
+  against the scan's own clock there are 5 expired-certificate CRITICALs plus the SAML one (6
+  CRITICALs, not 7). The score does not change, because `deep-critical` binds at 5 or more either
+  way. This CRITICAL count **drifts with the date the instrument is run**: it grows as more of the
+  17 certificates expire. The fix belongs in the evaluator (a `reference_utc` parameter), which is
+  outside this phase's scope (no `quirk/` change), so it is recorded here and in the instrument's
+  real-estate docstring instead;
 - `saml_weak_signing_count` is 1 vs 2 (Phase 210 dedupe);
 - one candidate cause not isolated: `derive_report_findings(cfg=None)` designates only the
   well-known TLS ports (RESEARCH A1).

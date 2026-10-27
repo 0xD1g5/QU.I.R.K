@@ -61,6 +61,17 @@ never calls ``init_db`` and never serves an app. ``--real-json PATH`` reads a
 recorded intelligence JSON's ``evidence_summary``. No committed test uses
 either flag.
 
+The ``--real-db`` reading mixes two clocks (code review WR-01). Evidence is
+built with ``reference_utc`` = the run's scan time, but the real rows'
+findings come from ``derive_report_findings``, which checks certificate
+expiry against TODAY'S date. So the CRITICAL count (and anything that reads
+it) DRIFTS WITH THE DATE THE INSTRUMENT IS RUN: a certificate that expired
+after the scan still counts as an expired-certificate CRITICAL. On
+2026-10-27, 6 of the 17 certificates counted as expired against 5 at scan
+time. Fixing it needs a ``reference_utc`` parameter on the evaluator, which
+is outside ``scripts/``; compare real-estate CRITICAL counts only between
+runs made on the same date.
+
 Usage::
 
     python -m scripts.p2b_instrument [--json | --markdown] [--points 0,20,100,500]
