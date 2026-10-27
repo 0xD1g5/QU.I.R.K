@@ -4,6 +4,8 @@ Key design:
 - API routes registered first (prefix /api).
 - Root-level static files (favicon.*) served explicitly before the SPA catch-all.
 - /assets StaticFiles mount for Vite build output.
+- /fonts StaticFiles mount for the bundled JetBrains Mono font (W15), before
+  the catch-all so /fonts/* is never answered with index.html.
 - SPA catch-all last — serves index.html for ANY path not already matched.
   This allows React Router to handle /findings, /cbom, etc. on hard reload.
 """
@@ -46,6 +48,14 @@ _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 # Root-level static files that must be served before the SPA catch-all.
 # The SPA catch-all would otherwise intercept /favicon.ico etc. and return index.html.
 _ROOT_STATIC_FILES = ("favicon.ico", "favicon.svg", "favicon.png", "robots.txt", "manifest.json")
+
+# W15 / POLISH-01: python:3.10/3.11-slim ship no /etc/mime.types, so
+# mimetypes.guess_type("x.ttf") is (None, None) there and Starlette serves the
+# bundled font as text/plain -- which browsers reject for @font-face under
+# X-Content-Type-Options: nosniff. Register the type explicitly so /fonts/*.ttf
+# is font/ttf on every platform. (A later mimetypes.init() would undo this;
+# nothing in quirk/ calls it.)
+mimetypes.add_type("font/ttf", ".ttf")
 
 
 def _index_html() -> str:
@@ -165,6 +175,17 @@ def create_app(db_path: str | None = None) -> FastAPI:
             "/assets",
             StaticFiles(directory=assets_dir),
             name="assets",
+        )
+
+    # 3b. /fonts static mount (W15) — the built CSS requests
+    #     /fonts/JetBrainsMono%5Bwght%5D.ttf (URL-encoded brackets), so the
+    #     files are mounted here rather than listed in _ROOT_STATIC_FILES.
+    fonts_dir = os.path.join(_STATIC_DIR, "fonts")
+    if os.path.isdir(fonts_dir):
+        application.mount(
+            "/fonts",
+            StaticFiles(directory=fonts_dir),
+            name="fonts",
         )
 
     # 4. SPA catch-all — MUST be registered last
