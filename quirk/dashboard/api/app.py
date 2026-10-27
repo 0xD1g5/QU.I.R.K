@@ -50,8 +50,9 @@ _STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "static")
 _ROOT_STATIC_FILES = ("favicon.ico", "favicon.svg", "favicon.png", "robots.txt", "manifest.json")
 
 # W15 / POLISH-01: python:3.10/3.11-slim ship no /etc/mime.types, so
-# mimetypes.guess_type("x.ttf") is (None, None) there and Starlette serves the
-# bundled font as text/plain -- which browsers reject for @font-face under
+# mimetypes.guess_type("x.ttf") is (None, None) there and Starlette falls back
+# to text/plain (1.0) or application/octet-stream (1.10) -- which browsers
+# reject for @font-face under
 # X-Content-Type-Options: nosniff. Register the type explicitly so /fonts/*.ttf
 # is font/ttf on every platform. (A later mimetypes.init() would undo this;
 # nothing in quirk/ calls it.)

@@ -96,8 +96,10 @@ module's own optional-import guard, 2026-09-09):
   These map to the ``'quirk-scanner[hw]'`` extras group, which is
   intentionally NOT an ``optional_extra.REGISTRY`` entry (``hw`` is
   deliberately excluded from ``[all]`` — see ``pyproject.toml``), so
-  ``extra=None`` here with the reason text naming ``'quirk-scanner[hw]'``
-  directly.
+  ``extra=None`` here. The reason text names only the module flag and
+  ``install_hint`` is empty: the dashboard shows no ``'quirk-scanner[hw]'``
+  hint for these three (Phase 232 review WR-01; follow-up todo
+  ``261027-dashboard-hw-connectors-show-no-install-hint``).
 - ``enable_authenticated_mode`` / ``enable_recurring_otics`` ->
   ``always_available=True`` — pure behavior toggles (Phase 93 AUTH-01,
   Phase 156 HWLC-12) with no optional import anywhere. These MUST be

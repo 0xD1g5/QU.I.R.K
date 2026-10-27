@@ -30,10 +30,16 @@ Measured on 2026-10-27 with the guard's own `scan_lines()` rule from
 None uses the wrong distribution name `quirk[`. Re-derive the list at fix time; these counts are a
 snapshot, not a target.
 
-Also record here (same class, hint text that never reaches the user as written):
-`quirk/dashboard/api/connector_availability.py:96-100` says the hw connectors carry "the reason text naming
-`'quirk-scanner[hw]'` directly", but the reason string is built from `"{module}.{flag} unavailable"`, so no
-install hint reaches the reason. Either correct the docstring or make the reason name the quoted extra.
+Two more sites outside the scanned roots, found by the Phase 232 code review (IN-07):
+
+| File | Line | Form |
+|------|------|------|
+| `config.yaml` (repo-root chaos-lab config, tracked) | 11 | comment names the **wrong** distribution, `quirk[identity]` |
+| `Dockerfile` | 52 | comment, unquoted `pip install quirk-scanner[all]==X.Y.Z` |
+
+The `connector_availability.py:96-100` docstring drift this todo first recorded was corrected in the Phase
+232 review-fix commit; the missing dashboard hint it described is now its own todo,
+`261027-dashboard-hw-connectors-show-no-install-hint` (owner 999.127).
 
 ## Feasibility & Effort
 

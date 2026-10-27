@@ -27,9 +27,12 @@ D-13, the Phase 235 coupling: the pin is derived from
 ``tests.pyproject_helpers.pyproject_version()``. The release bump to the next
 version turns this gate red until the README pins move with it, exactly like
 the image pins in tests/test_readme_brand_logo.py and tests/test_readme_hero.py.
-A link to a file added after the last tag is still correct: it resolves once the
-bumped version is tagged. The live "HTTP 200 on the PyPI page" check is Phase
-235's (LAUNCH-03), not this file's.
+Existence and anchors are checked at HEAD, not at the pinned tag (a shallow CI
+checkout has no tags). So between a release and the next bump, the pins name an
+already-published tag, and a link to a file or heading added after it passes
+here yet 404s on GitHub until the bump is tagged (Phase 232 review WR-02). The
+live "HTTP 200 on the PyPI page" check is Phase 235's (LAUNCH-03), not this
+file's.
 """
 from __future__ import annotations
 
@@ -230,11 +233,14 @@ def heading_slugs(markdown: str) -> set[str]:
     """All heading anchors GitHub would generate (with -1, -2 de-duplication)."""
     seen: Counter[str] = Counter()
     slugs: set[str] = set()
-    for line in strip_code(markdown).split("\n"):
-        m = _ATX.match(line)
-        if not m:
+    # strip_code() blanks fenced lines whole (so no heading matches there) but
+    # also blanks inline code spans, whose text GitHub keeps in the anchor --
+    # so match on the stripped line and slug the original one.
+    original = markdown.split("\n")
+    for i, line in enumerate(strip_code(markdown).split("\n")):
+        if not _ATX.match(line):
             continue
-        base = github_slug(m.group(1))
+        base = github_slug(_ATX.match(original[i]).group(1))
         slug = base if seen[base] == 0 else f"{base}-{seen[base]}"
         seen[base] += 1
         slugs.add(slug)
@@ -416,3 +422,5 @@ def test_github_slug_rule():
         == "attestation-verification-for-downstream-consumers"
     )
     assert heading_slugs("# A\n## A\n```\n# B\n```\n") == {"a", "a-1"}
+    # Inline code in a heading keeps its text in the anchor (review WR-03).
+    assert heading_slugs("## The `quirk serve` command\n") == {"the-quirk-serve-command"}
