@@ -2117,6 +2117,12 @@ and is never recoloured to a client palette. The client cover logo (`report.bran
 its precedence are unchanged. Operator template overrides (`report.template_dir`) show the colophon
 logo only if they reference `colophon_logo_b64`.
 
+**Header logo (Phase 232).** As of Phase 232 the HTML report's on-screen header shows the same
+Paper-variant QU.I.R.K. logo instead of a typed product name. The header is screen-only: it is
+hidden in print and in the PDF, where the QU.I.R.K. brand appears only in the colophon. If the logo
+asset cannot be read, the header shows no logo and no text substitute. Operator template overrides
+(`report.template_dir`) show the header logo only when they use the `colophon_logo_b64` variable.
+
 Every field is independently optional — an unset field simply does not render its line/row, on any
 surface. If none of the `report.branding.*` fields are set (by the config or by a report profile), no
 identity line or row renders on any surface: the branding output is the same as for a config with no
