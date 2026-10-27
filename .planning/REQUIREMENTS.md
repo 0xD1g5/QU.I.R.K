@@ -49,7 +49,7 @@ HORIZON prose:
 
 ### Score-depth dilution (SCORE)
 
-- [ ] **SCORE-08**: A third measurement instrument for scan-depth dilution exists and is recorded
+- [x] **SCORE-08**: A third measurement instrument for scan-depth dilution exists and is recorded
       before any fix is chosen. It is independent of the two Phase 212 used, and it measures, on the
       calibration ladder, how much the readiness score moves when only healthy endpoints are added.
       Effort is decided by its result, not assumed (`999.120`, spike).
@@ -188,7 +188,7 @@ Deferred from this milestone with an owner:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCORE-08 | Phase 233 | Pending |
+| SCORE-08 | Phase 233 | Complete |
 | SCORE-09 | Phase 234 | Pending |
 | SCORE-10 | Phase 234 | Pending |
 | XSURF-05 | Phase 228 | Complete |
