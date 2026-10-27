@@ -14,7 +14,19 @@ import pytest
 
 from tests.pyproject_helpers import PYPROJECT, _version_from_text, pyproject_version
 
-tomllib = pytest.importorskip("tomllib")
+
+def _reference_loads():
+    """A real TOML parser for ground truth (tomllib, else the tomli backport).
+
+    Imported lazily and never skipped: on a 3.10 interpreter without tomli the
+    ground-truth tests fail loudly rather than vanish (an unregistered skip is
+    also rejected by tests/test_skip_registry.py).
+    """
+    try:
+        import tomllib as _toml
+    except ImportError:
+        import tomli as _toml  # type: ignore[no-redef]
+    return _toml.loads
 
 
 def _real_text() -> str:
@@ -22,7 +34,7 @@ def _real_text() -> str:
 
 
 def _real_version() -> str:
-    return tomllib.loads(_real_text())["project"]["version"]
+    return _reference_loads()(_real_text())["project"]["version"]
 
 
 def test_regex_tier_agrees_with_tomllib():
@@ -45,10 +57,11 @@ def test_regex_tier_ignores_version_outside_project_table():
 
 
 def test_tomli_tier(monkeypatch):
-    real_loads = tomllib.loads
+    real_loads = _reference_loads()
+    expected = _real_version()
     monkeypatch.setitem(sys.modules, "tomllib", None)
     monkeypatch.setitem(sys.modules, "tomli", types.SimpleNamespace(loads=real_loads))
-    assert pyproject_version() == _real_version()
+    assert pyproject_version() == expected
 
 
 def test_regex_tier_via_pyproject_version(monkeypatch):
