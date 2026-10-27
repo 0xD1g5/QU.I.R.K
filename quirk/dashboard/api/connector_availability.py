@@ -93,10 +93,10 @@ module's own optional-import guard, 2026-09-09):
   scanner module's private ``_PYSNMP_AVAILABLE`` / ``_PYMODBUS_AVAILABLE`` /
   ``_PYBACNET_AVAILABLE`` flags (leading underscore is a module-privacy
   convention only; ``getattr`` reads it exactly the same as a public name).
-  These map to the ``quirk-scanner[hw]`` extras group, which is
+  These map to the ``'quirk-scanner[hw]'`` extras group, which is
   intentionally NOT an ``optional_extra.REGISTRY`` entry (``hw`` is
   deliberately excluded from ``[all]`` — see ``pyproject.toml``), so
-  ``extra=None`` here with the reason text naming ``quirk-scanner[hw]``
+  ``extra=None`` here with the reason text naming ``'quirk-scanner[hw]'``
   directly.
 - ``enable_authenticated_mode`` / ``enable_recurring_otics`` ->
   ``always_available=True`` — pure behavior toggles (Phase 93 AUTH-01,

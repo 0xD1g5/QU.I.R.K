@@ -1864,7 +1864,7 @@ def main():
     )
 
     # Phase 133 SNMP-01/D-04: opt-in SNMP hardware fingerprinting flag.
-    # Requires quirk[hw] extras (pysnmp). Off by default — no behavior change for
+    # Requires 'quirk-scanner[hw]' extras (pysnmp). Off by default — no behavior change for
     # existing scans. Advisory import guard in snmp_scanner.py catches missing pysnmp.
     parser.add_argument(
         "--enable-snmp",
@@ -1874,14 +1874,14 @@ def main():
         help=(
             "Enable SNMP hardware fingerprinting (Phase 133 SNMP-01). "
             "Probes discovered hosts on UDP/161 using SNMP v2c to collect "
-            "sysDescr/sysName/sysObjectID. Requires quirk-scanner[hw] extras."
+            "sysDescr/sysName/sysObjectID. Requires 'quirk-scanner[hw]' extras."
         ),
     )
 
     # Phase 141 OTICS-01/02/D-07: opt-in OT/ICS fingerprinting flags. These probe a
     # MATERIALLY DIFFERENT risk class than IT/network scanning — PLCs, RTUs, and building
     # controllers are industry-documented to crash or enter fail-safe states from even
-    # benign read-only Modbus/BACnet queries. Off by default. Requires quirk[hw] extras
+    # benign read-only Modbus/BACnet queries. Off by default. Requires 'quirk-scanner[hw]' extras
     # (pymodbus / bacpypes3). Strongly recommend written authorization from the OT network
     # owner before enabling on production OT networks.
     parser.add_argument(
@@ -1895,7 +1895,7 @@ def main():
             "industry-documented incidents include PLC/RTU crashes from benign read-only "
             "queries. Recommend written authorization before enabling on production OT "
             "networks. Probes port 502 with a single read-only Read Device Identification "
-            "request. Requires quirk-scanner[hw] extras."
+            "request. Requires 'quirk-scanner[hw]' extras."
         ),
     )
     parser.add_argument(
@@ -1909,7 +1909,7 @@ def main():
             "than IT scanning; industry-documented incidents include controller crashes "
             "from benign read-only queries. Recommend written authorization before "
             "enabling on production OT networks. Sends a single directed-unicast Who-Is "
-            "probe over the standard BACnet/IP UDP port. Requires quirk-scanner[hw] extras."
+            "probe over the standard BACnet/IP UDP port. Requires 'quirk-scanner[hw]' extras."
         ),
     )
 
@@ -3100,7 +3100,7 @@ def main():
         except ImportError as _snmp_import_err:
             logger.info(
                 f"SNMP fingerprint: pysnmp not installed (advisory); "
-                f"install quirk-scanner[hw] to enable. ({safe_str(_snmp_import_err)})"
+                f"run pip install 'quirk-scanner[hw]' to enable. ({safe_str(_snmp_import_err)})"
             )
             _snmp_results = []
 

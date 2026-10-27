@@ -184,7 +184,7 @@ def probe_bacnet_target(host: str, timeout: int = 2) -> Dict[str, Optional[str]]
     """
     if not _PYBACNET_AVAILABLE:
         _LOG.warning(
-            "BACnet probe skipped: install quirk-scanner[hw] to enable "
+            "BACnet probe skipped: run pip install 'quirk-scanner[hw]' to enable "
             "OT/ICS BACnet fingerprinting (bacpypes3 not found)"
         )
         return dict(_NULL_RESULT)

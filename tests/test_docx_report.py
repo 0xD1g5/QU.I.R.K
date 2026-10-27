@@ -178,7 +178,7 @@ def test_docx_skip_advisory(monkeypatch, tmp_path, capsys):
     assert "python-docx is not installed" in captured.err, (
         f"Advisory not in stderr. stderr was: {captured.err!r}"
     )
-    assert "pip install quirk-scanner[docx]" in captured.err, (
+    assert "pip install 'quirk-scanner[docx]'" in captured.err, (
         f"Install hint not in stderr. stderr was: {captured.err!r}"
     )
 

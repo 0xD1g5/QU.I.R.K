@@ -55,7 +55,7 @@ from quirk.util.pinned_adapter import PinnedIPAdapter
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Optional schemathesis import — present only when quirk[api] is installed
+# Optional schemathesis import — present only when 'quirk-scanner[api]' is installed
 # ---------------------------------------------------------------------------
 
 try:

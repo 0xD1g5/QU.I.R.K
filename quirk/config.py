@@ -371,12 +371,12 @@ class ConnectorsCfg:
     # Phase 93 AUTH-01: opt-in flag for authenticated scanning (ephemeral credentials only).
     # Scheduler rejects configs where this is True (D-11 / QRK-SCHED-AUTH-001).
     enable_authenticated_mode: bool = False
-    # Phase 133 SNMP-01: opt-in SNMP hardware fingerprinting; requires quirk-scanner[hw] extras.
+    # Phase 133 SNMP-01: opt-in SNMP hardware fingerprinting; requires 'quirk-scanner[hw]' extras.
     # Default False — zero behavior change for existing scans without [hw] installed.
     enable_snmp: bool = False
     snmp_community: str = "public"
     # Phase 141 OTICS-01/02 / D-06: opt-in OT/ICS protocol fingerprinting; requires
-    # quirk-scanner[hw] extras (pymodbus / bacpypes3). Default False — zero behavior
+    # 'quirk-scanner[hw]' extras (pymodbus / bacpypes3). Default False — zero behavior
     # change for existing scans. Scan-wide only — no per-host allowlist (RESEARCH Pitfall 3).
     enable_modbus: bool = False
     enable_bacnet: bool = False
