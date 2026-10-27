@@ -380,7 +380,8 @@ def test_scan_reliability_lift_follows_the_count_input() -> None:
     """Phase 234 D-03: the scorer reads scan_error.count, so the "Increase scan
     coverage" lift must be positive when only the count is populated."""
     evidence = _evidence()
-    # rate >= 0.2 triggers the roadmap item; count is what the 4.0 scorer reads.
+    # The count is what the 4.0 scorer reads and what triggers the roadmap item
+    # (Phase 234 review D-31); the rate only feeds the why text.
     evidence["scan_error"] = {"rate": 0.4, "count": 4}
     items = _items(evidence)
     assert "scan-reliability" in {slug_for_title(i["title"]) for i in items}
@@ -391,6 +392,40 @@ def test_scan_reliability_lift_follows_the_count_input() -> None:
     expected_lift = compute_readiness_score(resolved)["score"] - base
     assert expected_lift > 0
     assert compute_item_lifts(evidence, items).get("scan-reliability") == expected_lift
+
+
+def test_scan_coverage_item_fires_on_the_scored_count_with_a_real_lift() -> None:
+    """Phase 234 review D-31 (WR-04): "Increase scan coverage" triggers on
+    scan_error.count, the input scoring 4.0 penalises, not on the rate.
+
+    WR-04 reproduction: R3 with 40 scan errors among 250 endpoints (rate
+    0.16, below the old 0.2 trigger). The count costs points (hygiene and
+    modern_tls), yet the item was absent, so the roadmap offered no
+    remediation and the projected score left those points out.
+    """
+    from tests.test_score_properties import _r3_typical_enterprise
+
+    evidence = _r3_typical_enterprise()
+    evidence["totals"]["endpoints"] = 250
+    evidence["scan_error"] = {"count": 40, "rate": 0.16}
+    clean = copy.deepcopy(evidence)
+    clean["scan_error"] = {"count": 0, "rate": 0.0}
+    # Non-vacuity: the count really costs points on this estate.
+    assert compute_readiness_score(evidence)["score"] < (
+        compute_readiness_score(clean)["score"]
+    )
+    items = _items(evidence)
+    assert "scan-reliability" in {slug_for_title(i["title"]) for i in items}
+    lift = compute_item_lifts(evidence, items).get("scan-reliability")
+    assert lift is not None and lift > 0, f"scan-reliability lift {lift!r}"
+    assert lift == (
+        compute_readiness_score(clean)["score"]
+        - compute_readiness_score(evidence)["score"]
+    )
+    # The item does not fire when nothing is penalised.
+    assert "scan-reliability" not in {
+        slug_for_title(i["title"]) for i in _items(clean)
+    }
 
 
 def test_aggregate_projection_equals_one_independent_rescore() -> None:

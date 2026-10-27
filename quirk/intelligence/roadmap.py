@@ -149,9 +149,15 @@ def build_phased_roadmap(
     # 999.113 tail: `scan_error` is set on ANY probed port that yielded no crypto
     # evidence -- overwhelmingly ports where nothing was listening, not scanner
     # faults. Carry the evidenced count so the item can say which it is instead of
-    # reporting a closed-port sweep as unreliability. The RATE is deliberately left
-    # alone: it is a scoring input (scoring.py:483, :490) and changing it here would
-    # move the emitted score.
+    # reporting a closed-port sweep as unreliability.
+    #
+    # Phase 234 review D-31 (WR-04): scoring 4.0 penalises the scan-error COUNT
+    # (D-03, through the count curve); it no longer reads the rate. So the
+    # "Increase scan coverage" item triggers on the count, the input the scorer
+    # actually reads, the same "fires when the scorer's penalty fires" rule as
+    # the PQC certificate item. The rate is kept for the why text only. Under
+    # the old `rate >= 0.2` trigger a large estate with a few scan errors lost
+    # points with no item and no lift, and a small one got the item.
     scan_error_count = max(0, _as_int(scan_error.get("count", 0)))
     evidenced_count = max(0, endpoints - scan_error_count)
     tls_enum_cov = max(
@@ -219,7 +225,7 @@ def build_phased_roadmap(
             priority=30,
         )
 
-    if scan_error_rate >= 0.2:
+    if scan_error_count > 0:
         _add_candidate(
             items,
             phase="NOW",

@@ -580,7 +580,10 @@ def compute_readiness_score(
     hygiene_impacts: List[Tuple[str, float]] = [
         ("Plaintext HTTP exposure", -_count_curve(plaintext_http_count) * w["hygiene_plaintext_http_ratio"]),
         ("HTTP on TLS-designated ports", -_count_curve(http_on_tls_count) * w["hygiene_http_on_tls_ratio"]),
-        ("Scan error rate", -scan_error_penalty * w["hygiene_scan_error_rate"]),
+        # Phase 234 review D-31 (IN-02): the term reads the scan-error COUNT
+        # (D-03), so the client-facing driver label says "Scan errors", not
+        # "rate". roadmap._driver_hint matches the token "scan error".
+        ("Scan errors", -scan_error_penalty * w["hygiene_scan_error_rate"]),
     ]
     hygiene_score, hygiene_drivers = _apply_weighted_impacts(hygiene_impacts)
 

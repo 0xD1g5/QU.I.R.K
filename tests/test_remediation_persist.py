@@ -125,8 +125,9 @@ def test_no_written_row_has_closed_state(tmp_path) -> None:
 def test_evidence_only_item_has_zero_join_rows(tmp_path) -> None:
     db_path = str(tmp_path / "quirk.db")
     init_db(db_path)
-    # scan_error.rate >= 0.2 triggers "Increase scan coverage"
-    # (slug=scan-reliability, constituency=evidence_only) in build_phased_roadmap.
+    # scan_error.count > 0 triggers "Increase scan coverage" (Phase 234 review
+    # D-31; it was rate >= 0.2) (slug=scan-reliability,
+    # constituency=evidence_only) in build_phased_roadmap.
     endpoints = [_endpoint(f"host{i}.example.com", 443, protocol="TLS") for i in range(5)]
     for i, ep in enumerate(endpoints):
         if i < 2:
