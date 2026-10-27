@@ -281,7 +281,15 @@ Plans:
   2. The instrument's per-rung results and the current (pre-change) score for all five rungs are written into the phase record, with the commit they were measured at.
   3. The phase record names the fix shape the measurement supports (or states that none of the candidates is supported) and the effort that follows from it, and no scoring code is changed in this phase.
   4. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` is still `xfail(strict=True)` at phase close.
-**Plans**: TBD
+**Plans**: 6 plans (6 waves)
+
+Plans:
+- [ ] 233-01-PLAN.md — SCORE-08: fail-first `tests/test_p2b_instrument.py` pinning the instrument contract (rows reproduce the ladder, closed-form agreement + per-term probes on E=C and E≠C bases, independence incl. subprocess `sys.modules` leg, 212 continuity 71/74, ceiling identity, healthy rows, CLI, read-only snapshot) (D-02, D-03, D-05, D-10) (wave 1)
+- [ ] 233-02-PLAN.md — SCORE-08: `scripts/p2b_closed_form.py`, stdlib-only closed-form score model with the ceiling squeeze; mutations (D-03, D-12) (wave 2)
+- [ ] 233-03-PLAN.md — SCORE-08: `scripts/p2b_instrument.py` row-level sweep through `build_evidence_summary`, ECDSA/RSA/certless healthy rows + 212 mutator, emitted/computed/ceiling per point, JSON/Markdown, read-only real-estate mode (D-01, D-04..D-09, D-18) (wave 3)
+- [ ] 233-04-PLAN.md — SCORE-08: run at a recorded sha; decision record `.planning/decisions/233-p2b-third-instrument-measurement.md` with per-rung tables, closed-form diff and its provenance limits, fix-shape verdict + effort; report-interpretation pointer + ledger gate (D-11..D-13, D-15, D-19, D-20) (wave 4)
+- [ ] 233-05-PLAN.md — UAT Series 233, coverage-gaps regen, vault sync, SCORE-08 flipped by hand; criteria 3/4 re-checked (D-14, D-17) (wave 5)
+- [ ] 233-06-PLAN.md — Proof: full-suite failing-set compare, 3.11 clone leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` at HEAD (D-14, CITRUTH-03) (wave 6)
 
 ### Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement
 **Goal**: The readiness score no longer rewards scan depth: adding healthy endpoints to an observation does not raise it, and the whole calibration ladder is re-measured on the changed model so every rung's new value is known and agreed across surfaces.
@@ -318,7 +326,7 @@ Plans:
 | 230. Findings That Fire | 8/8 | Complete (verified passed 5/5 at 1072cdf4 after gap closure 230-08 (UDP fallback shares the TCP classifier; 0/65 false no-preauth live); review rounds R8-R22 hardened the Kerberos target path (gate/scanner same-address, IDNA wire name, zone/link-local/unspecified refusals, LDAP referrals off), R21/R22 0 blockers; follow-ups owned by 999.136; CI green, Python CI 40062953209 + Dashboard Quality 40062954891) | 2026-10-24 |
 | 231. QRAMM Scoring Surfaces | 10/10 | Complete (verified passed 5/5 at c09a809b; live print/PDF re-check passed with artifacts kept; review R1 0 blockers, WR-01 owned by SCORE-10 (Phase 234), WR-02/IN-01..04/IN-06 by 999.137, IN-05 by 999.136; 231-10 fixed the allow_abbrev gate 231-02 broke; CI green, Python CI 40207661100 + Dashboard Quality 40207663143) | 2026-10-25 |
 | 232. Post-Launch Visible Fixes | 6/6 | Complete (verified passed 5/5 at e28d45dd; criterion 4's live PyPI leg handed to Phase 235 per D-13; review 0 blockers, WR-03/IN-02 fixed, WR-01 owned by 999.127; CI green, Python CI 40525739851 + Dashboard Quality 40525744864) | 2026-10-27 |
-| 233. P2b Measurement Instrument | 0/TBD | Not started | - |
+| 233. P2b Measurement Instrument | 0/6 | Planned | - |
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 0/TBD | Not started | - |
 | 235. Release & Launch Gate | 0/TBD | Not started | - |
 
