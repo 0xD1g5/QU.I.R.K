@@ -68,8 +68,16 @@ Usage::
 """
 from __future__ import annotations
 
+import argparse
 import copy
+import json
+import platform
 import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -117,6 +125,10 @@ EXPIRING = REF + timedelta(days=10)
 PQC_MARKER = "pqc-hybrid-detected"
 KERBEROS_DETAIL = "etype:18:aes256-cts-hmac-sha1-96:SAFE"
 AEAD_CIPHER = "TLS_AES_256_GCM_SHA384"
+
+# Real-estate mode (local only).
+REAL_RUN_ID = "2026-09-14T14:25:49.899977+00:00"
+REAL_TABLE = "crypto_endpoints"
 
 # Sweep cell or probe id -> the cause of a closed-form / code disagreement.
 # Empty: 233-02 found 0 of 395 probes disagreeing, and the sweep agrees at
@@ -573,3 +585,243 @@ def run(points: Sequence[int] = POINTS,
     """Every (rung, reading, extra) point, rung-major."""
     return [measure_point(rung, reading, int(extra))
             for rung in rungs for reading in readings for extra in points]
+
+
+# ---------------------------------------------------------------------------
+# Provenance and the real estate.
+# ---------------------------------------------------------------------------
+
+def _git(*args: str) -> Optional[str]:
+    try:
+        proc = subprocess.run(["git", *args], cwd=str(REPO_ROOT),
+                              capture_output=True, text=True, timeout=30,
+                              check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def provenance() -> Dict[str, Optional[str]]:
+    """git HEAD plus the blob hashes of the measured model (Pitfall 7)."""
+    return {
+        "head_sha": _git("rev-parse", "HEAD"),
+        "scoring_blob": _git("hash-object", "quirk/intelligence/scoring.py"),
+        "evidence_blob": _git("hash-object", "quirk/intelligence/evidence.py"),
+        "python": platform.python_version(),
+    }
+
+
+def snapshot_db(src: Any, dst_dir: Any) -> Path:
+    """Copy ``src`` through the backup API from a read-only connection."""
+    dst_dir = Path(dst_dir)
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    dst = dst_dir / "quirk-snapshot.db"
+    source = sqlite3.connect(Path(src).resolve().as_uri() + "?mode=ro", uri=True)
+    try:
+        target = sqlite3.connect(str(dst))
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+    finally:
+        source.close()
+    return dst
+
+
+def _parse_dt(value: Any) -> Any:
+    if isinstance(value, str) and value:
+        return datetime.fromisoformat(value)
+    return value
+
+
+def _snapshot_rows(snapshot: Path) -> List[SimpleNamespace]:
+    conn = sqlite3.connect(str(snapshot))
+    conn.row_factory = sqlite3.Row
+    try:
+        records = conn.execute(
+            f"SELECT * FROM {REAL_TABLE} WHERE scan_run_id = ?",
+            (REAL_RUN_ID,)).fetchall()
+    finally:
+        conn.close()
+    rows = []
+    for record in records:
+        fields = dict(record)
+        for name in ("scanned_at", "cert_not_before", "cert_not_after"):
+            fields[name] = _parse_dt(fields.get(name))
+        rows.append(SimpleNamespace(**fields))
+    return rows
+
+
+def real_db_sweep(db_path: Any, points: Sequence[int]) -> Dict[str, Any]:
+    """Local only: the 2026-09-14 rows plus ECDSA healthy rows."""
+    tmp = tempfile.mkdtemp(prefix="p2b-snapshot-")
+    try:
+        rows = _snapshot_rows(snapshot_db(db_path, tmp))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    if not rows:
+        raise ValueError(f"no {REAL_TABLE} rows for run {REAL_RUN_ID}")
+    ref = max(r.scanned_at for r in rows if r.scanned_at is not None)
+    findings = derive_report_findings(rows)
+    cells = []
+    for extra in points:
+        h_rows, h_findings = _healthy(int(extra), "ecdsa", ref)
+        evidence = build_evidence_summary(rows + h_rows, findings + h_findings,
+                                          reference_utc=ref)
+        cell = {"extra": int(extra)}
+        cell.update(_score_point(evidence))
+        cells.append(cell)
+    return {"label": "local-only", "reading": "snapshot_rows+rows_ecdsa",
+            "run_id": REAL_RUN_ID, "row_count": len(rows),
+            "reference_utc": ref.isoformat(), "cells": cells}
+
+
+def real_json_sweep(json_path: Any, points: Sequence[int]) -> Dict[str, Any]:
+    """Local only: the recorded evidence_summary swept with mutator_212."""
+    recorded = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    evidence = recorded["evidence_summary"]
+    cells = []
+    for extra in points:
+        cell = {"extra": int(extra)}
+        cell.update(_score_point(mutator_212(evidence, int(extra))))
+        cells.append(cell)
+    return {"label": "local-only", "reading": "recorded_json+mutator_212",
+            "source": Path(json_path).name, "cells": cells}
+
+
+# ---------------------------------------------------------------------------
+# Report.
+# ---------------------------------------------------------------------------
+
+def build_report(points: Sequence[int] = POINTS,
+                 real_db: Optional[str] = None,
+                 real_json: Optional[str] = None) -> Dict[str, Any]:
+    points = [int(p) for p in points]
+    results = run(points=points)
+    ladder = {}
+    for rung in RUNGS:
+        scored = _score_point(dict_rung(rung))
+        ladder[rung] = {k: scored[k] for k in (
+            "emitted", "computed", "ceiling_source", "ceiling_value",
+            "losing_ceilings", "subscores", "agrees")}
+    report: Dict[str, Any] = {
+        "provenance": provenance(),
+        "points": points,
+        "readings": list(READINGS),
+        "primary_reading": PRIMARY_READING,
+        "continuity_reading": CONTINUITY_READING,
+        "results": results,
+        "ladder_at_zero": ladder,
+        "projection_gaps": {rung: [list(g) for g in projection_gaps(rung)]
+                            for rung in RUNGS},
+        "known_disagreements": {str(k): v for k, v in KNOWN_DISAGREEMENTS.items()},
+        "agreement": {"agree": sum(1 for p in results if p["agrees"]),
+                      "total": len(results)},
+    }
+    real: Dict[str, Any] = {}
+    if real_json:
+        real["recorded_json"] = real_json_sweep(real_json, points)
+    if real_db:
+        real["snapshot_db"] = real_db_sweep(real_db, points)
+    if real:
+        report["real"] = real
+    return report
+
+
+def _cell(point: Dict[str, Any]) -> str:
+    text = f"{point['emitted']}/{point['computed']}"
+    if point["ceiling_source"] != "none":
+        text += f" [{point['ceiling_source']} {point['ceiling_value']}]"
+    if not point["agrees"]:
+        text += " (CF DISAGREES)"
+    return text
+
+
+def to_markdown(report: Dict[str, Any]) -> str:
+    prov = report["provenance"]
+    points = report["points"]
+    lines = ["# P2b instrument (SCORE-08)", "",
+             f"- HEAD: `{prov['head_sha']}`",
+             f"- scoring.py blob: `{prov['scoring_blob']}`",
+             f"- evidence.py blob: `{prov['evidence_blob']}`",
+             f"- Python: {prov['python']}", "",
+             "Cells are `emitted/computed [winning ceiling source value]`.", "",
+             "## Dict ladder at +0", "",
+             "| Rung | Emitted | Computed | Ceiling | Subscores |",
+             "|---|---|---|---|---|"]
+    for rung, row in report["ladder_at_zero"].items():
+        ceiling = ("none" if row["ceiling_source"] == "none"
+                   else f"{row['ceiling_source']} {row['ceiling_value']}")
+        subs = ", ".join(f"{k}={v}" for k, v in row["subscores"].items())
+        lines.append(f"| {rung} | {row['emitted']} | {row['computed']} | "
+                     f"{ceiling} | {subs} |")
+    by_cell = {(p["rung"], p["reading"], p["extra"]): p
+               for p in report["results"]}
+    for reading in report["readings"]:
+        label = {PRIMARY_READING: " (primary)",
+                 CONTINUITY_READING: " (continuity)"}.get(reading, " (sub-reading)")
+        lines += ["", f"## {reading}{label}", "",
+                  "| Rung | " + " | ".join(f"+{p}" for p in points) + " |",
+                  "|---|" + "---|" * len(points)]
+        for rung in RUNGS:
+            cells = [_cell(by_cell[(rung, reading, p)]) for p in points]
+            lines.append(f"| {rung} | " + " | ".join(cells) + " |")
+    agreement = report["agreement"]
+    lines += ["", f"Closed form agrees at {agreement['agree']} of "
+              f"{agreement['total']} points; "
+              f"{len(report['known_disagreements'])} known disagreements.",
+              "", "## Projection gaps (score-irrelevant fields, dict vs rows)", ""]
+    for rung, gaps in report["projection_gaps"].items():
+        text = "; ".join(f"{f}: {d} vs {r}" for f, d, r in gaps) or "none"
+        lines.append(f"- {rung}: {text}")
+    if "real" in report:
+        lines += ["", "## Real estate (local-only)", "",
+                  "| Reading | " + " | ".join(f"+{p}" for p in points) + " |",
+                  "|---|" + "---|" * len(points)]
+        for block in report["real"].values():
+            cells = {c["extra"]: c for c in block["cells"]}
+            lines.append(f"| {block['reading']} | "
+                         + " | ".join(_cell(cells[p]) for p in points) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="python -m scripts.p2b_instrument",
+        description="SCORE-08 P2b row-level sweep with closed-form diff.")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--json", action="store_true", help="emit JSON")
+    mode.add_argument("--markdown", action="store_true",
+                      help="emit Markdown (default)")
+    parser.add_argument("--points", default=",".join(str(p) for p in POINTS),
+                        help="comma-separated healthy-row counts")
+    parser.add_argument("--real-db", default=None,
+                        help="local only: canonical DB, read via a snapshot")
+    parser.add_argument("--real-json", default=None,
+                        help="local only: recorded intelligence JSON")
+    args = parser.parse_args(argv)
+    try:
+        points = [int(p) for p in args.points.split(",") if p.strip()]
+    except ValueError:
+        parser.error(f"--points must be integers: {args.points!r}")
+    if not points or any(p < 0 for p in points):
+        parser.error("--points needs at least one non-negative integer")
+
+    report = build_report(points, real_db=args.real_db, real_json=args.real_json)
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+    if args.json:
+        sys.stdout.write(json.dumps(report, indent=2, sort_keys=True,
+                                    default=str) + "\n")
+    else:
+        sys.stdout.write(to_markdown(report))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
