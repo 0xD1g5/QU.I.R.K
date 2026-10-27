@@ -35,6 +35,7 @@ import {
   type AssessmentState,
 } from "@/lib/qramm-assessment"
 import type { QRAMMComplianceMapRow, QRAMMRowCoverageStatus } from "@/types/api"
+import { MATURITY_LABEL } from "@/lib/qramm-constants"
 import { buildCtx } from "./scorecard-fixtures"
 
 const DIMS = ["CVI", "SGRM", "DPE", "ITR"] as const
@@ -46,13 +47,23 @@ const ROWS = contract.rows as QRAMMComplianceMapRow[]
 const EXPECTED_STATE = contract.expected_dimension_state as Record<Dim, AssessmentState>
 const EXPECTED_STATUS = contract.expected_coverage_status as Record<Dim, QRAMMRowCoverageStatus>
 
-// Neutral, recorded values for the fields the contract does not carry.
+// Phase 234 SCORE-10: the overall, maturity and per-dimension answered counts come from the
+// contract (D-14); profile_multiplier is the one neutral value the contract does not carry.
 const SCORE: ScoreResult = {
-  overall: 1.25,
-  maturity: "Developing",
+  overall: contract.expected_overall,
+  maturity: contract.expected_maturity,
   dimensions: contract.score,
   profile_multiplier: 1.0,
+  answered_by_dimension: contract.expected_answered_by_dimension,
+  assessed_dimensions: contract.expected_assessed_dimensions,
+  dimensions_assessed: contract.expected_dimensions_assessed,
+  dimensions_total: contract.expected_dimensions_total,
 }
+
+// D-25: a score saved before Phase 234 is the same score with the contract's removed keys gone.
+const LEGACY_SCORE = Object.fromEntries(
+  Object.entries(SCORE).filter(([k]) => !contract.legacy_score_json.removed_score_keys.includes(k)),
+) as unknown as ScoreResult
 
 // ---------------------------------------------------------------------------
 // Print page mocks (231-06 pattern)
@@ -67,6 +78,7 @@ let qrammReturn: {
   complianceRows: unknown
   loading: boolean
   error: string | null
+  scoreStale?: boolean
 } = { scoreResult: null, complianceRows: null, loading: true, error: null }
 
 vi.mock("@/hooks/useScanData", () => ({ useScanData: () => scanDataReturn }))
@@ -102,11 +114,15 @@ const SCAN_FIXTURE = {
 
 const fetchSpy = vi.fn()
 
+// The rows the stubbed compliance-map endpoint answers with (ComplianceMapTab reads them via fetchApi).
+let mapRows: QRAMMComplianceMapRow[] = ROWS
+
 beforeEach(() => {
+  mapRows = ROWS
   fetchSpy.mockReset()
   fetchSpy.mockImplementation(
     async () =>
-      new Response(JSON.stringify(ROWS), {
+      new Response(JSON.stringify(mapRows), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -129,9 +145,11 @@ function contractCatalog(): Map<number, string> {
   return catalog
 }
 
-function contractAnswers(): Map<number, AnswerState> {
+function contractAnswers(
+  list: Array<{ question_number: number; answer_value: number }> = contract.answers,
+): Map<number, AnswerState> {
   const answers = new Map<number, AnswerState>()
-  for (const a of contract.answers) {
+  for (const a of list) {
     answers.set(a.question_number, {
       answer_value: a.answer_value as 1 | 2 | 3 | 4,
       suggested_answer: null,
@@ -142,10 +160,27 @@ function contractAnswers(): Map<number, AnswerState> {
   return answers
 }
 
+/** Per-dimension answered counts of an answer list, through the contract's question catalog. */
+function answeredCounts(list: Array<{ question_number: number }>): Record<Dim, number> {
+  const out: Record<Dim, number> = { CVI: 0, SGRM: 0, DPE: 0, ITR: 0 }
+  const qd = contract.question_dimensions as Record<string, string>
+  for (const a of list) out[qd[String(a.question_number)] as Dim] += 1
+  return out
+}
+
+/** The contract rows with each dimension's coverage_status replaced; a stale row carries no relevance. */
+function rowsWithStatus(status: Record<string, string>): QRAMMComplianceMapRow[] {
+  return ROWS.map((r) => {
+    const cs = status[r.dimension] as QRAMMRowCoverageStatus
+    return { ...r, coverage_status: cs, relevance_score: cs === "stale" ? null : r.relevance_score }
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Surface readers
 // ---------------------------------------------------------------------------
-async function complianceMapStates(): Promise<Record<Dim, string[]>> {
+async function complianceMapStates(rows: QRAMMComplianceMapRow[] = ROWS): Promise<Record<Dim, string[]>> {
+  mapRows = rows
   render(
     <QRAMMContext.Provider value={buildCtx(null)}>
       <ComplianceMapTab />
@@ -170,9 +205,13 @@ function complianceMapFootnote(): string | null {
   return screen.queryByText(QRAMM_COVERAGE_SENTENCE)?.textContent ?? null
 }
 
-async function renderPrintSection(): Promise<HTMLElement> {
+async function renderPrintSection(
+  score: ScoreResult = SCORE,
+  rows: QRAMMComplianceMapRow[] = ROWS,
+  scoreStale = false,
+): Promise<HTMLElement> {
   scanDataReturn = { data: SCAN_FIXTURE, loading: false, error: null }
-  qrammReturn = { scoreResult: SCORE, complianceRows: ROWS, loading: false, error: null }
+  qrammReturn = { scoreResult: score, complianceRows: rows, loading: false, error: null, scoreStale }
   const { PrintPage } = await import("@/pages/print")
   const { container } = render(<PrintPage />)
   const section = Array.from(container.querySelectorAll<HTMLElement>(".print-section")).find(
@@ -191,12 +230,16 @@ function tableAfter(section: HTMLElement, heading: string): HTMLTableElement {
   return el as HTMLTableElement
 }
 
-async function printStates(): Promise<Record<Dim, string>> {
-  const section = await renderPrintSection()
-  const rows = Array.from(tableAfter(section, "Dimension Scorecard").querySelectorAll<HTMLTableRowElement>("tbody tr"))
+async function printStates(
+  score: ScoreResult = SCORE,
+  rows: QRAMMComplianceMapRow[] = ROWS,
+  scoreStale = false,
+): Promise<Record<Dim, string>> {
+  const section = await renderPrintSection(score, rows, scoreStale)
+  const trs = Array.from(tableAfter(section, "Dimension Scorecard").querySelectorAll<HTMLTableRowElement>("tbody tr"))
   const out = {} as Record<Dim, string>
   for (const d of DIMS) {
-    const row = rows.find((r) => r.cells[0]?.textContent === d)
+    const row = trs.find((r) => r.cells[0]?.textContent === d)
     expect(row).toBeTruthy()
     const chip = row!.cells[1].querySelector("span.badge")
     expect(chip).not.toBeNull()
@@ -205,9 +248,12 @@ async function printStates(): Promise<Record<Dim, string>> {
   return out
 }
 
-function renderScorecard() {
+function renderScorecard(
+  score: ScoreResult | null = SCORE,
+  answers: Map<number, AnswerState> = contractAnswers(),
+) {
   render(
-    <QRAMMContext.Provider value={buildCtx(SCORE, contractAnswers())}>
+    <QRAMMContext.Provider value={buildCtx(score, answers)}>
       <ScorecardTab qnToDim={contractCatalog()} />
     </QRAMMContext.Provider>,
   )
@@ -223,7 +269,44 @@ function scorecardNotAssessed(): Set<string> {
   return out
 }
 
+/** Scorecard Dimension Summary: cell[4] (Maturity Level) text per dimension. */
+function scorecardMaturityCells(): Record<Dim, string> {
+  const out = {} as Record<Dim, string>
+  for (const row of Array.from(document.querySelectorAll<HTMLTableRowElement>("tbody tr"))) {
+    const dim = row.cells[0]?.textContent ?? ""
+    if ((DIMS as readonly string[]).includes(dim)) out[dim as Dim] = row.cells[4]?.textContent ?? ""
+  }
+  return out
+}
+
+/** Maturity Distribution bucket counts, read from the bar widths (count / 4 * 100%). */
+function scorecardBuckets(): Record<number, number> {
+  const out: Record<number, number> = {}
+  for (const level of [1, 2, 3, 4]) {
+    const bar = screen.queryByTestId(`maturity-bar-${level}`) as HTMLElement | null
+    out[level] = bar ? Math.round((parseFloat(bar.style.width) / 100) * DIMS.length) : -1
+  }
+  return out
+}
+
+/** Expected buckets: the contract scores of the dimensions that may count toward a maturity level. */
+function expectedBuckets(counted: readonly string[]): Record<number, number> {
+  const out: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 }
+  const score = contract.score as Record<string, { score: number }>
+  for (const d of counted) out[Math.max(1, Math.min(4, Math.round(score[d].score)))] += 1
+  return out
+}
+
+function printOverallRow(section: HTMLElement): string {
+  const rows = Array.from(tableAfter(section, "Dimension Scorecard").querySelectorAll<HTMLTableRowElement>("tbody tr"))
+  const footer = rows.find((r) => r.textContent?.startsWith("Overall maturity:"))
+  expect(footer).toBeTruthy()
+  return footer!.textContent ?? ""
+}
+
 const NOT_ASSESSED = ASSESSMENT_LABEL["not-assessed"]
+const SELF_ASSESSED = ASSESSMENT_LABEL["self-assessed"]
+const MATURITY_WORDS = Object.values(MATURITY_LABEL)
 
 // ---------------------------------------------------------------------------
 describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every surface)", () => {
@@ -294,6 +377,7 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
         "scanner-measured": 0,
         "self-assessed": 0,
         "not-assessed": 0,
+        stale: 0,
       }
       for (const row of ROWS) {
         if (row.framework === fw) counts[stateFromCoverageStatus(row.coverage_status)] += 1
@@ -310,5 +394,130 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
         state: EXPECTED_STATE[d],
       })
     }
+  })
+  // -------------------------------------------------------------------------
+  // Phase 234 SCORE-10 (D-14, D-15, D-23, D-25): the shared contract's overall,
+  // stale and legacy cases. The pytest half asserts the same keys on the API.
+  // -------------------------------------------------------------------------
+  it("the scorecard and the print page show the contract's overall and N of 4 assessed", async () => {
+    const overall = contract.expected_overall.toFixed(2)
+    const nOf4 = `${contract.expected_dimensions_assessed} of ${contract.expected_dimensions_total} dimensions assessed`
+
+    renderScorecard()
+    expect({
+      overall: screen.queryByTestId("qramm-overall")?.textContent ?? null,
+      maturity: screen.queryByTestId("qramm-overall-maturity")?.textContent ?? null,
+      assessed: screen.queryByTestId("qramm-dimensions-assessed")?.textContent ?? null,
+    }).toEqual({ overall, maturity: contract.expected_maturity, assessed: nOf4 })
+    expect(screen.queryByTestId("qramm-score-stale")).toBeNull()
+    cleanup()
+
+    const section = await renderPrintSection()
+    expect(printOverallRow(section)).toBe(
+      `Overall maturity: ${contract.expected_maturity} (${overall}) — ${nOf4}`,
+    )
+  })
+
+  it("a stale saved score reads Stale on every QRAMM surface, never Self-assessed", async () => {
+    const sc = contract.stale_case
+    const expectedState = sc.expected_dimension_state as Record<Dim, AssessmentState>
+    const staleDims = DIMS.filter((d) => expectedState[d] === "stale")
+    expect(staleDims).toEqual(["ITR"])
+    const staleLabel = ASSESSMENT_LABEL[expectedState.ITR]
+    expect({ twin: "ASSESSMENT_LABEL.stale", label: staleLabel }).toEqual({
+      twin: "ASSESSMENT_LABEL.stale",
+      label: expect.any(String),
+    })
+
+    // The score was saved against answers_before_score; answers_after_score arrived later.
+    const scoredCounts = answeredCounts(sc.answers_before_score)
+    const staleScore: ScoreResult = { ...SCORE, answered_by_dimension: scoredCounts }
+    const live = contractAnswers([...sc.answers_before_score, ...sc.answers_after_score])
+
+    renderScorecard(staleScore, live)
+    const cells = scorecardMaturityCells()
+    expect({ surface: "scorecard", ITR: cells.ITR }).toEqual({ surface: "scorecard", ITR: staleLabel })
+    expect(Object.values(cells)).not.toContain(SELF_ASSESSED)
+    expect(screen.queryByTestId("qramm-score-stale")).not.toBeNull()
+    expect({ surface: "scorecard", buckets: scorecardBuckets() }).toEqual({
+      surface: "scorecard",
+      buckets: expectedBuckets(DIMS.filter((d) => expectedState[d] !== "stale" && expectedState[d] !== "not-assessed")),
+    })
+    cleanup()
+
+    const rows = rowsWithStatus(sc.expected_coverage_status)
+    const mapStates = await complianceMapStates(rows)
+    cleanup()
+    const print = await printStates(staleScore, rows, sc.expected_score_stale)
+
+    for (const d of DIMS) {
+      const expected = ASSESSMENT_LABEL[expectedState[d]]
+      expect({ dim: d, surface: "compliance-map", states: mapStates[d] }).toEqual({
+        dim: d,
+        surface: "compliance-map",
+        states: [expected],
+      })
+      expect({ dim: d, surface: "print", state: print[d] }).toEqual({ dim: d, surface: "print", state: expected })
+    }
+    expect(mapStates.ITR).not.toContain(SELF_ASSESSED)
+    expect(print.ITR).not.toBe(SELF_ASSESSED)
+  })
+
+  it("a score saved before the upgrade shows Recalculate instead of an overall maturity level", async () => {
+    const lg = contract.legacy_score_json
+    const expectedState = lg.expected_dimension_state as Record<Dim, AssessmentState>
+    const label = lg.expected_overall_label
+    expect(LEGACY_SCORE).not.toHaveProperty("answered_by_dimension")
+
+    renderScorecard(LEGACY_SCORE, contractAnswers(lg.answers))
+    expect(screen.queryByTestId("qramm-overall")?.textContent ?? null).toBe(label)
+    expect(screen.queryByTestId("qramm-overall-maturity")).toBeNull()
+    expect(screen.queryByTestId("qramm-dimensions-assessed")).toBeNull()
+    const cells = scorecardMaturityCells()
+    for (const d of DIMS) {
+      expect({ dim: d, surface: "scorecard", state: cells[d] }).toEqual({
+        dim: d,
+        surface: "scorecard",
+        state: ASSESSMENT_LABEL[expectedState[d]],
+      })
+    }
+    for (const word of [...MATURITY_WORDS, SELF_ASSESSED]) expect(Object.values(cells)).not.toContain(word)
+    expect({ surface: "scorecard", buckets: scorecardBuckets() }).toEqual({
+      surface: "scorecard",
+      buckets: { 1: 0, 2: 0, 3: 0, 4: 0 },
+    })
+    cleanup()
+
+    const rows = rowsWithStatus(lg.expected_coverage_status)
+    const mapStates = await complianceMapStates(rows)
+    cleanup()
+    const section = await renderPrintSection(LEGACY_SCORE, rows, lg.expected_score_stale)
+    const overallRow = printOverallRow(section)
+    expect(overallRow).toContain(label)
+    for (const word of MATURITY_WORDS) expect(overallRow).not.toContain(word)
+    cleanup()
+    const print = await printStates(LEGACY_SCORE, rows, lg.expected_score_stale)
+
+    for (const d of DIMS) {
+      const expected = ASSESSMENT_LABEL[expectedState[d]]
+      expect({ dim: d, surface: "compliance-map", states: mapStates[d] }).toEqual({
+        dim: d,
+        surface: "compliance-map",
+        states: [expected],
+      })
+      expect({ dim: d, surface: "print", state: print[d] }).toEqual({ dim: d, surface: "print", state: expected })
+      expect(mapStates[d]).not.toContain(SELF_ASSESSED)
+      expect(print[d]).not.toBe(SELF_ASSESSED)
+    }
+  })
+
+  it("an answered but unscored session shows no stale dimension", () => {
+    // W2: with no score there is nothing to be stale (Python's score_data-is-None branch).
+    renderScorecard(null, contractAnswers())
+    expect(screen.queryByText(/Stale — recalculate/)).toBeNull()
+    expect(screen.queryByTestId("qramm-score-stale")).toBeNull()
+    expect(screen.queryByTestId("qramm-overall")).toBeNull()
+    const cells = scorecardMaturityCells()
+    for (const d of DIMS) expect({ dim: d, cell: cells[d] }).toEqual({ dim: d, cell: "—" })
   })
 })
