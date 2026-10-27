@@ -113,7 +113,7 @@ ALLOWED_SKIPS = [
     ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", 'python-docx not installed'),
     ("test_report_render_undetermined_hosts.py", "test_cross_surface_parity_undetermined_count", "optional_extra", "python-docx not installed"),
     ("test_scheduler_cmd.py", "test_signal_sets_stop_flag", "live_infra", "SIGTERM not supported on Windows"),
-    ("test_score_clamp_property.py", "test_agility_stays_below_cap_on_reference_estate", "live_infra", "Requires the Phase 210 live-scan artifact intelligence-20260928-014244.json preserved on disk under quirk-output/ (per .continue-here.md); a fresh checkout or a pruned quirk-output/ has no such file, so the pinned-oracle clamp-saturation test skips honestly rather than asserting on data that isn't there."),
+    ("test_score_clamp_property.py", "test_agility_stays_below_cap_on_reference_estate", "live_infra", "Requires the Phase 210 live-scan artifact intelligence-20260928-014244.json preserved on disk under quirk-output/ (per .continue-here.md); a fresh checkout or a pruned quirk-output/ has no such file, so the pinned-oracle agility-below-cap test skips honestly rather than asserting on data that isn't there."),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v2c_happy_path_parses_last_octet_ip", "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v3_path_uses_usm_and_v3arch_walk_cmd", "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_bounds_oversized_table_at_max_entries", "optional_extra", "pysnmp not installed"),
