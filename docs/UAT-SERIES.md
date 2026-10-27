@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -33743,3 +33743,165 @@ cd src/dashboard && npx vitest run src/hooks/__tests__/useQRAMMPrintData.test.ts
 **Result:** - [x] PASS (2026-10-25 10 passed — covered by `tests/test_cli_help_doctor_qramm_cve.py::test_unknown_action_or_argument_is_usage_error` and `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_format_equals_json_emits_json` and `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_format_space_json_emits_json` and `tests/test_cli_help_doctor_qramm_cve.py::test_cve_status_passes_format_to_handler`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-25  **Tester:** automated
 **Notes:** Plan 231-02 (fix commit 50f78b82, D-12 and D-12a). The usage-error test is parametrized over seven invocations, so the run reports 7 + 1 + 1 + 1. Behaviour changes, recorded in changelog.d/phase-231.bugfix.md: extra arguments to doctor used to be ignored and now exit 2; `--format=json` used to print text; `--format xml` used to exit 0. No tracked script, workflow or lab file passes extra arguments to doctor.
+
+## Series 232: Post-Launch Visible Fixes (Phase 232 — v5.28)
+
+**Last Updated:** 2026-10-27 (Phase 232)
+
+### UAT-232-01: The bundled JetBrains Mono fonts are served as font/ttf, not as the dashboard's index.html
+
+**ID:** UAT-232-01
+**Title:** The bundled JetBrains Mono fonts are served as font/ttf, not as the dashboard's index.html
+**Maps to:** POLISH-01
+
+**What to test:** Every `/fonts/...` URL referenced by the built dashboard CSS returns 200 with content type `font/ttf` and the real TrueType bytes; a missing font returns 404 instead of the SPA index page; a traversal attempt under `/fonts` returns 404; the `/fonts` mount is registered before the SPA catch-all route.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_dashboard_fonts_route.py
+```
+
+**Pass Criteria:** The run reports 4 passed.
+
+**Result:** - [x] PASS (2026-10-27 4 passed — covered by `tests/test_dashboard_fonts_route.py::test_built_css_font_urls_are_served_as_fonts` and `tests/test_dashboard_fonts_route.py::test_missing_font_is_404_not_spa`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-01 (fix commit 1197e608). Fixes v5.27 audit item W15. The probe URLs are derived from the built CSS, not hard-coded; at 1197e608 that CSS names two fonts, the regular and italic variable TTFs. The 4 passed is the whole file, run locally on Python 3.14 with Starlette 1.0.0. Plan 232-01 also ran the file in python:3.11-slim, Python 3.11.17 with Starlette 1.10.0, and observed 4 passed. Without the explicit `mimetypes.add_type` registration, that container served the font as `application/octet-stream`, so the exact `font/ttf` assertion is what catches a missing registration on Linux. The live font render in a browser was not observed in this phase; Phase 235 LAUNCH-03 observes it.
+
+### UAT-232-02: Every install hint in the product is a quoted pip install command naming quirk-scanner
+
+**ID:** UAT-232-02
+**Title:** Every install hint in the product is a quoted pip install command naming quirk-scanner
+**Maps to:** POLISH-02
+
+**What to test:** Across the git-tracked files of `quirk/`, `run_scan.py`, `scripts/` and `src/dashboard/src/`, no install hint names an extra unquoted, such as `quirk-scanner[hw]` bare, which zsh treats as a glob, and none names the wrong distribution `quirk[...]`; every hint the tool prints is a full `pip install 'quirk-scanner[<extra>]'` command; the scan is not vacuous, enforced by file, site and printed-literal floors.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_install_hint_package_name.py
+```
+
+**Pass Criteria:** The run reports 8 passed.
+
+**Result:** - [x] PASS (2026-10-27 8 passed — covered by `tests/test_install_hint_package_name.py::test_no_unquoted_install_hints_in_product` and `tests/test_install_hint_package_name.py::test_printed_hints_are_full_pip_commands` and `tests/test_install_hint_package_name.py::test_guard_scan_is_not_vacuous`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-02 (commits 01200b71 for the fix and guard widening, d61b0f92 for a follow-up test fix). Before the fix, the guard found 24 unquoted occurrences on 23 lines in 9 files, including 9 wrong-name `quirk[...]` hints in the shipped `quirk/config_template.yaml`, and 5 of 23 printed literals that were not full pip commands. After the fix the counts are 459 scanned files, 59 hint sites, 23 printed literals and 0 offenders, with floors of 400, 50 and 20. Closes todo 261015. Out of scope and filed as follow-up todos: 53 unquoted right-name hints in user docs outside the four scanned roots, and 6 non-README tests that import `tomllib` directly.
+
+### UAT-232-03: The DOCX skip advisory prints the quoted install command
+
+**ID:** UAT-232-03
+**Title:** The DOCX skip advisory prints the quoted install command
+**Maps to:** POLISH-02
+
+**What to test:** When python-docx is absent, the DOCX export advisory on stderr says python-docx is not installed and prints `pip install 'quirk-scanner[docx]'` with the extra quoted.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_docx_report.py::test_docx_skip_advisory
+```
+
+**Pass Criteria:** The run reports 1 passed.
+
+**Result:** - [x] PASS (2026-10-27 1 passed — covered by `tests/test_docx_report.py::test_docx_skip_advisory`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-02 (fix commit 01200b71). The assertion on the quoted hint was updated in the same commit as the advisory text in `quirk/reports/docx_renderer.py`.
+
+### UAT-232-04: The README tests read the package version through a helper that works on Python 3.10
+
+**ID:** UAT-232-04
+**Title:** The README tests read the package version through a helper that works on Python 3.10
+**Maps to:** POLISH-02
+
+**What to test:** The shared `tests/pyproject_helpers.py` reads the `[project]` version with tomllib, then tomli, then a regex tier; the regex tier agrees with tomllib on the real `pyproject.toml`, ignores a version line outside the `[project]` table, and raises when the table or its version is missing; an explicit path is honoured on every tier.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_pyproject_helpers.py
+```
+
+**Pass Criteria:** The run reports 7 passed.
+
+**Result:** - [x] PASS (2026-10-27 7 passed — covered by `tests/test_pyproject_helpers.py::test_regex_tier_agrees_with_tomllib` and `tests/test_pyproject_helpers.py::test_regex_tier_via_pyproject_version` and `tests/test_pyproject_helpers.py::test_tomli_tier`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-02 (commits 9e58bdb1 and d61b0f92), review item WR-03. `tests/test_readme_brand_logo.py` and `tests/test_readme_hero.py` now use the helper. The project's `requires-python` stays at 3.10. `quirk/__init__.py` keeps its own `tomllib` import on the development path on purpose. There is no 3.10 CI leg; six other test files still import `tomllib` directly, and that residue is a follow-up todo.
+
+### UAT-232-05: The HTML report header shows the brand logo, with no typed wordmark and no fallback text
+
+**ID:** UAT-232-05
+**Title:** The HTML report header shows the brand logo, with no typed wordmark and no fallback text
+**Maps to:** POLISH-03
+
+**What to test:** The HTML report header embeds the packaged Paper SVG logo as a data URI at a height of at least 24 px, with alt text `QU.I.R.K.`; the document contains no `class="wordmark"`; when the logo asset is unreadable, the header renders no logo and no text in its place; the header stays hidden in print.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_report_colophon.py::test_html_header_uses_paper_svg_logo \
+  tests/test_report_colophon.py::test_html_header_logo_meets_minimum_height \
+  tests/test_report_colophon.py::test_html_has_no_typed_wordmark \
+  tests/test_report_colophon.py::test_html_header_omits_logo_when_asset_unreadable \
+  tests/test_report_colophon.py::test_html_header_hidden_in_print
+```
+
+**Pass Criteria:** The run reports 5 passed.
+
+**Result:** - [x] PASS (2026-10-27 5 passed — covered by `tests/test_report_colophon.py::test_html_header_uses_paper_svg_logo` and `tests/test_report_colophon.py::test_html_header_logo_meets_minimum_height` and `tests/test_report_colophon.py::test_html_has_no_typed_wordmark` and `tests/test_report_colophon.py::test_html_header_omits_logo_when_asset_unreadable` and `tests/test_report_colophon.py::test_html_header_hidden_in_print`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-03 (fix commit 314afc94; doc commit 818fa6cd updates `docs/report-interpretation.md`). The header logo is 28 px. D-08 reading: the report header is screen-only, and the PDF is a print of the same HTML, so the PDF carries the QU.I.R.K. brand only through the colophon; UAT-232-06 covers that leg. The PDF cover title, `QU.I.R.K. Cryptographic Readiness Report`, keeps the report accent colour #3b9dff. It is the report's title in running text, not the header wordmark, and its colour belongs to the palette item that D-10 leaves in todo 261003.
+
+### UAT-232-06: The PDF report carries the brand only through the colophon logo, never as a typed wordmark
+
+**ID:** UAT-232-06
+**Title:** The PDF report carries the brand only through the colophon logo, never as a typed wordmark
+**Maps to:** POLISH-03
+
+**What to test:** A real Chromium-rendered PDF report has no typed `QU.I.R.K.` wordmark line, its printed HTML has no `class="wordmark"`, and the colophon logo's Signal #7FE001 and Paper #F4F5F9 fills are present.
+
+**Steps:**
+```
+PLAYWRIGHT_BROWSERS_PATH=/Volumes/Digs-1TB/pw-browsers .venv/bin/python -m pytest -q -m "" -rs \
+  tests/test_report_colophon.py::test_pdf_has_no_typed_wordmark \
+  tests/test_report_colophon.py::test_pdf_colophon_drawn
+```
+
+**Pass Criteria:** The run reports 2 passed with Chromium installed, and no skips.
+
+**Result:** - [x] PASS (2026-10-27 2 passed with Chromium installed, 0 skipped — covered by `tests/test_report_colophon.py::test_pdf_has_no_typed_wordmark` -- CI-EXEMPT: this node needs Chromium; it skips through the registered no-Chromium skip in Linux Full Suite, where Chromium is deliberately absent, and runs for real in the non-gating Browser E2E job, which installs Chromium and selects tests/test_report_colophon.py by path)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-03 (fix commit 314afc94). Plan 232-03 installed Chrome Headless Shell 145.0.7632.6 into `/Volumes/Digs-1TB/pw-browsers` and observed both PDF nodes pass for real; this disposition re-ran the Steps command on 2026-10-27 and observed 2 passed, 0 skipped. Without the browser path the PDF node reports 1 skipped, which is not a pass, so the Chromium run above is the evidence. The HTML half of the same invariant is enforced in every CI run by UAT-232-05's no-typed-wordmark node.
+
+### UAT-232-07: Every README link is absolute, pinned to the release tag, and resolves to an existing path and anchor
+
+**ID:** UAT-232-07
+**Title:** Every README link is absolute, pinned to the release tag, and resolves to an existing path and anchor
+**Maps to:** POLISH-04
+
+**What to test:** The README has no repo-relative link; every repository link is pinned to `v<pyproject version>`; each pinned path exists at HEAD with the right blob or tree kind; each pinned anchor resolves to a heading; the link tokenizer agrees with markdown-it-py on the full URL set.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_readme_links_pinned.py
+```
+
+**Pass Criteria:** The run reports 14 passed.
+
+**Result:** - [x] PASS (2026-10-27 14 passed — covered by `tests/test_readme_links_pinned.py::test_readme_has_no_relative_links` and `tests/test_readme_links_pinned.py::test_readme_repo_links_pinned_to_pyproject_version` and `tests/test_readme_links_pinned.py::test_readme_pinned_paths_exist_with_matching_kind` and `tests/test_readme_links_pinned.py::test_readme_pinned_anchors_resolve` and `tests/test_readme_links_pinned.py::test_tokenizer_matches_markdown_it`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 232-04 (commit 5486d5ba). 25 relative links were rewritten to `/blob/v5.27.0/` or `/tree/v5.27.0/` URLs, and the 26 doc-claim ledger rows they broke were re-anchored in the same commit. Because the pin is derived from the pyproject version, the Phase 235 version bump turns this gate red until the 25 link pins move together with the 4 image pins.
+
+### UAT-232-08: The README links resolve on the live PyPI project page
+
+**ID:** UAT-232-08
+**Title:** The README links resolve on the live PyPI project page
+**Maps to:** POLISH-04
+
+**What to test:** On the published PyPI page for quirk-scanner, every link in the rendered README returns HTTP 200.
+
+**Steps:**
+```
+Observable only after the v5.28.0 tag and upload: open https://pypi.org/project/quirk-scanner/ and follow every README link.
+```
+
+**Pass Criteria:** Every README link on the live PyPI page returns HTTP 200.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_readme_links_pinned.py::test_readme_repo_links_pinned_to_pyproject_version`)
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** The live leg can only be observed after the v5.28.0 tag and the PyPI upload, so it is handed to Phase 235 LAUNCH-03, the fresh-install and README smoke, per D-13. It is not a Phase 232 gap. Phase 232 proves the offline invariant through the substitute: every link is absolute and pinned to the version the release will carry, and UAT-232-07 proves each pinned path exists. Plan 232-04 also sent `curl -sI` to the 16 unique pinned GitHub URLs, fragments dropped, and all 16 returned HTTP 200 on 2026-10-27; no PyPI page was checked.
