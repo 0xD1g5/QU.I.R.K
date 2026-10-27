@@ -599,24 +599,49 @@ def run(points: Sequence[int] = POINTS,
 # Provenance and the real estate.
 # ---------------------------------------------------------------------------
 
-def _git(*args: str) -> Optional[str]:
+def _git_out(*args: str) -> Optional[str]:
+    """git's stripped stdout ("" allowed), or None if git is absent or fails.
+
+    Same spawn semantics as ``tests/cli_helpers.py::run_fork_safe`` (IN-04):
+    an absolute executable, ``-C`` instead of a ``cwd`` keyword, and
+    ``close_fds=False``. Together they keep CPython on ``posix_spawn``; any
+    one missing falls back to ``fork()``, which SIGSEGVs on macOS once
+    Network.framework is initialised (the full-suite case, since the CLI node
+    calls this in-process).
+    """
+    git = shutil.which("git")
+    if not git:
+        return None
     try:
-        proc = subprocess.run(["git", *args], cwd=str(REPO_ROOT),
+        proc = subprocess.run([git, "-C", str(REPO_ROOT), *args],
                               capture_output=True, text=True, timeout=30,
-                              check=False)
+                              check=False, close_fds=False)
     except (OSError, subprocess.SubprocessError):
         return None
     if proc.returncode != 0:
         return None
-    return proc.stdout.strip() or None
+    return proc.stdout.strip()
 
 
-def provenance() -> Dict[str, Optional[str]]:
-    """git HEAD plus the blob hashes of the measured model (Pitfall 7)."""
+def _git(*args: str) -> Optional[str]:
+    return _git_out(*args) or None
+
+
+# Tracked code the measurement executes. ``dirty`` is True when any of it
+# differs from HEAD, in which case the blob hashes (taken from the working
+# tree) are not HEAD's blobs. Untracked files are ignored.
+DIRTY_SCOPE = ("quirk", "scripts", "tests")
+
+
+def provenance() -> Dict[str, Any]:
+    """git HEAD, the measured model's blob hashes, and a dirty flag."""
+    status = _git_out("status", "--porcelain", "--untracked-files=no",
+                      "--", *DIRTY_SCOPE)
     return {
         "head_sha": _git("rev-parse", "HEAD"),
         "scoring_blob": _git("hash-object", "quirk/intelligence/scoring.py"),
         "evidence_blob": _git("hash-object", "quirk/intelligence/evidence.py"),
+        "dirty": None if status is None else bool(status),
         "python": platform.python_version(),
     }
 
@@ -807,6 +832,8 @@ def to_markdown(report: Dict[str, Any]) -> str:
              f"- HEAD: `{prov['head_sha']}`",
              f"- scoring.py blob: `{prov['scoring_blob']}`",
              f"- evidence.py blob: `{prov['evidence_blob']}`",
+             f"- working tree dirty ({', '.join(DIRTY_SCOPE)}): "
+             f"{prov.get('dirty')}",
              f"- Python: {prov['python']}", "",
              "Cells are `emitted/computed [winning ceiling source value]`.", "",
              "## Dict ladder at +0", "",

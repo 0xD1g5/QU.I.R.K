@@ -65,6 +65,7 @@ import importlib
 import json
 import os
 import re
+import shutil
 import sqlite3
 import sys
 import threading
@@ -782,8 +783,19 @@ def test_cli_outputs_json_and_markdown(inst, capsys):
     for key in ("provenance", "points", "readings", "results",
                 "ladder_at_zero", "projection_gaps", "known_disagreements"):
         assert key in report, f"--json report lacks top-level key {key!r}"
-    for key in ("head_sha", "scoring_blob", "evidence_blob", "python"):
-        assert key in report["provenance"], f"provenance lacks {key!r}"
+    prov = report["provenance"]
+    for key in ("head_sha", "scoring_blob", "evidence_blob", "dirty",
+                "python"):
+        assert key in prov, f"provenance lacks {key!r}"
+    assert prov["python"], f"provenance python is empty: {prov['python']!r}"
+    # IN-04: a crashed or failed git child surfaces as None, so require real
+    # values whenever git and a checkout are present (CI clones have both).
+    if shutil.which("git") and (REPO_ROOT / ".git").exists():
+        for key in ("head_sha", "scoring_blob", "evidence_blob"):
+            assert prov[key], f"git is available but provenance {key} is {prov[key]!r}"
+        assert isinstance(prov["dirty"], bool), (
+            f"git is available but provenance dirty is {prov['dirty']!r}"
+        )
 
     assert inst.main(["--markdown", "--points", "0"]) == 0
     markdown = capsys.readouterr().out
