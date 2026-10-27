@@ -223,6 +223,15 @@ recomputed. A history chart can therefore show a step at the release that introd
 > finding set it and what the number would otherwise have been — and clearing that finding set
 > lifts the cap."
 
+The dilution in that box is consequence dilution: a serious finding being averaged away by the
+healthy part of the same estate. The finding ceilings address it. A different kind, scan-depth
+dilution, is still open. Holding every weakness fixed, observing more healthy endpoints (a deeper
+or wider scan of the same estate) can still raise the readiness score, because the endpoint and
+certificate counts that most ratio terms divide by grow with the scan, and a single newly observed
+ECDSA certificate also lifts the agility subscore. Where a ceiling binds it compresses this rise but
+does not remove it. The measurement, rung by rung, is recorded in
+`.planning/decisions/233-p2b-third-instrument-measurement.md`.
+
 **Gauge colors now agree with the report band (SCORE-07).** The dashboard's subscore gauges (the
 0–25 gauges on the Executive page, including Data at Rest and Data in Motion) used to derive their
 green/amber/red boundaries independently of the report's EXCELLENT/GOOD/MODERATE/FAIR/POOR band
