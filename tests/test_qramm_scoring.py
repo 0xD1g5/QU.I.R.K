@@ -134,3 +134,78 @@ def test_maturity_label_covers_all_five_levels():
         f"Not all labels covered. Missing: {expected - labels_seen}, "
         f"Unexpected: {labels_seen - expected}"
     )
+
+
+# ---------- Phase 234 SCORE-10 (D-14 / D-25) ----------
+
+
+def test_overall_mean_over_assessed_dimensions_only():
+    """D-14: a Not-assessed dimension is excluded, never averaged in as 0.
+
+    Same dimension scores as the shared contract fixture's scenario:
+    (0.0 + 2.0 + 0.0) / 3 = 0.6667 (ITR excluded), not (0+2+0+0)/4 = 0.5.
+    """
+    result = compute_overall_score(
+        {"CVI": 0.0, "SGRM": 2.0, "DPE": 0.0, "ITR": 0.0},
+        multiplier=1.0,
+        assessed={"CVI", "SGRM", "DPE"},
+    )
+    assert result["overall"] == pytest.approx(0.6667, abs=1e-4)
+    assert result["maturity"] == "Basic"
+    assert result["assessed_dimensions"] == ["CVI", "SGRM", "DPE"]
+    assert result["dimensions_assessed"] == 3
+    assert result["dimensions_total"] == 4
+    # The weighted per-dimension block still reports all four dimensions.
+    assert set(result["dimensions"]) == {"CVI", "SGRM", "DPE", "ITR"}
+
+
+def test_overall_is_none_when_no_dimension_assessed():
+    """D-14: zero assessed dimensions -> overall pending (None), not 0."""
+    result = compute_overall_score(
+        {"CVI": 0.0, "SGRM": 0.0, "DPE": 0.0, "ITR": 0.0},
+        multiplier=1.0,
+        assessed=[],
+    )
+    assert result["overall"] is None
+    assert result["maturity"] == "Indeterminate"
+    assert result["assessed_dimensions"] == []
+    assert result["dimensions_assessed"] == 0
+    assert result["dimensions_total"] == 4
+
+
+def test_assessed_is_required_keyword():
+    """D-14 / T-234-02c: ``assessed`` has no default, so omitting it can
+    never silently restore the all-four-dimensions average."""
+    with pytest.raises(TypeError):
+        compute_overall_score({"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0})
+    with pytest.raises(TypeError):
+        # Keyword-only: a third positional argument is rejected too.
+        compute_overall_score(
+            {"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0},
+            1.0,
+            ["CVI", "SGRM", "DPE", "ITR"],
+        )
+    params = inspect.signature(compute_overall_score).parameters
+    assert params["assessed"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert params["assessed"].default is inspect.Parameter.empty
+
+
+def test_overall_state_is_recalculate_without_answered_counts():
+    """D-25: a score_json saved before Phase 234 (no answered_by_dimension)
+    still averaged Not-assessed dimensions as 0, so its overall reads
+    'recalculate'; a score carrying its counts reads 'current'."""
+    from quirk.qramm.assessment_state import overall_state
+
+    legacy = {"overall": 0.5, "maturity": "Basic", "dimensions": {}}
+    assert overall_state(legacy) == "recalculate"
+    # A non-dict value is not a count map: still legacy.
+    assert overall_state(dict(legacy, answered_by_dimension=None)) == (
+        "recalculate"
+    )
+    current = dict(
+        legacy,
+        overall=0.6667,
+        answered_by_dimension={"CVI": 3, "SGRM": 30, "DPE": 5, "ITR": 0},
+    )
+    assert overall_state(current) == "current"
+    assert overall_state(None) is None

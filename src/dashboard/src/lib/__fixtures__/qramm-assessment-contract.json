@@ -1,5 +1,5 @@
 {
-  "_comment": "Phase 231 D-09 assessed-state contract: hand-authored test input read by both tests/test_qramm_assessment_parity.py (pytest, real API) and src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx (vitest); not a generator artifact.",
+  "_comment": "Phase 231 D-09 assessed-state contract, extended by Phase 234 SCORE-10: hand-authored test input read by both tests/test_qramm_assessment_parity.py (pytest, real API) and src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx (vitest); not a generator artifact. Three cases: (1) the top-level scenario (rows, statuses, and the D-14 overall over assessed dimensions only: expected_overall = mean(CVI 0.0, SGRM 2.0, DPE 0.0) = 0.6667, ITR not assessed and excluded); (2) stale_case (D-15: answers saved after the score make the dimension stale, never self-assessed); (3) legacy_score_json (D-25: a score_json without answered_by_dimension reads stale per answered dimension and the overall reads recalculate).",
   "answers": [
     {
       "question_number": 1,
@@ -305,6 +305,491 @@
     "SGRM": "self-assessed",
     "DPE": "self-assessed",
     "ITR": "not-assessed"
+  },
+  "expected_overall": 0.6667,
+  "expected_maturity": "Basic",
+  "expected_assessed_dimensions": [
+    "CVI",
+    "SGRM",
+    "DPE"
+  ],
+  "expected_answered_by_dimension": {
+    "CVI": 3,
+    "SGRM": 30,
+    "DPE": 5,
+    "ITR": 0
+  },
+  "expected_dimensions_assessed": 3,
+  "expected_dimensions_total": 4,
+  "expected_overall_state": "current",
+  "expected_score_stale": false,
+  "stale_case": {
+    "_comment": "Phase 234 D-15 (WR-01 reproduction): score the scenario's answers, then answer all 30 ITR questions at level 4 WITHOUT rescoring. ITR's live answered count (30) differs from the count persisted with the score (0), so ITR reads stale (relevance null), never self-assessed.",
+    "answers_before_score": [
+      {
+        "question_number": 1,
+        "answer_value": 3
+      },
+      {
+        "question_number": 2,
+        "answer_value": 3
+      },
+      {
+        "question_number": 3,
+        "answer_value": 3
+      },
+      {
+        "question_number": 31,
+        "answer_value": 2
+      },
+      {
+        "question_number": 32,
+        "answer_value": 2
+      },
+      {
+        "question_number": 33,
+        "answer_value": 2
+      },
+      {
+        "question_number": 34,
+        "answer_value": 2
+      },
+      {
+        "question_number": 35,
+        "answer_value": 2
+      },
+      {
+        "question_number": 36,
+        "answer_value": 2
+      },
+      {
+        "question_number": 37,
+        "answer_value": 2
+      },
+      {
+        "question_number": 38,
+        "answer_value": 2
+      },
+      {
+        "question_number": 39,
+        "answer_value": 2
+      },
+      {
+        "question_number": 40,
+        "answer_value": 2
+      },
+      {
+        "question_number": 41,
+        "answer_value": 2
+      },
+      {
+        "question_number": 42,
+        "answer_value": 2
+      },
+      {
+        "question_number": 43,
+        "answer_value": 2
+      },
+      {
+        "question_number": 44,
+        "answer_value": 2
+      },
+      {
+        "question_number": 45,
+        "answer_value": 2
+      },
+      {
+        "question_number": 46,
+        "answer_value": 2
+      },
+      {
+        "question_number": 47,
+        "answer_value": 2
+      },
+      {
+        "question_number": 48,
+        "answer_value": 2
+      },
+      {
+        "question_number": 49,
+        "answer_value": 2
+      },
+      {
+        "question_number": 50,
+        "answer_value": 2
+      },
+      {
+        "question_number": 51,
+        "answer_value": 2
+      },
+      {
+        "question_number": 52,
+        "answer_value": 2
+      },
+      {
+        "question_number": 53,
+        "answer_value": 2
+      },
+      {
+        "question_number": 54,
+        "answer_value": 2
+      },
+      {
+        "question_number": 55,
+        "answer_value": 2
+      },
+      {
+        "question_number": 56,
+        "answer_value": 2
+      },
+      {
+        "question_number": 57,
+        "answer_value": 2
+      },
+      {
+        "question_number": 58,
+        "answer_value": 2
+      },
+      {
+        "question_number": 59,
+        "answer_value": 2
+      },
+      {
+        "question_number": 60,
+        "answer_value": 2
+      },
+      {
+        "question_number": 61,
+        "answer_value": 4
+      },
+      {
+        "question_number": 62,
+        "answer_value": 4
+      },
+      {
+        "question_number": 63,
+        "answer_value": 4
+      },
+      {
+        "question_number": 64,
+        "answer_value": 4
+      },
+      {
+        "question_number": 65,
+        "answer_value": 4
+      }
+    ],
+    "answers_after_score": [
+      {
+        "question_number": 91,
+        "answer_value": 4
+      },
+      {
+        "question_number": 92,
+        "answer_value": 4
+      },
+      {
+        "question_number": 93,
+        "answer_value": 4
+      },
+      {
+        "question_number": 94,
+        "answer_value": 4
+      },
+      {
+        "question_number": 95,
+        "answer_value": 4
+      },
+      {
+        "question_number": 96,
+        "answer_value": 4
+      },
+      {
+        "question_number": 97,
+        "answer_value": 4
+      },
+      {
+        "question_number": 98,
+        "answer_value": 4
+      },
+      {
+        "question_number": 99,
+        "answer_value": 4
+      },
+      {
+        "question_number": 100,
+        "answer_value": 4
+      },
+      {
+        "question_number": 101,
+        "answer_value": 4
+      },
+      {
+        "question_number": 102,
+        "answer_value": 4
+      },
+      {
+        "question_number": 103,
+        "answer_value": 4
+      },
+      {
+        "question_number": 104,
+        "answer_value": 4
+      },
+      {
+        "question_number": 105,
+        "answer_value": 4
+      },
+      {
+        "question_number": 106,
+        "answer_value": 4
+      },
+      {
+        "question_number": 107,
+        "answer_value": 4
+      },
+      {
+        "question_number": 108,
+        "answer_value": 4
+      },
+      {
+        "question_number": 109,
+        "answer_value": 4
+      },
+      {
+        "question_number": 110,
+        "answer_value": 4
+      },
+      {
+        "question_number": 111,
+        "answer_value": 4
+      },
+      {
+        "question_number": 112,
+        "answer_value": 4
+      },
+      {
+        "question_number": 113,
+        "answer_value": 4
+      },
+      {
+        "question_number": 114,
+        "answer_value": 4
+      },
+      {
+        "question_number": 115,
+        "answer_value": 4
+      },
+      {
+        "question_number": 116,
+        "answer_value": 4
+      },
+      {
+        "question_number": 117,
+        "answer_value": 4
+      },
+      {
+        "question_number": 118,
+        "answer_value": 4
+      },
+      {
+        "question_number": 119,
+        "answer_value": 4
+      },
+      {
+        "question_number": 120,
+        "answer_value": 4
+      }
+    ],
+    "expected_coverage_status": {
+      "CVI": "covered",
+      "SGRM": "self-assessed",
+      "DPE": "self-assessed",
+      "ITR": "stale"
+    },
+    "expected_dimension_state": {
+      "CVI": "scanner-measured",
+      "SGRM": "self-assessed",
+      "DPE": "self-assessed",
+      "ITR": "stale"
+    },
+    "expected_score_stale": true,
+    "expected_overall_state": "current"
+  },
+  "legacy_score_json": {
+    "_comment": "Phase 234 D-25: the scenario's answers, scored, then the persisted score_json has answered_by_dimension removed (a score saved before Phase 234). Without counts newer answers cannot be ruled out, so every live-answered dimension reads stale and the overall reads recalculate; a dimension with zero live answers stays pending (pending-first precedence).",
+    "answers": [
+      {
+        "question_number": 1,
+        "answer_value": 3
+      },
+      {
+        "question_number": 2,
+        "answer_value": 3
+      },
+      {
+        "question_number": 3,
+        "answer_value": 3
+      },
+      {
+        "question_number": 31,
+        "answer_value": 2
+      },
+      {
+        "question_number": 32,
+        "answer_value": 2
+      },
+      {
+        "question_number": 33,
+        "answer_value": 2
+      },
+      {
+        "question_number": 34,
+        "answer_value": 2
+      },
+      {
+        "question_number": 35,
+        "answer_value": 2
+      },
+      {
+        "question_number": 36,
+        "answer_value": 2
+      },
+      {
+        "question_number": 37,
+        "answer_value": 2
+      },
+      {
+        "question_number": 38,
+        "answer_value": 2
+      },
+      {
+        "question_number": 39,
+        "answer_value": 2
+      },
+      {
+        "question_number": 40,
+        "answer_value": 2
+      },
+      {
+        "question_number": 41,
+        "answer_value": 2
+      },
+      {
+        "question_number": 42,
+        "answer_value": 2
+      },
+      {
+        "question_number": 43,
+        "answer_value": 2
+      },
+      {
+        "question_number": 44,
+        "answer_value": 2
+      },
+      {
+        "question_number": 45,
+        "answer_value": 2
+      },
+      {
+        "question_number": 46,
+        "answer_value": 2
+      },
+      {
+        "question_number": 47,
+        "answer_value": 2
+      },
+      {
+        "question_number": 48,
+        "answer_value": 2
+      },
+      {
+        "question_number": 49,
+        "answer_value": 2
+      },
+      {
+        "question_number": 50,
+        "answer_value": 2
+      },
+      {
+        "question_number": 51,
+        "answer_value": 2
+      },
+      {
+        "question_number": 52,
+        "answer_value": 2
+      },
+      {
+        "question_number": 53,
+        "answer_value": 2
+      },
+      {
+        "question_number": 54,
+        "answer_value": 2
+      },
+      {
+        "question_number": 55,
+        "answer_value": 2
+      },
+      {
+        "question_number": 56,
+        "answer_value": 2
+      },
+      {
+        "question_number": 57,
+        "answer_value": 2
+      },
+      {
+        "question_number": 58,
+        "answer_value": 2
+      },
+      {
+        "question_number": 59,
+        "answer_value": 2
+      },
+      {
+        "question_number": 60,
+        "answer_value": 2
+      },
+      {
+        "question_number": 61,
+        "answer_value": 4
+      },
+      {
+        "question_number": 62,
+        "answer_value": 4
+      },
+      {
+        "question_number": 63,
+        "answer_value": 4
+      },
+      {
+        "question_number": 64,
+        "answer_value": 4
+      },
+      {
+        "question_number": 65,
+        "answer_value": 4
+      }
+    ],
+    "removed_score_keys": [
+      "answered_by_dimension"
+    ],
+    "expected_coverage_status": {
+      "CVI": "stale",
+      "SGRM": "stale",
+      "DPE": "stale",
+      "ITR": "pending"
+    },
+    "expected_dimension_state": {
+      "CVI": "stale",
+      "SGRM": "stale",
+      "DPE": "stale",
+      "ITR": "not-assessed"
+    },
+    "expected_score_stale": true,
+    "expected_overall_state": "recalculate",
+    "expected_overall_label": "Recalculate to apply the updated overall"
   },
   "rows": [
     {

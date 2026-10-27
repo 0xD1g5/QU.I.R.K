@@ -16,6 +16,17 @@ GET /api/qramm/sessions/{id}, the server half of the print-page fix (D-20).
 Scenario: 3 CVI questions answered (scanner-measured), all 30 SGRM
 (self-assessed), 5 DPE (self-assessed although partially answered, D-08),
 no ITR (not assessed).
+
+Phase 234 SCORE-10 extends the contract with three cases, all read from the
+same fixture so the vitest half (plan 234-04) asserts the same values:
+- the scenario's overall is the mean over ASSESSED dimensions only (D-14):
+  ITR has no answers, so it is excluded instead of averaged in as 0;
+- ``stale_case`` (D-15): answers saved after the score make that dimension
+  ``stale`` (relevance null), never ``self-assessed`` (todo 261025, WR-01);
+- ``legacy_score_json`` (D-25): a score_json saved before Phase 234 has no
+  ``answered_by_dimension``, so every live-answered dimension reads ``stale``
+  and the overall reads ``recalculate``; zero-answer dimensions stay
+  ``pending``.
 """
 from __future__ import annotations
 
@@ -44,6 +55,8 @@ _STATUS_TO_STATE: Dict[str, str] = {
     "self-assessed": "self-assessed",
     "pending": "not-assessed",
     "n/a": "not-assessed",
+    # Phase 234 D-15: the score predates the live answers (never self-assessed).
+    "stale": "stale",
 }
 
 
@@ -86,16 +99,35 @@ def _make_qramm_client():
 
 
 def _seed_contract_session(contract: dict) -> Tuple[object, int]:
-    client, _ = _make_qramm_client()
+    client, sid, _, _ = _seed_and_score(contract["answers"])
+    return client, sid
+
+
+def _seed_and_score(answers: list) -> Tuple[object, int, object, dict]:
+    """Seed ``answers`` into a fresh session and score it.
+
+    Returns (client, session_id, TestingSession factory, score response).
+    """
+    client, testing_session = _make_qramm_client()
     sid = client.post("/api/qramm/sessions", json={}).json()["session_id"]
     resp = client.post(
         f"/api/qramm/sessions/{sid}/answers",
-        json={"answers": contract["answers"]},
+        json={"answers": answers},
     )
     assert resp.status_code == 200, resp.text
     resp = client.post(f"/api/qramm/sessions/{sid}/score")
     assert resp.status_code == 200, resp.text
-    return client, sid
+    return client, sid, testing_session, resp.json()
+
+
+def _dimension_statuses(rows: list) -> Dict[str, str]:
+    """One coverage_status per dimension (the state is a dimension property)."""
+    statuses: Dict[str, set] = {d: set() for d in _DIMS}
+    for r in rows:
+        statuses[r["dimension"]].add(r["coverage_status"])
+    for dim in _DIMS:
+        assert len(statuses[dim]) == 1, (dim, statuses[dim])
+    return {d: next(iter(statuses[d])) for d in _DIMS}
 
 
 def _assert_rows_equal(got: list, want: list) -> None:
@@ -194,3 +226,95 @@ def test_session_endpoint_returns_persisted_score_dict() -> None:
         got = score["dimensions"][dim]
         assert got["score"] == pytest.approx(want["score"], abs=1e-9), dim
         assert got["weighted"] == pytest.approx(want["weighted"], abs=1e-9), dim
+
+
+# ---------- Phase 234 SCORE-10 (D-14 / D-15 / D-25) ----------
+
+
+def test_endpoint_overall_matches_contract() -> None:
+    """D-14: POST /score averages only the assessed dimensions.
+
+    ITR has zero answers in the scenario, so it is excluded from the mean
+    rather than counted as 0 (which gave 0.5 before Phase 234).
+    """
+    contract = _contract()
+    client, sid, _, body = _seed_and_score(contract["answers"])
+    assert body["overall"] == pytest.approx(
+        contract["expected_overall"], abs=1e-4
+    )
+    assert body["maturity"] == contract["expected_maturity"]
+    assert body["assessed_dimensions"] == contract["expected_assessed_dimensions"]
+    assert body["dimensions_assessed"] == contract["expected_dimensions_assessed"]
+    assert body["dimensions_total"] == contract["expected_dimensions_total"]
+    assert body["answered_by_dimension"] == (
+        contract["expected_answered_by_dimension"]
+    )
+    # A score saved by this phase carries its counts: current, not stale.
+    session = client.get(f"/api/qramm/sessions/{sid}").json()
+    assert session["score"]["answered_by_dimension"] == (
+        contract["expected_answered_by_dimension"]
+    )
+    assert session["score_overall_state"] == contract["expected_overall_state"]
+    assert session["score_stale"] is contract["expected_score_stale"]
+
+
+def test_stale_case_rows_and_session_flag_match_contract() -> None:
+    """D-15 (todo 261025, WR-01): answers saved after the score read stale."""
+    case = _contract()["stale_case"]
+    client, sid, _, _ = _seed_and_score(case["answers_before_score"])
+    resp = client.post(
+        f"/api/qramm/sessions/{sid}/answers",
+        json={"answers": case["answers_after_score"]},
+    )
+    assert resp.status_code == 200, resp.text
+
+    rows = client.get(f"/api/qramm/sessions/{sid}/compliance-map").json()
+    got_status = _dimension_statuses(rows)
+    assert got_status == case["expected_coverage_status"]
+    got_state = {d: _STATUS_TO_STATE[s] for d, s in got_status.items()}
+    assert got_state == case["expected_dimension_state"]
+    for r in rows:
+        if got_status[r["dimension"]] == "stale":
+            assert r["relevance_score"] is None, r["practice_number"]
+
+    session = client.get(f"/api/qramm/sessions/{sid}").json()
+    assert session["score_stale"] is case["expected_score_stale"]
+    assert session["score_overall_state"] == case["expected_overall_state"]
+
+
+def test_legacy_score_json_rows_and_overall_read_recalculate() -> None:
+    """D-25: a score_json without answered_by_dimension (saved before
+    Phase 234) never yields self-assessed or a maturity level."""
+    from quirk.models import QRAMMSession
+
+    case = _contract()["legacy_score_json"]
+    client, sid, testing_session, _ = _seed_and_score(case["answers"])
+
+    db = testing_session()
+    try:
+        session = db.query(QRAMMSession).filter(QRAMMSession.id == sid).one()
+        score = json.loads(session.score_json)
+        for key in case["removed_score_keys"]:
+            score.pop(key, None)
+        session.score_json = json.dumps(score)
+        db.commit()
+    finally:
+        db.close()
+
+    rows = client.get(f"/api/qramm/sessions/{sid}/compliance-map").json()
+    assert len(rows) == 96
+    for r in rows:
+        want = case["expected_coverage_status"][r["dimension"]]
+        assert r["coverage_status"] == want, (r["practice_number"], want)
+        assert r["coverage_status"] != "self-assessed", r["practice_number"]
+        assert r["relevance_score"] is None, r["practice_number"]
+    got_state = {
+        d: _STATUS_TO_STATE[s] for d, s in _dimension_statuses(rows).items()
+    }
+    assert got_state == case["expected_dimension_state"]
+
+    session_body = client.get(f"/api/qramm/sessions/{sid}").json()
+    assert session_body["score_stale"] is case["expected_score_stale"]
+    assert session_body["score_overall_state"] == (
+        case["expected_overall_state"]
+    )
