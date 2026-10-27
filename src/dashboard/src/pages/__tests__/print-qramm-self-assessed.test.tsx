@@ -73,7 +73,8 @@ const SCORE = {
 
 const ROWS = contract.rows as QRAMMComplianceMapRow[]
 const FRAMEWORK_ORDER = ["NIST_PQC", "NSM10", "CNSA2", "ISO27001", "ETSI_QS", "PCI_DSS", "CC", "BSI_TR"]
-const STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed"]
+// Phase 234 D-15: the composition table gained a "Stale — recalculate" column.
+const STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed", "stale"]
 
 afterEach(() => {
   cleanup()
@@ -129,6 +130,7 @@ function expectedCounts(rows: QRAMMComplianceMapRow[], fw: string): Record<Asses
     "scanner-measured": 0,
     "self-assessed": 0,
     "not-assessed": 0,
+    stale: 0,
   }
   for (const row of rows) {
     if (row.framework === fw) counts[stateFromCoverageStatus(row.coverage_status)] += 1
@@ -167,7 +169,7 @@ describe("PrintQRAMM — Phase 231 three-state print rendering", () => {
   it("shows per-framework composition counts", async () => {
     const section = await renderQramm()
     const table = tableAfter(section, "Compliance Framework Coverage")
-    expect(headers(table)).toEqual(["Framework", "Scanner-measured", "Self-assessed", "Not assessed"])
+    expect(headers(table)).toEqual(["Framework", "Scanner-measured", "Self-assessed", "Not assessed", "Stale — recalculate"])
 
     const caption = table.previousElementSibling
     expect(caption?.classList.contains("meta")).toBe(true)

@@ -11,7 +11,7 @@ import {
   DIMENSIONS,
 } from "@/lib/qramm-constants"
 import type { Dimension } from "@/lib/qramm-constants"
-import { buildAnswers, buildCatalog, buildCtx } from "./scorecard-fixtures"
+import { buildAnswers, buildCatalog, buildCtx, withAnsweredCounts } from "./scorecard-fixtures"
 
 // D-10 (WR-11, WR-12):
 //  - Bar width = (count / DIMENSION_COUNT) * 100 (NOT hardcoded /4)
@@ -33,7 +33,7 @@ function renderWith(
   const qnToDim = buildCatalog(perDim)
   const answers = buildAnswers(qnToDim, answeredPerDim)
   return render(
-    <QRAMMContext.Provider value={buildCtx(scoreResult, answers)}>
+    <QRAMMContext.Provider value={buildCtx(withAnsweredCounts(scoreResult, qnToDim, answers), answers)}>
       <ScorecardTab qnToDim={qnToDim} />
     </QRAMMContext.Provider>,
   )

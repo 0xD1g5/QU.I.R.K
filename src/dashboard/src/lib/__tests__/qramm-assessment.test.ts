@@ -8,10 +8,13 @@ import {
   ASSESSMENT_LABEL,
   ASSESSMENT_PRINT_CLASS,
   QRAMM_COVERAGE_SENTENCE,
+  RECALCULATE_OVERALL_LABEL,
   SCANNER_MEASURED_DIMENSIONS,
   dimensionStateFromAnswered,
+  dimensionsAssessedLabel,
   isDimensionAssessed,
   notAssessedCountLabel,
+  overallDisplayState,
   stateFromCoverageStatus,
 } from "@/lib/qramm-assessment"
 
@@ -37,6 +40,10 @@ describe("stateFromCoverageStatus", () => {
 
   it("maps self-assessed to self-assessed", () => {
     expect(stateFromCoverageStatus("self-assessed")).toBe("self-assessed")
+  })
+
+  it("maps stale to stale, not the not-assessed fall-through", () => {
+    expect(stateFromCoverageStatus("stale")).toBe("stale")
   })
 
   it("maps pending, n/a, null and undefined to not-assessed", () => {
@@ -70,6 +77,23 @@ describe("dimensionStateFromAnswered", () => {
     expect(dimensionStateFromAnswered("ITR", 0)).toBe("not-assessed")
   })
 
+  it("reads a live count that differs from the saved count as stale", () => {
+    expect(dimensionStateFromAnswered("ITR", 30, 0)).toBe("stale")
+    expect(dimensionStateFromAnswered("CVI", 3, 2)).toBe("stale")
+    expect(dimensionStateFromAnswered("SGRM", 30, 30)).toBe("self-assessed")
+    expect(dimensionStateFromAnswered("CVI", 3, 3)).toBe("scanner-measured")
+  })
+
+  it("reads every answered dimension of a score without counts as stale", () => {
+    expect(dimensionStateFromAnswered("CVI", 3, undefined, false)).toBe("stale")
+    expect(dimensionStateFromAnswered("SGRM", 30, undefined, false)).toBe("stale")
+  })
+
+  it("keeps an unanswered dimension not-assessed before any stale rule", () => {
+    expect(dimensionStateFromAnswered("ITR", 0, undefined, false)).toBe("not-assessed")
+    expect(dimensionStateFromAnswered("ITR", 0, 5)).toBe("not-assessed")
+  })
+
   it("treats CVI as the only scanner-measured dimension", () => {
     expect([...SCANNER_MEASURED_DIMENSIONS]).toEqual(["CVI"])
   })
@@ -81,6 +105,7 @@ describe("vocabulary maps", () => {
       "scanner-measured": "Scanner-measured",
       "self-assessed": "Self-assessed",
       "not-assessed": "Not assessed",
+      stale: "Stale — recalculate",
     })
   })
 
@@ -89,6 +114,7 @@ describe("vocabulary maps", () => {
       "scanner-measured": "default",
       "self-assessed": "outline",
       "not-assessed": "secondary",
+      stale: "destructive",
     })
   })
 
@@ -97,6 +123,7 @@ describe("vocabulary maps", () => {
       "scanner-measured": "tier-scanner",
       "self-assessed": "tier-self",
       "not-assessed": "tier-none",
+      stale: "tier-none",
     })
   })
 
@@ -104,6 +131,29 @@ describe("vocabulary maps", () => {
     expect(QRAMM_COVERAGE_SENTENCE).toBe(
       'CVI rows are measured from QUIRK scanner evidence; SGRM, DPE and ITR rows show self-assessed answers; any dimension with no answered question reads "Not assessed".',
     )
+  })
+})
+
+describe("overallDisplayState", () => {
+  it("is null with no score", () => {
+    expect(overallDisplayState(null)).toBeNull()
+    expect(overallDisplayState(undefined)).toBeNull()
+  })
+
+  it("is recalculate for a score saved without answered_by_dimension", () => {
+    expect(overallDisplayState({})).toBe("recalculate")
+    expect(overallDisplayState({ answered_by_dimension: null })).toBe("recalculate")
+    expect(RECALCULATE_OVERALL_LABEL).toBe("Recalculate to apply the updated overall")
+  })
+
+  it("is current for a score that carries answered_by_dimension", () => {
+    expect(overallDisplayState({ answered_by_dimension: { CVI: 3, SGRM: 30, DPE: 5, ITR: 0 } })).toBe("current")
+  })
+})
+
+describe("dimensionsAssessedLabel", () => {
+  it("reads N of total dimensions assessed", () => {
+    expect(dimensionsAssessedLabel(3, 4)).toBe("3 of 4 dimensions assessed")
   })
 })
 

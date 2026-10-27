@@ -11,6 +11,9 @@ import {
   ASSESSMENT_LABEL,
   ASSESSMENT_PRINT_CLASS,
   QRAMM_COVERAGE_SENTENCE,
+  RECALCULATE_OVERALL_LABEL,
+  dimensionsAssessedLabel,
+  overallDisplayState,
   type AssessmentState,
 } from "@/lib/qramm-assessment"
 import quirkLogoUrl from "@/assets/brand/quirk-logo.svg"
@@ -241,9 +244,11 @@ export function PrintRoadmap({
 function PrintQRAMM({
   scoreResult,
   complianceRows,
+  scoreStale = false,
 }: {
   scoreResult: QRAMMScoreResponse | null
   complianceRows: QRAMMComplianceMapRow[] | null
+  scoreStale?: boolean
 }) {
   if (!scoreResult || !complianceRows) {
     return (
@@ -276,13 +281,29 @@ function PrintQRAMM({
   // Phase 231 D-06a: per-framework composition — practice-area rows counted by assessment state.
   const frameworkCounts: Record<string, Record<AssessmentState, number>> = {}
   for (const fw of FRAMEWORK_ORDER) {
-    const counts: Record<AssessmentState, number> = { "scanner-measured": 0, "self-assessed": 0, "not-assessed": 0 }
+    const counts: Record<AssessmentState, number> = { "scanner-measured": 0, "self-assessed": 0, "not-assessed": 0, stale: 0 }
     for (const row of complianceRows) {
       if (row.framework === fw) counts[stateFromCoverageStatus(row.coverage_status)] += 1
     }
     frameworkCounts[fw] = counts
   }
-  const COUNT_STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed"]
+  const COUNT_STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed", "stale"]
+
+  // Phase 234 D-14/D-23/D-25: the overall over assessed dimensions with "N of 4"; a legacy score
+  // (no answered_by_dimension) reads Recalculate, never a maturity level.
+  const overallState = overallDisplayState(scoreResult)
+  let overallText: string
+  if (overallState === "recalculate") {
+    overallText = RECALCULATE_OVERALL_LABEL
+  } else if (typeof scoreResult.dimensions_assessed === "number") {
+    const overall = typeof scoreResult.overall === "number" ? scoreResult.overall.toFixed(2) : "—"
+    overallText = `${scoreResult.maturity} (${overall}) — ${dimensionsAssessedLabel(
+      scoreResult.dimensions_assessed,
+      scoreResult.dimensions_total ?? QRAMM_DIMS.length,
+    )}`
+  } else {
+    overallText = scoreResult.maturity
+  }
 
   // Group compliance rows by framework
   const grouped: Record<string, QRAMMComplianceMapRow[]> = {}
@@ -337,7 +358,8 @@ function PrintQRAMM({
             const raw = dim?.score ?? 0
             const weighted = dim?.weighted ?? 0
             const state = dimensionState[d]
-            const assessed = state !== "not-assessed"
+            // D-15: a stale dimension's saved score no longer describes its answers.
+            const assessed = state === "scanner-measured" || state === "self-assessed"
             return (
               <tr key={d}>
                 <td>{d}</td>
@@ -349,11 +371,16 @@ function PrintQRAMM({
           })}
           <tr>
             <td colSpan={4} style={{ fontWeight: 600, textAlign: "right" }}>
-              Overall maturity: {scoreResult.maturity}
+              Overall maturity: {overallText}
             </td>
           </tr>
         </tbody>
       </table>
+      {scoreStale && (
+        <p className="meta" data-testid="qramm-print-score-stale">
+          {ASSESSMENT_LABEL.stale}: answers changed after this score was saved.
+        </p>
+      )}
 
       <h3>Compliance Framework Coverage</h3>
       <p className="meta">Counts are practice areas per framework, grouped by how each was assessed.</p>
@@ -412,7 +439,13 @@ function PrintQRAMM({
 
 export function PrintPage() {
   const { data, loading, error } = useScanData()
-  const { scoreResult, complianceRows, loading: qrammLoading, error: qrammError } = useQRAMMPrintData()
+  const {
+    scoreResult,
+    complianceRows,
+    scoreStale,
+    loading: qrammLoading,
+    error: qrammError,
+  } = useQRAMMPrintData()
 
   // BR-05 (D-06): clear stale data-ready on mount (in case a previous PrintPage left it set)
   // and on unmount, so the attribute does not survive client-side navigation.
@@ -576,6 +609,7 @@ export function PrintPage() {
           <PrintQRAMM
             scoreResult={qrammError ? null : scoreResult}
             complianceRows={qrammError ? null : complianceRows}
+            scoreStale={scoreStale === true}
           />
         </div>
 

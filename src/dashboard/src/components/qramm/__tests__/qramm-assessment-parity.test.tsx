@@ -41,7 +41,7 @@ import { buildCtx } from "./scorecard-fixtures"
 const DIMS = ["CVI", "SGRM", "DPE", "ITR"] as const
 type Dim = (typeof DIMS)[number]
 const FRAMEWORK_ORDER = ["NIST_PQC", "NSM10", "CNSA2", "ISO27001", "ETSI_QS", "PCI_DSS", "CC", "BSI_TR"]
-const STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed"]
+const STATES: AssessmentState[] = ["scanner-measured", "self-assessed", "not-assessed", "stale"]
 
 const ROWS = contract.rows as QRAMMComplianceMapRow[]
 const EXPECTED_STATE = contract.expected_dimension_state as Record<Dim, AssessmentState>
@@ -519,5 +519,17 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
     expect(screen.queryByTestId("qramm-overall")).toBeNull()
     const cells = scorecardMaturityCells()
     for (const d of DIMS) expect({ dim: d, cell: cells[d] }).toEqual({ dim: d, cell: "—" })
+  })
+  it("a saved score missing one dimension's count reads that dimension Stale, never Self-assessed", () => {
+    // 234-02 Deviation 2 (T-234-02): a blob that omits a live-answered dimension's count cannot
+    // vouch for that dimension's answers; the server reads it stale and so must the TS twin.
+    const counts = { ...contract.expected_answered_by_dimension } as Record<string, number>
+    delete counts.SGRM
+    renderScorecard({ ...SCORE, answered_by_dimension: counts }, contractAnswers())
+    const cells = scorecardMaturityCells()
+    expect({ dim: "SGRM", cell: cells.SGRM }).toEqual({ dim: "SGRM", cell: ASSESSMENT_LABEL.stale })
+    expect(Object.values(cells)).not.toContain(SELF_ASSESSED)
+    expect(cells.ITR).toBe(NOT_ASSESSED)
+    expect(screen.queryByTestId("qramm-score-stale")).not.toBeNull()
   })
 })

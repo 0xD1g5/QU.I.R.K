@@ -529,14 +529,21 @@ export interface QRAMMProfileResponse {
 }
 
 export interface QRAMMScoreResponse {
-  overall: number
+  // Phase 234 D-14: mean over assessed dimensions only; null when none is assessed (Indeterminate).
+  overall: number | null
   maturity: string
   dimensions: Record<string, { score: number; weighted: number }>
   profile_multiplier: number
+  // Phase 234 D-15/D-23: optional because a score saved before Phase 234 lacks them (D-25 legacy).
+  answered_by_dimension?: Record<string, number>
+  assessed_dimensions?: string[]
+  dimensions_assessed?: number
+  dimensions_total?: number
 }
 
 // Phase 231 D-02: mirrors quirk.qramm.compliance_map.RowCoverageStatus
-export type QRAMMRowCoverageStatus = "covered" | "partial" | "self-assessed" | "pending" | "n/a"
+// Phase 234 D-15: "stale" = answers changed after the saved score (relevance_score null).
+export type QRAMMRowCoverageStatus = "covered" | "partial" | "self-assessed" | "pending" | "n/a" | "stale"
 
 // Phase 55 QRAMM-15: Compliance Map row returned by
 // GET /api/qramm/sessions/{id}/compliance-map
@@ -559,6 +566,10 @@ export interface QRAMMSessionDetail {
   session_id: number
   status: string | null
   score: QRAMMScoreResponse | null
+  // Phase 234 D-15/D-25: live answers differ from the saved counts, or the score is legacy.
+  score_stale?: boolean
+  // Phase 234 D-25: "current" | "recalculate" (legacy score), null when unscored.
+  score_overall_state?: "current" | "recalculate" | null
 }
 
 // Phase 193 Plan 07 (PARITY-02): mirrors

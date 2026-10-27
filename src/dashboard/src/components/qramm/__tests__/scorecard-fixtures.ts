@@ -41,6 +41,27 @@ export function buildAnswers(
   return answers
 }
 
+/**
+ * Phase 234 D-15/D-25: a score saved by today's API carries the per-dimension answered counts it
+ * was computed from. Stamps those counts (from `answers` through `catalog`) onto a hand-built
+ * score that lacks them, so it models a CURRENT score saved against the same answers rather than
+ * a legacy one (which would read stale). The stale and legacy paths are pinned in
+ * qramm-assessment-parity.test.tsx. Twin of tests/test_qramm_compliance_map.py::_rows.
+ */
+export function withAnsweredCounts(
+  scoreResult: ScoreResult | null,
+  catalog: Map<number, string>,
+  answers: Map<number, AnswerState>,
+): ScoreResult | null {
+  if (scoreResult == null || scoreResult.answered_by_dimension !== undefined) return scoreResult
+  const counts: Record<string, number> = Object.fromEntries(DIMENSIONS.map((d) => [d, 0]))
+  for (const [qn, a] of answers) {
+    const dim = catalog.get(qn)
+    if (dim !== undefined && a.answer_value != null) counts[dim] = (counts[dim] ?? 0) + 1
+  }
+  return { ...scoreResult, answered_by_dimension: counts }
+}
+
 /** A QRAMMContext value carrying `scoreResult` and `answers`. */
 export function buildCtx(
   scoreResult: ScoreResult | null,

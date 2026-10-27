@@ -17,10 +17,16 @@ export interface OrgProfile {
 }
 
 export interface ScoreResult {
-  overall: number
+  // Phase 234 D-14: null when no dimension is assessed.
+  overall: number | null
   maturity: string
   dimensions: Record<string, { score: number; weighted: number }>
   profile_multiplier: number
+  // Phase 234 D-15/D-23: absent on a score saved before Phase 234 (D-25 legacy).
+  answered_by_dimension?: Record<string, number>
+  assessed_dimensions?: string[]
+  dimensions_assessed?: number
+  dimensions_total?: number
 }
 
 interface QRAMMContextValue {

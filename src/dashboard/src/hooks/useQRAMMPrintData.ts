@@ -10,6 +10,9 @@ import { fetchApi } from "@/lib/api"
 interface UseQRAMMPrintDataResult {
   scoreResult: QRAMMScoreResponse | null
   complianceRows: QRAMMComplianceMapRow[] | null
+  // Phase 234 D-15/D-25: from GET /api/qramm/sessions/{id} (SessionRead).
+  scoreStale: boolean
+  scoreOverallState: "current" | "recalculate" | null
   loading: boolean
   error: string | null
 }
@@ -17,6 +20,8 @@ interface UseQRAMMPrintDataResult {
 export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
   const [scoreResult, setScoreResult] = useState<QRAMMScoreResponse | null>(null)
   const [complianceRows, setComplianceRows] = useState<QRAMMComplianceMapRow[] | null>(null)
+  const [scoreStale, setScoreStale] = useState(false)
+  const [scoreOverallState, setScoreOverallState] = useState<"current" | "recalculate" | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -128,6 +133,8 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
         if (!cancelled) {
           setScoreResult(detail.score)
           setComplianceRows(rows)
+          setScoreStale(detail.score_stale === true)
+          setScoreOverallState(detail.score_overall_state ?? null)
         }
       } catch (err) {
         if (!cancelled) {
@@ -146,5 +153,5 @@ export function useQRAMMPrintData(): UseQRAMMPrintDataResult {
     }
   }, [])
 
-  return { scoreResult, complianceRows, loading, error }
+  return { scoreResult, complianceRows, scoreStale, scoreOverallState, loading, error }
 }
