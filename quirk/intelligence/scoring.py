@@ -620,19 +620,26 @@ def compute_readiness_score(
         agility_impacts.append(
             ("Quantum-vulnerable certificate keys (RSA/ECDSA/EdDSA)", -w["agility_rsa_only_penalty"])
         )
-    elif cert_denom > 0 and pqc_cert_count == 0:
+    elif cert_denom > pqc_cert_count:
         # 999.115 P8 — certificates WERE observed but no key type was
-        # determined for any of them. Before this branch existed, such a scan
+        # determined for some of them. Before this branch existed, such a scan
         # took no key-type penalty and scored strictly better than one that
         # honestly reported RSA. See tests/test_score_properties.py::test_p8_*.
         # The penalty equals the classical one, so not looking never pays.
         #
-        # Guarded on `cert_denom > 0` so a scan that observed NO certificates
-        # at all is untouched — that is genuine absence of the subject, which
+        # A scan that observed NO certificates at all is untouched (0 > 0 is
+        # false) — that is genuine absence of the subject, which
         # `_identity_assessed` already handles, not a failure to determine a
-        # property of certificates that are right there. Phase 234: also
-        # guarded on `pqc_cert_count == 0`, because an estate whose only
-        # reported key type is PQC did report a key type.
+        # property of certificates that are right there.
+        #
+        # Phase 234 review D-29 (WR-02): inside this branch RSA + ECDSA is 0,
+        # so `cert_denom > pqc_cert_count` means "some observed certificates
+        # have no determined key type". The 234 guard was `cert_denom > 0 and
+        # pqc_cert_count == 0`, which let ONE PQC certificate switch the
+        # penalty off for every undetermined one (39 undetermined + 1 PQC
+        # outscored 39 RSA + 1 PQC). The penalty is now independent of PQC;
+        # the PQC credit below is applied separately. An all-PQC estate
+        # (every certificate PQC) is still not penalised.
         agility_impacts.append(
             ("Certificate key types undetermined", -w["agility_unverified_key_type_penalty"])
         )

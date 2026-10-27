@@ -260,3 +260,81 @@ def test_pqc_cert_does_not_lift_pqc_readiness_ceiling():
     assert "no post-quantum key exchange observed" in reason, (
         f"rating_cap_reason {reason!r} does not name the PQC-readiness ceiling"
     )
+
+
+# ---- Phase 234 code review WR-02 / D-29: undetermined keys and one PQC certificate ----
+
+def _cert_estate(key_alg_for_39):
+    """40 TLS certificate rows plus 40 UNKNOWN services, through the row layer.
+
+    39 certificates carry ``key_alg_for_39`` (``"RSA"`` or ``None`` for a key
+    type the scanner did not determine); the 40th is an ML-DSA-65 certificate
+    (the O-4 PQC bucket). The 40 UNKNOWN services saturate the -6 unknown term
+    in both arms, so agility sits below 25 and a hidden -8 cannot be absorbed
+    by the clamp.
+    """
+    from datetime import datetime, timedelta
+    from types import SimpleNamespace
+
+    from quirk.intelligence.evidence import build_evidence_summary
+
+    ref = datetime(2026, 10, 1, 12, 0, 0)
+    fields = (
+        "host", "port", "protocol", "scanned_at", "tls_version",
+        "tls_supported_versions", "cipher_suite", "cert_subject", "cert_issuer",
+        "cert_pubkey_alg", "cert_pubkey_size", "cert_sig_alg", "cert_not_before",
+        "cert_not_after", "scan_error", "tls_blocker_reason", "service_detail",
+        "severity",
+    )
+
+    def row(**kw):
+        base = {name: None for name in fields}
+        base["scanned_at"] = ref
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    rows = []
+    for i in range(40):
+        rows.append(row(
+            host=f"c{i}.d29.example", port=443, protocol="TLS",
+            tls_version="TLSv1.3", tls_supported_versions="TLSv1.2,TLSv1.3",
+            cipher_suite="TLS_AES_256_GCM_SHA384",
+            cert_subject=f"CN=c{i}", cert_issuer="CN=D29 CA",
+            cert_not_before=ref - timedelta(days=30),
+            cert_not_after=datetime(2099, 1, 1),
+            cert_pubkey_alg="ML-DSA-65" if i == 39 else key_alg_for_39,
+        ))
+    rows += [row(host=f"u{i}.d29.example", port=9000 + i, protocol="UNKNOWN")
+             for i in range(40)]
+    return build_evidence_summary(rows, [], reference_utc=ref)
+
+
+def test_undetermined_keys_with_one_pqc_cert_never_beat_classical_keys():
+    """D-29: not looking at certificate keys must never score better than
+    finding classical keys, even when one certificate is PQC.
+
+    WR-02 reproduction: under the 234 rule ``elif C > 0 and PQC == 0`` one
+    PQC certificate switched the "key types undetermined" -8 off, so 39
+    undetermined + 1 PQC outscored 39 RSA + 1 PQC (999.115 P8 regression).
+    """
+    rsa = _cert_estate("RSA")
+    undetermined = _cert_estate(None)
+    # Non-vacuity: the two arms differ only in the 39 key types.
+    assert rsa["cert_key_type_counts"] == {"RSA": 39, "ECDSA": 0, "PQC": 1}
+    assert undetermined["cert_key_type_counts"] == {"RSA": 0, "ECDSA": 0, "PQC": 1}
+    assert (rsa["certificate_observations"]["certs_observed"]
+            == undetermined["certificate_observations"]["certs_observed"] == 40)
+    assert _agility(rsa) < 25, f"no agility headroom: RSA arm {_agility(rsa)}"
+
+    r_rsa = compute_readiness_score(rsa)
+    r_und = compute_readiness_score(undetermined)
+    assert _agility(undetermined) <= _agility(rsa), (
+        f"39 undetermined + 1 PQC agility {_agility(undetermined)} > 39 RSA + "
+        f"1 PQC agility {_agility(rsa)}: not looking at keys paid"
+    )
+    assert r_und["score"] <= r_rsa["score"], (
+        f"39 undetermined + 1 PQC scored {r_und['score']} > 39 RSA + 1 PQC "
+        f"{r_rsa['score']}"
+    )
+    reasons = [d.get("reason", "") for d in r_und.get("drivers", [])]
+    assert "Certificate key types undetermined" in reasons, reasons

@@ -161,9 +161,10 @@ def build_phased_roadmap(
     rsa_count = max(0, _as_int(cert_keys.get("RSA", 0)))
     ecdsa_count = max(0, _as_int(cert_keys.get("ECDSA", 0)))
     # Phase 234 O-4: the certificate-key item fires exactly when the scorer's
-    # key-type penalty fires (scoring.py: classical keys present, or certificates
-    # observed with no PQC key), so PQC certificate count and certs observed are
-    # read with the same coercion the scorer uses.
+    # key-type penalty fires (scoring.py: classical keys present, or some
+    # observed certificates with no determined key type, D-29), so PQC
+    # certificate count and certs observed are read with the same coercion the
+    # scorer uses.
     pqc_cert_count = max(0, _as_int(cert_keys.get("PQC", 0)))
     certs_observed = max(0, _as_int(cert_obs.get("certs_observed", 0)))
 
@@ -323,7 +324,7 @@ def build_phased_roadmap(
     # now recommends PQC/hybrid certificates and fires on the same condition as
     # the scorer's key-type penalty, ECDSA-only estates included. Its slug stays
     # `ecdsa-adoption-planning` (remediation.py, D-01: the slug is identity).
-    if rsa_count + ecdsa_count > 0 or (certs_observed > 0 and pqc_cert_count == 0):
+    if rsa_count + ecdsa_count > 0 or certs_observed > pqc_cert_count:
         _add_candidate(
             items,
             phase="LATER",

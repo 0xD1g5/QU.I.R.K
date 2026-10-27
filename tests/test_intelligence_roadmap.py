@@ -110,6 +110,13 @@ class PqcCertificateItemTests(unittest.TestCase):
         titles = self._titles({"RSA": 0, "ECDSA": 0, "PQC": 4}, 4)
         self.assertNotIn(_PQC_CERT_TITLE, titles)
 
+    def test_pqc_certificate_item_fires_for_undetermined_keys_beside_one_pqc_cert(self) -> None:
+        # Phase 234 review D-29 (WR-02): 39 undetermined + 1 PQC certificate
+        # still takes the undetermined -8, so the item that resolves it must
+        # fire too; one PQC certificate no longer hides the other 39.
+        titles = self._titles({"RSA": 0, "ECDSA": 0, "PQC": 1}, 40)
+        self.assertIn(_PQC_CERT_TITLE, titles)
+
     def test_pqc_certificate_item_driver_hint_matches_scoring_4_label(self) -> None:
         # 234-03 handoff (Pitfall 7): the hint keywords must match the live
         # scoring-4.0 driver label, or the "Driver:" clause is silently empty.
