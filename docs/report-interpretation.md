@@ -34,7 +34,11 @@ than `EXCELLENT` — see §19, "The Severity Floor," for both behaviours.
 
 ## 3. The Six Subscores
 
-Each subscore is worth 0–25 points. The headline Quantum-Readiness Score (0–100) is computed from the subscores of the domains that were actually assessed, rescaled to 0–100 (see §3.6). The subscore key names used in the report output are: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. §3.1–§3.4 describe the first four; §3.5 describes the last two. The impact figures in the §3.1–§3.4 tables are maximums, reached when every assessed endpoint or certificate is affected: a ratio-based driver scales with the square root of the affected share, so a quarter of the certificates being expired costs half of its maximum (7 of 14 points).
+Each subscore is worth 0–25 points. The headline Quantum-Readiness Score (0–100) is computed from the subscores of the domains that were actually assessed, rescaled to 0–100 (see §3.6). The subscore key names used in the report output are: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. §3.1–§3.4 describe the first four; §3.5 describes the last two. The impact figures in the §3.1–§3.4 tables are maximums. Under scoring 4.0 a count-based driver costs `weight × min(1, count / 40) ^ 0.5`, where `count` is the number of affected endpoints or certificates, so it reaches its maximum at 40 and does not depend on what share of the scan they are: 10 expired certificates cost 14 × √(10/40) = 7.0 of 14 points whether the scan observed 20 certificates or 2,000. Adding healthy endpoints cannot lower a penalty. The reference count of 40 (`N_REF`) is an anchor, not a fitted value: it is the size of the project's calibration estates, so they keep the scores they had under scoring v3, and only the dependence on estate size is removed.
+
+**Small estates.** Because the curve counts weaknesses rather than taking their share, a weakness on a very small estate costs less than its share would suggest. A scan of one endpoint that is a plaintext HTTP service scores hygiene 22 under scoring 4.0 (25 − 18 × √(1/40) = 22.15), where scoring v3 gave it 7 (the full 18-point penalty for 1 of 1 endpoints affected). Read a small scan's subscores with that in mind.
+
+**Newly assessed domains.** Adding healthy endpoints to a domain that is already assessed does not raise the score. The first clean result in a domain that was **not** assessed before is different: that domain joins the average (§3.6), which can raise the headline. This is coverage credit, not dilution. Measured on the project's calibration estates, one clean SMTP-STARTTLS result moved their scores from 77 to 78, 44 to 46, and 22 to 24, each going from 5 to 6 domains assessed. Scoring v3 gave the same numbers.
 
 ### 3.1 Hygiene (0–25 points)
 
@@ -44,7 +48,7 @@ Hygiene measures whether your services are using encryption in the first place. 
 |--------|-----------|---------|
 | Plaintext HTTP exposure | −18 pts | HTTP services responding on non-TLS ports |
 | HTTP on TLS-designated ports | −16 pts | HTTP found on ports expected to serve TLS (by default 443, 4433, 5001, 8443, 9443 and 10443, plus any `scan.tls_designated_ports` you configure) |
-| Scan error rate | −6 pts | Share of probed endpoints whose probe recorded a scan error (for example a connection error or timeout) |
+| Scan error rate | −6 pts | Number of probed endpoints whose probe recorded a scan error (for example a connection error or timeout), saturating at 40 |
 
 > **Client Conversation — Hygiene:**
 > "Hygiene measures whether your services are using encryption in the first place. A low score here often means HTTP services are publicly accessible — not a quantum problem, a basic security problem. We recommend addressing these before the quantum migration work."
@@ -59,7 +63,7 @@ Modern TLS measures whether your encryption is current. Legacy TLS versions (1.0
 |--------|-----------|---------|
 | Legacy TLS versions allowed | −14 pts | TLS 1.0 or 1.1 accepting connections |
 | Unknown open services | −6 pts | Open ports that didn't respond to TLS, HTTP, or SSH |
-| Assessment visibility blockers | −5 pts | The same share of endpoints with a recorded scan error, weighted separately because it also limits how much of the TLS posture could be assessed |
+| Assessment visibility blockers | −5 pts | The same number of endpoints with a recorded scan error, saturating at 40, weighted separately because it also limits how much of the TLS posture could be assessed |
 
 > **Client Conversation — Modern TLS:**
 > "Modern TLS measures whether your encryption is current. TLS 1.0 and 1.1 have known weaknesses and were formally deprecated by the IETF in RFC 8996. If this score is low, some of your services are still advertising support for these versions — which needs to be addressed regardless of the quantum timeline."
@@ -89,24 +93,23 @@ Identity Trust measures certificate and identity-protocol health. This subscore 
 
 ### 3.4 Agility Signals (0–25 points)
 
-Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA is quantum-vulnerable and harder to migrate than ECDSA because it's more deeply embedded in older infrastructure. ECDSA adoption is a positive signal that engineering teams are already comfortable with modern key types.
+Agility measures how ready you are to swap out cryptographic algorithms when the time comes. Every classical certificate key, RSA, ECDSA or EdDSA, is quantum-vulnerable, so scoring 4.0 treats them alike: none of them earns credit, and only post-quantum or hybrid cryptography does.
 
 | Driver | Max Impact | Trigger |
 |--------|-----------|---------|
 | Unknown service inventory | −6 pts | Services that couldn't be identified |
-| RSA-only posture | −8 pts | Only RSA key types found, no ECDSA (harder to migrate) |
-| ECDSA adoption | +4 pts | At least one ECDSA certificate found (Ed25519 and Ed448 keys count as ECDSA here) |
-| Certificate key types undetermined | −8 pts | Certificates were observed but none was recognised as RSA, EC or EdDSA: no key type was recorded, or the key type is another algorithm such as DSA or ML-DSA (treated as the worst case, the same penalty as RSA-only) |
-| PQC-hybrid key exchange | +8 pts | At least one endpoint negotiated the hybrid post-quantum key exchange X25519MLKEM768 (a scan run from a host whose own OpenSSL is too old to probe it also records a placeholder that currently counts here, so the bonus can appear without a real detection) |
-| Bearer token weak algorithm | −6 pts | Share of assessable endpoints with a bearer token declaring any algorithm other than `none`. Every declared algorithm counts, including one the CBOM classifier labels quantum-safe such as `ML-DSA-65` (a token declaring `alg:none`, or no `alg`, is not counted here: a scan reports it as the CRITICAL finding "Bearer token is unsigned (alg:none)", and `quirk analyze-token` still flags it offline) |
-| OpenAPI plaintext servers | −4 pts | Share of assessable endpoints whose OpenAPI spec declares `http://` servers |
-| Code-signing cert weak algorithm | −6 pts | Share of assessable endpoints with a code-signing certificate that the code-signing scanner flagged: a weak algorithm (RSA < 2048-bit, EC < 256-bit, or SHA-1), an expired certificate, or one expiring within 90 days (`agility_codesign_weak_algo_ratio`) |
-| Active REST fuzz crypto-posture findings | −4 pts | Share of assessable endpoints with CRITICAL/HIGH crypto-posture findings from active REST fuzzing |
+| Quantum-vulnerable certificate keys (RSA/ECDSA/EdDSA) | −8 pts | At least one RSA, ECDSA or EdDSA (Ed25519, Ed448) certificate key found. A flat penalty, not count-based: one classical certificate needs replacing as surely as forty |
+| Certificate key types undetermined | −8 pts | Certificates were observed but none was recognised as RSA, EC, EdDSA or post-quantum: no key type was recorded, or the key type is another algorithm such as DSA (treated as the worst case, the same penalty as a classical key) |
+| Post-quantum key exchange or certificate key | +8 pts | At least one endpoint negotiated the hybrid post-quantum key exchange X25519MLKEM768, or at least one certificate key is ML-DSA, SLH-DSA or a composite key that includes one. One credit, never both. Only the key exchange lifts the 84 ceiling (§3.6); a post-quantum certificate key alone does not. ML-DSA, SLH-DSA and composite certificate keys earn the credit when a scanner reports them, but today's TLS scanner cannot read an ML-DSA leaf certificate (its certificate library does not recognise the algorithm): the endpoint is recorded as a scan error with no certificate key type and no expiry date, so the certificate earns no credit and is not counted as an observed certificate. A scan run from a host whose own OpenSSL is too old to probe the key exchange also records a placeholder that currently counts here, so the credit can appear without a real detection |
+| Bearer token weak algorithm | −6 pts | Number of assessable endpoints with a bearer token declaring any algorithm other than `none`. Every declared algorithm counts, including one the CBOM classifier labels quantum-safe such as `ML-DSA-65` (a token declaring `alg:none`, or no `alg`, is not counted here: a scan reports it as the CRITICAL finding "Bearer token is unsigned (alg:none)", and `quirk analyze-token` still flags it offline) |
+| OpenAPI plaintext servers | −4 pts | Number of assessable endpoints whose OpenAPI spec declares `http://` servers |
+| Code-signing cert weak algorithm | −6 pts | Number of assessable endpoints with a code-signing certificate that the code-signing scanner flagged: a weak algorithm (RSA < 2048-bit, EC < 256-bit, or SHA-1), an expired certificate, or one expiring within 90 days (`agility_codesign_weak_algo_ratio`) |
+| Active REST fuzz crypto-posture findings | −4 pts | Number of assessable endpoints with CRITICAL/HIGH crypto-posture findings from active REST fuzzing |
 
 The "High-impact findings ratio" driver that earlier scoring versions listed here no longer exists. Open CRITICAL and HIGH findings now limit the headline score through the ceilings described in §3.6, not through the agility subscore.
 
 > **Client Conversation — Agility Signals:**
-> "Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA is quantum-vulnerable, but it's also harder to migrate than ECDSA because it's more deeply embedded in older infrastructure. Seeing ECDSA adoption is a good signal — it means your engineering team is already comfortable with modern key types, which makes the quantum migration path shorter."
+> "Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA, ECDSA and EdDSA certificates are all classical, and a quantum computer breaks all of them, so moving from RSA to ECDSA does not make you quantum-ready. What earns credit here is post-quantum or hybrid cryptography: a post-quantum key exchange, or certificates with ML-DSA or composite keys as your CA and clients support them. The count-based drivers in this table measure how many endpoints carry a weakness, not what share of the estate they are, so scanning more healthy services does not make the number look better."
 
 ---
 
@@ -175,15 +178,26 @@ changes — not just the underlying findings — a score computed under one scor
 directly comparable to one computed under another, even for the identical estate. The executive
 and scorecard markdown, the HTML and DOCX reports, the dashboard executive page and
 `intelligence-{stamp}.json` carry a version marker next to the headline score, currently
-`Scoring version: 3.0` (on the dashboard, hovering it shows `scoring v3 — not comparable with v2 or
+`Scoring version: 4.0` (on the dashboard, hovering it shows `scoring v4 — not comparable with v3 or
 earlier scores`), for
-exactly this reason; see `CHANGELOG.md`'s 5.25.0 entry for the full migration decision record.
+exactly this reason; see `CHANGELOG.md`'s 5.25.0 entry for the v3 migration decision record.
 The dashboard's Export PDF (`/print`), trend timeline, scan history and Compare page show scores
 without the marker. QU.I.R.K. does not rewrite old report files or `intelligence-{stamp}.json`
 files to make old and new scores artificially comparable, so compare those only within the same
 scoring version. The dashboard keeps no per-scan score: its trend timeline, scan history and
 Compare page rescore every past scan from its stored endpoints with the current scoring code, so
-an old scan shows a v3 score there.
+an old scan shows a v4 score there. Saved report files, `intelligence-{stamp}.json` files and
+merge-run records keep the version they were written with: a scan from 2026-09-14 whose
+intelligence file records `scoring_version: "3.0"` and a score of 15 (computed 61) reads 18
+(computed 71) when the dashboard rescores it under 4.0.
+
+**What moves under scoring v4.** v4 changes how a weakness is weighed (§3: by count, not by share),
+not how harsh the scale is. The calibration estates the project uses keep their scores: 100, 78,
+46, 24 and 18. Only the largest one's uncapped figure moves, from 71 to 74, and its ceiling holds
+it at 18. Estates whose score was propped up by many healthy endpoints score lower, small estates
+score somewhat higher (§3, "Small estates"), and an estate with classical ECDSA certificates loses
+the old +4 ECDSA credit and takes the −8 classical-key penalty instead (§3.4). For example, the
+project's remediated multi-host reference estate moves from 84 to 80.
 
 **Expect scores to drop under scoring v3, and that is the intended correction.** Every reference
 estate the project re-scored dropped (a 31-host estate went from 87 to 18). v3 makes two
@@ -225,12 +239,15 @@ recomputed. A history chart can therefore show a step at the release that introd
 
 The dilution in that box is consequence dilution: a serious finding being averaged away by the
 healthy part of the same estate. The finding ceilings address it. A different kind, scan-depth
-dilution, is still open. Holding every weakness fixed, observing more healthy endpoints (a deeper
-or wider scan of the same estate) can still raise the readiness score, because the endpoint and
-certificate counts that most ratio terms divide by grow with the scan, and a single newly observed
-ECDSA certificate also lifts the agility subscore. Where a ceiling binds it compresses this rise but
-does not remove it. The measurement, rung by rung, is recorded in
-`.planning/decisions/233-p2b-third-instrument-measurement.md`.
+dilution, was resolved by scoring v4 (Phase 234). Under v3, holding every weakness fixed, observing
+more healthy endpoints (a deeper or wider scan of the same estate) could raise the readiness score,
+because the endpoint and certificate counts that most ratio terms divided by grew with the scan,
+and a single newly observed ECDSA certificate also lifted the agility subscore. Under v4 each
+weakness is weighed by its own count (§3), scan errors are counted the same way, and the ECDSA
+credit is gone (§3.4), so adding only healthy endpoints in domains that are already assessed no
+longer raises the score. A domain assessed for the first time can still raise it (§3, "Newly
+assessed domains"). The before-and-after measurement, rung by rung, is recorded in
+`.planning/decisions/234-p2b-fix-and-ladder-remeasurement.md`.
 
 **Gauge colors now agree with the report band (SCORE-07).** The dashboard's subscore gauges (the
 0–25 gauges on the Executive page, including Data at Rest and Data in Motion) used to derive their
@@ -345,13 +362,13 @@ The migration roadmap organizes findings and recommendations into three planning
 |---------|-------|-----------------|
 | **NOW** | Active classical risks: remove plaintext HTTP exposure, triage high-impact findings, replace expired certificates, increase scan coverage, assign remediation owners and SLAs | 0–30 days |
 | **NEXT** | Modernization work: classify unknown open services, renew near-expiry certificates, migrate self-signed certificates to managed PKI, disable legacy TLS versions, increase TLS enumeration coverage, automate evidence refresh | 31–90 days |
-| **LATER** | Longer-horizon agility work: plan ECDSA adoption, standardize mTLS lifecycle operations, establish crypto governance review | 90+ days |
+| **LATER** | Longer-horizon agility work: plan post-quantum (PQC/hybrid) certificate adoption, standardize mTLS lifecycle operations, establish crypto governance review | 90+ days |
 
 Which items appear depends on what the scan found: only items whose trigger is present are listed. Up to three baseline process items (assign remediation owners and SLAs, automate evidence refresh, establish crypto governance review) are added, in that order, until six items are listed, and the governance item is always present, so a scan that triggers nothing shows exactly those three. A scan that observed no endpoints at all gets three placeholder items after those three (collect initial asset scope, run baseline discovery and fingerprinting, establish recurring readiness reporting), six items in all. The list never exceeds twelve items.
 
 - **NOW** — Fix active classical security problems first. These are risks you have today, regardless of quantum. A client cannot justify deferring an expired certificate or plaintext HTTP service because "we'll handle everything during the quantum migration."
 - **NEXT** — Early quantum preparation that fits into the normal modernization cycle. Disabling legacy TLS, replacing self-signed certificates, and renewing near-expiry certificates are all work your team can do in regular sprint cycles without waiting for post-quantum standards to stabilize.
-- **LATER** — Agility work that prepares the estate for algorithm migration, such as planning ECDSA adoption and standardizing mTLS lifecycle operations, plus governance review. The post-quantum standards themselves are NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), and FIPS 205 (SLH-DSA); for the dated federal deadlines see §16.
+- **LATER** — Agility work that prepares the estate for algorithm migration, such as planning post-quantum (PQC/hybrid) certificate adoption and standardizing mTLS lifecycle operations, plus governance review. The roadmap item "Plan post-quantum (PQC/hybrid) certificate adoption" appears whenever certificate keys are classical (RSA, ECDSA or EdDSA) or undetermined, which replaced the earlier ECDSA-adoption item: ECDSA is classical too, so moving to it does not prepare an estate for quantum migration. The post-quantum standards themselves are NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), and FIPS 205 (SLH-DSA); for the dated federal deadlines see §16.
 
 > **Client Conversation — Migration Roadmap:**
 > "The migration roadmap is organized in three horizons. 'Now' items are things with known classical risk today — they need to be fixed regardless of quantum. 'Next' items are the early quantum-preparation work you can do in your normal modernization cycle. 'Later' items are the longer-horizon agility and governance work that sets you up for the post-quantum migration — the NIST FIPS 203/204/205 standards."
@@ -475,10 +492,10 @@ The dashboard's Export PDF (the `/print` page) includes a QRAMM (Quantum Readine
 
 - **Radar chart (inline SVG)** — Rendered first in the section. A four-axis polygon plotting the four QRAMM dimensions: CVI (Cryptographic Visibility & Inventory), SGRM (Strategic Governance & Risk Management), DPE (Data Protection Engineering), and ITR (Implementation & Technical Readiness). The polygon shows the session's raw dimension scores on a 0–4 scale; closer to the outer edge means higher maturity. A Not assessed dimension is still plotted at 0.
 - **Executive intro paragraph** — A one-sentence summary identifying that the section reflects the most recent completed QRAMM assessment.
-- **Dimension Scorecard table** — Four rows (one per dimension) with an Assessment chip (Scanner-measured, Self-assessed or Not assessed), raw score and weighted score, followed by one "Overall maturity" line. A Not assessed row shows "—" for both scores, because the stored 0.0 is a placeholder, not a measurement.
-- **Compliance Framework Coverage summary** — An 8-row table, one row per framework: NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Its columns are Scanner-measured, Self-assessed and Not assessed, and each cell is the integer count of that framework's practice areas in that state, so a reader can see how much of each framework rests on scanner evidence and how much on self-assessment. The caption above the table reads "Counts are practice areas per framework, grouped by how each was assessed." The footnote below it is the sentence quoted under Coverage caveat.
+- **Dimension Scorecard table** — Four rows (one per dimension) with an Assessment chip (Scanner-measured, Self-assessed, Not assessed or Stale — recalculate), raw score and weighted score, followed by one "Overall maturity" line that reads the maturity level, the overall score and "N of 4 dimensions assessed", for example "Overall maturity: Basic (0.67) — 3 of 4 dimensions assessed". A Not assessed or Stale row shows "—" for both scores, because the stored 0.0 is a placeholder and a stale score no longer describes the answers. When any dimension is stale, a line under the table reads "Stale — recalculate: answers changed after this score was saved."
+- **Compliance Framework Coverage summary** — An 8-row table, one row per framework: NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Its columns are Scanner-measured, Self-assessed, Not assessed and Stale — recalculate, and each cell is the integer count of that framework's practice areas in that state, so a reader can see how much of each framework rests on scanner evidence and how much on self-assessment. The caption above the table reads "Counts are practice areas per framework, grouped by how each was assessed." The footnote below it is the sentence quoted under Coverage caveat.
 - **Per-framework practice detail** — Below the summary table, eight subsections (one per framework) flow continuously, with no forced page break between them. Each lists every practice area with its dimension, relevance score and an Assessment chip. A Not assessed row shows "—" for its relevance score.
-- **Assessment chips** — The three states print differently in black and white: Scanner-measured is a solid filled chip, Self-assessed a solid outline, and Not assessed a dashed grey outline. The state is always written out as text, never shown by colour alone.
+- **Assessment chips** — The states print differently in black and white: Scanner-measured is a solid filled chip, Self-assessed a solid outline, and Not assessed a dashed grey outline. A Stale — recalculate chip uses the same dashed grey outline as Not assessed, with its own text. The state is always written out as text, never shown by colour alone.
 
 Before Phase 231, a print export of a scored session failed to load its QRAMM data: the page requested the score with a GET on a POST-only route, so the page never finished loading and the PDF export timed out. The page now reads the persisted score from `GET /api/qramm/sessions/{id}`.
 
@@ -492,7 +509,13 @@ This keeps the PDF structure consistent across all engagements and signals that 
 
 ### Coverage caveat
 
-CVI is scanner-measured: QUIRK's scanner informs it with cryptographic visibility from real findings. Answered SGRM, DPE and ITR dimensions are the operator's self-assessment from the dashboard's QRAMM questionnaire. They are scored at full weight, but no scanner evidence backs them, so read them as the client's own account of its governance. Any dimension with no answered question, CVI included, is Not assessed: the scorecard shows no score for it instead of a 0.0 that reads as maturity level 1. The QRAMM score itself is unchanged by Phase 231, so the "Overall maturity" line still averages all four dimensions and counts a Not assessed dimension as 0. The footnote in the PDF states this:
+CVI is scanner-measured: QUIRK's scanner informs it with cryptographic visibility from real findings. Answered SGRM, DPE and ITR dimensions are the operator's self-assessment from the dashboard's QRAMM questionnaire. They are scored at full weight, but no scanner evidence backs them, so read them as the client's own account of its governance. Any dimension with no answered question, CVI included, is Not assessed: the scorecard shows no score for it instead of a 0.0 that reads as maturity level 1. Since Phase 234 the overall QRAMM score is the mean of the **assessed** dimensions only. A Not assessed dimension is left out of the average instead of counting as 0, and every surface that shows the overall (the dashboard Scorecard tab, this print section and the API's `dimensions_assessed` field) states how many dimensions it rests on: "N of 4 dimensions assessed". With no dimension assessed the overall is pending (shown as "Indeterminate"), never 0.
+
+**Stale — recalculate.** A saved score records how many questions were answered in each dimension. If a dimension's answered count changes after the score was saved, that dimension reads "Stale — recalculate" until **Calculate Score** is run again. A stale dimension is never shown as Self-assessed and never counts toward a maturity level, because its saved score no longer describes its answers. The check compares answered **counts**, not answer values: re-answering a question that was already answered, with a different value, does not mark the dimension stale, so run Calculate Score after any change to the answers.
+
+**Scores saved before this release.** A QRAMM score saved before Phase 234 carries no answer counts and its stored overall still averaged a Not assessed dimension in as 0. No surface shows it as a maturity level: its overall reads "Recalculate to apply the updated overall", and every answered dimension of that session reads "Stale — recalculate", because without saved counts newer answers cannot be ruled out. Both clear when the session is scored again. The print page is where this shows today, since it reads the saved score; the dashboard Scorecard tab shows a score only after a fresh Calculate Score.
+
+The footnote in the PDF states which dimensions are measured and which are self-assessed:
 
 > CVI rows are measured from QUIRK scanner evidence; SGRM, DPE and ITR rows show self-assessed answers; any dimension with no answered question reads "Not assessed".
 
@@ -501,7 +524,7 @@ CVI is scanner-measured: QUIRK's scanner informs it with cryptographic visibilit
 
 ### Dashboard QRAMM tabs
 
-The dashboard's QRAMM Assessment page uses the same three states on its Compliance Map and Scorecard tabs, with the same footnote sentence, so the dashboard and the PDF never disagree about which dimensions were assessed. See `docs/operators-guide.md` §22 for how the tabs behave, including the refresh after Calculate Score.
+The dashboard's QRAMM Assessment page uses the same states on its Compliance Map and Scorecard tabs, with the same footnote sentence, so the dashboard and the PDF never disagree about which dimensions were assessed. See `docs/operators-guide.md` §22 for how the tabs behave, including the refresh after Calculate Score.
 
 ---
 
@@ -1629,12 +1652,25 @@ those bands. Because the v3 ceiling already places a CRITICAL-bearing estate in 
 rarely binds on a v3 score. A scan whose number already lands it in `FAIR` or `POOR` is unaffected
 by the floor.
 
+### What scoring v4 changed: weaknesses are counted, not diluted
+
+Scoring v4 (Phase 234) keeps the v3 ceilings, the band floor and the 84 cap for an estate with no
+post-quantum key exchange. It changes how each weakness is weighed inside a subscore: a weakness
+now costs `weight × min(1, count / 40) ^ 0.5`, a function of how many endpoints or certificates
+carry it, where v3 used the square root of their share of the scan (§3). Scan errors are counted
+the same way. RSA, ECDSA and EdDSA certificate keys all take the same −8 agility penalty, the v3
++4 credit for ECDSA is gone, and a post-quantum certificate key can earn the +8 post-quantum credit
+(§3.4). Under v3, scanning more healthy endpoints of the same estate could raise its score; under
+v4 it cannot (§3.6). The project's calibration estates keep their v3 scores (100, 78, 46, 24 and
+18). A v3 report and a v4 report of the same estate are still not comparable: check the
+`Scoring model` row (§27).
+
 ### Why a score can still look high next to a CRITICAL finding on an older report
 
 **"Why is my score still 89 if there's a CRITICAL finding?"** On a report produced under scoring
 v2, that was the correct reading: the floor capped the *band* only, and CRITICAL findings reached
 the number only through the agility subscore's high-impact ratio, which was diluted by the total
-finding count. On a scoring-v3 report this combination cannot occur; check the `Scoring model` row
+finding count. On a scoring-v3 or v4 report this combination cannot occur; check the `Scoring model` row
 (§27) to see which model produced a given number. Scores from different scoring versions are not
 comparable (§3.6).
 
@@ -1642,7 +1678,7 @@ comparable (§3.6).
 
 Whenever the score or band is capped, every report surface shows a short, structured explanation
 alongside the headline — not a synthetic scoring driver, not buried in a table, but directly
-beside the score/band pair itself. Under scoring v3 it names the ceiling and discloses the
+beside the score/band pair itself. Under scoring v3 and v4 it names the ceiling and discloses the
 uncapped figure:
 
 ```
@@ -2385,7 +2421,7 @@ this number?**
 
 ```
 Platform version   5.21.0
-Scoring model      v3.0
+Scoring model      v4.0
 Scanner build      a612e60fd3a2
 ```
 
@@ -2412,7 +2448,9 @@ The scoring model version, read live from the scanner's own `SCORING_VERSION` co
 **This is the row that matters for comparing scores.** Scores from different models are not
 comparable. v3 is materially stricter than v2: every reference estate the project re-scored
 dropped under it (a 31-host estate went from 87 to 18, and three smaller reference estates from
-95 to 78, 91 to 46 and 85 to 24). If you are comparing a scan against an earlier one, compare this row first. If it differs, the
+95 to 78, 91 to 46 and 85 to 24). v4 (Phase 234) weighs each weakness by its count rather than its
+share of the scan, so those reference estates keep their v3 scores, while the same scan can still
+read differently under v3 and v4 (§3.6, "What moves under scoring v4"). If you are comparing a scan against an earlier one, compare this row first. If it differs, the
 two numbers do not measure the same thing, and a "score improvement" or "regression" between them
 is an artifact of the model change rather than a change in your estate.
 
