@@ -5,6 +5,8 @@ source: 999.115 scoring-model work (task 22) — survived all six model changes
 priority: P1
 requirement: null
 resolves_phase: 234  # was 212 (closed), then null with owner 999.120; v5.28 Phase 234 (2026-10-15)
+status: completed
+resolved: 2026-10-27
 target: next milestone — the last open property in the P1-P8 suite
 ---
 
@@ -128,3 +130,27 @@ ratio sites; (b) a key-type rule that does not reward a single healthy observati
 rows_rsa, rows_certless, mutator_212). Diff the result against the record's §4-§5. The fix passes only if computed
 and emitted are non-increasing on R2-R5 in every reading. The xfail going green is necessary, not sufficient,
 because it reads the 212 mutator only, which moves E alone.
+
+## Resolution
+
+Resolved 2026-10-27 by Phase 234 (SCORE-09), scoring 4.0, commit `23ef422875071113ca33e81c9eb63ce35d2db4de`.
+
+- **The fix.** Every endpoint and certificate ratio penalty became an absolute-count curve, `min(1, count / 40) ** 0.5`
+  with N_REF = 40 as a fixed anchor, so a weakness costs the same however many healthy endpoints are observed beside
+  it (D-01/D-02). Scan errors are counted the same way (D-03). RSA, ECDSA and EdDSA certificate keys take one
+  classical penalty and only a PQC certificate key or PQC key exchange earns agility credit, once (O-2, O-4, D-04).
+  The code review then made the mTLS bonus a single presence credit (D-28, `e987c1e0`), the last channel through which
+  healthy endpoints could raise a score.
+- **The xfail is removed.** `tests/test_score_properties.py::test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`
+  passes at +20/+100/+500 (3 passed, 2026-10-27) with its assertions byte-identical, and its `known_open_defect` row
+  is gone from `tests/skip_registry.py` (grep 0).
+- **The instrument shows 0 rising series.** `python -m scripts.p2b_instrument` over 5 rungs x 5 readings
+  (rows_ecdsa, rows_rsa, rows_certless, rows_mtls, mutator_212) x 4 points finds no rise in the emitted or computed
+  score, gated by `tests/test_p2b_instrument.py::test_p2b_non_increase_all_rungs_all_readings`; the spec-first closed
+  form agrees at 100/100 sweep cells and 647/647 term probes. The table above (computed 71 -> 74 -> 78 -> 82) is now
+  flat at R5 18/74.
+- **Record:** `.planning/decisions/234-p2b-fix-and-ladder-remeasurement.md` (`cfde8c90`, review section `5023507a`).
+  UAT: UAT-234-01..13; UAT-233-07 and UAT-212-02 re-dispositioned as resolved (`b0f5451e`).
+- **Owner closed:** HORIZON 999.120 is CLOSED in the same commit as this move. Disclosed residuals (O-6 domain step,
+  D-19 closed-port scan errors, D-20 ML-DSA leaf keys, D-21 QRAMM answer values, the unreachable scorecard legacy
+  branch, and stale doc-claim-ledger cites) are owned by the successor row 999.139.

@@ -53,7 +53,7 @@ HORIZON prose:
       before any fix is chosen. It is independent of the two Phase 212 used, and it measures, on the
       calibration ladder, how much the readiness score moves when only healthy endpoints are added.
       Effort is decided by its result, not assumed (`999.120`, spike).
-- [ ] **SCORE-09**: Observing more healthy endpoints no longer raises the readiness score:
+- [x] **SCORE-09**: Observing more healthy endpoints no longer raises the readiness score:
       `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` passes without `xfail`
       and its skip-registry row is removed. All five calibration-ladder rungs are re-measured after
       the change and recorded beside the pre-change values, and the CLI report and dashboard agree
@@ -189,7 +189,7 @@ Deferred from this milestone with an owner:
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SCORE-08 | Phase 233 | Complete |
-| SCORE-09 | Phase 234 | Pending |
+| SCORE-09 | Phase 234 | Complete |
 | SCORE-10 | Phase 234 | Complete |
 | XSURF-05 | Phase 228 | Complete |
 | XSURF-06 | Phase 228 | Complete |

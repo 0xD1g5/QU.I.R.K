@@ -457,7 +457,8 @@ property with a new call shape or field set:
   and vitest only, and is not reachable live today. **Print is the only live surface that reads
   the saved score** (from the session detail's persisted `score_json`), so print is where a legacy
   overall actually shows "Recalculate to apply the updated overall". This was found in 234-04 and
-  is disclosed here, not fixed.
+  is disclosed here, not fixed. Follow-up todo:
+  `.planning/todos/pending/261027-qramm-scorecard-legacy-recalculate-branch-unreachable.md`.
 - **O-6: newly-assessed-domain coverage credit (deliberate).** SCORE-09 covers more endpoints in
   domains that are already assessed. The first clean row of a domain that is not yet assessed
   still raises the headline, through Phase 188's exclude-and-rescale: the domain enters at 25/25.
@@ -499,8 +500,10 @@ property with a new call shape or field set:
 - **D-21: QRAMM stale detection compares counts, not values.** Re-answering an answered question
   with a different value is not flagged as stale. Follow-up todo (answers digest):
   `.planning/todos/pending/261027-qramm-stale-detection-compares-counts-not-values.md`.
-- **RESEARCH Pitfall 8: the legacy-TLS lift is 0 on live evidence.** Follow-up todo:
-  `.planning/todos/pending/261027-legacy-tls-lift-is-zero-on-live-evidence.md`.
+- **RESEARCH Pitfall 8: the legacy-TLS lift is 0 on live evidence.** Already owned by an earlier
+  todo, so no new one was filed: `.planning/todos/pending/261012-doc224-legacy-tls-roadmap-and-lift-still-use-low-severity-proxy.md`
+  (owner HORIZON 999.131, filed by Phase 224), which records the same defect with a live
+  `compute_item_lifts` reproduction.
 - **O-3: small-estate lenience (accepted by the operator).** Because N_REF is an absolute anchor,
   a weakness on a tiny estate costs less than its share would imply. Measured with one endpoint
   that is one plaintext HTTP row (`totals.endpoints` 1, assessable 1, `plaintext_http_count` 1,
@@ -522,11 +525,19 @@ property with a new call shape or field set:
   (RSA/ECDSA/EdDSA)", agility 17) where 3.0 awarded the ECDSA +4. The PQC ceiling then scales the lower computed score. This matches
   RESEARCH's 84 -> 80.
 
-The five follow-up todo paths above are **planned**. Plan 234-08 files them under the successor
-HORIZON row 999.139, and none of them exists at `f2379a84`. Residual (a), the roadmap-trigger
-rate, is **fixed** (D-31, §6, §13), so it needs no todo. A todo for residual (b), the unreachable
-scorecard legacy branch, is not yet planned and is recommended to 234-08 (code review IN-07
-confirmed it and requires no fix now).
+The follow-up todos above were filed by plan 234-08 (2026-10-27) under the successor HORIZON row
+999.139, five of them from this section: O-6, D-19, D-20, D-21 and residual (b)
+(`261027-score-newly-assessed-domain-step-is-coverage-credit.md`,
+`261027-scan-error-count-includes-closed-and-advisory-rows.md`,
+`261027-tls-scanner-ml-dsa-leaf-raises-unknown-key-type.md`,
+`261027-qramm-stale-detection-compares-counts-not-values.md`,
+`261027-qramm-scorecard-legacy-recalculate-branch-unreachable.md`). A sixth 999.139 member,
+`261027-doc-claim-ledger-source-line-cites-drift.md`, records the stale source-line cites in
+doc-claim-ledger evidence that 234-07 reported. Pitfall 8 is owned by the existing 999.131 todo
+named above, so the separate legacy-TLS todo this record first planned was not filed (it would
+have duplicated that one). Residual (a), the roadmap-trigger rate, is **fixed** (D-31, §6, §13),
+so it needs no todo; nor does the mTLS depth channel (D-28, below). Code review IN-07 confirmed
+residual (b) and required no fix in Phase 234.
 
 - **Removed by the code review: the mTLS depth channel.** Under D-02 the mTLS bonus was a count
   curve, so healthy mTLS-enforcing endpoints raised identity_trust up to N_REF; this record's

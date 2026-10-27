@@ -27,3 +27,17 @@ v5.26 re-audit found it through the new todo -> live-owner gate
 - Operator-reserved: the owner phase and its milestone are the operator's call, not a planner's.
 
 Phase 230 (2026-10-23): + `261023-detect-kerberos-placeholder-rows-count-as-assessed` (resolve before or in Phase 233).
+
+## Closure (2026-10-27)
+
+**CLOSED by Phase 234 (SCORE-09).** Phase 233 built the third measurement instrument this item asked for
+(`.planning/decisions/233-p2b-third-instrument-measurement.md`); Phase 234 implemented the two-part shape it pointed
+to: scoring 4.0, commit `23ef422875071113ca33e81c9eb63ce35d2db4de` (absolute-count penalties at N_REF = 40, the
+classical-key rule, the PQC certificate bucket, Kerberos placeholder rows not assessed). The P2b property passes
+without xfail and the instrument shows 0 rising series over 5 rungs x 5 readings x 4 points. Re-measurement record:
+`.planning/decisions/234-p2b-fix-and-ladder-remeasurement.md` (`cfde8c90`; code-review fixes D-27..D-31 in §13,
+`5023507a`). The member todo `261023-detect-kerberos-placeholder-rows-count-as-assessed` closed in `23ef4228` and
+the owning todo `p2b-healthy-endpoints-dilute-the-readiness-score` closed with this row.
+
+**Successor:** HORIZON 999.139 (`.planning/backlog/999.139-score-truth-residuals-after-234/IDEA.md`) owns the
+residuals the record discloses.
