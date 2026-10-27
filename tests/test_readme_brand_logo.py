@@ -5,14 +5,15 @@ variant; GitHub honours the two prefers-color-scheme sources.
 """
 
 import re
-import tomllib
 from pathlib import Path
+
+from tests.pyproject_helpers import pyproject_version
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # Phase 226 D-10: README images are pinned to the release tag so the frozen PyPI
 # page cannot change after upload. The tag is derived from pyproject.toml, so a
 # version bump without moving the URLs turns this red.
-VERSION = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+VERSION = pyproject_version()
 RAW = f"https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v{VERSION}/docs/brand/"
 LIGHT = RAW + "quirk-logo.svg"
 DARK = RAW + "quirk-logo-dark.svg"
@@ -73,7 +74,7 @@ def test_no_relative_or_other_assets_in_block():
 
 def test_h1_unchanged():
     # Derived from pyproject.toml so a version bump does not turn this red (WR-03).
-    ver = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+    ver = pyproject_version()
     assert f"\n# QU.I.R.K. — v{ver}\n" in "\n" + _readme(), (
         "Phase 222 D-08: H1 must be kept unchanged"
     )
