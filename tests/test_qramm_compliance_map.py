@@ -109,10 +109,19 @@ def _rows(score_json, answered):
     The endpoint itself now queries the session's answers, so the old
     db=None direct call cannot see them; the live path is covered by
     test_compliance_map_endpoint_reads_live_answers below.
+
+    Phase 234 D-15 / D-25: a score saved by score_session carries the
+    per-dimension answered counts it was computed from, and a score without
+    them is a legacy score whose answered rows read 'stale'. These row
+    builder tests describe a CURRENT score (saved against the same answers),
+    so the persisted counts equal ``answered``; the stale and legacy paths
+    are pinned by tests/test_qramm_assessment_parity.py.
     """
     from quirk.dashboard.api.routes import qramm as routes
 
     score_data = json.loads(score_json) if score_json else None
+    if score_data is not None:
+        score_data["answered_by_dimension"] = dict(answered)
     return routes.build_compliance_rows(score_data, answered)
 
 

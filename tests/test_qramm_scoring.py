@@ -12,6 +12,11 @@ import pathlib
 import pytest
 
 from quirk.qramm import scoring
+
+# Phase 234 D-14: ``assessed`` is a required keyword. The pre-234 tests below
+# score all four dimensions as answered, so they pass all four (re-pin: same
+# property, the overall over a fully-assessed estate is unchanged).
+_ALL_DIMS = ["CVI", "SGRM", "DPE", "ITR"]
 from quirk.qramm.scoring import (
     compute_dimension_score,
     compute_overall_score,
@@ -46,6 +51,7 @@ def test_profile_multiplier():
     result = compute_overall_score(
         {"CVI": 1.5, "SGRM": 1.5, "DPE": 1.5, "ITR": 1.5},
         multiplier=1.2,
+        assessed=_ALL_DIMS,
     )
     assert result["dimensions"]["CVI"] == pytest.approx(1.8)
     assert result["dimensions"]["SGRM"] == pytest.approx(1.8)
@@ -58,6 +64,7 @@ def test_overall_score_csnp_example():
     result = compute_overall_score(
         {"CVI": 2.8, "SGRM": 3.1, "DPE": 2.5, "ITR": 2.9},
         multiplier=1.0,
+        assessed=_ALL_DIMS,
     )
     assert result["overall"] == pytest.approx(2.825)
     assert result["maturity"] == "Established"
@@ -66,7 +73,9 @@ def test_overall_score_csnp_example():
 
 def test_overall_score_default_multiplier():
     """Default multiplier is 1.0 (neutral) when not specified."""
-    result = compute_overall_score({"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0})
+    result = compute_overall_score(
+        {"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0}, assessed=_ALL_DIMS
+    )
     assert result["profile_multiplier"] == 1.0
     assert result["overall"] == pytest.approx(2.0)
 
@@ -85,7 +94,11 @@ def test_maturity_label_thresholds():
         (4.0, "Optimizing"),
     ]
     for score, expected in cases:
-        result = compute_overall_score({"CVI": score, "SGRM": score, "DPE": score, "ITR": score}, 1.0)
+        result = compute_overall_score(
+            {"CVI": score, "SGRM": score, "DPE": score, "ITR": score},
+            1.0,
+            assessed=_ALL_DIMS,
+        )
         assert result["maturity"] == expected, f"score={score}: expected {expected}, got {result['maturity']}"
 
 
