@@ -33996,19 +33996,21 @@ Observable only after the v5.28.0 tag and upload: open https://pypi.org/project/
 **Title:** The healthy rows are healthy, carry no Kerberos placeholder, and the real-DB snapshot is read-only
 **Maps to:** SCORE-08
 
-**What to test:** Adding healthy rows adds no weakness finding and no rung carries a Kerberos placeholder row (D-15); the real-estate snapshot path copies the source database and leaves its sha256 unchanged (D-08).
+**What to test:** Adding healthy rows adds no weakness finding, moves only the evidence counters expected for its kind, and no rung carries a Kerberos placeholder row (D-15); healthy rows stay healthy when the findings clock is years past the reference date (review CR-01); the real-estate snapshot path opens the source only with `mode=ro`, leaves its sha256 unchanged, and fails fast instead of hanging on a locked source (D-08, review WR-02/WR-04).
 
 **Steps:**
 ```
 .venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_healthy_rows_are_healthy \
-  tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only
+  tests/test_p2b_instrument.py::test_healthy_rows_survive_a_later_clock \
+  tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only \
+  tests/test_p2b_instrument.py::test_real_db_snapshot_fails_fast_on_a_locked_source
 ```
 
-**Pass Criteria:** The run reports 2 passed.
+**Pass Criteria:** The run reports 4 passed.
 
-**Result:** - [x] PASS (2026-10-27 2 passed — covered by `tests/test_p2b_instrument.py::test_healthy_rows_are_healthy` and `tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-27 4 passed — covered by `tests/test_p2b_instrument.py::test_healthy_rows_are_healthy`, `tests/test_p2b_instrument.py::test_healthy_rows_survive_a_later_clock`, `tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only` and `tests/test_p2b_instrument.py::test_real_db_snapshot_fails_fast_on_a_locked_source`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-27  **Tester:** automated
-**Notes:** Plan 233-03. The read-only node builds its own throwaway SQLite source under the test's temp dir, so it runs in CI without `quirk-output/`. Record §11 adds one finding outside this node: each certificate-bearing healthy row adds one unscored MEDIUM quantum-vulnerable key finding, so the primary reading's "healthy" endpoint is not free of quantum risk; this is listed as an open question for Phase 234.
+**Notes:** Plan 233-03; the clock and locked-source nodes were added by the review-fix commits `f542a30c` and `d6d7db89`. The read-only node builds its own throwaway SQLite source under the test's temp dir, so it runs in CI without `quirk-output/`. Record §11 adds one finding outside this node: each certificate-bearing healthy row adds one unscored MEDIUM quantum-vulnerable key finding, so the primary reading's "healthy" endpoint is not free of quantum risk; this is listed as an open question for Phase 234.
 
 ### UAT-233-06: The measurement record exists, is tracked, and names the measured sha, the tables, the verdict and the effort
 
