@@ -3481,7 +3481,12 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: `.planning/phases/228-cross-surface-score-parity/228-CONTEXT.md` (Phase 228 context gathered
+Last session: 2026-10-27. Resumed the autonomous run (`--from 232`) at plan-phase step 5.5. Wrote
+`232-VALIDATION.md` and spawned gsd-planner. The one-shot `HANDOFF.json` and the stale root
+`.planning/.continue-here.md` (Phase 229 era) were removed. Resume file:
+`.planning/phases/232-post-launch-visible-fixes/.continue-here.md`.
+
+Earlier resume file (superseded): `.planning/phases/228-cross-surface-score-parity/228-CONTEXT.md` (Phase 228 context gathered
 2026-10-15, 19 decisions, 2 operator flags; next `/gsd-plan-phase 228`). v5.27's phase directories are under
 `.planning/milestones/v5.27-phases/`.
 
