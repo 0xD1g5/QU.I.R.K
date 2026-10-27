@@ -229,5 +229,77 @@ def test_email_broker_parity_token_set():
         )
 
 
+# ---- Phase 234 O-4 / D-11: PQC certificate-key bucket, Kerberos placeholder ----
+
+_CERT_NOT_AFTER = datetime(2030, 1, 1, 0, 0, 0)
+
+
+def _cert_key_counts(*algs: str) -> dict:
+    """Key-type buckets for TLS rows that each carry a certificate."""
+    rows = [
+        _Ep(host=f"h{i}", port=443, protocol="TLS", cert_pubkey_alg=alg,
+            cert_not_after=_CERT_NOT_AFTER)
+        for i, alg in enumerate(algs)
+    ]
+    return build_evidence_summary(rows)["cert_key_type_counts"]
+
+
+def test_pqc_cert_key_bucket_counts_ml_dsa_and_slh_dsa():
+    """O-4: ML-DSA and SLH-DSA certificate keys count in the PQC bucket,
+    whichever separator the scanner reports, and never as RSA or ECDSA."""
+    counts = _cert_key_counts("ML-DSA-65", "ML_DSA_44", "SLH-DSA-SHA2-128s")
+    assert counts["PQC"] == 3
+    assert counts["RSA"] == 0
+    assert counts["ECDSA"] == 0
+
+
+def test_pqc_composite_name_counts_pqc_not_ecdsa():
+    """O-4: a composite (PQC + classical) certificate key counts as PQC.
+
+    Composite names carry the classical half too, and some put it first
+    (oqs-provider's ``rsa3072_mldsa44``; a classical-first ECDSA composite).
+    The PQC check must run BEFORE the RSA/EC prefix checks, or those names
+    land in the classical buckets. The classical-first names are what make
+    this test bite on that ordering (234 VALIDATION mutation "PQC check moved
+    after the EC prefix"); the classical-last name alone would not.
+    """
+    counts = _cert_key_counts(
+        "MLDSA65-ECDSA-P256", "ECDSA-P256-MLDSA65", "rsa3072_mldsa44",
+    )
+    assert counts["PQC"] == 3
+    assert counts["ECDSA"] == 0
+    assert counts["RSA"] == 0
+
+
+def test_pqc_bucket_requires_a_certificate():
+    """O-4 / T-234-03: an ML-DSA key on a row that carries no certificate
+    (a KMS key, a JWT signing key, a DNSSEC key) earns no certificate credit."""
+    ev = build_evidence_summary([
+        _Ep(host="kms", port=443, protocol="TLS", cert_pubkey_alg="ML-DSA-65"),
+    ])
+    assert ev["cert_key_type_counts"]["PQC"] == 0
+
+
+def test_kerberos_placeholder_rows_counted_not_assessed():
+    """D-11: a Kerberos row with no etype data and no scan_error is a
+    placeholder. It stays an assessable endpoint (the KDC answered) but is not
+    assessed crypto. A real etype row is unaffected."""
+    placeholder = build_evidence_summary([
+        _Ep(host="kdc", port=88, protocol="KERBEROS",
+            service_detail="kerberos-etypes-unavailable-principal-unknown"),
+    ])
+    assert placeholder["kerberos_placeholder_count"] == 1
+    assert placeholder["assessed_crypto_count"] == 0
+    assert placeholder["assessable_endpoint_count"] == 1
+
+    real = build_evidence_summary([
+        _Ep(host="kdc", port=88, protocol="KERBEROS",
+            service_detail="etype:18:aes256-cts-hmac-sha1-96:SAFE"),
+    ])
+    assert real["kerberos_placeholder_count"] == 0
+    assert real["assessed_crypto_count"] == 1
+    assert real["assessable_endpoint_count"] == 1
+
+
 if __name__ == "__main__":
     unittest.main()

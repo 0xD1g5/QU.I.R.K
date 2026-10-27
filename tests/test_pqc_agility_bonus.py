@@ -159,3 +159,104 @@ class TestPqcPresenceBonus:
         baseline = compute_readiness_score(_base_evidence(pqc_hybrid_endpoint_count=0))
         negative = compute_readiness_score(_base_evidence(pqc_hybrid_endpoint_count=-5))
         assert baseline["subscores"]["agility_signals"] == negative["subscores"]["agility_signals"]
+
+
+# ---- Phase 234 D-04 / O-2 / O-4: the classical key rule and the single PQC credit ----
+
+def _agility(ev):
+    return compute_readiness_score(ev)["subscores"]["agility_signals"]
+
+
+def test_ecdsa_cert_keys_take_the_classical_penalty():
+    """O-2: ECDSA (and EdDSA) certificate keys are quantum-vulnerable, exactly
+    like RSA. An ECDSA-only estate scores the same agility as an RSA-only one:
+    classical keys are never a positive signal (D-04 removed the ECDSA +4)."""
+    certs = {"certs_observed": 3}
+    ecdsa = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 0, "ECDSA": 3},
+    )
+    rsa = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 3, "ECDSA": 0},
+    )
+    assert _agility(ecdsa) == _agility(rsa), (
+        f"ECDSA-only agility {_agility(ecdsa)} != RSA-only agility "
+        f"{_agility(rsa)}: a classical key type is being scored as a signal"
+    )
+
+
+def test_pqc_cert_key_earns_single_credit():
+    """O-4 / D-04: a PQC certificate key earns the PQC credit even with no
+    PQC key exchange observed, so it scores strictly above the same estate
+    whose certificates report no PQC key."""
+    certs = {"certs_observed": 2}
+    pqc = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 0, "ECDSA": 0, "PQC": 2},
+        pqc_hybrid_endpoint_count=0,
+    )
+    none = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 0, "ECDSA": 0, "PQC": 0},
+        pqc_hybrid_endpoint_count=0,
+    )
+    assert _agility(pqc) > _agility(none), (
+        f"PQC certificate keys gave agility {_agility(pqc)}, not above "
+        f"{_agility(none)} without them"
+    )
+
+
+def test_pqc_cert_and_pqc_kex_credit_once_not_twice():
+    """D-04: a PQC certificate key and a PQC/hybrid key exchange share ONE
+    credit (+8), never +16.
+
+    The fixture leaves room for +16 to be visible: 40 UNKNOWN services and
+    40 weak bearer-token algorithms (each saturating its -6 term) plus an RSA
+    certificate (the classical -8, present in every arm) put agility at 5
+    before any credit, so a doubled credit (21) would score above the single
+    one (13) rather than clamping into it.
+    """
+    common = dict(
+        assessable_endpoint_count=40,
+        protocol_counts={"UNKNOWN": 40},
+        bearer_token_weak_alg_count=40,
+        certificate_observations={"certs_observed": 2},
+        pqc_hybrid_endpoint_count=1,
+    )
+    kex_only = _base_evidence(
+        cert_key_type_counts={"RSA": 1, "ECDSA": 0, "PQC": 0}, **common,
+    )
+    kex_and_cert = _base_evidence(
+        cert_key_type_counts={"RSA": 1, "ECDSA": 0, "PQC": 1}, **common,
+    )
+    no_credit = _base_evidence(
+        cert_key_type_counts={"RSA": 1, "ECDSA": 0, "PQC": 0},
+        **{**common, "pqc_hybrid_endpoint_count": 0},
+    )
+    # Headroom: the single credit is visible and a second +8 would not clamp.
+    assert _agility(kex_only) > _agility(no_credit)
+    assert _agility(kex_only) + 8 <= 25, (
+        f"fixture has no headroom: kex-only agility {_agility(kex_only)}"
+    )
+    assert _agility(kex_and_cert) == _agility(kex_only), (
+        f"PQC cert + PQC KEX gave agility {_agility(kex_and_cert)}, "
+        f"KEX alone {_agility(kex_only)}: the credit was counted twice"
+    )
+
+
+def test_pqc_cert_does_not_lift_pqc_readiness_ceiling():
+    """D-04: the 84 "no PQC, no 100" ceiling stays keyed on post-quantum KEY
+    EXCHANGE only. A PQC certificate key alone does not lift it."""
+    ev = _base_evidence(
+        certificate_observations={"certs_observed": 1},
+        cert_key_type_counts={"RSA": 0, "ECDSA": 0, "PQC": 1},
+        pqc_hybrid_endpoint_count=0,
+        # No HIGH findings, so the consequence ceiling cannot win instead.
+        finding_severity_counts={},
+    )
+    result = compute_readiness_score(ev)
+    reason = result["rating_cap_reason"] or ""
+    assert "no post-quantum key exchange observed" in reason, (
+        f"rating_cap_reason {reason!r} does not name the PQC-readiness ceiling"
+    )
