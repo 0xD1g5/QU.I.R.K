@@ -79,6 +79,7 @@ let qrammReturn: {
   loading: boolean
   error: string | null
   scoreStale?: boolean
+  scoreOverallState?: string | null
 } = { scoreResult: null, complianceRows: null, loading: true, error: null }
 
 vi.mock("@/hooks/useScanData", () => ({ useScanData: () => scanDataReturn }))
@@ -205,13 +206,23 @@ function complianceMapFootnote(): string | null {
   return screen.queryByText(QRAMM_COVERAGE_SENTENCE)?.textContent ?? null
 }
 
+// scoreOverallState is the server's SessionRead.score_overall_state, which print consumes
+// (234 review IN-03); each case passes the contract's own expected value.
 async function renderPrintSection(
   score: ScoreResult = SCORE,
   rows: QRAMMComplianceMapRow[] = ROWS,
   scoreStale = false,
+  scoreOverallState: string | null = contract.expected_overall_state,
 ): Promise<HTMLElement> {
   scanDataReturn = { data: SCAN_FIXTURE, loading: false, error: null }
-  qrammReturn = { scoreResult: score, complianceRows: rows, loading: false, error: null, scoreStale }
+  qrammReturn = {
+    scoreResult: score,
+    complianceRows: rows,
+    loading: false,
+    error: null,
+    scoreStale,
+    scoreOverallState,
+  }
   const { PrintPage } = await import("@/pages/print")
   const { container } = render(<PrintPage />)
   const section = Array.from(container.querySelectorAll<HTMLElement>(".print-section")).find(
@@ -234,8 +245,9 @@ async function printStates(
   score: ScoreResult = SCORE,
   rows: QRAMMComplianceMapRow[] = ROWS,
   scoreStale = false,
+  scoreOverallState: string | null = contract.expected_overall_state,
 ): Promise<Record<Dim, string>> {
-  const section = await renderPrintSection(score, rows, scoreStale)
+  const section = await renderPrintSection(score, rows, scoreStale, scoreOverallState)
   const trs = Array.from(tableAfter(section, "Dimension Scorecard").querySelectorAll<HTMLTableRowElement>("tbody tr"))
   const out = {} as Record<Dim, string>
   for (const d of DIMS) {
@@ -307,6 +319,8 @@ function printOverallRow(section: HTMLElement): string {
 const NOT_ASSESSED = ASSESSMENT_LABEL["not-assessed"]
 const SELF_ASSESSED = ASSESSMENT_LABEL["self-assessed"]
 const MATURITY_WORDS = Object.values(MATURITY_LABEL)
+// Every overall maturity label (CSNP levels, Indeterminate); "Basic" also catches any sub-floor label.
+const OVERALL_MATURITY_WORDS = [...new Set([...MATURITY_WORDS, "Advanced", "Indeterminate"])]
 
 // ---------------------------------------------------------------------------
 describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every surface)", () => {
@@ -435,6 +449,14 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
     const live = contractAnswers([...sc.answers_before_score, ...sc.answers_after_score])
 
     renderScorecard(staleScore, live)
+    // Phase 234 review D-27 (CR-01): the overall of a stale score is stale too; it never reads
+    // as a maturity level or as "N of 4 dimensions assessed" (ITR is live-assessed now).
+    expect({
+      surface: "scorecard",
+      overall: screen.queryByTestId("qramm-overall")?.textContent ?? null,
+      maturity: screen.queryByTestId("qramm-overall-maturity")?.textContent ?? null,
+      assessed: screen.queryByTestId("qramm-dimensions-assessed")?.textContent ?? null,
+    }).toEqual({ surface: "scorecard", overall: sc.expected_overall_label, maturity: null, assessed: null })
     const cells = scorecardMaturityCells()
     expect({ surface: "scorecard", ITR: cells.ITR }).toEqual({ surface: "scorecard", ITR: staleLabel })
     expect(Object.values(cells)).not.toContain(SELF_ASSESSED)
@@ -448,7 +470,15 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
     const rows = rowsWithStatus(sc.expected_coverage_status)
     const mapStates = await complianceMapStates(rows)
     cleanup()
-    const print = await printStates(staleScore, rows, sc.expected_score_stale)
+    const staleSection = await renderPrintSection(
+      staleScore, rows, sc.expected_score_stale, sc.expected_overall_state,
+    )
+    const staleOverall = printOverallRow(staleSection)
+    expect(staleOverall).toBe(`Overall maturity: ${sc.expected_overall_label}`)
+    for (const word of OVERALL_MATURITY_WORDS) expect(staleOverall).not.toContain(word)
+    expect(staleOverall).not.toContain("dimensions assessed")
+    cleanup()
+    const print = await printStates(staleScore, rows, sc.expected_score_stale, sc.expected_overall_state)
 
     for (const d of DIMS) {
       const expected = ASSESSMENT_LABEL[expectedState[d]]
@@ -491,12 +521,12 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
     const rows = rowsWithStatus(lg.expected_coverage_status)
     const mapStates = await complianceMapStates(rows)
     cleanup()
-    const section = await renderPrintSection(LEGACY_SCORE, rows, lg.expected_score_stale)
+    const section = await renderPrintSection(LEGACY_SCORE, rows, lg.expected_score_stale, lg.expected_overall_state)
     const overallRow = printOverallRow(section)
     expect(overallRow).toContain(label)
     for (const word of MATURITY_WORDS) expect(overallRow).not.toContain(word)
     cleanup()
-    const print = await printStates(LEGACY_SCORE, rows, lg.expected_score_stale)
+    const print = await printStates(LEGACY_SCORE, rows, lg.expected_score_stale, lg.expected_overall_state)
 
     for (const d of DIMS) {
       const expected = ASSESSMENT_LABEL[expectedState[d]]

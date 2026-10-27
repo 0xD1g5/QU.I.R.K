@@ -222,3 +222,23 @@ def test_overall_state_is_recalculate_without_answered_counts():
     )
     assert overall_state(current) == "current"
     assert overall_state(None) is None
+
+
+def test_overall_state_is_stale_when_answers_changed_after_the_score():
+    """Phase 234 review D-27 (CR-01): a current-format score whose answers
+    changed after it was saved reads 'stale', never 'current', so no surface
+    shows its overall as a maturity level. A legacy score stays
+    'recalculate' (D-25 wins: it cannot even rule out the newer answers)."""
+    from quirk.qramm.assessment_state import overall_state
+
+    current = {
+        "overall": 0.6667,
+        "maturity": "Below Basic",
+        "dimensions": {},
+        "answered_by_dimension": {"CVI": 3, "SGRM": 30, "DPE": 5, "ITR": 0},
+    }
+    assert overall_state(current, stale=True) == "stale"
+    assert overall_state(current, stale=False) == "current"
+    legacy = {"overall": 0.5, "maturity": "Basic", "dimensions": {}}
+    assert overall_state(legacy, stale=True) == "recalculate"
+    assert overall_state(None, stale=True) is None

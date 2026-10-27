@@ -324,7 +324,7 @@
   "expected_overall_state": "current",
   "expected_score_stale": false,
   "stale_case": {
-    "_comment": "Phase 234 D-15 (WR-01 reproduction): score the scenario's answers, then answer all 30 ITR questions at level 4 WITHOUT rescoring. ITR's live answered count (30) differs from the count persisted with the score (0), so ITR reads stale (relevance null), never self-assessed.",
+    "_comment": "Phase 234 D-15 (WR-01 reproduction): score the scenario's answers, then answer all 30 ITR questions at level 4 WITHOUT rescoring. ITR's live answered count (30) differs from the count persisted with the score (0), so ITR reads stale (relevance null), never self-assessed. Phase 234 review D-27 (CR-01): the overall is stale too, so the API reports score_overall_state 'stale' and every surface shows the overall as 'Stale — recalculate', never a maturity level or 'N of 4 dimensions assessed'.",
     "answers_before_score": [
       {
         "question_number": 1,
@@ -614,7 +614,8 @@
       "ITR": "stale"
     },
     "expected_score_stale": true,
-    "expected_overall_state": "current"
+    "expected_overall_state": "stale",
+    "expected_overall_label": "Stale — recalculate"
   },
   "legacy_score_json": {
     "_comment": "Phase 234 D-25: the scenario's answers, scored, then the persisted score_json has answered_by_dimension removed (a score saved before Phase 234). Without counts newer answers cannot be ruled out, so every live-answered dimension reads stale and the overall reads recalculate; a dimension with zero live answers stays pending (pending-first precedence).",
