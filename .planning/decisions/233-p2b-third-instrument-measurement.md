@@ -324,7 +324,10 @@ The unscored fields that also change are `totals.*`, `protocol_counts.TLS`,
 - **Term-probe coverage:** 395 probes across both bases, 0 disagreeing (233-02). R3 has E = C; R5
   has E != C.
 
-The probes cover 36 numerator paths × (6 R3 values + 5 R5 values), plus 10 R3 branch probes. Between
+The probes cover 35 numerator paths × (6 R3 values + 5 R5 values), plus 10 R3 branch probes
+(35 × 11 + 10 = 395). The 35 paths are the 35 `RATIO_TERMS` rows, less one because two rows share
+`protocol_counts.UNKNOWN`, plus the STARTTLS addend; this record said 36 until code review IN-01
+(2026-10-27). Between
 them, those exercise all 35 rows of `RATIO_TERMS`, the e-mail STARTTLS addend, the scan-error,
 key-type and PQC branches, the HIGH tiers, and the unassessed rescale.
 
