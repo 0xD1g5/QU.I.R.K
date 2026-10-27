@@ -304,15 +304,15 @@ Plans:
 **Plans**: 9 plans (9 sequential waves)
 
 Plans:
-- [ ] 234-01-PLAN.md — SCORE-09: confirm the 233 baseline; 4.0 closed form spec-first from CONTEXT (D-06); gate nodes non-increase / non-vacuity / scan-error / flat continuity red first (D-07, D-03, D-08, D-22) (wave 1)
-- [ ] 234-02-PLAN.md — SCORE-10 backend: overall over assessed dims, null when none (D-14); stale detection via persisted answered counts (D-15); legacy scores read recalculate/stale (D-25); contract cases red first (wave 2)
-- [ ] 234-03-PLAN.md — SCORE-09: ONE scoring 4.0 commit — count curve N_REF=40 (D-01..D-03), classical-key −8 + PQC credit once (D-04, O-2), PQC cert-key bucket (O-4), Kerberos placeholder (D-11), version 4.0; un-xfail P2b + registry row; O-6 domain-step pin; D-26 rename (wave 3)
-- [ ] 234-04-PLAN.md — SCORE-10 dashboard: scorecard overall + "N of 4 assessed" (D-23), stale / recalculate on scorecard, compliance map, print; vitest parity; bundle rebuild (wave 4)
-- [ ] 234-05-PLAN.md — SCORE-09: roadmap item + lift retargeted to PQC/hybrid (O-4); re-pins and semantic rewrites classified (D-10); agility test renamed (D-26); close 999.113 (D-12) (wave 5)
-- [ ] 234-06-PLAN.md — SCORE-09: re-measure all rungs and readings beside 233; real-estate reading (snapshot); live CLI-vs-dashboard check (D-13); decision record (D-16) (wave 6)
-- [ ] 234-07-PLAN.md — Docs: report-interpretation, operators-guide, master guide, lab oracles, changelog fragment; ledger re-anchors; vault sync (D-17, D-25 disclosure, O-3 lenience) (wave 7)
-- [ ] 234-08-PLAN.md — UAT Series 234 + re-dispositions; coverage-gaps regen; SCORE-10 / SCORE-09 flips with their todos; 999.120 closed, successor 999.139 + follow-up todos (D-18, O-6, D-19..D-21) (wave 8)
-- [ ] 234-09-PLAN.md — Proof: full suite (Docker masked, D-24), vitest + bundle, 3.11 leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` at HEAD (CITRUTH-03) (wave 9)
+- [x] 234-01-PLAN.md — SCORE-09: confirm the 233 baseline; 4.0 closed form spec-first from CONTEXT (D-06); gate nodes non-increase / non-vacuity / scan-error / flat continuity red first (D-07, D-03, D-08, D-22) (wave 1)
+- [x] 234-02-PLAN.md — SCORE-10 backend: overall over assessed dims, null when none (D-14); stale detection via persisted answered counts (D-15); legacy scores read recalculate/stale (D-25); contract cases red first (wave 2)
+- [x] 234-03-PLAN.md — SCORE-09: ONE scoring 4.0 commit — count curve N_REF=40 (D-01..D-03), classical-key −8 + PQC credit once (D-04, O-2), PQC cert-key bucket (O-4), Kerberos placeholder (D-11), version 4.0; un-xfail P2b + registry row; O-6 domain-step pin; D-26 rename (wave 3)
+- [x] 234-04-PLAN.md — SCORE-10 dashboard: scorecard overall + "N of 4 assessed" (D-23), stale / recalculate on scorecard, compliance map, print; vitest parity; bundle rebuild (wave 4)
+- [x] 234-05-PLAN.md — SCORE-09: roadmap item + lift retargeted to PQC/hybrid (O-4); re-pins and semantic rewrites classified (D-10); agility test renamed (D-26); close 999.113 (D-12) (wave 5)
+- [x] 234-06-PLAN.md — SCORE-09: re-measure all rungs and readings beside 233; real-estate reading (snapshot); live CLI-vs-dashboard check (D-13); decision record (D-16) (wave 6)
+- [x] 234-07-PLAN.md — Docs: report-interpretation, operators-guide, master guide, lab oracles, changelog fragment; ledger re-anchors; vault sync (D-17, D-25 disclosure, O-3 lenience) (wave 7)
+- [x] 234-08-PLAN.md — UAT Series 234 + re-dispositions; coverage-gaps regen; SCORE-10 / SCORE-09 flips with their todos; 999.120 closed, successor 999.139 + follow-up todos (D-18, O-6, D-19..D-21) (wave 8)
+- [x] 234-09-PLAN.md — Proof: full suite (Docker masked, D-24), vitest + bundle, 3.11 leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` at HEAD (CITRUTH-03) (wave 9)
 **UI hint**: yes
 
 ### Phase 235: Release & Launch Gate
@@ -338,7 +338,7 @@ Plans:
 | 231. QRAMM Scoring Surfaces | 10/10 | Complete (verified passed 5/5 at c09a809b; live print/PDF re-check passed with artifacts kept; review R1 0 blockers, WR-01 owned by SCORE-10 (Phase 234), WR-02/IN-01..04/IN-06 by 999.137, IN-05 by 999.136; 231-10 fixed the allow_abbrev gate 231-02 broke; CI green, Python CI 40207661100 + Dashboard Quality 40207663143) | 2026-10-25 |
 | 232. Post-Launch Visible Fixes | 6/6 | Complete (verified passed 5/5 at e28d45dd; criterion 4's live PyPI leg handed to Phase 235 per D-13; review 0 blockers, WR-03/IN-02 fixed, WR-01 owned by 999.127; CI green, Python CI 40525739851 + Dashboard Quality 40525744864) | 2026-10-27 |
 | 233. P2b Measurement Instrument | 6/6 | Complete (verified passed 4/4 at 0a7ab944; verdict: none of 212's three candidates supported, no ceiling shape can work, data point to absolute-count penalties at 35 ratio sites + a key-type rule, effort L; review CR-01 time bomb + WR-01..05 fixed fail-first; CI green, Python CI 40550728476 + Dashboard Quality 40550732544) | 2026-10-27 |
-| 234. P2b Scan-Depth Fix & Ladder Re-measurement | 0/9 | Planned | - |
+| 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Planned | - |
 | 235. Release & Launch Gate | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
