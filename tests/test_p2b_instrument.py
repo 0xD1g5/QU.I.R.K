@@ -213,34 +213,50 @@ def _resolves(evidence: Dict[str, Any], path: Tuple[str, ...]) -> bool:
     return True
 
 
-def _severity(evidence: Dict[str, Any]) -> Dict[str, Any]:
-    scored = evidence.get("scored_finding_severity_counts")
-    if isinstance(scored, dict):
-        return scored
-    return evidence.get("finding_severity_counts", {})
+_ABSENT = object()
 
 
-def _weakness_inputs(evidence: Dict[str, Any]) -> Dict[str, Any]:
-    """The weakness counts a healthy row must never move.
+def _flatten(node: Any, prefix: str = "") -> Dict[str, Any]:
+    """Every leaf of an evidence dict, keyed by its dotted path."""
+    if not isinstance(node, dict):
+        return {prefix: node}
+    out: Dict[str, Any] = {}
+    for key, value in node.items():
+        out.update(_flatten(value, f"{prefix}.{key}" if prefix else str(key)))
+    return out
 
-    ``legacy_tls`` is read as scoring reads it: ``legacy_tls_count`` when
-    present, else the LOW severity count (the dict ladder's fallback).
-    """
-    sev = _severity(evidence)
-    legacy = evidence.get("legacy_tls_count")
-    if legacy is None:
-        legacy = int(sev.get("LOW", 0) or 0)
-    certs = evidence.get("certificate_observations", {})
-    return {
-        "expired_count": certs.get("expired_count", 0),
-        "expiring_count": certs.get("expiring_count", 0),
-        "self_signed_count": certs.get("self_signed_count", 0),
-        "legacy_tls": legacy,
-        "plaintext_http_count": evidence.get("plaintext_http_count", 0),
-        "http_on_tls_port_count": evidence.get("http_on_tls_port_count", 0),
-        "CRITICAL": int(sev.get("CRITICAL", 0) or 0),
-        "HIGH": int(sev.get("HIGH", 0) or 0),
-    }
+
+# WR-03: what +N healthy rows may move in the evidence summary, per kind.
+# SCORED moves: E for every kind; C and the key-type counter for a row with
+# a certificate. These are the effects the readings exist to measure.
+HEALTHY_SCORED_MOVES = {
+    "ecdsa": {"assessable_endpoint_count",
+              "certificate_observations.certs_observed",
+              "cert_key_type_counts.ECDSA"},
+    "rsa": {"assessable_endpoint_count",
+            "certificate_observations.certs_observed",
+            "cert_key_type_counts.RSA"},
+    "certless": {"assessable_endpoint_count"},
+}
+# UNSCORED moves (scoring never reads them): population counters, a ratio
+# whose scored input is the count, and the MEDIUM "quantum-vulnerable key"
+# finding a certificate-bearing row derives (scoring reads CRITICAL/HIGH
+# only, and LOW only when legacy_tls_count is absent).
+_UNSCORED_POPULATION = {
+    "assessed_crypto_count", "protocol_counts.TLS", "totals.endpoints",
+    "dar_db_plaintext_ratio",
+}
+_UNSCORED_CERT_FINDING = {
+    "finding_severity_counts.MEDIUM",
+    "scored_finding_severity_counts.MEDIUM", "totals.findings",
+}
+HEALTHY_ALLOWED_MOVES = {
+    "ecdsa": HEALTHY_SCORED_MOVES["ecdsa"] | _UNSCORED_POPULATION
+    | _UNSCORED_CERT_FINDING,
+    "rsa": HEALTHY_SCORED_MOVES["rsa"] | _UNSCORED_POPULATION
+    | _UNSCORED_CERT_FINDING,
+    "certless": HEALTHY_SCORED_MOVES["certless"] | _UNSCORED_POPULATION,
+}
 
 
 def _probe_paths(cf) -> List[Tuple[str, ...]]:
@@ -663,13 +679,33 @@ def test_healthy_rows_are_healthy(inst):
                     f"is not after REF {inst.REF!r}"
                 )
 
-    for rung in inst.RUNGS:
-        for kind in ("ecdsa", "rsa", "certless"):
-            base = _weakness_inputs(inst.row_evidence(rung, 0, kind))
-            wider = _weakness_inputs(inst.row_evidence(rung, 20, kind))
-            assert base == wider, (
-                f"{rung}|rows_{kind}: +20 healthy rows moved weakness inputs "
-                f"from {base} to {wider}"
+    # WR-03: the WHOLE evidence summary, flattened, may move only where a
+    # healthy row is expected to move it. Anything else that moves (e.g.
+    # mtls_present_count, scan_error.rate, protocol_counts.UNKNOWN) fails.
+    relevant = set(inst.SCORE_RELEVANT_PATHS)
+    for kind, allowed in HEALTHY_ALLOWED_MOVES.items():
+        must_move = HEALTHY_SCORED_MOVES[kind]
+        assert must_move <= allowed
+        scored_allowed = allowed & relevant
+        assert scored_allowed == must_move, (
+            f"rows_{kind}: allowlist admits scored input(s) "
+            f"{sorted(scored_allowed - must_move)} beyond E/C/key type"
+        )
+        for rung in inst.RUNGS:
+            base = _flatten(inst.row_evidence(rung, 0, kind))
+            wider = _flatten(inst.row_evidence(rung, 20, kind))
+            moved = {k for k in set(base) | set(wider)
+                     if base.get(k, _ABSENT) != wider.get(k, _ABSENT)}
+            unexpected = moved - allowed
+            assert not unexpected, (
+                f"{rung}|rows_{kind}: +20 healthy rows moved "
+                + "; ".join(f"{k}: {base.get(k, _ABSENT)!r} -> "
+                            f"{wider.get(k, _ABSENT)!r}"
+                            for k in sorted(unexpected))
+            )
+            assert must_move <= moved, (
+                f"{rung}|rows_{kind}: expected {sorted(must_move - moved)} to "
+                "move with +20 healthy rows; the check would be vacuous"
             )
 
     for rung in inst.RUNGS:
