@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,704 lines, in reading order.
+Five guides, 7,722 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -3666,8 +3666,20 @@ unassessed and what to do about it:
 - **Scores are not comparable across scoring versions.** A lower number after a scoring-version
   upgrade may simply reflect honest exclusion of previously-fabricated points, not a regression —
   do not compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s 5.25.0
-  entry for the full migration decision record.
-- **Scoring v3 lowers scores substantially, by design.** Expect a large drop on estates carrying
+  entry for the v3 migration decision record. The current scoring version is 4.0.
+- **Scoring v4 (Phase 234) counts weaknesses instead of taking their share of the scan.** Each
+  weakness costs `weight × min(1, count / 40) ^ 0.5`, where `count` is the number of endpoints or
+  certificates that carry it, so adding only healthy endpoints in domains that are already assessed
+  no longer raises the score (under v3 a deeper scan of the same estate could raise it). Scan
+  errors are counted the same way. Every classical certificate key (RSA, ECDSA or EdDSA) costs the
+  same −8 agility penalty, and only a post-quantum key exchange or certificate key earns agility
+  credit. The project's calibration estates keep their v3 scores (100, 78, 46, 24 and 18). On a
+  real 370-endpoint scan from 2026-09-14 the dashboard's score moves from 17 (computed 69) under v3
+  to 18 (computed 71) under v4. Small estates score somewhat higher than under v3, and estates whose
+  score was propped up by many healthy endpoints score lower. The first clean result in a domain
+  that was not assessed before can still raise the score, because that domain joins the average.
+  See `docs/report-interpretation.md` §3 and §3.6.
+- **Scoring v3 (5.25.0) lowered scores substantially, by design.** Expect a large drop on estates carrying
   open CRITICAL/HIGH findings, and a cap at the top of GOOD on any estate with no observed hybrid
   post-quantum key exchange. Two changes drive it: consequence is now **absolute** rather than
   proportional (a high count of CRITICAL/HIGH findings sets a ceiling irrespective of estate size),
@@ -4636,13 +4648,15 @@ did not arrive through Docker Desktop's UDP proxy.
 
 If the KDC answers that the probe principal is unknown, the scanner emits the row
 `kerberos-etypes-unavailable-principal-unknown`. This is an assessment gap: it derives no
-finding and no direct score penalty, and it is not a statement that the KDC is safe. Two
-effects it shares with the `kerberos-no-preauth` row are pre-existing and are not intended
-(open todo `261023-detect-kerberos-placeholder-rows-count-as-assessed`): the row counts as
-Kerberos evidence, so the identity domain is treated as assessed, and it counts as an
-assessed endpoint, so it raises the scan's coverage (and therefore its confidence) although
-no Kerberos crypto was assessed. To resolve it, set `kerberos_probe_principal` to an account
-that exists.
+finding and no direct score penalty, and it is not a statement that the KDC is safe. Since
+scoring 4.0 (Phase 234), a Kerberos row with no scan error and no encryption types is counted
+as a placeholder. That covers this row, `kerberos-no-preauth`,
+`kerberos-etypes-unavailable-preauth-no-etype-info`, and a `kerberos-unreachable` row that records
+no error. A placeholder does not make the identity domain assessed and is not counted as an
+assessed endpoint. The KDC did answer, so the row is still a scan target, and it lowers the scan's
+coverage (and therefore its confidence) instead of raising it. Before 4.0 such a row counted as
+Kerberos evidence and as an assessed endpoint. To get a real assessment, set
+`kerberos_probe_principal` to an account that exists.
 
 If the KDC answers that pre-authentication is required but its reply lists no encryption types
 (no error data, error data that cannot be decoded, or error data that carries only other
@@ -7481,20 +7495,21 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 
 ### 22. QRAMM Assessment Tabs: Compliance Map and Scorecard (Phase 231, QRAMM-17/18/19)
 
-The dashboard's QRAMM Assessment page (`/qramm/assessment`; **QRAMM Assessment** in the sidebar opens the organization profile at `/qramm`, and starting or continuing an assessment there opens this page) has one tab per dimension (CVI, SGRM, DPE, ITR), then **Scorecard** and **Compliance Map**. Both of the last two tabs mark how each dimension was assessed, using the same three states:
+The dashboard's QRAMM Assessment page (`/qramm/assessment`; **QRAMM Assessment** in the sidebar opens the organization profile at `/qramm`, and starting or continuing an assessment there opens this page) has one tab per dimension (CVI, SGRM, DPE, ITR), then **Scorecard** and **Compliance Map**. Both of the last two tabs mark how each dimension was assessed, using the same states:
 
 | State | Meaning |
 |-------|---------|
 | **Scanner-measured** | CVI with at least one answered question. Scored with QUIRK scanner evidence, capped by the scanner coverage ceiling. |
 | **Self-assessed** | SGRM, DPE or ITR with at least one answered question. Scored from the answers entered by hand, at full weight (static weight x dimension score / 4) with no scanner ceiling. No scanner evidence backs these scores. |
 | **Not assessed** | Any dimension, CVI included, with no answered question. The tabs show no score and no maturity level for it, instead of a 0.0 that reads as level 1. |
+| **Stale — recalculate** | An answered dimension whose answered-question count has changed since the score was saved (Phase 234). Its saved score no longer describes its answers, so it shows no score, is never shown as Self-assessed and never counts toward a maturity level. It clears when you run **Calculate Score** again. |
 
-A dimension counts as assessed as soon as one of its questions is answered. A score of 0.0 does not make it Not assessed, and a partly answered dimension is assessed. The QRAMM score itself is unchanged by Phase 231: the overall score still averages all four dimensions and counts a Not assessed dimension as 0.
+A dimension counts as assessed as soon as one of its questions is answered. A score of 0.0 does not make it Not assessed, and a partly answered dimension is assessed. Since Phase 234 the overall QRAMM score averages the assessed dimensions only: a Not assessed dimension is left out instead of counting as 0, and the overall states how many dimensions it rests on, "N of 4 dimensions assessed". With no dimension assessed the overall is pending ("Indeterminate"), never 0.
 
 #### Compliance Map tab
 
 - **Calculate Score refreshes the table.** Until the session is scored, the tab shows a banner with a **Calculate Score** button. After a successful Calculate Score the table refetches in place and screen readers hear "Compliance map updated." A failed Calculate Score shows the error line under the button and leaves the table as it was.
-- **Assessment column.** Each practice-area row carries a text badge, Scanner-measured, Self-assessed or Not assessed, so the state never depends on colour alone. Scanner-measured and Self-assessed rows show their framework scores. Not assessed rows show "—".
+- **Assessment column.** Each practice-area row carries a text badge, Scanner-measured, Self-assessed, Not assessed or Stale — recalculate, so the state never depends on colour alone. Scanner-measured and Self-assessed rows show their framework scores. Not assessed rows show "—".
 - **Coverage Tiers legend** lists the three badges with a one-line description of each.
 - **Footnote.** The table ends with the same sentence the print/PDF page uses:
 
@@ -7505,14 +7520,17 @@ A dimension counts as assessed as soon as one of its questions is answered. A sc
 - A dimension with no answered question shows a **Not assessed** badge in the Maturity Level column of the Dimension Summary table, and "—" for its Raw and Weighted Score. The stored 0.0 is a placeholder, not a measurement.
 - Not assessed dimensions are left out of the Maturity Distribution buckets, and a line under the buckets reads "1 dimension not assessed" or "N dimensions not assessed".
 - The Dimension Radar still plots an unanswered dimension at 0. That is unchanged in Phase 231.
+- An **Overall Maturity** card, shown once the session has a score, reads the overall score, the maturity level and "N of 4 dimensions assessed" (for example 0.67, Basic, "3 of 4 dimensions assessed"). With no dimension assessed it reads "—" and "Indeterminate".
+- A dimension whose answers changed after the score was saved shows a **Stale — recalculate** badge, "—" for its Raw and Weighted Score, and is left out of the Maturity Distribution. The card then adds the line "Stale — recalculate: answers changed after this score was saved". Staleness is detected by comparing answered-question **counts**: changing the value of a question that was already answered does not mark the dimension stale, so run **Calculate Score** after any change to the answers.
+- A score saved before Phase 234 carries no answer counts, and its stored overall still averaged a Not assessed dimension in as 0. Its overall reads "Recalculate to apply the updated overall" instead of a maturity level, and every answered dimension reads "Stale — recalculate", because newer answers cannot be ruled out. Both clear when you run **Calculate Score**. Today you see this state on the print/PDF page, which reads the saved score; the Scorecard tab shows a score only after a fresh Calculate Score.
 
 #### Answering after scoring
 
-The state comes from the live answers and the scores from the last Calculate Score. If you answer a dimension's first question after scoring, both tabs immediately read that dimension as assessed, but its score is still the 0.0 placeholder until you run **Calculate Score** again. Re-run Calculate Score after answering more questions.
+The state comes from the live answers and the scores from the last Calculate Score. If you answer a question after scoring, including a dimension's first question, the tabs read that dimension as **Stale — recalculate** until you run **Calculate Score** again, because its saved score no longer matches its answers. Re-run Calculate Score after answering more questions.
 
 #### Print / PDF
 
-The dashboard's Export PDF (the `/print` page) uses the same three states in its QRAMM section: an Assessment column on the Dimension Scorecard, per-framework counts in place of the old coverage tier, and a chip on every practice-area row. See `docs/report-interpretation.md` §9. Before Phase 231, a print export of a scored session failed to load its QRAMM data. It now reads the persisted score from `GET /api/qramm/sessions/{id}`.
+The dashboard's Export PDF (the `/print` page) uses the same states in its QRAMM section: an Assessment column on the Dimension Scorecard, an "Overall maturity" line that ends with "N of 4 dimensions assessed" (or reads "Recalculate to apply the updated overall" for a score saved before Phase 234), per-framework counts in place of the old coverage tier, and a chip on every practice-area row. See `docs/report-interpretation.md` §9. Before Phase 231, a print export of a scored session failed to load its QRAMM data. It now reads the persisted score from `GET /api/qramm/sessions/{id}`.
 
 
 ---
