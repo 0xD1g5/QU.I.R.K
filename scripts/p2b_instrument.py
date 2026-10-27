@@ -23,6 +23,17 @@ THE METHOD
   into its certificate and non-certificate effects. No weakness rows are
   ever added; ``row_evidence`` refuses healthy rows that derive a CRITICAL or
   HIGH finding.
+* Phase 234 review (D-28), the mTLS reading. ``rows_mtls`` appends
+  certless TLS 1.3 rows that enforce mTLS (``tls_blocker_reason`` =
+  ``MTLS_REQUIRED``, no scan error), so it isolates the one positive
+  identity signal the other three readings cannot move. The reading starts
+  from ONE seed mTLS row (``MTLS_SEED``) on top of the rung, so +N is the rung
+  plus 1 + N mTLS rows. The first mTLS observation is a sanctioned single
+  step (a presence credit, the same shape as the PQC credit), pinned by its
+  own test; this reading measures DEPTH: once mTLS is observed, more
+  mTLS-enforcing endpoints must not raise the score. The scanner's own mTLS
+  row also carries a ``scan_error``; that channel is the D-03 scan-error
+  reading's, so this reading leaves it out.
 * D-06, continuity. ``mutator_212`` keeps Phase 212's three-field dict
   mutator as a labelled continuity reading, so this instrument can be checked
   against the R5 values 212 recorded (computed 71 at +0, 74 at +20).
@@ -50,7 +61,8 @@ score is computed. It imports ``tests.test_score_properties``, which imports
 dev extra with ``pip install -e '.[dev]'``.
 
 Phase 234 changes the scoring model; it must re-run this instrument across all
-five rungs and all four readings, not only the R5 continuity pair (D-20).
+five rungs and every reading (five since the Phase 234 review added
+``rows_mtls``), not only the R5 continuity pair (D-20).
 
 REAL-ESTATE MODE (local only, D-08)
 -----------------------------------
@@ -123,11 +135,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # ---------------------------------------------------------------------------
 
 RUNGS = ("R1", "R2", "R3", "R4", "R5")
-READINGS = ("rows_ecdsa", "rows_rsa", "rows_certless", "mutator_212")
+READINGS = ("rows_ecdsa", "rows_rsa", "rows_certless", "rows_mtls",
+            "mutator_212")
 PRIMARY_READING = "rows_ecdsa"
 CONTINUITY_READING = "mutator_212"
 POINTS = (0, 20, 100, 500)
-HEALTHY_KINDS = ("ecdsa", "rsa", "certless")
+HEALTHY_KINDS = ("ecdsa", "rsa", "certless", "mtls")
+# rows_mtls starts from this many mTLS rows at +0 (D-28): the first mTLS
+# observation is the sanctioned presence step, so depth is measured from it.
+MTLS_SEED = 1
 
 REF = datetime(2026, 10, 1, 12, 0, 0)
 FUTURE = REF + timedelta(days=400)
@@ -206,6 +222,7 @@ _FIXED_PATHS: Tuple[Tuple[str, ...], ...] = (
     ("pqc_hybrid_endpoint_count",),
     ("cert_key_type_counts", "PQC"),
     ("kerberos_placeholder_count",),
+    ("kerberos_scan_error_count",),
 )
 _PROJECTED_PATHS: Tuple[Tuple[str, ...], ...] = tuple(
     list(_FIXED_PATHS) + [p for p in _count_paths() if p not in _FIXED_PATHS]
@@ -399,7 +416,11 @@ def rung_rows(rung: str) -> Tuple[List[SimpleNamespace], List[Dict[str, Any]]]:
 
 def healthy_row(i: int, kind: str = "ecdsa",
                 ref: Optional[datetime] = None) -> SimpleNamespace:
-    """The i-th healthy TLS 1.3 row (D-05 primary kind is ``ecdsa``)."""
+    """The i-th healthy TLS 1.3 row (D-05 primary kind is ``ecdsa``).
+
+    ``mtls`` is a certless row that enforces mTLS: ``tls_blocker_reason``
+    ``MTLS_REQUIRED`` with no ``scan_error`` (D-28).
+    """
     if kind not in HEALTHY_KINDS:
         raise ValueError(f"unknown healthy kind {kind!r}")
     ref = REF if ref is None else ref
@@ -425,6 +446,8 @@ def healthy_row(i: int, kind: str = "ecdsa",
     else:
         for name in _CERT_FIELDS:
             setattr(row, name, None)
+        if kind == "mtls":
+            row.tls_blocker_reason = "MTLS_REQUIRED"
     return row
 
 
@@ -457,10 +480,12 @@ def row_evidence(rung: str, extra: int, kind: str = "ecdsa") -> Dict[str, Any]:
 
     Healthy-row findings come only from ``derive_report_findings`` over the
     healthy rows; running it over the weakness rows would double-count the
-    synthetic finding dicts.
+    synthetic finding dicts. The ``mtls`` kind adds ``MTLS_SEED`` rows on top
+    of ``extra`` (D-28; see the module docstring).
     """
     rows, findings = rung_rows(rung)
-    h_rows, h_findings = _healthy(extra, kind)
+    seed = MTLS_SEED if kind == "mtls" else 0
+    h_rows, h_findings = _healthy(extra + seed, kind)
     return build_evidence_summary(rows + h_rows, findings + h_findings,
                                   reference_utc=REF)
 

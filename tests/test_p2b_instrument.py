@@ -56,8 +56,11 @@ Three gate nodes carry SCORE-09 (Phase 234 CONTEXT O-1: the gate is this
 instrument across all rungs and readings, not only the property xfail):
 
 * ``test_p2b_non_increase_all_rungs_all_readings`` (D-07(a)): over R1..R5 x
-  the four readings x +0/+20/+100/+500, neither emitted nor computed ever
-  rises. Red on scoring 3.0.
+  every reading x +0/+20/+100/+500, neither emitted nor computed ever
+  rises. Red on scoring 3.0. The Phase 234 review (D-28) added the fifth
+  reading, ``rows_mtls``: mTLS-enforcing endpoints from a one-row seed. It
+  was red on the count-curve mTLS bonus and is green on the presence
+  credit.
 * ``test_p2b_weakness_rows_lower_the_score`` (D-07(b), D-22): the
   non-vacuity control. Adding weakness rows strictly lowers the score on
   R2..R5 and pulls R1 below 100. It is green on 3.0 too (3.0 also lowers the
@@ -263,6 +266,8 @@ HEALTHY_SCORED_MOVES = {
             "certificate_observations.certs_observed",
             "cert_key_type_counts.RSA"},
     "certless": {"assessable_endpoint_count"},
+    # D-28: an mTLS-enforcing certless row moves E and the mTLS signal only.
+    "mtls": {"assessable_endpoint_count", "mtls_present_count"},
 }
 # UNSCORED moves (scoring never reads them): population counters, a ratio
 # whose scored input is the count, and the MEDIUM "quantum-vulnerable key"
@@ -282,12 +287,14 @@ HEALTHY_ALLOWED_MOVES = {
     "rsa": HEALTHY_SCORED_MOVES["rsa"] | _UNSCORED_POPULATION
     | _UNSCORED_CERT_FINDING,
     "certless": HEALTHY_SCORED_MOVES["certless"] | _UNSCORED_POPULATION,
+    "mtls": HEALTHY_SCORED_MOVES["mtls"] | _UNSCORED_POPULATION,
 }
 
 
 def _probe_paths(cf) -> List[Tuple[str, ...]]:
     paths: List[Tuple[str, ...]] = []
-    for _domain, path, _weight, _sign in cf.COUNT_TERMS:
+    for _domain, path, _weight, _sign in list(cf.COUNT_TERMS) + list(
+            cf.PRESENCE_TERMS):
         if tuple(path) not in paths:
             paths.append(tuple(path))
     if ("motion_email_starttls_missing_count",) not in paths:
@@ -346,6 +353,35 @@ def _branch_probes(cf) -> Dict[str, Dict[str, Any]]:
     ev["kerberos_placeholder_count"] = 1
     probes["kerberos-placeholder-only"] = ev
 
+    # Only a Kerberos row that carries a scan error (a never-probed or
+    # unreachable KDC): identity must be unassessed (D-30).
+    ev = _r3_typical_enterprise()
+    ev["certificate_observations"]["certs_observed"] = 0
+    for key in cf.IDENTITY_KEYS:
+        ev["protocol_counts"][key] = 0
+    ev["protocol_counts"]["KERBEROS"] = 1
+    ev["kerberos_scan_error_count"] = 1
+    probes["kerberos-scan-error-only"] = ev
+
+    # 39 undetermined certificates and 1 PQC certificate: the undetermined
+    # -8 still applies, independent of PQC (D-29). Two saturated agility
+    # penalties (-12) give the subscore headroom; without them both the old
+    # and the new rule clamp agility at 25 and the probe proves nothing.
+    ev = _r3_typical_enterprise()
+    ev["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0, "PQC": 1}
+    ev["certificate_observations"]["certs_observed"] = 40
+    ev["bearer_token_weak_alg_count"] = 40
+    ev["codesign_weak_algo_count"] = 40
+    probes["undetermined-39-with-pqc-1"] = ev
+
+    # Every observed certificate is PQC: nothing is undetermined (D-29). Same
+    # headroom as above.
+    ev = _r3_typical_enterprise()
+    ev["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0, "PQC": 40}
+    ev["bearer_token_weak_alg_count"] = 40
+    ev["codesign_weak_algo_count"] = 40
+    probes["all-certs-pqc"] = ev
+
     ev = _r3_typical_enterprise()
     ev["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0}
     probes["keytype-unreported-with-certs"] = ev
@@ -402,12 +438,13 @@ def test_emits_row_per_rung_per_point(inst, sweep_d10):
     expected = {
         (rung, reading, extra)
         for rung in ("R1", "R2", "R3", "R4", "R5")
-        for reading in ("rows_ecdsa", "rows_rsa", "rows_certless", "mutator_212")
+        for reading in ("rows_ecdsa", "rows_rsa", "rows_certless", "rows_mtls",
+                        "mutator_212")
         for extra in (0, 20)
     }
     assert tuple(inst.RUNGS) == ("R1", "R2", "R3", "R4", "R5")
     assert tuple(inst.READINGS) == (
-        "rows_ecdsa", "rows_rsa", "rows_certless", "mutator_212")
+        "rows_ecdsa", "rows_rsa", "rows_certless", "rows_mtls", "mutator_212")
     assert inst.PRIMARY_READING == "rows_ecdsa"
     assert inst.CONTINUITY_READING == "mutator_212"
 
@@ -419,7 +456,7 @@ def test_emits_row_per_rung_per_point(inst, sweep_d10):
         f"missing cells {sorted(expected - set(seen))}; "
         f"unexpected cells {sorted(set(seen) - expected)}"
     )
-    assert len(sweep_d10) == 40
+    assert len(sweep_d10) == 50
     for point in sweep_d10:
         cell = f"{point['rung']}|{point['reading']}|{point['extra']}"
         missing = POINT_KEYS - set(point)
@@ -551,11 +588,25 @@ def test_closed_form_term_probes(cf):
         "COUNT_TERMS key paths absent from build_evidence_summary([], []) "
         f"output (a mistyped key hides behind a zero count): {unresolved}"
     )
-    assert len(cf.COUNT_TERMS) == 35, (
+    assert len(cf.COUNT_TERMS) == 34, (
         f"COUNT_TERMS has {len(cf.COUNT_TERMS)} rows; the 35 ratio sites "
-        "each become one count term (D-01)"
+        "each become one count term (D-01), less mTLS, which is a presence "
+        "credit (D-28)"
     )
-    for row in cf.COUNT_TERMS:
+    assert [tuple(p) for _d, p, _w, _s in cf.PRESENCE_TERMS] == [
+        ("mtls_present_count",)], (
+        f"PRESENCE_TERMS {cf.PRESENCE_TERMS}: mTLS is the one presence credit "
+        "(D-28)"
+    )
+    unresolved_presence = [
+        ".".join(path) for _d, path, _w, _s in cf.PRESENCE_TERMS
+        if not _resolves(empty, tuple(path))
+    ]
+    assert not unresolved_presence, (
+        "PRESENCE_TERMS key paths absent from build_evidence_summary([], []) "
+        f"output: {unresolved_presence}"
+    )
+    for row in list(cf.COUNT_TERMS) + list(cf.PRESENCE_TERMS):
         assert len(row) == 4, f"COUNT_TERMS row {row!r} is not 4 fields"
         _domain, _path, weight, sign = row
         assert weight > 0, f"COUNT_TERMS row {row!r}: weight {weight} <= 0"
@@ -567,6 +618,7 @@ def test_closed_form_term_probes(cf):
             ("scan_error", "count"),
             ("cert_key_type_counts", "PQC"),
             ("kerberos_placeholder_count",),
+            ("kerberos_scan_error_count",),
         )
         if not _resolves(empty, path)
     ]
@@ -713,9 +765,13 @@ def test_p2b_non_increase_all_rungs_all_readings(sweep_all):
     groups: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
     for point in sweep_all:
         groups.setdefault((point["rung"], point["reading"]), []).append(point)
-    # Non-vacuity: a zero-match grouping would pass every check below.
-    assert len(groups) == 20, (
-        f"expected 20 (rung, reading) groups: {sorted(groups)}"
+    # Non-vacuity: a zero-match grouping would pass every check below. 25 =
+    # 5 rungs x 5 readings, rows_mtls included (D-28).
+    assert len(groups) == 25, (
+        f"expected 25 (rung, reading) groups: {sorted(groups)}"
+    )
+    assert {reading for _rung, reading in groups} >= {"rows_mtls"}, (
+        "the mTLS reading is missing from the non-increase sweep (D-28)"
     )
     for key, pts in groups.items():
         assert len(pts) == 4, f"{key}: expected 4 points, got {len(pts)}"
@@ -852,7 +908,8 @@ def test_ceiling_identification_consistent(sweep_d10):
 
 def test_healthy_rows_are_healthy(inst):
     """D-05/D-18/D-15: healthy rows add no weakness; no Kerberos placeholder."""
-    for kind in ("ecdsa", "rsa", "certless"):
+    assert tuple(inst.HEALTHY_KINDS) == ("ecdsa", "rsa", "certless", "mtls")
+    for kind in inst.HEALTHY_KINDS:
         rows = [inst.healthy_row(i, kind) for i in range(20)]
         findings = derive_report_findings(rows)
         bad = [
@@ -867,7 +924,15 @@ def test_healthy_rows_are_healthy(inst):
                 f"healthy {kind} row {row.host} claims PQC hybrid: {detail!r}"
             )
             not_after = getattr(row, "cert_not_after", None)
-            if kind == "certless":
+            if kind == "mtls":
+                # D-28: certless, enforcing mTLS, and NOT a scan error.
+                assert row.tls_blocker_reason == "MTLS_REQUIRED", (
+                    f"mtls row {row.host} does not enforce mTLS"
+                )
+                assert not getattr(row, "scan_error", None), (
+                    f"mtls row {row.host} carries a scan_error"
+                )
+            if kind in ("certless", "mtls"):
                 assert not_after is None, (
                     f"certless row {row.host} carries a certificate "
                     f"(cert_not_after={not_after!r})"
@@ -880,7 +945,8 @@ def test_healthy_rows_are_healthy(inst):
 
     # WR-03: the WHOLE evidence summary, flattened, may move only where a
     # healthy row is expected to move it. Anything else that moves (e.g.
-    # mtls_present_count, scan_error.count, protocol_counts.UNKNOWN) fails.
+    # mtls_present_count outside rows_mtls, scan_error.count,
+    # protocol_counts.UNKNOWN) fails.
     relevant = set(inst.SCORE_RELEVANT_PATHS)
     for kind, allowed in HEALTHY_ALLOWED_MOVES.items():
         must_move = HEALTHY_SCORED_MOVES[kind]

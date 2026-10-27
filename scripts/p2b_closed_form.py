@@ -42,7 +42,9 @@ this file is that it is a second implementation, sharing no code with the
 scorer, of a separately written statement of the formula. Phase 234 did
 exactly this: the 4.0 spec below was written from the decisions before the
 scorer was changed, so the closed-form nodes were red between the two
-commits by design.
+commits by design. The Phase 234 code-review corrections (D-28 mTLS
+presence credit, D-29 undetermined keys independent of PQC, D-30 Kerberos
+scan-error rows) followed the same order: this spec first, then the scorer.
 
 THE SPEC (scoring 4.0)
 ----------------------
@@ -77,15 +79,15 @@ other profile raises ``UncoveredBranch`` (no weights override is modelled).
 Each of the six DOMAINS starts at DOMAIN_CAP = 25.0 and adds signed terms:
 
 * COUNT_TERMS: one row per (domain, count key path, weight, sign). Each row
-  adds ``sign * curve(count) * weight`` to its domain. The mTLS row is the
-  one positive row: an absolute count that saturates at N_REF (D-02). The 35
-  rows (the 3.0 ratio sites, same paths, weights and signs) are, by domain:
+  adds ``sign * curve(count) * weight`` to its domain. Every row is a
+  penalty. The 34 rows (the 3.0 ratio sites less mTLS, same paths, weights
+  and signs) are, by domain:
 
   - hygiene: plaintext HTTP 18-, HTTP on a TLS port 16-.
   - modern_tls: legacy TLS 14-, ``protocol_counts.UNKNOWN`` 6-.
-  - identity_trust: expired 14-, expiring 7-, self-signed 9-; mTLS present
-    6+, weak Kerberos etype 10-, SAML weak signing 8-, DNSSEC weak algorithm
-    8-, then seven S/MIME and AD CS rows at 2- each.
+  - identity_trust: expired 14-, expiring 7-, self-signed 9-, weak Kerberos
+    etype 10-, SAML weak signing 8-, DNSSEC weak algorithm 8-, then seven
+    S/MIME and AD CS rows at 2- each.
   - agility_signals: ``protocol_counts.UNKNOWN`` 6-, bearer-token weak alg
     6-, OpenAPI plaintext server 4-, code-signing weak algorithm 6-, fuzz
     finding 4-.
@@ -96,6 +98,14 @@ Each of the six DOMAINS starts at DOMAIN_CAP = 25.0 and adds signed terms:
     cipher 6-, broker plaintext 14-, broker weak TLS 8-, broker weak cipher
     6-.
 
+* PRESENCE_TERMS (Phase 234 review, D-28): one row per (domain, count key
+  path, weight, sign). Each row adds ``sign * weight`` ONCE when the count is
+  > 0, else nothing: a presence credit, not a count curve. The one row is
+  mTLS present, identity_trust 6+. D-02 had made mTLS the one positive count
+  row, so every further mTLS-enforcing endpoint raised identity_trust up to
+  N_REF: observing more healthy endpoints raised the score, which SCORE-09
+  forbids. D-28 gives it the same single-step shape as the PQC credit (D-04):
+  the first observation earns the credit, depth earns nothing.
 * Scan error (D-03): the scan-error COUNT ``scan_error.count`` goes through
   the same curve: hygiene -= curve(count) x 6; modern_tls -= curve(count) x
   5. The scan-error rate is never read.
@@ -103,8 +113,16 @@ Each of the six DOMAINS starts at DOMAIN_CAP = 25.0 and adds signed terms:
   Classical certificate keys are quantum-vulnerable and are never a positive
   signal. EdDSA keys are counted under ECDSA by the evidence builder.
   In this if/elif order: RSA + ECDSA > 0 -> KEY_TYPE_CLASSICAL (-8, flat, not
-  count-based); elif C > 0 and PQC == 0 (certificates observed with no key
-  type reported) -> -8; else 0. There is no ECDSA bonus.
+  count-based); elif C > PQC (some observed certificates have no determined
+  key type) -> -8; else 0. There is no ECDSA bonus.
+  Spec correction (Phase 234 review, D-29): the undetermined branch was
+  ``C > 0 and PQC == 0`` (RESEARCH D-06 step 5), which exempted any estate
+  holding ONE PQC certificate, so 39 undetermined + 1 PQC scored above
+  39 RSA + 1 PQC: not looking paid again (999.115 P8). The -8 now applies
+  whenever undetermined certificates exist, independent of PQC; the PQC
+  credit below is applied separately. Inside this branch RSA + ECDSA is 0,
+  so ``C > PQC`` is exactly "C exceeds the determined key-type count". An
+  all-PQC estate (C == PQC) is still not penalised.
 * PQC credit (O-4, D-04): ONE +8 credit on agility_signals when
   ``pqc_hybrid_endpoint_count`` > 0 OR ``cert_key_type_counts.PQC`` > 0.
   Never +16: a KEX observation and a certificate observation share it. The
@@ -116,8 +134,11 @@ subscore = int(round(clamp(raw, 0, 25))) with Python's round (half to even).
 Assessed domains: hygiene, modern_tls and agility_signals iff E > 0;
 identity_trust iff C > 0 or (effective KERBEROS + SAML + DNSSEC + SMIME +
 ADCS) > 0 over ``protocol_counts``, where effective KERBEROS is
-max(0, KERBEROS - ``kerberos_placeholder_count``): placeholder Kerberos rows
-are not identity evidence (D-11); data_at_rest iff the sum over DAR_KEYS is
+max(0, KERBEROS - ``kerberos_placeholder_count`` -
+``kerberos_scan_error_count``): placeholder Kerberos rows are not identity
+evidence (D-11), and neither are Kerberos rows that carry a scan error
+(Phase 234 review, D-30: an unreachable, never-probed or unrecognised-reply
+KDC row has no etype data, so it cannot make identity assessed); data_at_rest iff the sum over DAR_KEYS is
 > 0; data_in_motion iff the sum over MOTION_KEYS is > 0. n is the number
 assessed; n == 0 raises ``UncoveredBranch``. Unassessed subscores are
 reported as None.
@@ -179,6 +200,7 @@ KEY_TYPE_UNREPORTED_WITH_CERTS = -8.0
 PQC_HYBRID_BONUS = 8.0
 
 KERBEROS_PLACEHOLDER_PATH = ("kerberos_placeholder_count",)
+KERBEROS_SCAN_ERROR_PATH = ("kerberos_scan_error_count",)
 PQC_CERT_PATH = ("cert_key_type_counts", "PQC")
 
 DOMAINS = (
@@ -191,7 +213,8 @@ DOMAINS = (
 )
 
 # (domain, count key path, weight, sign). No denominator column: under
-# 4.0 every term is a curve of the weakness count alone (D-01, D-02).
+# 4.0 every term is a curve of the weakness count alone (D-01). mTLS left
+# this table for PRESENCE_TERMS (D-28).
 COUNT_TERMS: List[Tuple[str, Tuple[str, ...], float, int]] = [
     ("hygiene", ("plaintext_http_count",), 18.0, -1),
     ("hygiene", ("http_on_tls_port_count",), 16.0, -1),
@@ -203,7 +226,6 @@ COUNT_TERMS: List[Tuple[str, Tuple[str, ...], float, int]] = [
      7.0, -1),
     ("identity_trust", ("certificate_observations", "self_signed_count"),
      9.0, -1),
-    ("identity_trust", ("mtls_present_count",), 6.0, +1),
     ("identity_trust", ("identity_weak_etype_count",), 10.0, -1),
     ("identity_trust", ("saml_weak_signing_count",), 8.0, -1),
     ("identity_trust", ("dnssec_weak_algo_count",), 8.0, -1),
@@ -231,6 +253,12 @@ COUNT_TERMS: List[Tuple[str, Tuple[str, ...], float, int]] = [
     ("data_in_motion", ("motion_broker_plaintext_count",), 14.0, -1),
     ("data_in_motion", ("motion_broker_weak_tls_count",), 8.0, -1),
     ("data_in_motion", ("motion_broker_weak_cipher_count",), 6.0, -1),
+]
+
+# (domain, count key path, weight, sign). Each row adds sign * weight ONCE
+# when the count is > 0 (D-28): a presence credit, never a count curve.
+PRESENCE_TERMS: List[Tuple[str, Tuple[str, ...], float, int]] = [
+    ("identity_trust", ("mtls_present_count",), 6.0, +1),
 ]
 
 # Extra numerator paths summed into a COUNT_TERMS row's count.
@@ -330,6 +358,9 @@ def _raw_domains(evidence: Mapping[str, Any],
     for domain, path, weight, sign in COUNT_TERMS:
         count = _numerator(evidence, tuple(path), sev)
         raw[domain] += sign * _curve(count) * weight
+    for domain, path, weight, sign in PRESENCE_TERMS:
+        if _read(evidence, tuple(path)) > 0:
+            raw[domain] += sign * weight
 
     scan_error_curve = _curve(_scan_error_count(evidence))
     for domain, weight in SCAN_ERROR_WEIGHTS.items():
@@ -340,7 +371,7 @@ def _raw_domains(evidence: Mapping[str, Any],
     pqc_cert = _read(evidence, PQC_CERT_PATH)
     if rsa + ecdsa > 0:
         raw["agility_signals"] += KEY_TYPE_CLASSICAL
-    elif c_count > 0 and pqc_cert == 0:
+    elif c_count > pqc_cert:
         raw["agility_signals"] += KEY_TYPE_UNREPORTED_WITH_CERTS
 
     pqc_kex = _read(evidence, ("pqc_hybrid_endpoint_count",))
@@ -350,7 +381,8 @@ def _raw_domains(evidence: Mapping[str, Any],
 
 
 def _identity_protocol_sum(evidence: Mapping[str, Any]) -> int:
-    """IDENTITY_KEYS sum with Kerberos placeholder rows removed (D-11)."""
+    """IDENTITY_KEYS sum with Kerberos placeholder (D-11) and scan-error
+    (D-30) rows removed."""
     counts = evidence.get("protocol_counts")
     if not isinstance(counts, Mapping):
         counts = {}
@@ -358,7 +390,8 @@ def _identity_protocol_sum(evidence: Mapping[str, Any]) -> int:
     for key in IDENTITY_KEYS:
         value = _count(counts.get(key, 0))
         if key == "KERBEROS":
-            value = max(0, value - _read(evidence, KERBEROS_PLACEHOLDER_PATH))
+            value = max(0, value - _read(evidence, KERBEROS_PLACEHOLDER_PATH)
+                        - _read(evidence, KERBEROS_SCAN_ERROR_PATH))
         total += value
     return total
 
