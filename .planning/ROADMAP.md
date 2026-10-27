@@ -265,12 +265,12 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 232-01-PLAN.md — POLISH-01: `/fonts` StaticFiles mount before the SPA catch-all + `mimetypes.add_type("font/ttf", ".ttf")`; red-first route test reading URLs from the built CSS; mutations; python:3.11-slim leg (D-01..D-03) (wave 1)
-- [ ] 232-02-PLAN.md — POLISH-02: 3.10-safe pyproject version helper; every printed hint a full `pip install 'quirk-scanner[<extra>]'` (AST node over `git ls-files`); widened unquoted-hint guard with tracked-set floors; config_template wrong-name hints; mutations M1-M7 (D-04..D-06) (wave 1)
-- [ ] 232-03-PLAN.md — POLISH-03: report header Paper SVG logo `<img>`, `.wordmark` rule removed, no fallback text; header + PDF nodes; report-interpretation; cover-title reading recorded (D-07..D-10) (wave 1)
-- [ ] 232-04-PLAN.md — POLISH-04: README links tag-pinned blob/tree URLs; parser-based git-object gate + markdown-it differential; ledger re-anchored in the same commit (D-11..D-13) (wave 2, after 02)
-- [ ] 232-05-PLAN.md — Records: UAT Series 232, coverage-gaps regen, vault sync, todos 261015/261014 completed + 261003 re-pointed, follow-up todos, W15 recorded fixed, POLISH flips with their todos (D-14, D-15) (wave 3)
-- [ ] 232-06-PLAN.md — Proof: full-suite failing-set compare, 3.11 clone-based leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` observation at HEAD (D-16, CITRUTH-03) (wave 4)
+- [x] 232-01-PLAN.md — POLISH-01: `/fonts` StaticFiles mount before the SPA catch-all + `mimetypes.add_type("font/ttf", ".ttf")`; red-first route test reading URLs from the built CSS; mutations; python:3.11-slim leg (D-01..D-03) (wave 1)
+- [x] 232-02-PLAN.md — POLISH-02: 3.10-safe pyproject version helper; every printed hint a full `pip install 'quirk-scanner[<extra>]'` (AST node over `git ls-files`); widened unquoted-hint guard with tracked-set floors; config_template wrong-name hints; mutations M1-M7 (D-04..D-06) (wave 1)
+- [x] 232-03-PLAN.md — POLISH-03: report header Paper SVG logo `<img>`, `.wordmark` rule removed, no fallback text; header + PDF nodes; report-interpretation; cover-title reading recorded (D-07..D-10) (wave 1)
+- [x] 232-04-PLAN.md — POLISH-04: README links tag-pinned blob/tree URLs; parser-based git-object gate + markdown-it differential; ledger re-anchored in the same commit (D-11..D-13) (wave 2, after 02)
+- [x] 232-05-PLAN.md — Records: UAT Series 232, coverage-gaps regen, vault sync, todos 261015/261014 completed + 261003 re-pointed, follow-up todos, W15 recorded fixed, POLISH flips with their todos (D-14, D-15) (wave 3)
+- [x] 232-06-PLAN.md — Proof: full-suite failing-set compare, 3.11 clone-based leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` observation at HEAD (D-16, CITRUTH-03) (wave 4)
 
 ### Phase 233: P2b Measurement Instrument
 **Goal**: Scan-depth dilution is measured, on the five-rung calibration ladder, by a third instrument independent of the two Phase 212 used, and that measurement (plus the pre-change ladder values) is recorded before any P2b fix shape is chosen. This is a spike: its effort and the fix it points to are decided by its result.
@@ -317,7 +317,7 @@ Plans:
 | 229. Finding & State Correctness | 12/12 | Complete (verified passed 10/10 at 1848635e after 5 verifier gaps closed in-phase (false-closure paths: co-resident rows, legacy chains x2, per-host evidence, blocked mail ports); 3-iteration code review; CI green, Python CI 38916184370 + Dashboard Quality 38916187404) | 2026-10-16 |
 | 230. Findings That Fire | 8/8 | Complete (verified passed 5/5 at 1072cdf4 after gap closure 230-08 (UDP fallback shares the TCP classifier; 0/65 false no-preauth live); review rounds R8-R22 hardened the Kerberos target path (gate/scanner same-address, IDNA wire name, zone/link-local/unspecified refusals, LDAP referrals off), R21/R22 0 blockers; follow-ups owned by 999.136; CI green, Python CI 40062953209 + Dashboard Quality 40062954891) | 2026-10-24 |
 | 231. QRAMM Scoring Surfaces | 10/10 | Complete (verified passed 5/5 at c09a809b; live print/PDF re-check passed with artifacts kept; review R1 0 blockers, WR-01 owned by SCORE-10 (Phase 234), WR-02/IN-01..04/IN-06 by 999.137, IN-05 by 999.136; 231-10 fixed the allow_abbrev gate 231-02 broke; CI green, Python CI 40207661100 + Dashboard Quality 40207663143) | 2026-10-25 |
-| 232. Post-Launch Visible Fixes | 0/6 | Planned | - |
+| 232. Post-Launch Visible Fixes | 6/6 | Planned | - |
 | 233. P2b Measurement Instrument | 0/TBD | Not started | - |
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 0/TBD | Not started | - |
 | 235. Release & Launch Gate | 0/TBD | Not started | - |
