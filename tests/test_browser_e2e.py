@@ -860,7 +860,7 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
       2. its connected (visible) edge's endpoint updates position in real-time, i.e. WHILE the
          mouse is still down, not only after release (D-09)
       3. the node's new position holds after mouse release (no snap-back)
-      4. the other three nodes on the canvas are byte-identical, pre-drag versus post-release
+      4. every other node on the canvas is byte-identical, pre-drag versus post-release
       5. no layout reset occurs (dagre does not silently re-run and reassign the pre-drag layout)
 
     The rejected data-layer-invariant substitute (docs/UAT-SERIES.md:4147) covered ZERO of these
@@ -889,7 +889,7 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
         )
         assert other_ids, (
             "UAT-7-29: expected at least one OTHER node on the canvas besides the dragged node "
-            f"{node_id!r} (the measured seed has 3) — criterion 4 cannot be asserted against an "
+            f"{node_id!r} (the seed has 4 since Phase 234) — criterion 4 cannot be asserted against an "
             "empty list."
         )
         pre = page.evaluate(
@@ -930,7 +930,8 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
         # update position in real-time" (criterion 2) says.
         mid = page.evaluate(
             "(args) => { const cy = document.querySelector(args.sel)._cyreg.cy;"
-            " return { pos: cy.$id(args.nodeId).position(), edge: cy.$id(args.edgeId).sourceEndpoint() }; }",
+            " return { pos: cy.$id(args.nodeId).position(), edge: cy.$id(args.edgeId).sourceEndpoint(),"
+            "   box: cy.$id(args.nodeId).boundingBox({ includeLabels: false }) }; }",
             {"sel": _CY_CONTAINER_SELECTOR, "nodeId": node_id, "edgeId": edge_id},
         )
         page.mouse.up()
@@ -964,26 +965,29 @@ def test_uat_7_29_roadmap_node_drag(dashboard_origin):
         )
         node_delta = (mid["pos"]["x"] - pre["pos"]["x"], mid["pos"]["y"] - pre["pos"]["y"])
         edge_delta = (mid["edge"]["x"] - pre["edge"]["x"], mid["edge"]["y"] - pre["edge"]["y"])
-        # Tolerance is 25px, not the ~1px "exact lockstep" a naive reading of D-09/RESEARCH.md's
-        # prose might suggest. FINDING (observed live, this run): the edge is a bezier-style edge
-        # whose source anchor point is computed from the angle between source and target nodes,
-        # not simply offset from the source node's center — so as the node moves, the anchor point
-        # on its boundary shifts too, and the endpoint's raw delta is NOT identical to the node's
-        # raw delta on every axis. Measured this run: node_delta's y matched edge_delta's y
-        # EXACTLY (both axes' deltas agreed to 1e-9), while x diverged by ~19.6px on a 100px x
-        # offset (~20%). 25px comfortably covers that measured divergence while still failing a
-        # genuinely-decoupled endpoint (e.g. one that didn't move directionally with the node, or
-        # moved by only a few px on a 100px/50px drag). Direction (sign) agreement on both axes is
-        # asserted separately below as the sharper, geometry-independent form of "followed the
-        # node" that this test can make without overfitting to one edge's curve routing.
-        tolerance = 25.0
+        # Attachment, not a fixed delta tolerance. The edge's source anchor sits on the node's
+        # perimeter at the point facing the target, so as the node moves the anchor also slides
+        # ALONG the perimeter and its raw delta differs from the node's by a layout-dependent
+        # amount: ~19.6px of x on a 100px drag with the 2026-09-27 seed, 28.5px once Phase 234
+        # (O-4) added a fifth roadmap node and moved the target. A fixed 25px band was therefore
+        # a property of one layout, not of "the edge follows the node". The layout-independent
+        # form is that, mid-drag, the endpoint still lies on the DRAGGED node's bounding box
+        # (model coords, padded by 2px for anti-aliased perimeter rounding). What each check
+        # catches: a fully stale endpoint (repainted only on release) fails the `!=` assertion
+        # above; an endpoint that moved but detached from the node fails this one; a
+        # wrong-direction move fails the sign check below. Mutation-checked 2026-10-27 by
+        # feeding the PRE-drag endpoint here: red on x (130 < box x1 144.6 on a 172px-wide
+        # node dragged 100px). It is NOT outside on y (194 lies inside y1..y2 = 181..255),
+        # so this check alone is not a stale-endpoint detector -- the `!=` check is.
+        box = mid["box"]
+        pad = 2.0
         assert (
-            abs(node_delta[0] - edge_delta[0]) <= tolerance
-            and abs(node_delta[1] - edge_delta[1]) <= tolerance
+            box["x1"] - pad <= mid["edge"]["x"] <= box["x2"] + pad
+            and box["y1"] - pad <= mid["edge"]["y"] <= box["y2"] + pad
         ), (
-            f"UAT-7-29 criterion 2: expected edge {edge_id!r}'s endpoint to follow node "
-            f"{node_id!r} within tolerance; node_delta={node_delta!r} edge_delta={edge_delta!r} "
-            f"(tolerance={tolerance})."
+            f"UAT-7-29 criterion 2: expected edge {edge_id!r}'s endpoint to stay attached to node "
+            f"{node_id!r} mid-drag (inside its bounding box, pad={pad}); edge={mid['edge']!r} "
+            f"box={box!r} node_delta={node_delta!r} edge_delta={edge_delta!r}."
         )
 
         def _sign(v):
