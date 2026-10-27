@@ -1,9 +1,9 @@
-"""D-04 / WR-06: SCORE_WEIGHTS sum invariant (Phase 73; rebalanced Phase 83; PQC-03 Phase 90; SCORE-01 Phase 94; SCORE-01 Phase 95; SCORE-01 Phase 96)."""
+"""D-04 / WR-06: SCORE_WEIGHTS sum invariant (Phase 73; rebalanced Phase 83; PQC-03 Phase 90; SCORE-01 Phase 94; SCORE-01 Phase 95; SCORE-01 Phase 96; 999.115; Phase 234 D-04)."""
 from quirk.intelligence.scoring import SCORE_WEIGHTS
 
 
 def test_score_weights_sum_invariant():
-    """SCORE_WEIGHTS sum must be 303.0 by design (NOT normalized).
+    """SCORE_WEIGHTS sum must be 293.0 by design (NOT normalized).
 
     See quirk/intelligence/scoring.py docstring above SCORE_WEIGHTS for
     rationale (Phase 73 / D-04). Any contributor changing this value must
@@ -50,15 +50,22 @@ def test_score_weights_sum_invariant():
     NOTE the coincidence, so nobody reads it as a no-op: the entry COUNT
     returned to 41, the same value it held before either change. The two
     deltas are unrelated and the SUM did not return (303.0 -> 297.0).
+
+    Phase 234 D-04: dropped from 297.0 -> 293.0 (-4.0) by REMOVING
+    agility_has_ecdsa_bonus (4.0). Classical keys are never a positive signal
+    (O-2): ECDSA and EdDSA are as quantum-vulnerable as RSA, so any classical
+    certificate key now costs the flat agility_rsa_only_penalty instead.
+    Removed rather than zeroed, following the 999.115 C precedent. Net delta =
+    -1 entry / -4.0 sum (41 -> 40, 297.0 -> 293.0).
     """
-    assert abs(sum(SCORE_WEIGHTS.values()) - 297.0) < 1e-9, (
-        f"SCORE_WEIGHTS sum drifted from 297.0 to {sum(SCORE_WEIGHTS.values())}. "
+    assert abs(sum(SCORE_WEIGHTS.values()) - 293.0) < 1e-9, (
+        f"SCORE_WEIGHTS sum drifted from 293.0 to {sum(SCORE_WEIGHTS.values())}. "
         "Per D-04 this is intentional — update this test ONLY if rebalance is documented."
     )
 
 
 def test_score_weights_count_invariant():
-    """Anchors the 41-weight count alongside the sum invariant.
+    """Anchors the 40-weight count alongside the sum invariant.
 
     Phase 83 rebalance: bumped from 29 -> 36 (+7) absorbing Phase 79 SMIME
     (+3) and Phase 80 ADCS (+4) Wave A scanner expansions.
@@ -77,5 +84,8 @@ def test_score_weights_count_invariant():
     999.115 C: dropped from 42 -> 41 (-1) by removing agility_high_impact_ratio.
     Back at 41 by coincidence, not by reversal — see the sum invariant's
     docstring above, where the sum shows the two changes were not a round trip.
+
+    Phase 234 D-04: dropped from 41 -> 40 (-1) by removing
+    agility_has_ecdsa_bonus. Classical keys are never a positive signal (O-2).
     """
-    assert len(SCORE_WEIGHTS) == 41
+    assert len(SCORE_WEIGHTS) == 40

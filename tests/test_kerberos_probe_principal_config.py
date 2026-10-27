@@ -3,8 +3,8 @@
 D-24: ``connectors.kerberos_probe_principal`` (default ``Administrator``) is
 read from YAML and reaches ``scan_kerberos_targets(principal=...)``.
 D-25: a KDC_ERR_C_PRINCIPAL_UNKNOWN row derives no finding and adds no weak
-etype; its (pre-existing, shared with kerberos-no-preauth) effect on coverage
-and identity presence is pinned, not endorsed.
+etype. Phase 234 D-11: such a placeholder row (shared with kerberos-no-preauth)
+is not assessed crypto and does not make identity assessed.
 D-28: the template documents the option.
 
 230-REVIEW-R2 CR-01: the QUIRK-owned TCP exchange (``_kdc_tcp_exchange``)
@@ -122,23 +122,26 @@ def test_principal_unknown_row_derives_no_finding_and_no_weak_count():
     assert build_evidence_summary([ep])["identity_weak_etype_count"] == 0
 
 
-def test_principal_unknown_row_counts_as_assessed_pinned():
+def test_principal_unknown_placeholder_row_is_not_assessed():
     from quirk.intelligence.evidence import build_evidence_summary
     from quirk.intelligence.scoring import _identity_assessed
 
     ep = _unknown_principal_row()
     ev = build_evidence_summary([ep])
-    # PINNED, not endorsed: a placeholder row the KDC answered without etypes
-    # counts as assessed crypto and as identity presence. Pre-existing, shared
-    # with kerberos-no-preauth. Owned by todo
-    # 261023-detect-kerberos-placeholder-rows-count-as-assessed (resolve before
-    # or in Phase 233). Change this assertion only together with that todo.
-    assert ev["assessed_crypto_count"] == 1
+    # Phase 234 D-11 (scoring 4.0): a placeholder row the KDC answered without
+    # etypes is NOT assessed crypto and does NOT make identity assessed. It
+    # stays an assessable endpoint (the KDC answered) and is counted in
+    # kerberos_placeholder_count. This inverts the 3.0 pin, so the test was
+    # renamed (D-26; the old name is recorded in the resolved todo):
+    # .planning/todos/completed/261023-detect-kerberos-placeholder-rows-count-as-assessed.md
+    assert ev["assessed_crypto_count"] == 0
     assert ev["assessable_endpoint_count"] == 1
+    assert ev["kerberos_placeholder_count"] == 1
     assert _identity_assessed(
-        ev.get("certificate_observations", {}) or ev.get("cert_observations", {}) or {},
+        ev.get("certificate_observations", {}) or {},
         ev["protocol_counts"],
-    ) is True
+        placeholders=ev["kerberos_placeholder_count"],
+    ) is False
 
 
 # --- 230-REVIEW-R2 CR-01: QUIRK-owned TCP framing (CI-visible) ---------------

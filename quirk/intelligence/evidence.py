@@ -26,7 +26,13 @@ from quirk.util.weak_crypto import (
 # this mapping honest, not the mapping table itself.
 from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 
-EVIDENCE_SCHEMA_VERSION = "1.2.0"
+# 1.3.0 (Phase 234, additive): cert_key_type_counts.PQC and
+# kerberos_placeholder_count.
+EVIDENCE_SCHEMA_VERSION = "1.3.0"
+
+# Phase 234 O-4: substrings that mark a post-quantum (ML-DSA / SLH-DSA, or a
+# composite containing one) certificate key, matched after "_" -> "-".
+_PQC_CERT_KEY_TOKENS = ("ML-DSA", "MLDSA", "SLH-DSA", "SLHDSA")
 
 # Phase 184.1 SCORE-01 D-06/D-07 — protocols that are not scanned assets and must be
 # excluded from both the coverage numerator (assessed_crypto_count) and denominator
@@ -170,7 +176,7 @@ def build_evidence_summary(
     expiring_cutoff = ref_utc + timedelta(days=max(0, int(expiring_days)))
 
     protocol_counts = {k: 0 for k in _PROTOCOL_KEYS}
-    cert_key_type_counts = {"RSA": 0, "ECDSA": 0}
+    cert_key_type_counts = {"RSA": 0, "ECDSA": 0, "PQC": 0}
     tls_enum_success_count = 0
 
     certs_observed = 0
@@ -187,6 +193,8 @@ def build_evidence_summary(
     # rows such as a failed SMTP-STARTTLS handshake (D-04) and plaintext HTTP (D-08).
     assessed_crypto_count = 0
     assessable_endpoint_count = 0
+    # Phase 234 D-11: Kerberos rows the KDC answered without etype data.
+    kerberos_placeholder_count = 0
 
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
@@ -284,10 +292,25 @@ def build_evidence_summary(
         if scan_error:
             scan_error_count += 1
 
+        # Phase 234 D-11: a KERBEROS row with no scan_error and no `etype:`
+        # service_detail is a placeholder (kerberos-no-preauth,
+        # kerberos-etypes-unavailable-principal-unknown / -preauth-no-etype-info,
+        # or an unreachable row without a recorded error). The KDC answered, so
+        # it stays an assessable endpoint, but no crypto was assessed: it is
+        # excluded from assessed_crypto_count and, in the scorer, from identity
+        # presence. Every real etype row carries "etype:{id}:{name}:{sev}".
+        is_kerberos_placeholder = (
+            proto == "KERBEROS"
+            and not scan_error
+            and "etype:" not in _ep_sd
+        )
+        if is_kerberos_placeholder:
+            kerberos_placeholder_count += 1
+
         # Phase 184.1 SCORE-01 D-01/D-02/D-05/D-06/D-07/D-09 — coverage counters.
         if proto not in _NON_ASSET_PROTOCOLS:
             assessable_endpoint_count += 1
-            if proto != "UNKNOWN" and not scan_error:
+            if proto != "UNKNOWN" and not scan_error and not is_kerberos_placeholder:
                 assessed_crypto_count += 1
 
         blocker = str(getattr(ep, "tls_blocker_reason", "") or "")
@@ -295,14 +318,27 @@ def build_evidence_summary(
             mtls_targets.add((host, port))
 
         key_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
-        if key_alg.startswith("RSA"):
+        cert_not_after = getattr(ep, "cert_not_after", None)
+        # Phase 234 O-4: the PQC bucket is checked FIRST. Composite names
+        # carry the classical half too ("rsa3072_mldsa44", an ECDSA-first
+        # composite), so the RSA/EC prefix checks would otherwise claim them.
+        # It is certificate-gated (the row carries a certificate expiry), so an
+        # ML-DSA name on a KMS key, JWT or DNSSEC row never earns certificate
+        # credit. RSA/ECDSA keep their meaning for non-score consumers. Note:
+        # ML-DSA leaf certificates cannot reach this today, because
+        # `cryptography` raises "Unknown key type" in tls_scanner._pubkey_info
+        # (Phase 234 D-20; follow-up todo filed by plan 234-08).
+        if isinstance(cert_not_after, datetime) and any(
+            token in key_alg.replace("_", "-") for token in _PQC_CERT_KEY_TOKENS
+        ):
+            cert_key_type_counts["PQC"] += 1
+        elif key_alg.startswith("RSA"):
             cert_key_type_counts["RSA"] += 1
         elif key_alg.startswith(("EC", "ECDSA")):
             cert_key_type_counts["ECDSA"] += 1
         elif key_alg.startswith(("ED25519", "ED448", "EDDSA")):
             cert_key_type_counts["ECDSA"] += 1
 
-        cert_not_after = getattr(ep, "cert_not_after", None)
         if isinstance(cert_not_after, datetime):
             certs_observed += 1
             na = _as_utc_naive(cert_not_after)
@@ -593,6 +629,7 @@ def build_evidence_summary(
         "protocol_counts": protocol_counts,
         "assessed_crypto_count": assessed_crypto_count,
         "assessable_endpoint_count": assessable_endpoint_count,
+        "kerberos_placeholder_count": kerberos_placeholder_count,
         "plaintext_http_count": len(plaintext_http_targets),
         "http_on_tls_port_count": len(http_on_tls_port_targets),
         "mtls_present_count": len(mtls_targets),

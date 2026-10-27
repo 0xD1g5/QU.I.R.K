@@ -4,8 +4,9 @@ created: 2026-10-23
 source: Phase 230 DETECT-02 (plan 230-02, D-25; orchestrator decision on the 230-02 plan-check warning)
 priority: medium
 area: quirk/intelligence/scoring.py (_identity_assessed), quirk/intelligence/evidence.py (assessed_crypto_count), quirk/intelligence/confidence.py (coverage_ratio)
-status: pending
-resolves_phase: null
+status: completed
+resolves_phase: 234
+resolved: 2026-10-27
 owner: "999.120"
 ---
 
@@ -34,8 +35,8 @@ behaviour must update the pinned test in the same commit. 999.120 is OPEN and ac
 the P1 operator-reserved row, so the owner choice here is a recommendation the operator may re-home to 999.131
 "score inputs and evidence counters").
 
-- [ ] Decide: placeholder rows excluded from `assessed_crypto_count` and from `_identity_assessed`, or counted with a coverage flag.
-- [ ] Update the pinned test and `docs/report-interpretation.md` / operators guide Kerberos paragraphs (230-05 documents both side effects).
+- [x] Decide: placeholder rows excluded from `assessed_crypto_count` and from `_identity_assessed`, or counted with a coverage flag.
+- [x] Update the pinned test and `docs/report-interpretation.md` / operators guide Kerberos paragraphs (230-05 documents both side effects).
 
 ## Feasibility & Effort
 
@@ -55,3 +56,31 @@ a model that counts an unassessed KDC as assessed.
 This todo is **not fixed in Phase 233**: changing the behaviour moves scores, and Phase 233 was measurement-only
 (D-15). The wording above, "before or in Phase 233", now means **Phase 234**. Record:
 `.planning/decisions/233-p2b-third-instrument-measurement.md` §12.
+
+## Resolution (2026-10-27, Phase 234 plan 234-03, D-11)
+
+Resolved in the scoring 4.0 commit (Phase 234, SCORE-09), which shares the `SCORING_VERSION` bump as D-11 requires.
+The decision is **exclusion**, not a coverage flag:
+
+- `quirk/intelligence/evidence.py`: a `KERBEROS` row with no `scan_error` and no `etype:` in `service_detail` is a
+  placeholder. It is counted in the new `kerberos_placeholder_count` (evidence schema 1.3.0), stays in
+  `assessable_endpoint_count` (the KDC answered), and is excluded from `assessed_crypto_count`. The check was made
+  against every `CryptoEndpoint(protocol="KERBEROS", ...)` in `quirk/scanner/kerberos_scanner.py`: the real per-etype
+  rows always carry `etype:{id}:{name}:{severity}`, and the placeholders (`kerberos-no-preauth`,
+  `kerberos-etypes-unavailable-principal-unknown`, `kerberos-etypes-unavailable-preauth-no-etype-info`, and
+  `kerberos-unreachable` when no TCP error was recorded) never do. The rows that carry a `scan_error` were already
+  excluded from assessed crypto.
+- `quirk/intelligence/scoring.py`: `_identity_assessed(cert_obs, protocol_counts, placeholders=...)` subtracts the
+  placeholder count from `KERBEROS` (floored at 0), so a placeholder-only KDC no longer makes `identity_trust` assessed.
+  `protocol_counts` is not edited (reports, CBOM and the dashboard read it).
+- The pinned test inverted, so it was **renamed** (D-26):
+  `tests/test_kerberos_probe_principal_config.py::test_principal_unknown_row_counts_as_assessed_pinned` ->
+  `tests/test_kerberos_probe_principal_config.py::test_principal_unknown_placeholder_row_is_not_assessed`. It now
+  asserts `assessed_crypto_count == 0`, `assessable_endpoint_count == 1`, `kerberos_placeholder_count == 1` and
+  `_identity_assessed(..., placeholders=...) is False`.
+- Every citation of the old name moved in the same commit: `docs/UAT-SERIES.md` UAT-230-07 `**Notes:**` (Notes only;
+  no `**Result:**` change) and the `.planning/HORIZON.md` 999.120 row. Plan 234-08 cites the commit sha when it closes
+  999.120.
+- Not done here: the `docs/report-interpretation.md` / operators guide Kerberos paragraphs (230-05 documents the two
+  old side effects). They belong to the Phase 234 doc pass (D-17, plan 234-07), whose plan text does not name them
+  as of 2026-10-27; flagged in `234-03-SUMMARY.md` so the doc pass picks them up.

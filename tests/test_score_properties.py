@@ -572,23 +572,6 @@ def test_p2a_score_is_independent_of_the_raw_probe_count(probe_count):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "999.115 / RE-MEASURED 2026-09-14 after all six model changes: STILL "
-        "OPEN. 999.113 removed the probe count as a denominator but the "
-        "replacement, assessable_endpoint_count, ALSO grows with scan depth. "
-        "Holding every weakness fixed and adding only healthy assessable "
-        "endpoints, the COMPUTED score rises monotonically at every step: "
-        "71 -> 74 (+20) -> 78 (+100) -> 82 (+500). The consequence ceiling "
-        "MASKS most of that in the emitted number (18 -> 18 -> 20 -> 20) but "
-        "does not remove it — the estate's absolute exposure (6 plaintext "
-        "endpoints, 5 expired certs, 5 CRITICAL) is unchanged throughout. "
-        "This is 999.115's 'no concept of CONSEQUENCE, only PREVALENCE' gap, "
-        "and it is a denominator problem in assessable_endpoint_count, a "
-        "separate fix from 999.115's model work."
-    ),
-)
 @pytest.mark.parametrize("extra_healthy_endpoints", [20, 100, 500])
 def test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints(
     extra_healthy_endpoints,
@@ -625,6 +608,16 @@ def test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints(
     a number that cannot move far enough to show it. The ceiling is a MASK on
     this defect, not a fix for it, and the property has to look underneath the
     mask to keep saying something true.
+
+    PHASE 234 CLOSING NOTE — scoring 4.0 CLOSED this property, and the xfail
+    is gone with both assertions unchanged. Every ratio site became an
+    absolute-count curve with no denominator (D-01, N_REF = 40 as a continuity
+    anchor), the scan-error terms read the count rather than the rate (D-03),
+    and classical certificate keys stopped being a positive signal (D-04).
+    Measured on this estate: computed 74 at +0, +20, +100 and +500 alike
+    (3.0: 71 -> 74 -> 78 -> 82), emitted 18 throughout. The 233 instrument
+    gates the same property across every rung and reading
+    (tests/test_p2b_instrument.py::test_p2b_non_increase_all_rungs_all_readings).
     """
     base = _multihost_evidence()
     wider = copy.deepcopy(base)
