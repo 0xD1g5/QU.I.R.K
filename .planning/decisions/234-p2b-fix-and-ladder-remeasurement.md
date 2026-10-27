@@ -1,6 +1,7 @@
 # Decision: P2b scan-depth fix (scoring 4.0) and ladder re-measurement (SCORE-09)
 
-**Status: RECORDED 2026-10-27.** This is the Phase 234 D-16 record for SCORE-09. It sets the
+**Status: RECORDED 2026-10-27; updated the same day after the code review (D-27..D-31, §13).**
+This is the Phase 234 D-16 record for SCORE-09. It sets the
 re-measured calibration ladder beside Phase 233's pre-change values
 (`.planning/decisions/233-p2b-third-instrument-measurement.md` §4, §5 and §9).
 
@@ -13,13 +14,15 @@ toward a prediction.
 
 **SCORE-09 is fixed by scoring 4.0.** Within an already-assessed domain, adding healthy endpoints
 no longer raises the readiness score. Under operator decision O-1, the gate is the Phase 233
-instrument, `python -m scripts.p2b_instrument`, run across all five rungs (R1-R5), all four readings
-(rows_ecdsa, rows_rsa, rows_certless, mutator_212) and four points (+0, +20, +100, +500). The single
-xfail is not the gate. At the measured commit:
+instrument, `python -m scripts.p2b_instrument`, run across all five rungs (R1-R5), all five readings
+(rows_ecdsa, rows_rsa, rows_certless, rows_mtls, mutator_212) and four points (+0, +20, +100, +500).
+The single xfail is not the gate. `rows_mtls` was added by the code review (D-28, §13): the first
+four readings could not see the mTLS channel. At the measured commit:
 
-- **0 rising series** (233: 28). See §5.
-- **80/80** sweep cells agree with the independent spec-first closed form.
-- **644/644** term and branch probes agree.
+- **0 rising series** over 25 (rung, reading) groups (233: 28 over 20). See §5.
+- **100/100** sweep cells agree with the independent spec-first closed form (80/80 before the
+  review added `rows_mtls`).
+- **647/647** term and branch probes agree (644 before the review's three new branch probes).
 - `KNOWN_DISAGREEMENTS` is empty.
 
 **999.120 is closed by this change.** The scoring-4.0 commit is
@@ -39,6 +42,10 @@ and its `known_open_defect` row in `tests/skip_registry.py`. The commits that co
 | Re-pins, same property with a new number (D-10) | `0abc928182229026007af38e59b9287c11a65c90` |
 | Semantic rewrites (D-10, D-26) | `1f4b988bb9970f0f2f531696b27e1a9eab216c9a` |
 | 999.113 closed as moot (D-12) | `f2379a8428a87ca7b21463b968c29dacc7f672af` |
+| Review: spec-first closed form for D-28/D-29/D-30 + `rows_mtls` reading (red) | `55ce5d18c8ca1cd3f36279022129d7222be96dc0` |
+| Review: mTLS presence credit (D-28) | `e987c1e092db2033a9f2d37628d9affbeb8b302c` |
+| Review: undetermined-key -8 independent of PQC (D-29) | `0c51d456dd5d4b06300a207c71367681f3385200` |
+| Review: Kerberos scan-error rows not identity evidence (D-30) | `53c8a46096b6143745ed15a4220a38ecdb84bc2e` |
 
 **Scoring version 3.0 -> 4.0 (D-05).** `SCORING_VERSION = "4.0"`, with the note "scoring v4 — not
 comparable with v3 or earlier scores". Trends and compare re-score stored endpoints live, so they
@@ -50,10 +57,11 @@ read 4.0 throughout. Persisted values keep the version they were recorded with. 
 
 | Field | Value |
 |-------|-------|
-| Measured commit (`SHA_06_MEASURED`) | `f2379a8428a87ca7b21463b968c29dacc7f672af` (branch `v528-open`) |
-| Tree state | `provenance.dirty: false`; `git status --porcelain -- quirk/intelligence scripts/p2b_closed_form.py scripts/p2b_instrument.py` was empty |
-| `scoring_blob` | `2291239ee9271beac8b3ad5adee6a2f4bfa8a392` (233: `25f0f7912202dd5192a5634ac3b2f04578608912`) |
-| `evidence_blob` | `8f2edfa1336b490aa8a4ed161c537d5939df155a` |
+| Measured commit (after the code review, `SHA_REVIEW_MEASURED`) | `7d9594633579549058e18a6ca07f45816b4c48de` (branch `v528-open`) |
+| First measured commit (`SHA_06_MEASURED`) | `f2379a8428a87ca7b21463b968c29dacc7f672af`; every value it measured is reproduced at `7d959463` (§13) |
+| Tree state | `provenance.dirty: false`; `git status --porcelain -- quirk scripts tests` was empty |
+| `scoring_blob` | `b00b6f6f3f3004e3ec48f7c332c8add64d2c7ded` (pre-review 234: `2291239ee9271beac8b3ad5adee6a2f4bfa8a392`; 233: `25f0f7912202dd5192a5634ac3b2f04578608912`) |
+| `evidence_blob` | `3c85314c08fd75d08c5b8302be1424cc9409479e` (pre-review 234: `8f2edfa1336b490aa8a4ed161c537d5939df155a`) |
 | Python | 3.14.10 (local `.venv`; CI runs 3.11, and the scratch scripts are 3.11-safe) |
 | Date | 2026-10-27 |
 | 233 baseline | head `2571917018452c10d595d35700b830a7678d0438`, `233-measurement.json` |
@@ -75,14 +83,20 @@ These are D-01..D-04 and D-11, as committed in `23ef4228`.
   size is removed. The research probe found that every N_ref from 5 to 100 passes the bands,
   because ceilings dominate the emitted scores. The bands therefore cannot select N_ref, and 40 is
   an operator choice. The consequence is small-estate lenience (§10).
-- **D-02, mTLS.** The +6 mTLS bonus becomes the same curve with a positive sign (an absolute count
-  that saturates at N_REF).
+- **D-02, mTLS, corrected by D-28.** D-02 made the +6 mTLS bonus the same curve with a positive
+  sign (an absolute count that saturates at N_REF). The code review showed that this kept a
+  scan-depth reward: every further mTLS-enforcing endpoint raised identity_trust. Under **D-28** it
+  is a **presence credit**: +6 once when any mTLS endpoint is observed, the same single-step shape
+  as the PQC credit. The 35 count sites became 34 count terms plus one presence term (§13).
 - **D-03, scan errors.** The two scan-error sites (hygiene w6, modern_tls w5) used to read
   `scan_error.rate = scan_error_count / total_endpoints`. They now read `scan_error.count` through
   the curve. A non-comment `get("rate"` appears 0 times in `scoring.py`.
 - **D-04, the key-type rule.**
   - Any classical certificate key (RSA, ECDSA, EdDSA): flat −8, not count-based.
-  - Certificates observed with no key type and no PQC key (`elif C > 0 and PQC == 0`): also −8.
+  - Certificates observed with no determined key type: also −8. The rule was written
+    `elif C > 0 and PQC == 0` (RESEARCH D-06 step 5). **D-29 corrected it** to `elif C > PQC`,
+    independent of PQC, because one PQC certificate exempted every undetermined one beside it
+    (§13).
   - The ECDSA +4 bonus is removed (O-2: classical ≠ ready).
   - A PQC or hybrid certificate key, from the new evidence bucket `cert_key_type_counts.PQC`
     (O-4), earns the existing PQC credit. That credit is +8, granted **once**, when
@@ -97,7 +111,11 @@ These are D-01..D-04 and D-11, as committed in `23ef4228`.
   `service_detail` is a placeholder. Evidence counts it in `kerberos_placeholder_count`, and the
   identity gate uses `max(0, KERBEROS - kerberos_placeholder_count)`. So a placeholder alone no
   longer marks identity as assessed. Todo `261023-detect-kerberos-placeholder-rows-count-as-assessed`
-  was closed in `23ef4228`. The evidence schema is now 1.3.0.
+  was closed in `23ef4228`. The evidence schema went to 1.3.0.
+- **D-30 (code review), Kerberos scan-error rows.** A KERBEROS row that carries a `scan_error`
+  (unreachable or never-probed KDC, unrecognised reply, KRB-ERROR) is not identity evidence either.
+  Evidence counts it in `kerberos_scan_error_count` (schema 1.4.0), and the identity gate subtracts
+  it with the placeholders.
 
 `SCORE_WEIGHTS` has 40 keys summing to 293.0, pinned by `tests/test_score_weights_invariant.py`.
 
@@ -114,6 +132,10 @@ data_in_motion.
 | R3 | 46/85 | consequence 54 | 22/23/16/17/25/25 | **46/85** | consequence 54 | 22/23/16/17/25/25 | (84, pqc_readiness) |
 | R4 | 24/72 | consequence 34 | 15/18/11/16/23/25 | **24/72** | consequence 34 | 15/18/11/16/23/25 | (84, pqc_readiness) |
 | R5 | 18/71 | consequence 25 | 13/15/12/16/25/25 | **18/74** | consequence 25 | 14/15/16/16/25/25 | (84, pqc_readiness) |
+
+Re-measured at `7d959463` after the code-review fixes: every field of every rung is identical to the
+`f2379a84` measurement above. No rung carries mTLS between 1 and 39 endpoints, a PQC certificate
+beside undetermined ones, or a Kerberos scan-error row, so D-28/D-29/D-30 cannot move them.
 
 R1-R4 are identical to 233 in every field. That is the O-3 anchor working as intended: each rung's
 skeleton population is 40. R5's computed score rises 71 -> 74 (hygiene +1, identity +4), while its
@@ -169,9 +191,29 @@ Source: `results[]` in both instrument files. Each cell is emitted/computed at +
 | R4 | 24/72 · 25/74 · 27/78 · 28/81 | 24/72 · 24/72 · 24/72 · 24/72 |
 | R5 | 18/71 · 18/74 · 20/78 · 20/82 | 18/74 · 18/74 · 18/74 · 18/74 |
 
+### rows_mtls (code review, D-28)
+
+Certless TLS 1.3 rows that enforce mTLS (`tls_blocker_reason` `MTLS_REQUIRED`, no scan error), on
+top of the rung plus a one-row seed, so +N is the rung plus 1 + N mTLS rows. The first mTLS
+observation is the sanctioned presence step (pinned by
+`tests/test_score_mtls_presence_credit.py`); this reading measures depth after it. 233 has no
+such reading.
+
+| Rung | pre-review 4.0 (count curve, 55ce5d18 red run) | 4.0 after D-28 (`7d959463`) |
+|------|-----------------------------------------------|-----------------------------|
+| R1 | 100/100 · 100/100 · 100/100 · 100/100 | 100/100 · 100/100 · 100/100 · 100/100 |
+| R2 | 79/94 · 80/95 · 80/95 · 80/95 | 80/95 · 80/95 · 80/95 · 80/95 |
+| R3 | 46/86 · 48/89 · 48/89 · 48/89 | 48/89 · 48/89 · 48/89 · 48/89 |
+| R4 | 25/73 · 26/75 · 26/76 · 26/76 | 26/76 · 26/76 · 26/76 · 26/76 |
+| R5 | 19/75 · 19/77 · 20/78 · 20/78 | 20/78 · 20/78 · 20/78 · 20/78 |
+
+Identity at every point after D-28: R1 25, R2 25, R3 22, R4 17, R5 22.
+
 ### Gate figures (criterion 4)
 
-- **Rising (rung, reading, emitted|computed) series: 233 = 28, 234 = 0.** The 28 is recomputed here
+- **Rising (rung, reading, emitted|computed) series: 233 = 28, 234 = 0.** After the code review the
+  count is over 25 groups, `rows_mtls` included: still 0. On the pre-review scorer `rows_mtls` gave 8
+  rising series (10 rising transitions, §13). The 28 is recomputed here
   from `233-measurement.json` by `diff233.py`, and it matches 234-01's independent count on the
   3.0 baseline. The plan's verify assertion (80 results, all agree, no disagreement, 0 rising)
   exited 0.
@@ -179,9 +221,10 @@ Source: `results[]` in both instrument files. Each cell is emitted/computed at +
   or an R5 cell whose computed score moved 71 -> 74 at +0.
 - **Closed-form agreement: 80/80** sweep cells (instrument `agreement {'agree': 80, 'total': 80}`)
   and **644/644** term and branch probes (`tests/test_p2b_instrument.py::_all_probes`, 0
-  `_differs`), at `f2379a84`.
+  `_differs`), at `f2379a84`. At `7d959463`: **100/100** cells and **647/647** probes.
 - Gate nodes at `f2379a84`: `tests/test_p2b_instrument.py` (15 nodes), the P2b property
-  ×3 (no xfail) and the O-6 pin ×3 gave **21 passed**.
+  ×3 (no xfail) and the O-6 pin ×3 gave **21 passed**. At `7d959463` the same set plus the mTLS
+  presence pin gave **22 passed**.
 - `projection_gaps` are unchanged in kind: `protocol_counts.TLS` and `totals.endpoints` differ
   between the dict ladder and the row skeleton, as in 233 §8.
 
@@ -209,13 +252,12 @@ On 4.0, each rung plus 4 `scan_error="timeout"` TLS rows, with the healthy ECDSA
 All five series are flat in emitted, computed, hygiene and modern_tls. The measurement matches the
 prediction.
 
-**Residual (a), disclosed and not fixed here.** The roadmap item "Increase scan coverage" still
-**triggers** on `scan_error.rate` (`rate >= 0.2` in `quirk/intelligence/roadmap.py`), and its why
-text also uses the rate. Scoring 4.0 scores `scan_error.count`. The item's **lift** is correct:
-`score_lift._resolve_scan_reliability` zeroes the count (`fab63af4`). Only the trigger condition
-still follows the old input. As a result, a large estate with a few scan errors (low rate, count
-penalised) does not get the item, while a small estate with a high rate does. This was recorded as
-a 234-05 handoff and is a candidate follow-up. No todo has been filed for it yet.
+**Residual (a) is fixed by the code review (D-31, `f48862da`).** The roadmap item "Increase scan
+coverage" used to trigger on `scan_error.rate >= 0.2` while 4.0 scores `scan_error.count`. It now
+triggers on `scan_error.count > 0`, the scorer's input; the rate stays in the why text only. The
+hygiene driver label "Scan error rate" is now "Scan errors". Probe (R3 with 40 scan errors among
+250 endpoints, rate 0.16): the item was absent; now it is present with a +4 lift (42 -> 46), equal
+to an independent rescore with the count zeroed.
 
 ## 7. Real estate (local-only)
 
@@ -239,6 +281,12 @@ a `mode=ro` URI and copies it via `Connection.backup` into a `mkdtemp` directory
 
 **Prediction vs measurement.** RESEARCH predicted snapshot_rows 18/71 flat and recorded_json +
 mutator 16/64 flat. The measurement matches.
+
+**Re-measured after the code review (`7d959463`):** identical at every point, with the same
+subscores and cap reasons. The estate has no mTLS endpoint, no KERBEROS row and RSA keys present,
+so D-28/D-29/D-30 do not reach it (§13). Because the real-estate score did not move, the D-13
+CLI-vs-dashboard check below (18 on both surfaces) was not re-run: both surfaces call the same
+`compute_readiness_score`, and its result for this scan is unchanged.
 
 **Canonical DB integrity**, for `quirk-output/quirk.db`:
 
@@ -321,7 +369,8 @@ within 3 s. It was stopped with `kill` on its PID. Afterwards:
 
 ## 9. Test changes (D-10)
 
-**All six semantic changes**, each with its one-line justification and owning commit:
+**All nine semantic changes** (six from plans 234-01..05, three from the code review), each with
+its one-line justification and owning commit:
 
 1. **`tests/test_p2b_instrument.py::test_continuity_reproduces_212`** — flat (D-08). Under 3.0 this
    node pinned 212's rising continuity reading, 71 -> 74 -> 78 -> 82, which was the defect itself.
@@ -349,6 +398,25 @@ within 3 s. It was stopped with `kill` on its PID. Afterwards:
    — the fixture goes from 1 ADCS row to 3 ESC1 rows. The penalty is 2 × √(n/40) < 0.5 for
    n ≤ 2, so it rounds away (O-3 small-estate lenience). Measured identity: 25 at n = 1 and 2, 24
    at n = 3 and 4. A one-row "is assessed" assertion was added. Commit `1f4b988b…` (234-05).
+7. **`tests/test_qramm_scoring.py::test_maturity_label_no_gaps_no_overlaps`** (code review D-31,
+   WR-05) — the valid label set gains "Below Basic", because 0.0 and 0.5 sit below CSNP's Basic
+   floor of 1.0. The property, every score maps to exactly one label, is unchanged. Commit
+   `6e865f5f08ae1613348859577d817deb81ffb6c4`.
+8. **`tests/test_qramm_scoring.py::test_maturity_label_covers_all_five_levels`** (D-31) — still
+   requires all five CSNP labels, and now also requires that the only other label the sweep sees is
+   "Below Basic". The name is kept: it is still true, and UAT-SERIES cites it. Commit `6e865f5f…`.
+9. **`tests/test_qramm_scoring.py::test_overall_mean_over_assessed_dimensions_only`** (D-31) — the
+   0.6667 mean's maturity is "Below Basic", not "Basic". Commit `6e865f5f…`.
+
+**Re-pins from the code review: none.** D-28, D-29 and D-30 moved no pinned value: the 134
+score-adjacent test files (every test file importing the scorer, evidence, roadmap, score lift or
+the instrument) gave 1910 passed, 22 skipped, 1 xfailed with no edit after `53c8a460`.
+
+**Code-review shape changes (not re-pins, not semantic):** `tests/test_p2b_instrument.py` asserts
+34 `COUNT_TERMS` plus one `PRESENCE_TERMS` row (was 35 count terms), 5 readings and 50 D-10 cells
+(was 4 and 40), 25 non-increase groups (was 20), and has three new branch probes
+(`kerberos-scan-error-only`, `undetermined-39-with-pqc-1`, `all-certs-pqc`; the last two carry two
+saturated agility penalties so the -8 is not hidden by the clamp). Commit `55ce5d18`.
 
 **Re-pins: 9** (same property, new number). They are rows 8-16 of 234-05's D-10 table: XSURF
 0508 73 -> 76, XSURF07 trend/merge 32 -> 33, XSURF07 compare 31 -> 30, evidence-coverage
@@ -455,9 +523,16 @@ property with a new call shape or field set:
   RESEARCH's 84 -> 80.
 
 The five follow-up todo paths above are **planned**. Plan 234-08 files them under the successor
-HORIZON row 999.139, and none of them exists at `f2379a84`. A todo for residual (a), the
-roadmap-trigger rate, and one for residual (b), the unreachable scorecard legacy branch, are not
-yet planned. Both are recommended to 234-08.
+HORIZON row 999.139, and none of them exists at `f2379a84`. Residual (a), the roadmap-trigger
+rate, is **fixed** (D-31, §6, §13), so it needs no todo. A todo for residual (b), the unreachable
+scorecard legacy branch, is not yet planned and is recommended to 234-08 (code review IN-07
+confirmed it and requires no fix now).
+
+- **Removed by the code review: the mTLS depth channel.** Under D-02 the mTLS bonus was a count
+  curve, so healthy mTLS-enforcing endpoints raised identity_trust up to N_REF; this record's
+  earlier "0 rising series" did not name that channel because no reading carried mTLS. D-28 made it
+  a presence credit and `rows_mtls` gates it (§5, §13). The first mTLS observation remains a
+  deliberate single step, like the PQC credit and O-6.
 
 ## 11. Mutation evidence
 
@@ -482,6 +557,14 @@ reverted. After every revert, the scoped porcelain was empty.
 | 234-04 | M4-TS / M5-TS legacy reads current | "a score saved before the upgrade shows Recalculate instead of an overall maturity level" | RED |
 | 234-04 | M6-TS stale checked before not-assessed | same legacy test | first run **SURVIVED**, which exposed a real gap; fixed in `279c1088`; RED after the fix |
 | 234-04 | M7-TS drop the per-dimension missing-count guard | "a saved score missing one dimension's count reads that dimension Stale, never Self-assessed" | RED |
+| Review | M1-PY `overall_state` ignores `stale` | `tests/test_qramm_assessment_parity.py::test_stale_case_rows_and_session_flag_match_contract` | RED (`'current' == 'stale'`) |
+| Review | M2-TS `overallDisplayState` ignores `stale` | vitest "a stale saved score reads Stale on every QRAMM surface, never Self-assessed" | RED (scorecard "0.67 / Basic / 3 of 4 dimensions assessed") |
+| Review | M3-TS print suppresses only `recalculate` | same vitest case | RED (print "Overall maturity: Basic (0.67) — 3 of 4 dimensions assessed") |
+| Review | M4-PY drop the "Below Basic" row from `OVERALL_MATURITY_LEVELS` | `tests/test_qramm_assessment_parity.py::test_overall_maturity_mapping_matches_contract` | RED (table differs from the contract) |
+| Review | M5-TS drop the "Below Basic" row from the TS twin | vitest "the overall maturity label comes from the shared mapping, so a mean below 1.0 never reads Basic" | RED (received "Basic") |
+
+The scorer changes D-28, D-29 and D-30 were each red first against a dedicated node (and the
+closed form disagreed with the scorer until each landed, §13), so they need no separate mutation.
 
 234-05 recorded no mutation table of its own. Its semantic rewrites were checked by assertion
 counts: 3 assertions removed and 4 added, so none was dropped.
@@ -490,8 +573,9 @@ counts: 3 assertions removed and 4 added, so none was dropped.
 
 - **A rising series** on any (rung, reading) at any point, in emitted or computed, when
   `python -m scripts.p2b_instrument --json` is re-run on a later commit with
-  `scoring_blob 2291239e…` unchanged. `test_p2b_non_increase_all_rungs_all_readings` would fail.
-- **A closed-form disagreement**: a sweep cell or one of the 644 probes where `scripts/p2b_closed_form.py`
+  `scoring_blob b00b6f6f…` unchanged (`rows_mtls` included). `test_p2b_non_increase_all_rungs_all_readings`
+  would fail.
+- **A closed-form disagreement**: a sweep cell or one of the 647 probes where `scripts/p2b_closed_form.py`
   and `compute_readiness_score` differ, or a non-empty `KNOWN_DISAGREEMENTS`.
 - **CLI != dashboard** on this run or any other: the report pipeline and `/api/scan/latest`
   differing on score, cap reason, subscores or scoring_version for the same `scan_id`.
@@ -504,15 +588,88 @@ counts: 3 assertions removed and 4 added, so none was dropped.
   mean a measurement wrote to it.
 - **A scan-error row raising any rung** under a healthy sweep (D-03 regressed).
 
+## 13. Review fixes D-27..D-31
+
+The code review (`234-REVIEW.md`, 1 critical, 5 warnings, 7 info) was dispositioned by the operator
+as D-27..D-31 (`234-CONTEXT.md`, "Locked after code review"). Every scorer change went spec-first:
+`scripts/p2b_closed_form.py` was updated from the decision text in `55ce5d18`, committed red, and
+only then was `quirk/intelligence/scoring.py` changed.
+
+**SCORING_VERSION stays "4.0".** D-28, D-29 and D-30 change three 4.0 rules. Scoring 4.0 has not
+been released (Phase 235 releases v5.28.0), so these are corrections inside 4.0, not a 4.1. Any 4.0
+value persisted on a development machine before `53c8a460` used the pre-review rules; no released
+artifact carries one.
+
+### Spec-first red run (`55ce5d18`, unchanged scorer)
+
+- `test_p2b_non_increase_all_rungs_all_readings`: RED, 10 rising transitions over 8 series, all
+  `rows_mtls` (R2 79/94 -> 80/95; R3 46/86 -> 48/89; R4 25/73 -> 26/75 -> 26/76;
+  R5 19/75 -> 19/77 -> 20/78).
+- `test_closed_form_agrees`: RED. Sweep agreement 93/100; the 7 disagreeing cells are `rows_mtls`
+  R2-R5 at +0 and R3-R5 at +20. First: R2|rows_mtls|0, closed form 80/95 (identity 25), code 79/94
+  (identity 24).
+- `test_closed_form_term_probes`: RED (`kerberos_scan_error_count` absent from the empty evidence
+  summary). Behind it, 12 of 647 probes disagreed: `mtls_present_count` ×10 (values below N_REF on
+  R3 and R5), `kerberos-scan-error-only`, `undetermined-39-with-pqc-1`.
+- `test_healthy_rows_survive_a_later_clock`: RED (R3|rows_mtls|20 disagrees).
+
+Agreement then rose with each scorer commit: after D-28 (`e987c1e0`) 100/100 cells and 645/647
+probes; after D-29 (`0c51d456`) 646/647; after D-30 (`53c8a460`) **647/647**. No disagreement
+remained to diagnose, and `KNOWN_DISAGREEMENTS` stayed empty.
+
+### The fixes
+
+| Decision | Finding | Change | Red first (own invocation) | Commit |
+|----------|---------|--------|----------------------------|--------|
+| D-27 | CR-01 | A stale current-format QRAMM score shows its overall as "Stale — recalculate" on the scorecard and print; API `score_overall_state` gains `"stale"`; print consumes the server field | pytest stale-case parity `'current' == 'stale'`; pytest `overall_state(..., stale=)` TypeError; vitest stale case (scorecard "0.67 / Basic / 3 of 4 dimensions assessed") | `b92535d9` red, `831d76a3` fix, `747e3ec5` bundle |
+| D-28 | WR-03 | mTLS bonus = +6 once on presence | `test_first_mtls_endpoint_earns_the_presence_credit_once`: identity 11 -> 12 (expected 17) | `e987c1e0` |
+| D-29 | WR-02 | undetermined -8 when `C > PQC`, independent of PQC; roadmap trigger follows | `test_undetermined_keys_with_one_pqc_cert_never_beat_classical_keys`: agility 25 > 19; roadmap item absent for 39 undetermined + 1 PQC | `0c51d456` |
+| D-30 | WR-01 | `kerberos_scan_error_count` (schema 1.4.0) subtracted in the identity gate | evidence KeyError; `_not_probed_row` + 40 legacy-TLS rows made identity 25 | `53c8a460` |
+| D-31 | WR-04, IN-02 | "Increase scan coverage" fires on `scan_error.count > 0`; label "Scan errors"; comment corrected | R3 + 40/250 scan errors: item absent | `f48862da` |
+| D-31 | WR-05 | One overall maturity mapping (Python `OVERALL_MATURITY_LEVELS`, TS twin, contract `overall_maturity_levels`); a mean below 1.0 reads "Below Basic" | pytest ImportError and `'Basic' == 'Below Basic'`; vitest twin undefined and scorecard "Basic" | `c4754ac7` red, `6e865f5f` fix, `a8420515` bundle |
+| D-31 | IN-01 | skip-registry reason names the agility-below-cap test | — (text) | `e84e67be` |
+| D-31 | IN-03 | print consumes `scoreOverallState` | covered by D-27's vitest case | `831d76a3` |
+| D-31 | IN-04 | Python drops non-integer persisted counts (keeps integral floats, as JSON/JS cannot tell 3.0 from 3) | API parity case: SGRM/DPE read self-assessed | `c3c3e77d` |
+| D-31 | IN-05, IN-06 | PQC aliases DILITHIUM, FALCON, FN-DSA, FNDSA, SPHINCS; a PQC/composite name on a certless row lands in no bucket | 9 names PQC 0; certless composites RSA 1 / ECDSA 1 | `7d959463` |
+
+### What moved, measured
+
+- **Ladder (+0) and every pre-review sweep cell: nothing moved.** All 80 cells of the four original
+  readings, and all five dict rungs, are identical at `7d959463` to `f2379a84`.
+- **Real estate: nothing moved.** snapshot_rows + rows_ecdsa 18/71 and recorded_json + mutator_212
+  16/64 at every point, with the same subscores and cap reasons. The real estate has
+  `mtls_present_count` 0, no KERBEROS row, and 18 RSA keys, so none of D-28/D-29/D-30 applies.
+- **The review's own probes, pre-review 4.0 (scorer read-only from `git show cfde8c90`) vs now:**
+
+  | Probe | pre-review | now |
+  |-------|------------|-----|
+  | WR-03, dict R3 + 0/5/20/40 mTLS endpoints | 46/85, 47/87, 48/89, 48/89 | 46/85, 48/89, 48/89, 48/89 |
+  | WR-03, dict R4 + 0/5/20/40 | 24/72, 25/73, 26/75, 26/76 | 24/72, 26/76, 26/76, 26/76 |
+  | WR-03, dict R5 + 0/5/20/40 | 18/74, 19/76, 19/77, 20/78 | 18/74, 20/78, 20/78, 20/78 |
+  | WR-02, 40 certs + 40 UNKNOWN: 39 RSA + 1 PQC | 74 (agility 19) | 74 (agility 19) |
+  | WR-02, same: 39 undetermined + 1 PQC | **79 (agility 25)** | **74 (agility 19)** |
+  | WR-01, 40 legacy TLS | 68 (3 domains) | 68 (3 domains) |
+  | WR-01, same + `_not_probed_row` | **71 (4 domains, identity 25)** | **66 (3 domains, identity None)** |
+  | WR-04, R3 + 40 scan errors / 250 endpoints | 42, no item | 42, item with lift +4 |
+
+  The WR-03 rows now step once (0 -> first mTLS) and stay flat; the step is the sanctioned presence
+  credit. In the WR-01 row the remaining 68 -> 66 comes from the Kerberos row's own scan error (the
+  D-19 scan-error class), not from identity.
+- **QRAMM contract session:** overall 0.6667 now reads "Below Basic" (was "Basic"). In the stale
+  case the overall reads "Stale — recalculate" (was "0.67 · Basic · 3 of 4 dimensions assessed").
+
 ## Provenance appendix
 
 Untracked phase artifacts (local only), in `.planning/phases/234-p2b-scan-depth-fix-ladder-re-measurement/`:
 
-- `234-measurement.json` and `234-measurement.md`: the instrument at `f2379a84`.
+- `234-measurement.json` and `234-measurement.md`: the instrument at `7d959463` (overwritten after
+  the code review; the `f2379a84` copies are kept in scratch as
+  `/Volumes/Digs-1TB/tmp-pytest-234/fix-measure/*.pre-review.json`).
 - `234-measurement-diff.md`: all 80 cells, 233 vs 234, with the +0 ladder and the rising-series
   counts.
 - `234-real-estate.json` and `234-real-estate.md`: the instrument with `--real-db` and
-  `--real-json`.
+  `--real-json`, at `7d959463`. `234-measurement-diff.md` still compares 233 with the `f2379a84`
+  80-cell measurement, which `7d959463` reproduces cell for cell.
 - `234-residuals.md`: D-03, O-6, D-19, O-3, remediated multihost, R5 rounding.
 - `234-06-SUMMARY.md`.
 
@@ -535,4 +692,5 @@ Phase 234 commits: see the table in §1. Earlier plan commits: SCORE-10
 
 Canonical DB: `quirk-output/quirk.db`, sha256
 `990366f8346a644bd576ef6543376d7d647fa783a3d5cf78ff13cca79677b946`, the same before and after
-every read in this plan.
+every read in this plan, and again before and after the code-review re-measurement (size 5849088,
+mtime 1791847042, no sidecar; the instrument's temp directory was empty afterwards).
