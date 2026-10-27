@@ -75,7 +75,7 @@ and STATE (REL-07).
   were published.
 
 **What to carry forward.** DOC-04's 4.0% residual in deep reference docs is owned by `999.123`.
-The bundled JetBrains Mono is never served (W15, effort S). 118 `doc224` product-defect todos exist,
+The bundled JetBrains Mono was never served (W15); fixed in Phase 232 (`1197e608`), which mounts `/fonts`. 118 `doc224` product-defect todos exist,
 14 of them high priority and 117 with no owner field, so no gate polices them. The next milestone's
 PM review owes them an owner. `999.120` (P2b, P1, operator-reserved) is the v5.28 anchor.
 

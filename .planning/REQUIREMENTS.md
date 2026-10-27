@@ -40,6 +40,8 @@ HORIZON prose:
 5. **W15 predates the milestone.** `quirk/dashboard/api/app.py` mounts only `/assets` (`:161-167`)
    plus five root files (`:48`). The built CSS requests `/fonts/JetBrainsMono[wght].ttf`, which
    falls through to the SPA catch-all and returns `index.html`, even though the font files are built into `quirk/dashboard/static/fonts/`. Only the route is missing.
+   Fixed in Phase 232 (commit `1197e608`): a `/fonts` mount plus `.ttf` MIME registration, probed by
+   `tests/test_dashboard_fonts_route.py`.
 
 ---
 
@@ -123,7 +125,7 @@ HORIZON prose:
 
 ### Post-launch visible fixes (POLISH)
 
-- [ ] **POLISH-01**: The dashboard serves its bundled JetBrains Mono font: `/fonts/*` returns the
+- [x] **POLISH-01**: The dashboard serves its bundled JetBrains Mono font: `/fonts/*` returns the
       font file, not `index.html`, and a test probes it (audit W15).
 - [ ] **POLISH-02**: Every runtime `quirk-scanner[extra]` install hint is shell-safe when pasted into
       zsh, and the guard test covers every hint form, not only bare `quirk[` (todo
@@ -205,7 +207,7 @@ Deferred from this milestone with an owner:
 | QRAMM-18 | Phase 231 | Complete |
 | QRAMM-19 | Phase 231 | Complete |
 | QRAMM-20 | Phase 231 | Complete |
-| POLISH-01 | Phase 232 | Pending |
+| POLISH-01 | Phase 232 | Complete |
 | POLISH-02 | Phase 232 | Pending |
 | POLISH-03 | Phase 232 | Pending |
 | POLISH-04 | Phase 232 | Pending |
