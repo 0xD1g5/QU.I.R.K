@@ -63,6 +63,7 @@ import os
 import re
 import sqlite3
 import sys
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -684,6 +685,52 @@ def test_healthy_rows_are_healthy(inst):
                 f"{rung}: KERBEROS row {getattr(row, 'host', '?')} is a "
                 f"placeholder (service_detail={detail!r}, no 'etype:')"
             )
+
+
+def test_healthy_rows_survive_a_later_clock(inst, monkeypatch):
+    """CR-01: healthy rows stay healthy whatever today's date is.
+
+    ``derive_report_findings`` checks certificate expiry against the wall
+    clock, not against REF. A healthy notAfter tied to REF is a dated bomb:
+    once real time passes it, every healthy row derives a CRITICAL and the
+    instrument raises. Move the evaluator's clock 5+ years past REF and check
+    that the instrument still runs and no healthy row derives an expiry
+    finding of any severity.
+    """
+    fe = importlib.import_module("quirk.engine.findings_evaluator")
+    real_dt = fe.datetime
+    later = inst.REF + timedelta(days=5 * 366)
+
+    class _Meta(type):
+        def __instancecheck__(cls, obj):
+            return isinstance(obj, real_dt)
+
+    class _LaterClock(metaclass=_Meta):
+        @classmethod
+        def now(cls, tz=None):
+            return later.replace(tzinfo=tz)
+
+    monkeypatch.setattr(fe, "datetime", _LaterClock)
+
+    for kind in inst.HEALTHY_KINDS:
+        rows = [inst.healthy_row(i, kind) for i in range(20)]
+        findings = fe.derive_report_findings(rows)
+        bad = [
+            (f.get("severity"), f.get("title")) for f in findings
+            if str(f.get("severity", "")).upper() in ("CRITICAL", "HIGH")
+            or "expir" in str(f.get("title", "")).lower()
+        ]
+        assert not bad, (
+            f"clock {later.isoformat()}: healthy {kind} rows derive {bad}"
+        )
+
+    points = inst.run(points=(20,))
+    assert len(points) == len(inst.RUNGS) * len(inst.READINGS)
+    for point in points:
+        assert point["agrees"], (
+            f"clock {later.isoformat()}: {point['rung']}|{point['reading']}|20 "
+            "closed form disagrees"
+        )
 
 
 def test_cli_outputs_json_and_markdown(inst, capsys):

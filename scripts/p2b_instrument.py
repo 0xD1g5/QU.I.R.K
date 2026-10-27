@@ -121,6 +121,13 @@ REF = datetime(2026, 10, 1, 12, 0, 0)
 FUTURE = REF + timedelta(days=400)
 EXPIRED = REF - timedelta(days=30)
 EXPIRING = REF + timedelta(days=10)
+# Healthy certificates (CR-01). ``derive_report_findings`` checks expiry
+# against the WALL CLOCK, not REF, so a notAfter tied to REF (it was
+# REF + 400 d, 2027-11-05) turns every healthy row CRITICAL once real time
+# passes it. A fixed far-future date is neither expired nor expiring against
+# REF or against any plausible "now"; nothing in quirk/ checks validity
+# length, so the long lifetime moves no scored input.
+HEALTHY_NOT_AFTER = datetime(2099, 1, 1, 12, 0, 0)
 
 PQC_MARKER = "pqc-hybrid-detected"
 KERBEROS_DETAIL = "etype:18:aes256-cts-hmac-sha1-96:SAFE"
@@ -389,7 +396,7 @@ def healthy_row(i: int, kind: str = "ecdsa",
         cipher_suite=AEAD_CIPHER,
         cert_subject=f"CN={host}", cert_issuer="CN=P2b Issuing CA",
         cert_not_before=ref - timedelta(days=30),
-        cert_not_after=ref + timedelta(days=400),
+        cert_not_after=HEALTHY_NOT_AFTER,
         service_detail="",
     )
     if kind == "ecdsa":
