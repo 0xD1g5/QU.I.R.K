@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -33905,3 +33905,174 @@ Observable only after the v5.28.0 tag and upload: open https://pypi.org/project/
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_readme_links_pinned.py::test_readme_repo_links_pinned_to_pyproject_version`)
 **Date:** 2026-10-27  **Tester:** automated
 **Notes:** The live leg can only be observed after the v5.28.0 tag and the PyPI upload, so it is handed to Phase 235 LAUNCH-03, the fresh-install and README smoke, per D-13. It is not a Phase 232 gap. Phase 232 proves the offline invariant through the substitute: every link is absolute and pinned to the version the release will carry, and UAT-232-07 proves each pinned path exists. Plan 232-04 also sent `curl -sI` to the 16 unique pinned GitHub URLs, fragments dropped, and all 16 returned HTTP 200 on 2026-10-27; no PyPI page was checked.
+
+## Series 233: P2b Measurement Instrument (Phase 233 — v5.28)
+
+**Last Updated:** 2026-10-27 (Phase 233)
+
+### UAT-233-01: The P2b instrument emits one result per rung, reading and point, and writes JSON and Markdown with provenance
+
+**ID:** UAT-233-01
+**Title:** The P2b instrument emits one result per rung, reading and point, and writes JSON and Markdown with provenance
+**Maps to:** SCORE-08
+
+**What to test:** `scripts/p2b_instrument.py` produces exactly one result for every calibration rung (R1-R5) x reading (rows_ecdsa, rows_rsa, rows_certless, mutator_212) x healthy-row point; its CLI writes a JSON report with a provenance block (head sha, scoring and evidence blob ids) and a Markdown report with the per-reading tables.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_emits_row_per_rung_per_point \
+  tests/test_p2b_instrument.py::test_cli_outputs_json_and_markdown
+```
+
+**Pass Criteria:** The run reports 2 passed.
+
+**Result:** - [x] PASS (2026-10-27 2 passed — covered by `tests/test_p2b_instrument.py::test_emits_row_per_rung_per_point` and `tests/test_p2b_instrument.py::test_cli_outputs_json_and_markdown`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 233-01 (fail-first contract, commit 8838a034) and 233-03 (instrument, commits 2ba32f63 and 25719170). The full default sweep is 80 results: 5 rungs x 4 readings x 4 points (+0, +20, +100, +500).
+
+### UAT-233-02: The row-built rungs reproduce the dict calibration ladder at +0
+
+**ID:** UAT-233-02
+**Title:** The row-built rungs reproduce the dict calibration ladder at +0
+**Maps to:** SCORE-08
+
+**What to test:** Each rung rebuilt as synthetic endpoint rows plus findings and assembled through `build_evidence_summary` scores the same emitted value, computed value and subscores as the dict ladder in the score-property tests, with no projection gap on a score-relevant field.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_rows_reproduce_dict_ladder_at_zero
+```
+
+**Pass Criteria:** The run reports 1 passed.
+
+**Result:** - [x] PASS (2026-10-27 1 passed — covered by `tests/test_p2b_instrument.py::test_rows_reproduce_dict_ladder_at_zero`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 233-03 (commit 2ba32f63). Measured +0 ladder, emitted/computed, from the decision record `.planning/decisions/233-p2b-third-instrument-measurement.md` §4: R1 100/100 with no ceiling, R2 78/93 under the PQC-readiness ceiling 84, R3 46/85, R4 24/72 and R5 18/71 under the consequence ceilings 54, 34 and 25. The only projection gaps are score-irrelevant (protocol_counts.TLS and totals.endpoints).
+
+### UAT-233-03: The closed form is independent of the audited code and agrees with it
+
+**ID:** UAT-233-03
+**Title:** The closed form is independent of the audited code and agrees with it
+**Maps to:** SCORE-08
+
+**What to test:** `scripts/p2b_closed_form.py` imports nothing from `quirk` (static AST check and a dynamic subprocess check), agrees with the scorer on every term probe, and agrees with the emitted and computed score, subscores and ceiling source at every sweep point, with any disagreement required to be listed in `KNOWN_DISAGREEMENTS`.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_closed_form_agrees \
+  tests/test_p2b_instrument.py::test_closed_form_term_probes \
+  tests/test_p2b_instrument.py::test_closed_form_is_independent
+```
+
+**Pass Criteria:** The run reports 3 passed.
+
+**Result:** - [x] PASS (2026-10-27 3 passed — covered by `tests/test_p2b_instrument.py::test_closed_form_agrees` and `tests/test_p2b_instrument.py::test_closed_form_term_probes` and `tests/test_p2b_instrument.py::test_closed_form_is_independent`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 233-02 (closed form, commit 35099410) and 233-03. Agreement: 80 of 80 sweep points and 8 of 8 real-estate cells; `KNOWN_DISAGREEMENTS` is empty; 395 term probes with 0 disagreeing. Mutation table, record §7: M1 exponent 0.5 to 0.55 turned test_closed_form_agrees red with 58 of 80 points disagreeing; M2 top-good ceiling 84 to 85 turned it red with 16 of 80; M3 the R3 expired count turned test_rows_reproduce_dict_ladder_at_zero red; M4 and M4b, a quirk import and a string naming the audited file, turned test_closed_form_is_independent red; M5 and M6 turned test_closed_form_term_probes red. Every mutation was reverted and byte-identity confirmed. Agreement validates the instrument's reading of the scorer, not whether the scorer matches its intent.
+
+### UAT-233-04: The continuity reading reproduces Phase 212's R5 values and ceiling identification is consistent
+
+**ID:** UAT-233-04
+**Title:** The continuity reading reproduces Phase 212's R5 values and ceiling identification is consistent
+**Maps to:** SCORE-08
+
+**What to test:** The mutator_212 reading reproduces Phase 212's recorded R5 computed values, 71 at +0 and 74 at +20; at every point the winning ceiling explains the emitted score as a linear squeeze of the computed score.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_continuity_reproduces_212 \
+  tests/test_p2b_instrument.py::test_ceiling_identification_consistent
+```
+
+**Pass Criteria:** The run reports 2 passed.
+
+**Result:** - [x] PASS (2026-10-27 2 passed — covered by `tests/test_p2b_instrument.py::test_continuity_reproduces_212` and `tests/test_p2b_instrument.py::test_ceiling_identification_consistent`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 233-03. Measured mutator_212 R5: 18/71, 18/74, 20/78, 20/82 at +0, +20, +100, +500, identical cell for cell to rows_certless. The winning ceiling is constant on every rung across all 16 cells, which is the basis of the record's ruling that no ceiling-shaped candidate can fix the dilution.
+
+### UAT-233-05: The healthy rows are healthy, carry no Kerberos placeholder, and the real-DB snapshot is read-only
+
+**ID:** UAT-233-05
+**Title:** The healthy rows are healthy, carry no Kerberos placeholder, and the real-DB snapshot is read-only
+**Maps to:** SCORE-08
+
+**What to test:** Adding healthy rows adds no weakness finding and no rung carries a Kerberos placeholder row (D-15); the real-estate snapshot path copies the source database and leaves its sha256 unchanged (D-08).
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_healthy_rows_are_healthy \
+  tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only
+```
+
+**Pass Criteria:** The run reports 2 passed.
+
+**Result:** - [x] PASS (2026-10-27 2 passed — covered by `tests/test_p2b_instrument.py::test_healthy_rows_are_healthy` and `tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 233-03. The read-only node builds its own throwaway SQLite source under the test's temp dir, so it runs in CI without `quirk-output/`. Record §11 adds one finding outside this node: each certificate-bearing healthy row adds one unscored MEDIUM quantum-vulnerable key finding, so the primary reading's "healthy" endpoint is not free of quantum risk; this is listed as an open question for Phase 234.
+
+### UAT-233-06: The measurement record exists, is tracked, and names the measured sha, the tables, the verdict and the effort
+
+**ID:** UAT-233-06
+**Title:** The measurement record exists, is tracked, and names the measured sha, the tables, the verdict and the effort
+**Maps to:** SCORE-08 (Success Criteria 2 and 3)
+
+**What to test:** `.planning/decisions/233-p2b-third-instrument-measurement.md` is git-tracked and carries the measured head sha, both audited blob ids, the per-rung tables for all four readings, the closed-form diff and `KNOWN_DISAGREEMENTS`, the local-only real-estate reading, the verdict, the effort and the Phase 234 gate.
+
+**Steps:**
+```
+f=.planning/decisions/233-p2b-third-instrument-measurement.md
+for s in R1 R2 R3 R4 R5 "RESEARCH Q4" "__builtins__" "sys.modules" rows_ecdsa rows_rsa rows_certless \
+  mutator_212 Verdict Effort 25f0f7912202dd5192a5634ac3b2f04578608912 73c48a36bb9e057d1e3f61732568d816ac3440ee \
+  "Phase 234" 999.113-domain-connector-ratio-denominator-is-approximate Kerberos "xfail(strict=True)" \
+  "local-only" KNOWN_DISAGREEMENTS 2571917018452c10d595d35700b830a7678d0438; do
+  grep -q -- "$s" "$f" || echo "missing: $s"; done
+git ls-files --error-unmatch "$f"
+```
+
+**Pass Criteria:** No `missing:` line is printed (23 of 23 tokens found) and `git ls-files` prints the record's path.
+
+**Result:** - [x] PASS (2026-10-27 23 of 23 tokens found and the record is tracked — grep evidence, no test node)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 233-04 (commit 1b261ffa; the doc pointer in `docs/report-interpretation.md` is commit 5f46d121). Measured at 2571917018452c10d595d35700b830a7678d0438, which is commit 25719170. Verdict line, record §11: "None of 212's three candidates is supported, and no ceiling-shaped candidate can be." The data point to a new two-part shape: denominator-free absolute-count penalties at the 35 E and C ratio sites, plus a key-type rule that does not reward a single healthy observation. That shape is analytic, not measured. Effort: L. This case proves the record's content is present; whether the verdict follows from its tables is the verifier's interpretive check, recorded as the manual row in `233-VALIDATION.md`.
+
+### UAT-233-07: The P2b defect stays recorded and open, and the scoring code is unchanged
+
+**ID:** UAT-233-07
+**Title:** The P2b defect stays recorded and open, and the scoring code is unchanged
+**Maps to:** SCORE-08 (Success Criteria 3 and 4), CONTEXT D-14
+
+**What to test:** Phase 233 measures the defect and does not fix it. The p2b property test still xfails strict, its skip-registry row is still `known_open_defect`, and `scoring.py` and `evidence.py` are byte-unchanged since the phase base e0064b02.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q tests/test_score_properties.py tests/test_skip_registry.py
+.venv/bin/python -m pytest -q tests/test_score_properties.py -k p2b
+git diff e0064b02..HEAD -- quirk/intelligence/scoring.py quirk/intelligence/evidence.py | wc -l
+grep -c "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints\", \"known_open_defect\"" tests/skip_registry.py
+```
+
+**Pass Criteria:** The first run reports `48 passed, 3 xfailed`; the second reports `24 deselected, 3 xfailed`; the diff prints `0`; the grep prints `1`.
+
+**Result:** - [x] PASS (2026-10-27 48 passed, 3 xfailed; p2b-only 3 xfailed; scoring diff 0 lines; registry row 1 — known-open-defect record, mirroring UAT-212-02)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** This is PASS as a known-open-defect record, the same disposition UAT-212-02 uses: the xfail is the correct, by-design outcome for a measurement phase, not an unfinished item. No xfail node is cited, because a citation is executed and an xfail is not a pass. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` stays `xfail(strict=True)` until Phase 234 (SCORE-09) implements a fix and gates it on the instrument across all five rungs and four readings (D-20). The wider diff over `tests/test_score_properties.py`, `tests/test_score_denominator_999_113.py` and `tests/skip_registry.py` since e0064b02 also prints `0`.
+
+### UAT-233-08: The local-only real-estate reading runs against a read-only snapshot of the canonical DB
+
+**ID:** UAT-233-08
+**Title:** The local-only real-estate reading runs against a read-only snapshot of the canonical DB
+**Maps to:** SCORE-08, CONTEXT D-08
+
+**What to test:** The instrument's real-estate mode scores a snapshot of the canonical database and the recorded intelligence JSON at +0, +20, +100 and +500, writes only aggregate scores, and leaves the canonical database's sha256 unchanged.
+
+**Steps:**
+```
+.venv/bin/python -m scripts.p2b_instrument --real-db quirk-output/quirk.db \
+  --real-json quirk-output/intelligence-20260914-142606.json --markdown
+```
+
+**Pass Criteria:** The run prints the two real-estate readings, and the sha256 of `quirk-output/quirk.db` is equal before and after.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only`)
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** The real-estate reading is local-only. `quirk-output/` is gitignored and absent in CI, so no committed test runs the reading itself. The substitute node covers the read-only snapshot path only, against a throwaway database it builds, not the real-estate scores. The observed local values are recorded in the decision record §9 and in 233-03's and 233-04's SUMMARY files: run on 2026-10-27 at 25719170, recorded_json+mutator_212 scored 15/61 at +0 and 19/76 at +500, snapshot_rows+rows_ecdsa scored 17/69 at +0 and 23/91 at +500, all under the consequence ceiling 25, and the `quirk-output/quirk.db` sha256 was 990366f8346a644bd576ef6543376d7d647fa783a3d5cf78ff13cca79677b946 before and after. Only aggregate scores were written; no rows or hostnames.
