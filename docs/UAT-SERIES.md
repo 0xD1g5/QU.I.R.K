@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.27.0
-**Last Updated:** 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-10-27 (Phase 234 — P2b Scan-Depth Fix & Ladder Re-measurement, SCORE-09/SCORE-10. Series 234 added: 13 cases, 12 PASS and 1 SKIP, covering scoring 4.0 (absolute-count penalties at N_REF 40, the classical-key rule, the PQC certificate bucket, Kerberos placeholder and scan-error rows), the QRAMM overall over assessed dimensions with its stale and pre-upgrade states, and the code-review fixes D-27..D-31; UAT-234-13, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. UAT-233-07 and UAT-212-02 re-dispositioned as resolved by Phase 234 (PASS on the un-xfailed P2b node, their known-open-defect dispositions kept in Notes as history); UAT-233-03's probe count and UAT-233-04's continuity wording updated; UAT-60-04's Expected corrected for "Below Basic". No version bump. Prior: 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -9298,13 +9298,14 @@ All tests are automated (pytest). No chaos lab required.
 1. Run: `python -m pytest tests/test_qramm_scoring.py::test_maturity_label_no_gaps_no_overlaps tests/test_qramm_scoring.py::test_maturity_label_covers_all_five_levels -v`
 
 **Expected:**
-- 9-step sweep over [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] — each maps to one of {Basic, Developing, Established, Advanced, Optimizing}.
-- All five labels reachable across the sweep.
+- 9-step sweep over [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] — each maps to exactly one label: 0.0 and 0.5 map to "Below Basic" (a mean under Basic's 1.0 floor), and 1.0 to 4.0 map to one of {Basic, Developing, Established, Advanced, Optimizing}.
+- All five CSNP labels reachable across the sweep; "Below Basic" is the only other label seen.
 
 **Pass criteria:** 10 tests green (9 parametrized + 1 sanity); no gaps or overlaps in CSNP maturity scale.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-10  **Tester:** automated (pytest)
+**Notes:** Expected corrected 2026-10-27 (plan 234-08): until the Phase 234 code review, 0.0 and 0.5 fell through to "Basic", which is what this case's Expected used to say. Review fix D-31 WR-05 (`6e865f5f`) added "Below Basic" for a mean below 1.0, and both nodes were updated to assert it. Re-run 2026-10-27: 10 passed (observed sweep: 0.0 and 0.5 Below Basic, 1.0 Basic, 1.5 and 2.0 Developing, 2.5 and 3.0 Established, 3.5 Advanced, 4.0 Optimizing). Result line unchanged.
 
 ---
 
@@ -29638,33 +29639,34 @@ miss it (Section "Provenance appendix", "Scope audit" subsection).
 
 ---
 
-### UAT-212-02: The Defect Is Recorded Deferred, Not Fixed — `test_p2b_...` Still xfails Strict
+### UAT-212-02: The Defect Recorded Deferred by Phase 212 Is Resolved by Phase 234 — `test_p2b_...` Now Passes
 
 **ID:** UAT-212-02
-**Title:** The decision document states the defect is DEFERRED and `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`
-remains `xfail(strict=True)` at phase close, with zero changes under `quirk/` or `tests/`
-**Maps to:** DILUTE-01 (Success Criteria 3 and 4)
+**Title:** The decision document recorded the defect DEFERRED with `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`
+as `xfail(strict=True)` at Phase 212 close; Phase 234 has since fixed it, so the test passes and its registry row is gone
+**Maps to:** DILUTE-01 (Success Criteria 3 and 4); resolved by SCORE-09
 
-**What to test:** Success Criterion 4 forbids shipping any candidate's implementation this phase.
-This case verifies the standing regression instrument was not weakened and no production code moved.
+**What to test:** Phase 212 recorded the defect deferred and kept the regression instrument intact. Phase 234
+(scoring 4.0) implemented the fix that this case waited for; the decision record still says what Phase 212 decided.
 
 **Steps:**
 ```
 .venv/bin/python -m pytest tests/test_score_properties.py -q
-git status --porcelain -- quirk/ tests/
+grep -c "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints" tests/skip_registry.py
 grep -q "DEFERRED, NOT FIXED" .planning/decisions/212-score-dilution-denominator-decision.md
-grep -q "xfail(strict=True)" .planning/decisions/212-score-dilution-denominator-decision.md
 ```
 
-**Pass Criteria:** pytest reports `24 passed, 3 xfailed`, `git status --porcelain` on `quirk/` and
-`tests/` is empty, and the decision document states the defect is deferred, not fixed.
+**Pass Criteria:** pytest reports `27 passed` with no xfailed, the registry grep prints `0`, and the Phase 212
+decision document still records its deferral as history.
 
-**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-09-28  **Tester:** automated
-**Notes:** Verbatim tail confirmed `24 passed, 3 xfailed, 2 warnings in 0.21s`
-(`212-CRITERIA-EVIDENCE.md`, Section 1a). Both `tests/test_score_properties.py` and
-`tests/skip_registry.py` are byte-unchanged (`git diff --stat`, empty). This is the correct,
-by-design outcome for a measurement spike, not an unfinished item.
+**Result:** - [x] PASS (2026-10-27 27 passed; registry grep 0 — resolved by Phase 234, covered by `tests/test_score_properties.py::test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Re-dispositioned 2026-10-27 by plan 234-08 as resolved by Phase 234 (scoring 4.0,
+`23ef422875071113ca33e81c9eb63ce35d2db4de`; forward case UAT-234-01). History: on 2026-09-28 this case was
+PASS as a deferred-defect record — verbatim tail `24 passed, 3 xfailed, 2 warnings in 0.21s`
+(`212-CRITERIA-EVIDENCE.md`, Section 1a), with `tests/test_score_properties.py` and `tests/skip_registry.py`
+byte-unchanged — the correct, by-design outcome for a measurement spike. The former `git status --porcelain --
+quirk/ tests/` step was dropped, since later phases changed both trees on purpose.
 
 ---
 
@@ -33968,15 +33970,15 @@ Observable only after the v5.28.0 tag and upload: open https://pypi.org/project/
 
 **Result:** - [x] PASS (2026-10-27 3 passed — covered by `tests/test_p2b_instrument.py::test_closed_form_agrees` and `tests/test_p2b_instrument.py::test_closed_form_term_probes` and `tests/test_p2b_instrument.py::test_closed_form_is_independent`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-27  **Tester:** automated
-**Notes:** Plans 233-02 (closed form, commit 35099410) and 233-03. Agreement: 80 of 80 sweep points and 8 of 8 real-estate cells; `KNOWN_DISAGREEMENTS` is empty; 395 term probes with 0 disagreeing. Mutation table, record §7: M1 exponent 0.5 to 0.55 turned test_closed_form_agrees red with 58 of 80 points disagreeing; M2 top-good ceiling 84 to 85 turned it red with 16 of 80; M3 the R3 expired count turned test_rows_reproduce_dict_ladder_at_zero red; M4 and M4b, a quirk import and a string naming the audited file, turned test_closed_form_is_independent red; M5 and M6 turned test_closed_form_term_probes red. Every mutation was reverted and byte-identity confirmed. Agreement validates the instrument's reading of the scorer, not whether the scorer matches its intent.
+**Notes:** Plans 233-02 (closed form, commit 35099410) and 233-03. Agreement: 80 of 80 sweep points and 8 of 8 real-estate cells; `KNOWN_DISAGREEMENTS` is empty; 395 term probes with 0 disagreeing at Phase 233. Re-run 2026-10-27 on scoring 4.0 (Phase 234): 3 passed, and the test module's own `_all_probes` builds 647 term probes with 0 disagreeing, because the 4.0 spec added terms (see UAT-234-04). Mutation table, record §7: M1 exponent 0.5 to 0.55 turned test_closed_form_agrees red with 58 of 80 points disagreeing; M2 top-good ceiling 84 to 85 turned it red with 16 of 80; M3 the R3 expired count turned test_rows_reproduce_dict_ladder_at_zero red; M4 and M4b, a quirk import and a string naming the audited file, turned test_closed_form_is_independent red; M5 and M6 turned test_closed_form_term_probes red. Every mutation was reverted and byte-identity confirmed. Agreement validates the instrument's reading of the scorer, not whether the scorer matches its intent.
 
-### UAT-233-04: The continuity reading reproduces Phase 212's R5 values and ceiling identification is consistent
+### UAT-233-04: The continuity reading is flat on scoring 4.0 and ceiling identification is consistent
 
 **ID:** UAT-233-04
-**Title:** The continuity reading reproduces Phase 212's R5 values and ceiling identification is consistent
+**Title:** The continuity reading is flat on scoring 4.0 and ceiling identification is consistent
 **Maps to:** SCORE-08
 
-**What to test:** The mutator_212 reading reproduces Phase 212's recorded R5 computed values, 71 at +0 and 74 at +20; at every point the winning ceiling explains the emitted score as a linear squeeze of the computed score.
+**What to test:** The mutator_212 continuity reading is flat on scoring 4.0: R5's emitted and computed scores are the same at +0, +20, +100 and +500 (Phase 212's rising 71 at +0 and 74 at +20 under scoring 3.0 is history, and was the P2b defect). At every point the winning ceiling explains the emitted score as a linear squeeze of the computed score.
 
 **Steps:**
 ```
@@ -33988,7 +33990,7 @@ Observable only after the v5.28.0 tag and upload: open https://pypi.org/project/
 
 **Result:** - [x] PASS (2026-10-27 2 passed — covered by `tests/test_p2b_instrument.py::test_continuity_reproduces_212` and `tests/test_p2b_instrument.py::test_ceiling_identification_consistent`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-27  **Tester:** automated
-**Notes:** Plan 233-03. Measured mutator_212 R5: 18/71, 18/74, 20/78, 20/82 at +0, +20, +100, +500, identical cell for cell to rows_certless. The winning ceiling is constant on every rung across all 16 cells, which is the basis of the record's ruling that no ceiling-shaped candidate can fix the dilution.
+**Notes:** Plan 233-03. Measured at Phase 233 on scoring 3.0, mutator_212 R5: 18/71, 18/74, 20/78, 20/82 at +0, +20, +100, +500, identical cell for cell to rows_certless. Re-worded 2026-10-27 for Phase 234 (node name unchanged; plan 234-01 rewrote `test_continuity_reproduces_212` to assert flatness, D-08): re-run 2 passed, and the observed 4.0 reading is 18/74 at all four points. The winning ceiling is constant on every rung across all 16 cells, which is the basis of the record's ruling that no ceiling-shaped candidate can fix the dilution.
 
 ### UAT-233-05: The healthy rows are healthy, carry no Kerberos placeholder, and the real-DB snapshot is read-only
 
@@ -34037,27 +34039,26 @@ git ls-files --error-unmatch "$f"
 **Date:** 2026-10-27  **Tester:** automated
 **Notes:** Plan 233-04 (commit 1b261ffa; the doc pointer in `docs/report-interpretation.md` is commit 5f46d121). Measured at 2571917018452c10d595d35700b830a7678d0438, which is commit 25719170. Verdict line, record §11: "None of 212's three candidates is supported, and no ceiling-shaped candidate can be." The data point to a new two-part shape: denominator-free absolute-count penalties at the 35 E and C ratio sites, plus a key-type rule that does not reward a single healthy observation. That shape is analytic, not measured. Effort: L. This case proves the record's content is present; whether the verdict follows from its tables is the verifier's interpretive check, recorded as the manual row in `233-VALIDATION.md`.
 
-### UAT-233-07: The P2b defect stays recorded and open, and the scoring code is unchanged
+### UAT-233-07: The P2b defect recorded open by Phase 233 is resolved by Phase 234
 
 **ID:** UAT-233-07
-**Title:** The P2b defect stays recorded and open, and the scoring code is unchanged
-**Maps to:** SCORE-08 (Success Criteria 3 and 4), CONTEXT D-14
+**Title:** The P2b defect recorded open by Phase 233 is resolved by Phase 234
+**Maps to:** SCORE-08 (Success Criteria 3 and 4), CONTEXT D-14; resolved by SCORE-09
 
-**What to test:** Phase 233 measures the defect and does not fix it. The p2b property test still xfails strict, its skip-registry row is still `known_open_defect`, and `scoring.py` and `evidence.py` are byte-unchanged since the phase base e0064b02.
+**What to test:** Phase 233 measured the defect and left it open. Phase 234 (scoring 4.0) fixed it: the p2b property test now passes as an ordinary test, its skip-registry row is gone, and the score-property suite runs with no xfail.
 
 **Steps:**
 ```
 .venv/bin/python -m pytest -q tests/test_score_properties.py tests/test_skip_registry.py
 .venv/bin/python -m pytest -q tests/test_score_properties.py -k p2b
-git diff e0064b02..HEAD -- quirk/intelligence/scoring.py quirk/intelligence/evidence.py | wc -l
-grep -c "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints\", \"known_open_defect\"" tests/skip_registry.py
+grep -c "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints" tests/skip_registry.py
 ```
 
-**Pass Criteria:** The first run reports `48 passed, 3 xfailed`; the second reports `24 deselected, 3 xfailed`; the diff prints `0`; the grep prints `1`.
+**Pass Criteria:** The first run reports `51 passed` with no xfailed; the second reports `3 passed, 24 deselected`; the grep prints `0`.
 
-**Result:** - [x] PASS (2026-10-27 48 passed, 3 xfailed; p2b-only 3 xfailed; scoring diff 0 lines; registry row 1 — known-open-defect record, mirroring UAT-212-02)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-27 51 passed; p2b-only 3 passed, 24 deselected; registry grep 0 — resolved by Phase 234, covered by `tests/test_score_properties.py::test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-27  **Tester:** automated
-**Notes:** This is PASS as a known-open-defect record, the same disposition UAT-212-02 uses: the xfail is the correct, by-design outcome for a measurement phase, not an unfinished item. No xfail node is cited, because a citation is executed and an xfail is not a pass. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` stays `xfail(strict=True)` until Phase 234 (SCORE-09) implements a fix and gates it on the instrument across all five rungs and four readings (D-20). The wider diff over `tests/test_score_properties.py`, `tests/test_score_denominator_999_113.py` and `tests/skip_registry.py` since e0064b02 also prints `0`.
+**Notes:** Re-dispositioned 2026-10-27 by plan 234-08 as resolved by Phase 234: scoring 4.0 (`23ef422875071113ca33e81c9eb63ce35d2db4de`) removed the strict xfail and the `known_open_defect` registry row, and UAT-234-01 is the forward case. History: on 2026-10-27 at Phase 233 this case was PASS as a known-open-defect record mirroring UAT-212-02, with `48 passed, 3 xfailed`, p2b-only `24 deselected, 3 xfailed`, a scoring/evidence diff of 0 lines since e0064b02 and a registry row count of 1. The former step that diffed `scoring.py` and `evidence.py` against e0064b02 was dropped, since Phase 234 changed both on purpose.
 
 ### UAT-233-08: The local-only real-estate reading runs against a read-only snapshot of the canonical DB
 
@@ -34078,3 +34079,307 @@ grep -c "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints\", 
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only`)
 **Date:** 2026-10-27  **Tester:** automated
 **Notes:** The real-estate reading is local-only. `quirk-output/` is gitignored and absent in CI, so no committed test runs the reading itself. The substitute node covers the read-only snapshot path only, against a throwaway database it builds, not the real-estate scores. The observed local values are recorded in the decision record §9 and in 233-03's and 233-04's SUMMARY files: run on 2026-10-27 at 25719170, recorded_json+mutator_212 scored 15/61 at +0 and 19/76 at +500, snapshot_rows+rows_ecdsa scored 17/69 at +0 and 23/91 at +500, all under the consequence ceiling 25, and the `quirk-output/quirk.db` sha256 was 990366f8346a644bd576ef6543376d7d647fa783a3d5cf78ff13cca79677b946 before and after. Only aggregate scores were written; no rows or hostnames.
+
+## Series 234: P2b Scan-Depth Fix & Ladder Re-measurement (Phase 234 — v5.28)
+
+**Last Updated:** 2026-10-27 (Phase 234)
+
+### UAT-234-01: The P2b property passes without xfail and its skip-registry row is gone
+
+**ID:** UAT-234-01
+**Title:** The P2b property passes without xfail and its skip-registry row is gone
+**Maps to:** SCORE-09 (Success Criterion 1)
+
+**What to test:** Under scoring 4.0, observing more healthy endpoints never raises the readiness score. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` runs as an ordinary test at +20, +100 and +500 healthy endpoints, and `tests/skip_registry.py` no longer carries its `known_open_defect` row.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_score_properties.py::test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints
+grep -c "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints" tests/skip_registry.py
+```
+
+**Pass Criteria:** The run reports 3 passed (no xfailed), and the grep prints `0`.
+
+**Result:** - [x] PASS (2026-10-27 3 passed; registry grep 0 — covered by `tests/test_score_properties.py::test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 234-03, scoring 4.0 commit `23ef422875071113ca33e81c9eb63ce35d2db4de`. The xfail decorator and the registry row were removed in that commit; the property's two assertions are byte-identical to the Phase 212 version. This resolves UAT-233-07 and UAT-212-02, which recorded the defect as open.
+
+### UAT-234-02: No rung or reading rises from healthy endpoints, and a weakness still lowers the score
+
+**ID:** UAT-234-02
+**Title:** No rung or reading rises from healthy endpoints, and a weakness still lowers the score
+**Maps to:** SCORE-09 (Success Criterion 4), CONTEXT O-1, D-07, D-08, D-28
+
+**What to test:** Over all five calibration rungs and all five readings (rows_ecdsa, rows_rsa, rows_certless, rows_mtls, mutator_212) at +0, +20, +100 and +500 healthy endpoints, neither the emitted nor the computed score ever rises. Adding weakness rows still lowers the score on every rung, so the fix is not a flat-lining of the scorer. The Phase 212 continuity reading (R5, mutator_212) is flat.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_p2b_non_increase_all_rungs_all_readings \
+  tests/test_p2b_instrument.py::test_p2b_weakness_rows_lower_the_score \
+  tests/test_p2b_instrument.py::test_continuity_reproduces_212
+```
+
+**Pass Criteria:** The run reports 3 passed.
+
+**Result:** - [x] PASS (2026-10-27 3 passed — covered by `tests/test_p2b_instrument.py::test_p2b_non_increase_all_rungs_all_readings` and `tests/test_p2b_instrument.py::test_p2b_weakness_rows_lower_the_score` and `tests/test_p2b_instrument.py::test_continuity_reproduces_212`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 234-01 (gate nodes, red first, `80f20e42`) and 234-03 (scoring 4.0). The non-increase node asserts 25 (rung, reading) groups, so the `rows_mtls` reading added by the code review (D-28, `55ce5d18`) is included: on the pre-review scorer it found 10 rising transitions over 8 `rows_mtls` series, and it is flat after `e987c1e0` made the mTLS bonus a single presence credit. The weakness node was shown load-bearing in 234-01 by zeroing every weight (RED, R1 stays 100). Observed continuity on 4.0: R5 mutator_212 is 18/74 at +0, +20, +100 and +500.
+
+### UAT-234-03: Scan-error rows do not dilute
+
+**ID:** UAT-234-03
+**Title:** Scan-error rows do not dilute
+**Maps to:** SCORE-09, CONTEXT D-03
+
+**What to test:** The scan-error term is an absolute count (`scan_error.count` against N_REF = 40), not a rate, so a fixed number of scan errors does not cost less as healthy endpoints are added.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_scan_error_rows_do_not_dilute
+```
+
+**Pass Criteria:** The run reports 1 passed.
+
+**Result:** - [x] PASS (2026-10-27 1 passed — covered by `tests/test_p2b_instrument.py::test_scan_error_rows_do_not_dilute`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 234-01 and 234-03. Mutation M3 in 234-03 (read `scan_error.rate` again) turned this node red with 8 rising series. The separate pre-existing effect that closed-port and advisory scan-error rows lower the score (D-19) is not claimed fixed; it is owned by HORIZON 999.139.
+
+### UAT-234-04: The spec-first closed form agrees with the scorer and stays independent of it
+
+**ID:** UAT-234-04
+**Title:** The spec-first closed form agrees with the scorer and stays independent of it
+**Maps to:** SCORE-09, CONTEXT D-06, D-28..D-30
+
+**What to test:** `scripts/p2b_closed_form.py`, written from the decision text before the scorer changed, agrees with `compute_readiness_score` at every sweep cell and on every term probe, and imports nothing from `quirk`.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_p2b_instrument.py::test_closed_form_agrees \
+  tests/test_p2b_instrument.py::test_closed_form_term_probes \
+  tests/test_p2b_instrument.py::test_closed_form_is_independent
+```
+
+**Pass Criteria:** The run reports 3 passed.
+
+**Result:** - [x] PASS (2026-10-27 3 passed — covered by `tests/test_p2b_instrument.py::test_closed_form_agrees` and `tests/test_p2b_instrument.py::test_closed_form_term_probes` and `tests/test_p2b_instrument.py::test_closed_form_is_independent`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 234-01 (spec, `474c93eb`) and 234-03; review spec update `55ce5d18`. Observed 2026-10-27 by calling the test module's own `_all_probes`: 647 term probes, 0 disagreeing; `KNOWN_DISAGREEMENTS` is empty and the record (§13) gives 100 of 100 sweep cells. The probe count rose from 395 (Phase 233) because the 4.0 spec added the count curve, the key-type rule, the PQC bucket and the review's mTLS-presence, undetermined-key and Kerberos scan-error terms. Mutations from 234-03: M1 (the curve divides by the endpoint count), M2 (ECDSA +4 re-added), M3 (scan error reads the rate) and M5 (N_REF 39 in the closed form only) each turned an agreement node red; every mutation was reverted. During the review the closed form was committed red first, and agreement rose 645, 646, 647 of 647 as D-28, D-29 and D-30 landed.
+
+### UAT-234-05: Classical certificate keys never earn agility credit; a PQC certificate key earns one; PQC names are recognised
+
+**ID:** UAT-234-05
+**Title:** Classical certificate keys never earn agility credit; a PQC certificate key earns one; PQC names are recognised
+**Maps to:** SCORE-09, CONTEXT O-2, O-4, D-04, D-29, D-31 (IN-05, IN-06)
+
+**What to test:** RSA, ECDSA and EdDSA certificate keys take the same classical penalty (the old ECDSA +4 is gone). ML-DSA, SLH-DSA and composite certificate keys land in a `cert_key_type_counts.PQC` bucket that requires a certificate and earns a single agility credit, never twice with PQC key exchange, and does not lift the PQC-readiness ceiling. Legacy and other PQC signature names (Dilithium, Falcon, FN-DSA, SPHINCS) count as PQC; a PQC or composite name on a certless row lands in no bucket. Undetermined certificate keys beside one PQC certificate never score better than classical keys (D-29).
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" \
+  tests/test_intelligence_evidence.py::test_pqc_cert_key_bucket_counts_ml_dsa_and_slh_dsa \
+  tests/test_intelligence_evidence.py::test_pqc_composite_name_counts_pqc_not_ecdsa \
+  tests/test_intelligence_evidence.py::test_pqc_bucket_requires_a_certificate \
+  tests/test_intelligence_evidence.py::test_pqc_bucket_counts_legacy_and_other_pqc_signature_names \
+  tests/test_intelligence_evidence.py::test_composite_name_on_a_certless_row_lands_in_no_bucket \
+  tests/test_pqc_agility_bonus.py::test_ecdsa_cert_keys_take_the_classical_penalty \
+  tests/test_pqc_agility_bonus.py::test_pqc_cert_key_earns_single_credit \
+  tests/test_pqc_agility_bonus.py::test_pqc_cert_and_pqc_kex_credit_once_not_twice \
+  tests/test_pqc_agility_bonus.py::test_pqc_cert_does_not_lift_pqc_readiness_ceiling \
+  tests/test_pqc_agility_bonus.py::test_undetermined_keys_with_one_pqc_cert_never_beat_classical_keys
+```
+
+**Pass Criteria:** The run reports 10 passed.
+
+**Result:** - [x] PASS (2026-10-27 10 passed — covered by `tests/test_intelligence_evidence.py::test_pqc_cert_key_bucket_counts_ml_dsa_and_slh_dsa` and `tests/test_intelligence_evidence.py::test_pqc_composite_name_counts_pqc_not_ecdsa` and `tests/test_intelligence_evidence.py::test_pqc_bucket_requires_a_certificate` and `tests/test_intelligence_evidence.py::test_pqc_bucket_counts_legacy_and_other_pqc_signature_names` and `tests/test_intelligence_evidence.py::test_composite_name_on_a_certless_row_lands_in_no_bucket` and `tests/test_pqc_agility_bonus.py::test_ecdsa_cert_keys_take_the_classical_penalty` and `tests/test_pqc_agility_bonus.py::test_pqc_cert_key_earns_single_credit` and `tests/test_pqc_agility_bonus.py::test_pqc_cert_and_pqc_kex_credit_once_not_twice` and `tests/test_pqc_agility_bonus.py::test_pqc_cert_does_not_lift_pqc_readiness_ceiling` and `tests/test_pqc_agility_bonus.py::test_undetermined_keys_with_one_pqc_cert_never_beat_classical_keys`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 234-03 (red first `f87efc34`, scoring 4.0 `23ef4228`); review fixes D-29 (`0c51d456`: the undetermined −8 fires when certificates observed exceed PQC certificates, independent of PQC; the review's probe of 39 undetermined + 1 PQC went 79 to 74, equal to 39 RSA + 1 PQC) and D-31 IN-05/IN-06 (`7d959463`). Mutation M6 (PQC branch after the classical prefixes) turned the composite node red. The PQC bucket is dormant on real scans until the TLS scanner can read ML-DSA leaf certificates (D-20, owned by HORIZON 999.139).
+
+### UAT-234-06: Kerberos placeholder and scan-error rows do not make the identity domain assessed
+
+**ID:** UAT-234-06
+**Title:** Kerberos placeholder and scan-error rows do not make the identity domain assessed
+**Maps to:** SCORE-09, CONTEXT D-11, D-26, D-30
+
+**What to test:** A Kerberos row that recorded no encryption types (the principal-unknown placeholder) and a Kerberos row that carries only a scan error are counted in evidence (`kerberos_placeholder_count`, `kerberos_scan_error_count`, schema 1.4.0) and subtracted in the identity gate, so neither makes the identity domain assessed.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" \
+  tests/test_kerberos_probe_principal_config.py::test_principal_unknown_placeholder_row_is_not_assessed \
+  tests/test_intelligence_evidence.py::test_kerberos_placeholder_rows_counted_not_assessed \
+  tests/test_intelligence_evidence.py::test_kerberos_scan_error_rows_counted_for_the_identity_gate \
+  tests/test_score_coverage_disclosure.py::test_kerberos_scan_error_row_does_not_make_identity_assessed
+```
+
+**Pass Criteria:** The run reports 4 passed.
+
+**Result:** - [x] PASS (2026-10-27 4 passed — covered by `tests/test_kerberos_probe_principal_config.py::test_principal_unknown_placeholder_row_is_not_assessed` and `tests/test_intelligence_evidence.py::test_kerberos_placeholder_rows_counted_not_assessed` and `tests/test_intelligence_evidence.py::test_kerberos_scan_error_rows_counted_for_the_identity_gate` and `tests/test_score_coverage_disclosure.py::test_kerberos_scan_error_row_does_not_make_identity_assessed`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 234-03 (D-11; the first node was renamed in 234-03, D-26) closed todo 261023. Review fix D-30 (`53c8a460`) added the scan-error half: the review's probe (40 legacy-TLS rows plus one Kerberos scan-error row) went from 71 with identity 25 over 4 domains to 66 with identity not assessed over 3 domains; the remaining 2 points below 68 come from the row's own scan error (the D-19 class).
+
+### UAT-234-07: A newly assessed domain still raises the headline, as deliberate coverage credit
+
+**ID:** UAT-234-07
+**Title:** A newly assessed domain still raises the headline, as deliberate coverage credit
+**Maps to:** CONTEXT O-6 (not SCORE-09's property)
+
+**What to test:** SCORE-09 covers more endpoints in domains that are already assessed. The first clean row of a domain that was not assessed still raises the headline through Phase 188's exclude-and-rescale. This is pinned so the step stays visible and deliberate.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_score_newly_assessed_domain.py::test_newly_assessed_domain_step_is_deliberate_coverage_credit
+```
+
+**Pass Criteria:** The run reports 3 passed (R2, R3, R4).
+
+**Result:** - [x] PASS (2026-10-27 3 passed — covered by `tests/test_score_newly_assessed_domain.py::test_newly_assessed_domain_step_is_deliberate_coverage_credit`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 234-03 (`f87efc34`). This is NOT SCORE-09's property: it pins a deliberate step, it does not claim one is absent. Measured (record §10): one clean SMTP-STARTTLS row moves R2 77/92 to 78/93, R3 44/82 to 46/85 and R4 22/66 to 24/72; the 3.0 scorer gives the same numbers. Whether the first clean row of a domain should move the headline is an open decision, filed as `.planning/todos/pending/261027-score-newly-assessed-domain-step-is-coverage-credit.md` under HORIZON 999.139.
+
+### UAT-234-08: The retargeted roadmap items fire on the scored inputs and carry a real lift
+
+**ID:** UAT-234-08
+**Title:** The retargeted roadmap items fire on the scored inputs and carry a real lift
+**Maps to:** SCORE-09, CONTEXT O-4, D-29, D-31 (WR-04)
+
+**What to test:** "Plan post-quantum (PQC/hybrid) certificate adoption" (formerly "Plan ECDSA adoption") fires for an ECDSA-only estate, for undetermined key types, and for undetermined keys beside one PQC certificate, and not when every certificate key is PQC; its lift is positive on R2. "Increase scan coverage" fires on the scored `scan_error.count`, not the rate, with a real lift.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" \
+  tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_fires_for_ecdsa_only_estate \
+  tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_fires_when_key_types_undetermined \
+  tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_absent_when_all_cert_keys_pqc \
+  tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_fires_for_undetermined_keys_beside_one_pqc_cert \
+  tests/test_score_lift.py::test_pqc_certificate_adoption_lift_is_positive_on_r2 \
+  tests/test_score_lift.py::test_scan_coverage_item_fires_on_the_scored_count_with_a_real_lift
+```
+
+**Pass Criteria:** The run reports 6 passed.
+
+**Result:** - [x] PASS (2026-10-27 6 passed — covered by `tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_fires_for_ecdsa_only_estate` and `tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_fires_when_key_types_undetermined` and `tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_absent_when_all_cert_keys_pqc` and `tests/test_intelligence_roadmap.py::PqcCertificateItemTests::test_pqc_certificate_item_fires_for_undetermined_keys_beside_one_pqc_cert` and `tests/test_score_lift.py::test_pqc_certificate_adoption_lift_is_positive_on_r2` and `tests/test_score_lift.py::test_scan_coverage_item_fires_on_the_scored_count_with_a_real_lift`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 234-05 (`fab63af4`); review fixes D-29 (`0c51d456`, the roadmap trigger follows the undetermined-key rule) and D-31 WR-04 (`f48862da`: the review's probe, R3 with 40 scan errors over 250 endpoints, went from no item to an item with lift +4). The legacy-TLS lift is still 0 on live evidence; that pre-existing defect (RESEARCH Pitfall 8) is owned by the existing todo `261012-doc224-legacy-tls-roadmap-and-lift-still-use-low-severity-proxy.md` (HORIZON 999.131) and is not claimed here.
+
+### UAT-234-09: The re-measurement record exists, with before/after tables and matching CLI and dashboard scores
+
+**ID:** UAT-234-09
+**Title:** The re-measurement record exists, with before/after tables and matching CLI and dashboard scores
+**Maps to:** SCORE-09 (Success Criteria 2 and 3), CONTEXT D-13, D-16
+
+**What to test:** `.planning/decisions/234-p2b-fix-and-ladder-remeasurement.md` is tracked and carries the status, the before/after ladder and sweep tables, the scan-error result, the real-estate reading, the CLI-vs-dashboard comparison, the test-change list, the non-claims, the falsifiers and the review-fix section. The committed cross-surface parity nodes hold on scoring 4.0.
+
+**Steps:**
+```
+f=.planning/decisions/234-p2b-fix-and-ladder-remeasurement.md
+git ls-files --error-unmatch "$f"
+for h in "## 1. Status" "## 4. Before / after" "## 5. Before / after" "## 6. Scan-error" "## 7. Real estate" \
+  "## 8. CLI vs dashboard" "## 9. Test changes" "## 10. Properties this change does NOT claim" \
+  "## 12. What would falsify" "## 13. Review fixes" N_REF 999.120 anchor; do grep -q -- "$h" "$f" || echo "missing: $h"; done
+.venv/bin/python -m pytest -q -m "" tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality \
+  tests/test_cross_surface_parity.py::test_xsurf0508_no_critical_cross_surface_parity \
+  tests/test_cross_surface_parity.py::test_xsurf07_trend_merge_segment_scores_match_headline \
+  tests/test_cross_surface_parity.py::test_xsurf07_compare_includes_identity_findings
+```
+
+**Pass Criteria:** `git ls-files` prints the record's path, no `missing:` line is printed (13 of 13 tokens), and the pytest run reports 4 passed.
+
+**Result:** - [x] PASS (2026-10-27 record tracked, 13 of 13 tokens; 4 passed — covered by `tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality` and `tests/test_cross_surface_parity.py::test_xsurf0508_no_critical_cross_surface_parity` and `tests/test_cross_surface_parity.py::test_xsurf07_trend_merge_segment_scores_match_headline` and `tests/test_cross_surface_parity.py::test_xsurf07_compare_includes_identity_findings`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plan 234-06 (record `cfde8c90`, review section `5023507a`). The live D-13 check itself is local-only, because it needs `quirk-output/quirk.db`, which is absent in CI; the XSURF nodes are the committed cross-surface invariant, not that live check. Record §8: for scan `2026-09-14T14:25:49.899977+00:00` (370 rows), the report/CLI pipeline and the dashboard `/api/scan/latest` both gave score 18, POOR, "7 open CRITICAL findings — score limited to 18 (computed 71)", subscores 10/19/15/24/21/None, 5 domains, scoring_version "4.0". The record says the live check was not re-run after the review fixes, because the real-estate score did not move.
+
+### UAT-234-10: The QRAMM overall averages only assessed dimensions, shows N of 4, and labels a mean below 1.0 "Below Basic"
+
+**ID:** UAT-234-10
+**Title:** The QRAMM overall averages only assessed dimensions, shows N of 4, and labels a mean below 1.0 "Below Basic"
+**Maps to:** SCORE-10, CONTEXT D-14, D-23, D-31 (WR-05)
+
+**What to test:** The QRAMM overall is the mean of the assessed dimensions only, never averaging a Not-assessed dimension in as 0, and is null when none is assessed. The API, the scorecard and the print page agree with the shared contract fixture, and show "N of 4 dimensions assessed". One overall maturity mapping (Python `OVERALL_MATURITY_LEVELS`, its TS twin and the contract's `overall_maturity_levels`) labels a mean below 1.0 "Below Basic".
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_qramm_assessment_parity.py::test_endpoint_overall_matches_contract \
+  tests/test_qramm_assessment_parity.py::test_overall_maturity_mapping_matches_contract \
+  tests/test_qramm_scoring.py::test_overall_mean_over_assessed_dimensions_only \
+  tests/test_qramm_scoring.py::test_overall_is_none_when_no_dimension_assessed \
+  tests/test_qramm_scoring.py::test_assessed_is_required_keyword
+cd src/dashboard
+npx vitest run src/components/qramm/__tests__/qramm-assessment-parity.test.tsx -t "the scorecard and the print page show the contract's overall and N of 4 assessed"
+npx vitest run src/components/qramm/__tests__/qramm-assessment-parity.test.tsx -t "the overall maturity label comes from the shared mapping, so a mean below 1.0 never reads Basic"
+npx vitest run src/lib/__tests__/qramm-assessment.test.ts -t "uses the contract's overall maturity levels, so a mean below 1.0 never reads Basic"
+```
+
+**Pass Criteria:** pytest reports 5 passed; each vitest run reports `Tests 1 passed` (a filter that matched nothing would report 0 passed, not success).
+
+**Result:** - [x] PASS (2026-10-27 pytest 5 passed; vitest 1 passed per title, 3 titles — covered by `tests/test_qramm_assessment_parity.py::test_endpoint_overall_matches_contract` and `tests/test_qramm_assessment_parity.py::test_overall_maturity_mapping_matches_contract` and `tests/test_qramm_scoring.py::test_overall_mean_over_assessed_dimensions_only` and `tests/test_qramm_scoring.py::test_overall_is_none_when_no_dimension_assessed` and `tests/test_qramm_scoring.py::test_assessed_is_required_keyword` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"the scorecard and the print page show the contract's overall and N of 4 assessed"` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"the overall maturity label comes from the shared mapping, so a mean below 1.0 never reads Basic"` and `src/dashboard/src/lib/__tests__/qramm-assessment.test.ts::"uses the contract's overall maturity levels, so a mean below 1.0 never reads Basic"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 234-02 (`d56af77f` red, `f56ae61f`) and 234-04 (`486e0052` red, `9dda7bfd`, `279c1088`); review fix D-31 WR-05 (`c4754ac7` red, `6e865f5f`, bundle `a8420515`). The contract session's overall is (0.0 + 2.0 + 0.0) / 3 = 0.6667 with ITR excluded, which now reads "Below Basic" (it read "Basic" before the review). O-5 reading: the CLI surface for SCORE-10 is the API response plus the shared contract; no new `quirk qramm score` command was added. Mutations M1 (pytest), M4-PY and M5-TS each turned a node here red.
+
+### UAT-234-11: A stale saved QRAMM score is never shown as Self-assessed or as an overall level, and a pre-upgrade overall reads Recalculate
+
+**ID:** UAT-234-11
+**Title:** A stale saved QRAMM score is never shown as Self-assessed or as an overall level, and a pre-upgrade overall reads Recalculate
+**Maps to:** SCORE-10, CONTEXT D-15, D-21, D-25, D-27, D-31 (IN-04)
+
+**What to test:** A dimension answered after the score was saved reads "Stale — recalculate", never "Self-assessed", on every QRAMM surface, and the overall of that stale current-format score reads "Stale — recalculate" (API `score_overall_state` "stale") instead of a maturity level. A score saved before the upgrade (no `answered_by_dimension`) reads "Recalculate to apply the updated overall" for the overall and Stale for every answered dimension. A persisted score whose counts are not integers reads those dimensions Stale in both the Python and TS twins.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_qramm_assessment_parity.py::test_stale_case_rows_and_session_flag_match_contract \
+  tests/test_qramm_assessment_parity.py::test_legacy_score_json_rows_and_overall_read_recalculate \
+  tests/test_qramm_assessment_parity.py::test_non_integer_persisted_counts_read_stale_like_the_ts_twin \
+  tests/test_qramm_scoring.py::test_overall_state_is_recalculate_without_answered_counts \
+  tests/test_qramm_scoring.py::test_overall_state_is_stale_when_answers_changed_after_the_score
+cd src/dashboard
+P=src/components/qramm/__tests__/qramm-assessment-parity.test.tsx; L=src/lib/__tests__/qramm-assessment.test.ts
+npx vitest run $P -t "a stale saved score reads Stale on every QRAMM surface, never Self-assessed"
+npx vitest run $P -t "a score saved before the upgrade shows Recalculate instead of an overall maturity level"
+npx vitest run $P -t "a saved score with non-integer counts reads those dimensions Stale on both twins"
+npx vitest run $L -t "is stale for a current-format score whose answers changed after it was saved"
+npx vitest run $L -t "replaces the overall for recalculate and stale, never for current"
+```
+
+**Pass Criteria:** pytest reports 5 passed; each vitest run reports `Tests 1 passed`.
+
+**Result:** - [x] PASS (2026-10-27 pytest 5 passed; vitest 1 passed per title, 5 titles — covered by `tests/test_qramm_assessment_parity.py::test_stale_case_rows_and_session_flag_match_contract` and `tests/test_qramm_assessment_parity.py::test_legacy_score_json_rows_and_overall_read_recalculate` and `tests/test_qramm_assessment_parity.py::test_non_integer_persisted_counts_read_stale_like_the_ts_twin` and `tests/test_qramm_scoring.py::test_overall_state_is_recalculate_without_answered_counts` and `tests/test_qramm_scoring.py::test_overall_state_is_stale_when_answers_changed_after_the_score` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"a stale saved score reads Stale on every QRAMM surface, never Self-assessed"` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"a score saved before the upgrade shows Recalculate instead of an overall maturity level"` and `src/dashboard/src/components/qramm/__tests__/qramm-assessment-parity.test.tsx::"a saved score with non-integer counts reads those dimensions Stale on both twins"` and `src/dashboard/src/lib/__tests__/qramm-assessment.test.ts::"is stale for a current-format score whose answers changed after it was saved"` and `src/dashboard/src/lib/__tests__/qramm-assessment.test.ts::"replaces the overall for recalculate and stale, never for current"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Plans 234-02 and 234-04 closed todo 261025; review fixes D-27 (`b92535d9` red, `831d76a3`, bundle `747e3ec5`) and D-31 IN-04 (`c3c3e77d`; Python keeps an integral float such as 3.0, because JSON and JavaScript cannot tell it from 3). Disclosed limits, not claimed fixed: D-21, stale detection compares answered counts, not values, so re-answering an answered question with a different value is not flagged (todo `261027-qramm-stale-detection-compares-counts-not-values.md`, HORIZON 999.139); D-25 revision 2, a pre-upgrade score reads Recalculate for the overall and Stale for every answered dimension until the session is re-scored; residual (b), only the print page reads the saved score live, so the scorecard's Recalculate branch is pinned by the TS twin and vitest but not reachable in the live UI today (todo `261027-qramm-scorecard-legacy-recalculate-branch-unreachable.md`, HORIZON 999.139).
+
+### UAT-234-12: The mTLS bonus is a single presence credit
+
+**ID:** UAT-234-12
+**Title:** The mTLS bonus is a single presence credit
+**Maps to:** SCORE-09, CONTEXT D-28 (review WR-03)
+
+**What to test:** The first endpoint that enforces mTLS earns the +6 identity bonus once; further mTLS-enforcing endpoints add nothing, so mTLS depth cannot raise the score.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_score_mtls_presence_credit.py::test_first_mtls_endpoint_earns_the_presence_credit_once
+```
+
+**Pass Criteria:** The run reports 1 passed.
+
+**Result:** - [x] PASS (2026-10-27 1 passed — covered by `tests/test_score_mtls_presence_credit.py::test_first_mtls_endpoint_earns_the_presence_credit_once`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** Review fix D-28 (`e987c1e0`); red first on the old scorer (identity 11 to 12, expected 17). Record §13: on dict R3, R4 and R5 plus 0/5/20/40 mTLS endpoints the scores now step once from 0 to the first mTLS endpoint and stay flat (for example R4 24/72, 26/76, 26/76, 26/76; before the fix 24/72, 25/73, 26/75, 26/76). The single step is sanctioned, like the PQC credit and UAT-234-07's domain step. The instrument's `rows_mtls` reading (UAT-234-02) is the depth gate.
+
+### UAT-234-13: The local-only real-estate reading on scoring 4.0
+
+**ID:** UAT-234-13
+**Title:** The local-only real-estate reading on scoring 4.0
+**Maps to:** SCORE-09, CONTEXT D-16
+
+**What to test:** The instrument's real-estate mode, run against a read-only snapshot of the canonical database and the recorded intelligence JSON, shows no rise across +0, +20, +100 and +500 on scoring 4.0, and leaves the canonical database's sha256 unchanged.
+
+**Steps:**
+```
+.venv/bin/python -m scripts.p2b_instrument --real-db quirk-output/quirk.db \
+  --real-json quirk-output/intelligence-20260914-142606.json --markdown
+```
+
+**Pass Criteria:** Both real-estate readings are flat across the four points, and the sha256 of `quirk-output/quirk.db` is equal before and after.
+
+**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (DEFERRED — covered by `tests/test_p2b_instrument.py::test_real_db_snapshot_is_read_only`)
+**Date:** 2026-10-27  **Tester:** automated
+**Notes:** The reading is local-only: `quirk-output/` is gitignored and absent in CI, so no committed test runs the reading itself. The substitute node (1 passed, 2026-10-27) covers the read-only snapshot path only, against a throwaway database it builds, not the real-estate scores. The observed values are in the record §7, measured by 234-06 at `f2379a84` and again after the review at `7d959463`: snapshot_rows + rows_ecdsa 18/71 and recorded_json + mutator_212 16/64 at every point (on 3.0 they rose 17/69 to 23/91 and 15/61 to 19/76), and the canonical DB sha256 `990366f8346a644bd576ef6543376d7d647fa783a3d5cf78ff13cca79677b946` was the same before and after every read. This plan did not re-run the reading.
