@@ -788,8 +788,14 @@ def test_cli_outputs_json_and_markdown(inst, capsys):
     )
 
 
-def test_real_db_snapshot_is_read_only(inst, tmp_path):
-    """D-08: the snapshot path never modifies its source (tmp_path only)."""
+def test_real_db_snapshot_is_read_only(inst, tmp_path, monkeypatch):
+    """D-08: the snapshot path never modifies its source (tmp_path only).
+
+    An unchanged sha256 alone cannot tell ``mode=ro`` from a read-write
+    connection that only reads (WR-04), so this also spies on
+    ``sqlite3.connect`` and requires every open of the source to be a
+    ``mode=ro`` URI, and checks that a missing source is not created.
+    """
     src = tmp_path / "source.db"
     conn = sqlite3.connect(str(src))
     try:
@@ -800,7 +806,30 @@ def test_real_db_snapshot_is_read_only(inst, tmp_path):
         conn.close()
     before = hashlib.sha256(src.read_bytes()).hexdigest()
 
+    real_connect = sqlite3.connect
+    opened: List[Tuple[str, bool]] = []
+
+    def _spy(database, *args, **kwargs):
+        opened.append((str(database), bool(kwargs.get("uri", False))))
+        return real_connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", _spy)
     snap = inst.snapshot_db(src, tmp_path / "snap")
+    source_opens = [(db, uri) for db, uri in opened if src.name in db]
+    assert source_opens, f"snapshot_db never opened {src.name}: {opened}"
+    for db, uri in source_opens:
+        assert uri and db.startswith("file:") and "mode=ro" in db, (
+            f"snapshot_db opened its source without a mode=ro URI: "
+            f"database={db!r}, uri={uri}"
+        )
+
+    missing = tmp_path / "absent.db"
+    with pytest.raises(sqlite3.OperationalError):
+        inst.snapshot_db(missing, tmp_path / "snap-missing")
+    assert not missing.exists(), (
+        "snapshot_db created its missing source: it was not opened mode=ro"
+    )
+    monkeypatch.setattr(sqlite3, "connect", real_connect)
 
     snap_conn = sqlite3.connect(str(snap))
     try:
