@@ -557,6 +557,22 @@ describe("QRAMM assessed-state parity — Phase 231 D-09 (one contract, every su
     expect(overallRow.startsWith(`Overall maturity: ${contract.expected_maturity} (`)).toBe(true)
   })
 
+  it("a saved score with non-integer counts reads those dimensions Stale on both twins", () => {
+    // Phase 234 review D-31 (IN-04): the pytest half asserts the same case against the API.
+    const nc = contract.non_integer_counts_case
+    const expectedState = nc.expected_dimension_state as Record<Dim, AssessmentState>
+    const counts = nc.answered_by_dimension as unknown as Record<string, number>
+    renderScorecard({ ...SCORE, answered_by_dimension: counts }, contractAnswers())
+    const cells = scorecardMaturityCells()
+    for (const d of DIMS) {
+      const stale = expectedState[d] === "stale"
+      expect({ dim: d, stale: cells[d] === ASSESSMENT_LABEL.stale }).toEqual({ dim: d, stale })
+    }
+    expect(cells.ITR).toBe(NOT_ASSESSED)
+    expect(Object.values(cells)).not.toContain(SELF_ASSESSED)
+    expect(screen.queryByTestId("qramm-overall")?.textContent ?? null).toBe(ASSESSMENT_LABEL.stale)
+  })
+
   it("an answered but unscored session shows no stale dimension", () => {
     // W2: with no score there is nothing to be stale (Python's score_data-is-None branch).
     renderScorecard(null, contractAnswers())

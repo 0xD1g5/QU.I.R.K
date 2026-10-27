@@ -632,6 +632,14 @@
     "expected_overall_state": "stale",
     "expected_overall_label": "Stale — recalculate"
   },
+  "non_integer_counts_case": {
+    "_comment": "Phase 234 review D-31 (IN-04): the scenario's answers, scored, then the persisted answered_by_dimension is replaced with crafted values. A count that is not an integer (the string \"30\", the fraction 5.5) cannot vouch for live answers, so SGRM and DPE read stale on both twins. 3.0 is an integer value: JSON and JavaScript cannot tell it from 3, so both twins accept it and CVI stays current. ITR has zero live answers and stays pending (pending-first).",
+    "answered_by_dimension": {"CVI": 3.0, "SGRM": "30", "DPE": 5.5, "ITR": 0},
+    "expected_coverage_status": {"CVI": "covered", "SGRM": "stale", "DPE": "stale", "ITR": "pending"},
+    "expected_dimension_state": {"CVI": "scanner-measured", "SGRM": "stale", "DPE": "stale", "ITR": "not-assessed"},
+    "expected_score_stale": true,
+    "expected_overall_state": "stale"
+  },
   "legacy_score_json": {
     "_comment": "Phase 234 D-25: the scenario's answers, scored, then the persisted score_json has answered_by_dimension removed (a score saved before Phase 234). Without counts newer answers cannot be ruled out, so every live-answered dimension reads stale and the overall reads recalculate; a dimension with zero live answers stays pending (pending-first precedence).",
     "answers": [

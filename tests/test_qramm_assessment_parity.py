@@ -340,3 +340,35 @@ def test_overall_maturity_mapping_matches_contract() -> None:
     assert _maturity_label(contract["expected_overall"]) == (
         contract["expected_maturity"]
     )
+
+
+def test_non_integer_persisted_counts_read_stale_like_the_ts_twin() -> None:
+    """D-31 (IN-04): a persisted count that is not an integer cannot vouch
+    for live answers. Python used to coerce "30" -> 30 and 5.5 -> 5, so
+    those values matched the live counts and read self-assessed, while the
+    TS twin read them stale. 3.0 is an integer value that JSON and
+    JavaScript cannot tell from 3, so it is accepted on both sides."""
+    from quirk.models import QRAMMSession
+
+    contract = _contract()
+    case = contract["non_integer_counts_case"]
+    client, sid, testing_session, _ = _seed_and_score(contract["answers"])
+
+    db = testing_session()
+    try:
+        session = db.query(QRAMMSession).filter(QRAMMSession.id == sid).one()
+        score = json.loads(session.score_json)
+        score["answered_by_dimension"] = case["answered_by_dimension"]
+        session.score_json = json.dumps(score)
+        db.commit()
+    finally:
+        db.close()
+
+    rows = client.get(f"/api/qramm/sessions/{sid}/compliance-map").json()
+    got_status = _dimension_statuses(rows)
+    assert got_status == case["expected_coverage_status"]
+    got_state = {d: _STATUS_TO_STATE[s] for d, s in got_status.items()}
+    assert got_state == case["expected_dimension_state"]
+    session_body = client.get(f"/api/qramm/sessions/{sid}").json()
+    assert session_body["score_stale"] is case["expected_score_stale"]
+    assert session_body["score_overall_state"] == case["expected_overall_state"]

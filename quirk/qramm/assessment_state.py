@@ -117,6 +117,14 @@ def score_answered_counts(
     dict-valued ``answered_by_dimension`` (a pre-Phase-234 legacy score,
     D-25). Values that are not integers are dropped rather than trusted: a
     persisted blob can only make a dimension stale, never upgrade it.
+
+    Phase 234 review D-31 (IN-04): "not an integer" is judged exactly as the
+    TS twin judges it (``typeof count === "number"`` and strict equality with
+    the live count). A string ("30") or a fraction (30.9) is dropped, so the
+    dimension reads stale; it used to be coerced with ``int()`` and could
+    vouch for a live count of 30. A float with an integer value (30.0) is
+    kept, because JSON and JavaScript cannot tell it from 30. Booleans are
+    dropped (``True`` is an ``int`` in Python, not a count).
     """
     if not isinstance(score_data, Mapping):
         return None
@@ -128,10 +136,10 @@ def score_answered_counts(
         value = raw.get(dim)
         if isinstance(value, bool):
             continue
-        try:
+        if isinstance(value, int):
+            counts[dim] = value
+        elif isinstance(value, float) and value.is_integer():
             counts[dim] = int(value)
-        except (TypeError, ValueError):
-            continue
     return counts
 
 
