@@ -88,6 +88,9 @@ These are D-01..D-04 and D-11, as committed in `23ef4228`.
   scan-depth reward: every further mTLS-enforcing endpoint raised identity_trust. Under **D-28** it
   is a **presence credit**: +6 once when any mTLS endpoint is observed, the same single-step shape
   as the PQC credit. The 35 count sites became 34 count terms plus one presence term (§13).
+  **Operator-ratified 2026-10-28:** D-28 was an orchestrator call made at code review; the operator
+  reviewed it after the close and kept it ("keep mtls, that is a fair call to make"). It is no
+  longer open for overrule before 4.0 ships.
 - **D-03, scan errors.** The two scan-error sites (hygiene w6, modern_tls w5) used to read
   `scan_error.rate = scan_error_count / total_endpoints`. They now read `scan_error.count` through
   the curve. A non-comment `get("rate"` appears 0 times in `scoring.py`.
