@@ -325,7 +325,26 @@ Plans:
   3. On a clean macOS and a clean Linux machine with no repo checkout: `pip install quirk-scanner==5.28.0` in a fresh venv, `quirk doctor`, a chaos-lab scan, `quirk serve` (dashboard loads, JetBrains Mono served, current brand), and an HTML and PDF report all succeed, and the dashboard and report show the same readiness score. Every README command is run as written and either works or is corrected, including `gh attestation verify` (`999.129`). Transcript recorded in the phase directory.
   4. Every link in the README resolves from the PyPI project page, and every user-facing claim in `README.md` and the PyPI long description is re-verified against `v5.28.0` (doc-claim ledger gate green on `main`); any open high-priority todo that contradicts a README claim is either closed or the claim is removed.
   5. A launch go/no-go record (`docs/launch-gate.md` or the phase VERIFICATION) lists each criterion above with its evidence link and the operator's sign-off. "No-go" names the blocking item and its owner. Nothing is posted publicly before a recorded "go".
-**Plans**: TBD
+**Plans**: 17 plans (17 serial waves)
+
+Plans:
+- [ ] 235-01-PLAN.md — Source scanner fails honestly: semgrep exit 7 / errors[] raises "ruleset unavailable", recorded as a failed phase (D-09) (wave 1)
+- [ ] 235-02-PLAN.md — requires-python ">=3.10,<3.15"; doctor floor 3.10, optional binaries + first-run DB informational (D-23, D-24); validator floor (wave 2)
+- [ ] 235-03-PLAN.md — PDF cover title + header border in the brand accent (D-03); browser-E2E seed on one clock (D-19) (wave 3)
+- [ ] 235-04-PLAN.md — README command enumerator + live link checker; clean-environment release smoke harness (wave 4)
+- [ ] 235-05-PLAN.md — Remove the working-Semgrep claim from every public doc + standing gate; gitea oracle; doctor/Python docs; single-tag runbook (D-01, D-02, D-15) (wave 5)
+- [ ] 235-06-PLAN.md — README Quick Start (interpreter, Chromium); high-priority todo sweep; narrow + disclose contradicted claims (D-16, D-25) (wave 6)
+- [ ] 235-07-PLAN.md — Re-verify every live README claim and the PyPI metadata against 5.28.0 (wave 7)
+- [ ] 235-08-PLAN.md — CHANGELOG [5.28.0] with the scoring 4.0 upgrade notes and known defects (D-12) (wave 8)
+- [ ] 235-09-PLAN.md — Version bump to 5.28.0 with README pins, What's New v5.28, UAT-SERIES rows + Series 235, UAT-232-08 relabel (D-14, D-22) (wave 9)
+- [ ] 235-10-PLAN.md — Local proof (full suite, 3.11 container, staleness) + rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 10)
+- [ ] 235-11-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, open the release PR (wave 11)
+- [ ] 235-12-PLAN.md — Operator merges (merge commit); main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 12)
+- [ ] 235-13-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 13)
+- [ ] 235-14-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 14)
+- [ ] 235-15-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed (wave 15)
+- [ ] 235-16-PLAN.md — Private go/no-go record, claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20) (wave 16)
+- [ ] 235-17-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 17)
 
 ### Progress
 
