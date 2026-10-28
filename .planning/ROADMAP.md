@@ -127,7 +127,7 @@ tag. Phases 228–232 have no hard ordering among themselves beyond the dependen
 - [x] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
 - [x] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
 - [x] **Phase 233: P2b Measurement Instrument** - A third, independent instrument measures scan-depth dilution on the calibration ladder and its result is recorded before any fix is chosen
-- [ ] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
+- [x] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
 - [ ] **Phase 235: Release & Launch Gate** - `v5.28.0` is on PyPI, a clean install works end to end as the README says, and the operator signs a go/no-go for the public announcement
 
 ### Phase Details
@@ -338,7 +338,7 @@ Plans:
 | 231. QRAMM Scoring Surfaces | 10/10 | Complete (verified passed 5/5 at c09a809b; live print/PDF re-check passed with artifacts kept; review R1 0 blockers, WR-01 owned by SCORE-10 (Phase 234), WR-02/IN-01..04/IN-06 by 999.137, IN-05 by 999.136; 231-10 fixed the allow_abbrev gate 231-02 broke; CI green, Python CI 40207661100 + Dashboard Quality 40207663143) | 2026-10-25 |
 | 232. Post-Launch Visible Fixes | 6/6 | Complete (verified passed 5/5 at e28d45dd; criterion 4's live PyPI leg handed to Phase 235 per D-13; review 0 blockers, WR-03/IN-02 fixed, WR-01 owned by 999.127; CI green, Python CI 40525739851 + Dashboard Quality 40525744864) | 2026-10-27 |
 | 233. P2b Measurement Instrument | 6/6 | Complete (verified passed 4/4 at 0a7ab944; verdict: none of 212's three candidates supported, no ceiling shape can work, data point to absolute-count penalties at 35 ratio sites + a key-type rule, effort L; review CR-01 time bomb + WR-01..05 fixed fail-first; CI green, Python CI 40550728476 + Dashboard Quality 40550732544) | 2026-10-27 |
-| 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Planned | - |
+| 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Complete (verified 5/5 at b2ef2634, status human_needed for 2 optional visual checks in 234-HUMAN-UAT.md; scoring 4.0: classical ≠ ready, count curve N_REF=40, PQC bucket, mTLS presence credit (D-28); P2b xfail now passes, instrument 100/100 agree, 0 rising; R5 18/71 → 18/74, R1–R4 unchanged; SCORE-10 overall over assessed dimensions; review D-27..D-31 fixed; UAT-7-29 drag assertion made layout-independent (b2ef2634); CI green, Python CI 40604747341 + Dashboard Quality 40604750364) | 2026-10-27 |
 | 235. Release & Launch Gate | 0/TBD | Not started | - |
 
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
