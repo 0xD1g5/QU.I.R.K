@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.28
 milestone_name: Score & Finding Truth
 status: executing
-last_updated: "2026-10-28T01:00:00.000Z"
-last_activity: "2026-10-27 -- Phase 234 complete (9/9 plans, verified 5/5 at b2ef2634, 2 optional visual checks in 234-HUMAN-UAT.md, CI green). STATE.md hand-edited from a pre-image"
+last_updated: "2026-10-28T18:00:00.000Z"
+last_activity: "2026-10-28 -- Phase 235 context gathered (22 decisions, all recommended options accepted; 235-CONTEXT.md). STATE.md hand-edited from a pre-image"
 progress:
   total_phases: 9
   completed_phases: 8
@@ -3480,6 +3480,8 @@ Found at Phase 208 close (2026-09-22):
 | costed_handoff (208 -> 207) | ROADMAP Phase 208 criterion 2 recorded NOT MET AS WRITTEN — the Playwright PDF leg for `UAT-88-03` (six-row score-decomposition table, PDF render assertion) was not delivered | **open, costed, handed to Phase 207.** `render_pdf_report()` already exists at `quirk/reports/html_renderer.py:1351`; `pypdf` is already a live runtime dependency (no new dependency needed for PDF text extraction); the sole remaining cost is installing a Chromium browser in `.github/workflows/python-ci.yml`, an operator-reserved CI toolchain call. Full record: `.planning/phases/208-security-report-coverage-doc-debt/208-NOT-MET-AS-WRITTEN.md`. |
 
 ## Session Continuity
+
+Last session: 2026-10-28. Phase 235 (Release & Launch Gate) context gathered via `/gsd-discuss-phase 235`: 4 areas (clean-machine smoke, publish sequencing, Semgrep honest-error, go/no-go record), D-01..D-22, operator accepted every recommended option. Stopped at: Phase 235 context gathered; next `/gsd-plan-phase 235`. Resume file: `.planning/phases/235-release-launch-gate/235-CONTEXT.md`.
 
 Last session: 2026-10-27. Resumed the autonomous run (`--from 232`) at plan-phase step 5.5; Phase 232
 planned, executed and closed (verified passed 5/5); Phase 233 likewise (4/4). Operator decided the P2b scope (effort L; classical ≠ ready); Phase 234 next. The one-shot `HANDOFF.json` and the stale root
