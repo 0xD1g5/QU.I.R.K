@@ -164,7 +164,9 @@ else
   [ "${SELF_CHECK}" -eq 0 ] && diverge "no /etc/os-release — not an Ubuntu/Debian host"
 fi
 
-# glibc >= 2.17 is docs/installation.md's own stated Playwright floor.
+# glibc >= 2.17 is a conservative floor for Playwright's bundled Chromium.
+# docs/installation.md states supported OS releases (Debian 12/13, Ubuntu
+# 22.04/24.04/26.04) rather than a glibc number; all of them exceed this floor.
 GLIBC="$(ldd --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+$')"
 if [ -n "${GLIBC}" ]; then
   GLIBC_MAJOR="${GLIBC%%.*}"; GLIBC_MINOR="${GLIBC##*.}"
@@ -180,10 +182,10 @@ fi
 PY="$(command -v python3 || true)"
 if [ -n "${PY}" ]; then
   PYV="$("${PY}" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)"
-  if "${PY}" -c 'import sys; sys.exit(0 if sys.version_info[:2] >= (3,11) else 1)' 2>/dev/null; then
-    pass "python3 ${PYV} (>= 3.11)"
+  if "${PY}" -c 'import sys; sys.exit(0 if (3,10) <= sys.version_info[:2] < (3,15) else 1)' 2>/dev/null; then
+    pass "python3 ${PYV} (3.10-3.14)"
   else
-    fail "python3 ${PYV} is below the required 3.11" "install a newer python3"
+    fail "python3 ${PYV} is outside the supported range 3.10-3.14" "install a Python between 3.10 and 3.14"
   fi
 else
   fail "python3 not found" "sudo apt-get install -y python3"

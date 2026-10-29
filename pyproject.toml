@@ -7,7 +7,7 @@ name = "quirk-scanner"
 version = "5.27.0"
 description = "QU.I.R.K. -- Quantum Infrastructure Readiness Kit"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 license = {text = "MIT"}
 dependencies = [
     "PyYAML>=6.0",
