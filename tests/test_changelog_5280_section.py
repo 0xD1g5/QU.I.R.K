@@ -164,14 +164,14 @@ def test_known_defects_disclosed():
 def test_code_divergences_disclosed():
     live = set(SEVERITY_DIVERGENCES) | set(UNBRIDGED_DASHBOARD_TITLES)
     assert set(_DIVERGENCE_PHRASES) == live
-    kd = _known_defects().lower()
+    kd = " ".join(_known_defects().lower().split())  # hard-wrap tolerant
     for key, phrase in _DIVERGENCE_PHRASES.items():
         assert phrase.strip(), key
         assert phrase.lower() in kd, (key, phrase)
 
 
 def test_todo_divergences_disclosed():
-    kd = _known_defects().lower()
+    kd = " ".join(_known_defects().lower().split())  # hard-wrap tolerant
     for item, phrase in _TODO_DIVERGENCE_PHRASES:
         assert phrase.strip(), item
         assert phrase.lower() in kd, (item, phrase)
