@@ -65,6 +65,8 @@ Modern TLS measures whether your encryption is current. Legacy TLS versions (1.0
 | Unknown open services | −6 pts | Open ports that didn't respond to TLS, HTTP, or SSH |
 | Assessment visibility blockers | −5 pts | The same number of endpoints with a recorded scan error, saturating at 40, weighted separately because it also limits how much of the TLS posture could be assessed |
 
+In 5.28.0, the error recorded when source code scanning cannot run (see *Scan Coverage* below) counts as a scan error here, so a scan that sets `source_targets` scores lower on Hygiene and Modern TLS than the same scan without `source_targets`.
+
 > **Client Conversation — Modern TLS:**
 > "Modern TLS measures whether your encryption is current. TLS 1.0 and 1.1 have known weaknesses and were formally deprecated by the IETF in RFC 8996. If this score is low, some of your services are still advertising support for these versions — which needs to be addressed regardless of the quantum timeline."
 
@@ -1962,6 +1964,8 @@ five skip reasons, each implying a specific operator action:
 | `no-eligible-targets` | The scanner is enabled, but no targets were configured for it. | Add hosts/addresses to the named config key (e.g. `connectors.vault_targets`). |
 | `missing-credentials` | The scanner is enabled and has targets, but the credential it needs to authenticate is not set. Today only the Vault phase makes this check, when the phase starts during the scan (`connectors.vault_token` / `VAULT_TOKEN`); a dashboard submit does not check it. | Supply the named config key or environment variable — see the Effective config panel (`docs/operators-guide.md` §3.1.2) to check credential status before submitting a scan; the panel shows each credential as set or not set and never shows a value. |
 | `failed` | The phase started and aborted with an error. | Check the error rows / logs for that phase; this is not a configuration gap, it is a runtime failure. |
+
+In 5.28.0, source code scanning always records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. This is a known defect, not a configuration gap, and no config change fixes it.
 
 ### A skipped phase never fabricates a zero
 

@@ -142,10 +142,13 @@ guards against it: it fails when more than one installed distribution claims the
 
    ```bash
    git tag vX.Y.Z
-   git push origin main --tags
+   git push origin vX.Y.Z
    # Confirm it landed — a tag that stays local releases nothing:
    git ls-remote --tags origin | grep vX.Y.Z
    ```
+
+   Push the single tag, not `git push origin main --tags`: pushing `main` directly bypasses
+   review, and `--tags` pushes every local tag, not just the release.
 
    > **Why this step has its own warning (RVW-004).** `release.yml` used to
    > trigger on `v*.*.*`, which matches three components and *silently matches
