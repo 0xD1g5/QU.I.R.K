@@ -14,6 +14,7 @@
       --surface2: #1a1a26;
       --border: #2a2a3a;
       --accent: #3b9dff;
+      --brand-accent: #af89f5; /* dashboard dark --ds-accent; cover title + header borders (D-03) */
       --text: #e8e8f0;
       --text-muted: #8888aa;
       --critical: #e53935;
@@ -37,7 +38,7 @@
     a { color: var(--accent); text-decoration: none; }
     .report-header {
       background: var(--surface);
-      border-bottom: 2px solid var(--accent);
+      border-bottom: 2px solid var(--brand-accent);
       padding: 24px 40px;
       display: flex;
       align-items: center;
@@ -186,7 +187,7 @@
     /* Cover page: dark background, accent top border; print uses break-after:page */
     .cover-page {
       background: var(--bg);
-      border-top: 4px solid var(--accent);
+      border-top: 4px solid var(--brand-accent);
       padding: 48px 40px 32px;
       display: flex;
       flex-direction: column;
@@ -209,7 +210,7 @@
     .cover-title {
       font-size: 36px;
       font-weight: 900;
-      color: var(--accent);
+      color: var(--brand-accent);
       letter-spacing: 0.04em;
       line-height: 1.1;
       margin-bottom: 16px;
