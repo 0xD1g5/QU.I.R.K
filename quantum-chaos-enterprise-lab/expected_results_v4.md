@@ -165,7 +165,7 @@ PROFILE_ARGS="--profile jwt" ./lab.sh up
 | 20003 | jwt-rsa1024 | RS256 (RSA) | WEAK_KEY_SIZE + WEAK_QUANTUM | 1024-bit | RSA-1024 is classically weak and quantum-vulnerable; scanner flags key size |
 | 20004 | jwt-algnone | none | CRITICAL_NO_SIGNATURE | 0 | alg:none = no signature verification; scanner classifies as UNKNOWN/critical |
 
-**Scanner validation command:**
+**Manual semgrep validation command (currently fails with HTTP 404, exit 7: known defect, ruleset unavailable):**
 ```
 printf '%s\n' http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004 > targets.txt
 quirk --targets-file targets.txt
@@ -211,7 +211,7 @@ quirk --config config.yaml
 
 ## Profile: source
 
-*Gitea + seeded repos with crypto anti-patterns (semgrep target).*
+*Gitea + seeded repos with crypto anti-patterns (semgrep target; scanning them is a known defect in 5.28.0: ruleset unavailable).*
 
 > **Idempotency contract (CHAOS-03 / DEF-999.83-C, 2026-05-16):** The
 > `gitea-seed` sidecar is idempotent — re-running `PROFILE_ARGS="--profile source"
@@ -243,7 +243,7 @@ PROFILE_ARGS="--profile source" ./lab.sh up
 ```
 git clone http://localhost:20006/labadmin/crypto-antipatterns-python && cd crypto-antipatterns-python && semgrep --config p/cryptography .
 ```
-**Expected:** At least 1 finding per anti-pattern category (hardcoded keys, weak algorithm, weak random, deprecated protocol).
+**Expected (5.28.0, known defect):** the `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so a QU.I.R.K. scan with `enable_source` and these clones in `source_targets` does **not** produce source findings. The `source_scanner` phase records an ERROR row whose scan error starts `ruleset unavailable` (phase detail `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`); Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`; there are zero SOURCE findings; and the readiness score is lower than the same scan without `source_targets`, because scan errors feed the hygiene and modern-TLS error-rate inputs. The seeded anti-pattern table above describes the lab's seeded repositories, not current scanner output.
 
 ---
 

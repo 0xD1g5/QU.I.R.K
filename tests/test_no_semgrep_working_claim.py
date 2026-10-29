@@ -39,7 +39,7 @@ WINDOW = 3
 KV_SENTENCE = "Key Vault key scanning has a known defect and currently records no keys"
 
 # Measured on git ls-files at the RED commit of 235-05 (a8b3d166 base): 61 tracked
-# *.md in the scan set, 33 flagged sites. Floors sit a little below.
+# *.md in the scan set, 32 flagged sites. Floors sit a little below.
 FILE_FLOOR = 40
 SITE_FLOOR = 25
 
