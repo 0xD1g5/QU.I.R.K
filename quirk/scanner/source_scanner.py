@@ -1,8 +1,13 @@
 """Source code scanner module (SCAN-05).
 
-Uses semgrep with the p/cryptography ruleset to find insecure cryptographic
+Runs semgrep with the p/cryptography ruleset to find insecure cryptographic
 usage in source repositories. Returns one CryptoEndpoint per finding.
-Degrades gracefully if semgrep is absent.
+
+Known defect (5.28.0): the p/cryptography ruleset is unavailable (the Semgrep
+registry returns HTTP 404), so a run with semgrep present exits 7 with valid
+JSON and ``results: []``. That is reported as "ruleset unavailable" and the
+source domain reads Not assessed, never a clean repo. An absent semgrep binary
+is still a graceful skip (empty list).
 """
 import json
 import logging
@@ -15,6 +20,18 @@ from quirk.models import CryptoEndpoint
 from quirk.util.subprocess_input import validate_repo_path
 
 _LOG = logging.getLogger(__name__)
+
+_MAX_DETAIL = 200
+
+
+class SourceScanError(Exception):
+    """A semgrep run failed. Messages are persisted and API-served, so they
+    must not contain raw semgrep stdout or the repo path."""
+
+
+class SourceRulesetUnavailable(SourceScanError):
+    """The semgrep ruleset could not be loaded (404 / invalid configuration).
+    Messages are persisted and API-served: no raw stdout, no repo path."""
 
 
 def scan_source_repo(
@@ -30,7 +47,8 @@ def scan_source_repo(
     - service_detail = "file:line"
     - source_scan_json = full finding JSON
 
-    Returns empty list if semgrep is absent, subprocess fails, or JSON is invalid.
+    Returns empty list if semgrep is absent. Raises SourceScanError (or
+    SourceRulesetUnavailable) if semgrep runs but fails or its output is invalid.
     Rejected inputs (argv injection, path traversal, etc.) return a single
     CryptoEndpoint with scan_error_category="invalid_input" and no subprocess call.
     """
@@ -65,17 +83,48 @@ def scan_source_repo(
             timeout=timeout,
         )
         data = json.loads(proc.stdout)
+    except subprocess.TimeoutExpired as e:
+        _LOG.warning("semgrep timed out in scan_source_repo for %r", repo_path)
+        raise SourceScanError(
+            f"source scan failed: TimeoutExpired: timed out after {timeout} s"
+        ) from e
     except (
-        subprocess.TimeoutExpired,
         subprocess.CalledProcessError,
-        FileNotFoundError,
         OSError,
         json.JSONDecodeError,
     ) as e:
         _LOG.warning(
             "subprocess failed in scan_source_repo for %r: %s", repo_path, e
         )
-        return []
+        raise SourceScanError(
+            f"source scan failed: {e.__class__.__name__}"
+        ) from e
+
+    if not isinstance(data, dict):
+        raise SourceScanError("source scan failed: unexpected semgrep output")
+
+    error_entries = [
+        e for e in (data.get("errors") or [])
+        if isinstance(e, dict) and e.get("level") == "error"
+    ]
+    if proc.returncode not in (0, 1) or error_entries:
+        first = str(error_entries[0].get("message", "")) if error_entries else ""
+        first = first[:_MAX_DETAIL]
+        _LOG.warning(
+            "semgrep failed in scan_source_repo (exit %s): %s",
+            proc.returncode, first,
+        )
+        is_ruleset = proc.returncode == 7 or any(
+            "configuration" in str(e.get("message", "")).lower()
+            for e in error_entries
+        )
+        if is_ruleset:
+            raise SourceRulesetUnavailable(
+                f"ruleset unavailable: semgrep exited {proc.returncode}: {first}"
+            )
+        raise SourceScanError(
+            f"source scan failed: semgrep exited {proc.returncode}: {first}"
+        )
 
     endpoints: List[CryptoEndpoint] = []
     results = data.get("results", [])
@@ -114,6 +163,8 @@ def scan_source_targets(
         try:
             eps = scan_source_repo(repo_path, timeout=timeout, logger=logger)
             results.extend(eps)
+        except SourceScanError:
+            raise
         except Exception as exc:
             if logger:
                 logger.v(f"Source scan error for {repo_path}: {exc}")

@@ -173,10 +173,12 @@ def test_wrapped_phase_records_source_ruleset_failure(fake_semgrep):
     rows = [r for r in recorder.rows() if r["phase_name"] == "source_scanning"]
     assert len(rows) == 1
     assert rows[0]["reason"] == "failed"
-    assert rows[0]["detail"].startswith("ruleset unavailable")
+    # _wrapped_phase persists safe_str(exc), which prefixes the class name.
+    assert "ruleset unavailable" in rows[0]["detail"]
+    assert rows[0]["detail"].startswith("SourceRulesetUnavailable")
     assert len(error_endpoints) == 1
     assert error_endpoints[0].protocol == "ERROR"
-    assert error_endpoints[0].scan_error
+    assert error_endpoints[0].scan_error.startswith("ruleset unavailable")
 
 
 def test_semgrep_warn_level_errors_do_not_fail(fake_semgrep):
