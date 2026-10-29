@@ -187,6 +187,7 @@ quirk = [
     "config_template.yaml",
     "dashboard/static/**/*",
     "compliance/*.json",
+    "compliance/*.csv",
     "reports/assets/*",
 ]
 
