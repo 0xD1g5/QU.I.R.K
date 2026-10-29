@@ -23,7 +23,7 @@ It produces three things:
 - a prioritized migration roadmap, in client-ready PDF, DOCX and HTML reports.
 
 > [!IMPORTANT]
-> **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, HTTP and SNMP requests, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and the dashboard's New Scan form can also check targets against an optional trusted-targets allowlist (`security.trusted_targets`), and the check covers `targets.include_ips` and every host-naming connector field, whether or not that connector is enabled. See the [Operator's Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/operators-guide.md).
+> **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, HTTP and SNMP requests, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and the dashboard's New Scan form can also check targets against an optional trusted-targets allowlist (`security.trusted_targets`), and the check covers `targets.include_ips` and the host-naming connector fields it recognizes, whether or not that connector is enabled. Known gaps in 5.28.0: a connector target field written as a single value instead of a list may not be checked, LDAP referrals returned to the AD CS, S/MIME and code-signing scanners are not checked, and a non-ASCII IPv6 zone id is not rejected. See the [Operator's Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/operators-guide.md).
 
 ![QU.I.R.K. dashboard — executive summary](https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/images/dashboard-hero.png)
 *The executive summary for a scan of the bundled chaos lab, which is deliberately weak. The score is capped at 20 because six CRITICAL findings are open, even though the computed score is 78. It shows the harvest-now-decrypt-later verdict, the first three remediation steps, and the six subscores.*
@@ -44,13 +44,18 @@ Nothing is installed on the systems being scanned.
 
 ## Quick Start
 
+QU.I.R.K. supports Python 3.10 to 3.14. Python 3.15 is not supported yet, so check `python3 --version` first (Homebrew's default `python3` on macOS may already be 3.15). Use any of `python3.10` to `python3.14`; the example below uses `python3.12`.
+
 Install into a virtual environment. This is recommended on every platform and **required** on Debian 12, Kali and other distributions that mark their system Python as externally managed (see the note below).
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate   # any of python3.10 ... python3.14
 pip install 'quirk-scanner[all]'
+playwright install chromium    # needed for the PDF report; one-time download
 quirk serve                    # opens the dashboard at http://127.0.0.1:8512
 ```
+
+On Linux, Chromium also needs system libraries: run `playwright install-deps chromium` once, without a `sudo` prefix (Playwright asks for root itself; see [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/installation.md#linux-ubuntu--debian) if you have no sudo). Without Chromium the scan still writes the HTML report and skips the PDF.
 
 Then click **New Scan** in the sidebar, enter your targets and start the scan. Results appear in the dashboard when it finishes.
 
@@ -105,7 +110,7 @@ The dashboard has no login by default and is meant for local use. To require one
 
 ## Output
 
-- **Quantum-readiness score** (0–100) with six subscores: Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion. The headline score (in the report and on the dashboard's Executive page) is capped while CRITICAL findings remain open; trend and sensor-merge scores do not apply that cap. No score reaches 100 unless a hybrid post-quantum key exchange is observed.
+- **Quantum-readiness score** (0–100) with six subscores: Hygiene, Modern TLS, Identity, Agility, Data at Rest, Data in Motion. The headline score (in the report and on the dashboard's Executive page) is capped while CRITICAL findings remain open, and the trend, sensor-merge and per-segment scores apply that cap too. Known defects in 5.28.0: the dashboard and the report can still differ on the score for one scan, because some findings are raised on one surface only or at different severities. Those are the legacy TLS version finding (HIGH on the dashboard, LOW in the report), weak cipher suites (dashboard only; one such endpoint scores 84 in the report and 69 on the dashboard), undersized ECDSA certificate keys (HIGH in the report, MEDIUM on the dashboard), end-of-life crypto libraries in container images (report only), Kerberos weak-encryption and DNSSEC findings, and some other report-only HIGH or CRITICAL findings. Merged and notification scores also ignore a customized list of TLS-designated ports, and the scheduled-scan drift notification can show a different score than the dashboard's Trends page. No score reaches 100 unless a hybrid post-quantum key exchange is observed.
 - **CBOM** in CycloneDX JSON and XML. Hardware is modelled as DEVICE components with FIRMWARE children.
 - **Reports** in PDF, DOCX and HTML, plus CLI markdown. The HTML report (which the PDF prints), the DOCX report and the CLI executive summary take their executive content from one shared content model, and each carries a written executive narrative and a NOW / NEXT / LATER migration roadmap. The CLI also writes the roadmap on its own as `roadmap-*.md`. The PDF needs Playwright and its Chromium browser; without them the scan skips the PDF and still writes the HTML report.
 - **Web dashboard** (`quirk serve`) with these views: executive summary, findings with a per-finding storyline, identity, data in motion, data at rest, certificates, hardware inventory, CBOM viewer, migration roadmap, quantum exposure map (endpoints linked by a shared key or a shared issuing CA), trends, scan history, scan comparison, schedules, sensors and QRAMM assessment, plus a New Scan page that starts a scan from the browser. Light and dark themes are included.
@@ -147,7 +152,7 @@ The full per-release history is in [CHANGELOG.md](https://github.com/0xD1g5/QU.I
 ## Install
 
 - **PyPI:** `pip install 'quirk-scanner[all]'` (see Quick Start). Releases are published through PyPI Trusted Publishers with Sigstore attestations; verify them as described in [Release Process](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/release-process.md#attestation-verification-for-downstream-consumers).
-- **Windows sensor:** a zip with the frozen `quirk.exe` and PowerShell install and uninstall scripts is attached to each [GitHub Release](https://github.com/0xD1g5/QU.I.R.K/releases) from v5.12.0 onward. The installer registers a daily Scheduled Task.
+- **Windows sensor:** a zip with the frozen `quirk.exe` and PowerShell install and uninstall scripts is attached to each [GitHub Release](https://github.com/0xD1g5/QU.I.R.K/releases) from v5.12.0 onward. The installer registers a daily Scheduled Task. Known defect in 5.28.0: the installer does not write a sensor identity or a scan config, so the task's pushes are rejected until you enroll the sensor by hand; see [Operator's Guide → Windows sensor deployment](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/operators-guide.md#88-windows-sensor-deployment-zip--scheduled-task).
 
 > **No `curl | bash` installer.** This is deliberate. Piping HTTP into a shell bypasses the integrity guarantees of Sigstore attestations and Trusted Publishers. See [`docs/release-process.md`](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/release-process.md).
 

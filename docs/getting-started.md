@@ -7,10 +7,13 @@ From install to first scan in three steps, using the dashboard.
 ## Quickstart: the dashboard
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate   # any of python3.10 ... python3.14
 pip install 'quirk-scanner[all]'
+playwright install chromium    # needed for the PDF report; one-time download
 quirk serve
 ```
+
+QU.I.R.K. supports Python 3.10 to 3.14 (3.15 is not supported yet); `python3.12` is only an example. On Linux, also run `playwright install-deps chromium` once (see [Installation](installation.md#linux-ubuntu--debian)).
 
 > **Use a venv + quote the extras.** Debian 12, Kali (2024.4 and later), and other distributions that mark their system Python as "externally managed" ([PEP 668](https://peps.python.org/pep-0668/)) reject a bare `pip install` with `externally-managed-environment`; the `.venv` avoids this. zsh treats an unquoted `[all]` as a glob and fails with `no matches found`, so keep the quotes. Full Parrot/Kali steps: [Installation → Parrot OS / Kali / Debian](installation.md#parrot-os--kali--debian-pep-668).
 
