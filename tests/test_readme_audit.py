@@ -148,3 +148,17 @@ def test_pypi_mode_without_renderer_is_unknown(monkeypatch, capsys):
         json_loader=lambda v, t: {"info": {"description": "[a](https://e.com)"}})
     report = json.loads(capsys.readouterr().out)
     assert rc == 2 and report["verdict"] == "unknown"
+
+
+def test_commands_blocks_and_python_range(capsys):
+    cmds = _commands()
+    clone_fence = {c["fence_id"] for c in cmds if c["text"].startswith("git clone")}
+    assert clone_fence
+    assert all(c["block"] == "contributor"
+               for c in cmds if c["fence_id"] in clone_fence)
+    assert any(c["block"] == "user" and "quirk serve" in c["text"] for c in cmds)
+    assert readme_audit.stated_python_range("needs Python 3.10 to 3.14.") == "3.10-3.14"
+    assert readme_audit.stated_python_range("Python 3.10–3.14") == "3.10-3.14"
+    assert readme_audit.stated_python_range("no range here") is None
+    assert readme_audit.main(["commands", "--readme", str(README)]) == 0
+    assert "python_range" in json.loads(capsys.readouterr().out)

@@ -7,7 +7,10 @@ Two subcommands, JSON on stdout, human notes on stderr:
     Every shell command in README.md, found by walking the markdown-it token
     stream (fenced bash/sh/shell/console blocks, plus inline code that starts
     with a known tool name). No hand-kept list: a command added to the README
-    appears here on the next run. Each record carries its README line number.
+    appears here on the next run. Each record carries its README line number and a ``block`` of
+    ``contributor`` (a fence that clones the repository) or ``user``. The JSON
+    also carries ``python_range``, the supported-interpreter range stated in
+    the README prose (``null`` when none is stated).
 
 ``links --source file:PATH | pypi:VERSION [--substitute-ref REF]``
     Extract every href/src/srcset target and HTTP-check it. In ``pypi`` mode
@@ -87,6 +90,11 @@ def enumerate_commands(text: str) -> List[dict]:
                 walk(tok.children, line)
 
     walk(_md().parse(text), 1)
+    contributor = {r["fence_id"] for r in records
+                   if r["kind"] == "fence" and r["text"].startswith("git clone")}
+    for r in records:
+        r["block"] = ("contributor" if r["fence_id"] in contributor
+                      else "user")
     return records
 
 
@@ -118,6 +126,21 @@ def _fence_records(tok, fence_id: int, out: List[dict]) -> None:
             "fence_id": fence_id, "line": pending_line,
             "text": pending, "kind": "fence",
         })
+
+
+_RANGE = re.compile(
+    r"Python\s+(3\.\d+)\s*(?:to|through|-|\u2013|\u2014)\s*(?:Python\s+)?(3\.\d+)")
+
+
+def stated_python_range(text: str) -> Optional[str]:
+    """The supported-interpreter range the README prose states, e.g. ``3.10-3.14``.
+
+    ``None`` when the prose names no range. The smoke harness reads this from
+    the commands JSON, so the README itself never has to cross into the clean
+    environment.
+    """
+    match = _RANGE.search(text)
+    return f"{match.group(1)}-{match.group(2)}" if match else None
 
 
 # ---------------------------------------------------------------------------
@@ -297,8 +320,11 @@ def main(argv=None, fetcher: Fetcher = default_fetcher,
 
     if args.cmd == "commands":
         with open(args.readme, encoding="utf-8") as fh:
-            cmds = enumerate_commands(fh.read())
-        print(json.dumps({"readme": args.readme, "commands": cmds}, indent=2))
+            text = fh.read()
+        cmds = enumerate_commands(text)
+        rng = stated_python_range(text)
+        print(json.dumps({"readme": args.readme, "commands": cmds,
+                          "python_range": rng}, indent=2))
         return 0
     return _links(args, fetcher, json_loader)
 
