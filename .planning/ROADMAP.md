@@ -338,13 +338,13 @@ Plans:
 - [ ] 235-08-PLAN.md — Re-verify every live README claim (by section) and the PyPI metadata against 5.28.0 (wave 8)
 - [ ] 235-09-PLAN.md — CHANGELOG [5.28.0] with the scoring 4.0 upgrade notes and known defects (D-12) (wave 9)
 - [ ] 235-10-PLAN.md — Version bump to 5.28.0 with README pins, What's New v5.28 (ledgered, re-checked), UAT-SERIES rows + Series 235, UAT-232-08 relabel (D-14, D-22) (wave 10)
-- [ ] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness) + rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
+- [ ] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness); D-30 dashboard-vs-report pre-measurement; rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
 - [ ] 235-12-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, contributor leg, open the release PR (wave 12)
 - [ ] 235-13-PLAN.md — Operator merges (merge commit); merge tree == rehearsed tree; main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 13)
 - [ ] 235-14-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 14)
 - [ ] 235-15-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 15)
-- [ ] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed (wave 16)
-- [ ] 235-17-PLAN.md — Private go/no-go record, claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20) (wave 17)
+- [ ] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed; D-30 GO preconditions (umbrella divergence todo Feasibility & Effort, score-divergence follow-up scheduled as a v5.29 candidate phase) (wave 16)
+- [ ] 235-17-PLAN.md — Private go/no-go record (SC3 by the D-30 attributed-gap rule, GO preconditions cited), claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20, D-30) (wave 17)
 - [ ] 235-18-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 18)
 
 ### Progress
