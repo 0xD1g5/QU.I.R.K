@@ -100,7 +100,6 @@ def test_every_tracked_quirk_data_file_is_package_data():
     """235-11: a data file tracked under quirk/ that no package-data glob
     covers is silently absent from the wheel (cmvp_curated.csv was)."""
     import pathlib
-    import subprocess
 
     root = pathlib.Path(__file__).resolve().parent.parent
     cfg = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
@@ -111,9 +110,13 @@ def test_every_tracked_quirk_data_file_is_package_data():
             p.relative_to(root).as_posix()
             for p in (root / "quirk").glob(pat) if p.is_file()
         )
-    tracked = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "quirk"], capture_output=True,
-        text=True, check=True, close_fds=False,
+    import shutil
+
+    from tests.cli_helpers import run_fork_safe
+
+    tracked = run_fork_safe(
+        [shutil.which("git"), "-C", str(root), "ls-files", "quirk"],
+        check=True,
     ).stdout.split()
     data = {f for f in tracked if not f.endswith(".py")}
     assert data - covered == set(), sorted(data - covered)
