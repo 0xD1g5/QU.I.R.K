@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,740 lines, in reading order.
+Five guides, 7,744 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -147,7 +147,7 @@ The command line is fully supported and suits scripted or scheduled scans: see s
 
 Before you begin:
 
-- **Python 3.10 or higher** — check with `python3 --version`
+- **Python 3.10 to 3.14** (3.15 is not yet supported: a dependency, nassl, ships no 3.15 build) — check with `python3 --version`
 - **Docker** — optional; needed only to run the [chaos lab](chaos-lab.md) (Docker Desktop on macOS and Windows, Docker Engine with the Compose plugin on Linux)
 
 ---
@@ -369,7 +369,7 @@ Installation steps for macOS, Linux and Windows (via WSL2).
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Python 3.10 or higher | — | Check: `python3 --version`. CI tests Python 3.11 |
+| Python 3.10 to 3.14 | — | Check: `python3 --version`. Python 3.15 is not yet supported: a dependency, nassl, ships no 3.15 build. CI tests Python 3.11 |
 | pip | A current release | Run `pip install --upgrade pip` first (this guide's install was verified with pip 26.2.1). The repo's CI install tests use `pip install --report`, which needs pip 22.2 or newer |
 | git | — | Only needed to clone the repo for a source install; the PyPI install does not use it |
 | Docker | Optional | Needed to run the chaos lab. **Docker Desktop** on macOS/Windows; **Docker Engine + Compose plugin** on Linux — see [Docker on Linux](#docker-on-linux-chaos-lab-only) |
@@ -383,7 +383,7 @@ Installation steps for macOS, Linux and Windows (via WSL2).
 **Install Python** (Homebrew recommended):
 
 ```bash
-brew install python@3.12
+brew install python@3.12   # example: any of python3.10 … python3.14 works
 ```
 
 **Clone and install:**
@@ -391,12 +391,13 @@ brew install python@3.12
 ```bash
 git clone https://github.com/0xD1g5/QU.I.R.K
 cd QU.I.R.K
+# e.g. python3.12; any of python3.10 ... python3.14 works
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
 ```
 
-Homebrew's `python@3.12` puts `python3.12` on your PATH; it does not replace `python3`, which can still be Apple's older interpreter. Create the venv with `python3.12`. Inside the activated venv, `python` and `pip` are the venv's own.
+Homebrew's `python@3.12` puts `python3.12` on your PATH; it does not replace `python3`, which can still be Apple's older interpreter. Create the venv with `python3.12` (or any other supported version, python3.10 … python3.14; 3.12 is just the example used here). Inside the activated venv, `python` and `pip` are the venv's own.
 
 Playwright installs Chromium to `~/Library/Caches/ms-playwright/` on macOS (one-time, a few hundred megabytes).
 
@@ -3409,7 +3410,7 @@ supported route for automation, sensors and repeat engagements. This guide cover
 starts with the dashboard.
 
 **Prerequisites:**
-- Python 3.10+ (CI tests 3.11)
+- Python 3.10 to 3.14 (CI tests 3.11)
 - macOS / Linux host with outbound network reach to scan targets
 - (Optional) Docker for the chaos lab smoke test
 
@@ -4909,17 +4910,20 @@ It takes no arguments: `quirk doctor --help` prints usage and exits 0 without ru
 
 | # | Category | Severity | Failure exits 1? |
 |---|----------|----------|------------------|
-| 1 | Python environment (>= 3.11) | non-informational | yes |
-| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | non-informational | yes |
+| 1 | Python environment (>= 3.10 and < 3.15) | non-informational | yes |
+| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | informational | **no** (a missing binary is reported but does not set exit 1) |
 | 3 | Compliance framework freshness (within `STALENESS_THRESHOLD_DAYS`) | non-informational | yes |
 | 4 | QRAMM module availability | informational | **no** |
-| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes |
+| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes (unreadable `QUIRK_DB_PATH`, unopenable database, or more than one legacy file); a database that has not been created yet is informational |
 | 6 | Configuration (`./config.yaml` parses) | non-informational | yes (malformed); informational only if file is absent |
 | 7 | Network connectivity (DNS lookup of `example.com`) | informational | **no** |
 | 8 | Dashboard process (HTTP HEAD to `http://127.0.0.1:8512/`) | informational | **no** |
 
-The Python check requires 3.11 or newer, although the package metadata (`requires-python`)
-allows 3.10.
+The Python check accepts the same range as the package metadata (`requires-python`):
+3.10 up to and including 3.14. Python 3.15 is not yet supported. Missing optional binaries
+and a not-yet-created database are reported with `[!]` and leave the exit status at 0; a
+Python version outside the range, a failed core import, stale compliance data or an
+unreadable database still exit 1.
 
 ##### Symbols
 
@@ -5327,7 +5331,7 @@ segment. The gauges are recomputed from the current sensor rows each time the pa
 QU.I.R.K. sensors run on Windows with no additional configuration beyond the standard
 Python install.
 
-**Prerequisites:** Python 3.10 or newer for Windows (the package declares `requires-python >=3.10`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
+**Prerequisites:** Python 3.10 to 3.14 for Windows (the package declares `requires-python >=3.10,<3.15`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
 
 **Install:**
 
@@ -7461,7 +7465,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk compliance cmvp` | Inspect the CMVP attestation cache (actions `status` and `refresh`; use only `status`) | `status`, `refresh` | CLI only |
 | `quirk compliance cmvp status` | Print CMVP cache freshness (read-only) | `--format` (`text` or `json`) | CLI only |
 | `quirk compliance cmvp refresh` | Refresh CMVP cache from NIST. **Do not run it**: see the warning below the table | `--dry-run` | CLI only |
-| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries, compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (`-h`/`--help` only; extra arguments exit 2) | CLI only |
+| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries (informational), compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (`-h`/`--help` only; extra arguments exit 2) | CLI only |
 | `quirk schedule` | Manage scheduled scans | `add`, `list`, `enable`, `disable`, `remove` | Schedules page (list, enable, disable, delete); the page cannot create a schedule |
 | `quirk schedule add` | Add a new scheduled scan | `--name`, `--cron`, `--target`, `--check-in` | `POST /api/schedules` also creates one, but no page calls it: the Schedules page's Add Schedule sheet only prints this command |
 | `quirk schedule list` | List all scheduled scans | `--config` | Schedules page: `GET /api/schedules` |

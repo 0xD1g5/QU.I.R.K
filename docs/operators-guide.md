@@ -12,7 +12,7 @@ supported route for automation, sensors and repeat engagements. This guide cover
 starts with the dashboard.
 
 **Prerequisites:**
-- Python 3.10+ (CI tests 3.11)
+- Python 3.10 to 3.14 (CI tests 3.11)
 - macOS / Linux host with outbound network reach to scan targets
 - (Optional) Docker for the chaos lab smoke test
 
@@ -1512,17 +1512,20 @@ It takes no arguments: `quirk doctor --help` prints usage and exits 0 without ru
 
 | # | Category | Severity | Failure exits 1? |
 |---|----------|----------|------------------|
-| 1 | Python environment (>= 3.11) | non-informational | yes |
-| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | non-informational | yes |
+| 1 | Python environment (>= 3.10 and < 3.15) | non-informational | yes |
+| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | informational | **no** (a missing binary is reported but does not set exit 1) |
 | 3 | Compliance framework freshness (within `STALENESS_THRESHOLD_DAYS`) | non-informational | yes |
 | 4 | QRAMM module availability | informational | **no** |
-| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes |
+| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes (unreadable `QUIRK_DB_PATH`, unopenable database, or more than one legacy file); a database that has not been created yet is informational |
 | 6 | Configuration (`./config.yaml` parses) | non-informational | yes (malformed); informational only if file is absent |
 | 7 | Network connectivity (DNS lookup of `example.com`) | informational | **no** |
 | 8 | Dashboard process (HTTP HEAD to `http://127.0.0.1:8512/`) | informational | **no** |
 
-The Python check requires 3.11 or newer, although the package metadata (`requires-python`)
-allows 3.10.
+The Python check accepts the same range as the package metadata (`requires-python`):
+3.10 up to and including 3.14. Python 3.15 is not yet supported. Missing optional binaries
+and a not-yet-created database are reported with `[!]` and leave the exit status at 0; a
+Python version outside the range, a failed core import, stale compliance data or an
+unreadable database still exit 1.
 
 #### Symbols
 
@@ -1930,7 +1933,7 @@ segment. The gauges are recomputed from the current sensor rows each time the pa
 QU.I.R.K. sensors run on Windows with no additional configuration beyond the standard
 Python install.
 
-**Prerequisites:** Python 3.10 or newer for Windows (the package declares `requires-python >=3.10`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
+**Prerequisites:** Python 3.10 to 3.14 for Windows (the package declares `requires-python >=3.10,<3.15`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
 
 **Install:**
 
@@ -4064,7 +4067,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk compliance cmvp` | Inspect the CMVP attestation cache (actions `status` and `refresh`; use only `status`) | `status`, `refresh` | CLI only |
 | `quirk compliance cmvp status` | Print CMVP cache freshness (read-only) | `--format` (`text` or `json`) | CLI only |
 | `quirk compliance cmvp refresh` | Refresh CMVP cache from NIST. **Do not run it**: see the warning below the table | `--dry-run` | CLI only |
-| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries, compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (`-h`/`--help` only; extra arguments exit 2) | CLI only |
+| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries (informational), compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (`-h`/`--help` only; extra arguments exit 2) | CLI only |
 | `quirk schedule` | Manage scheduled scans | `add`, `list`, `enable`, `disable`, `remove` | Schedules page (list, enable, disable, delete); the page cannot create a schedule |
 | `quirk schedule add` | Add a new scheduled scan | `--name`, `--cron`, `--target`, `--check-in` | `POST /api/schedules` also creates one, but no page calls it: the Schedules page's Add Schedule sheet only prints this command |
 | `quirk schedule list` | List all scheduled scans | `--config` | Schedules page: `GET /api/schedules` |

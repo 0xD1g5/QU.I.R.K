@@ -28,7 +28,7 @@ The command line is fully supported and suits scripted or scheduled scans: see s
 
 Before you begin:
 
-- **Python 3.10 or higher** — check with `python3 --version`
+- **Python 3.10 to 3.14** (3.15 is not yet supported: a dependency, nassl, ships no 3.15 build) — check with `python3 --version`
 - **Docker** — optional; needed only to run the [chaos lab](chaos-lab.md) (Docker Desktop on macOS and Windows, Docker Engine with the Compose plugin on Linux)
 
 ---

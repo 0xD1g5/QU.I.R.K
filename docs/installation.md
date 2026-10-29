@@ -8,7 +8,7 @@ Installation steps for macOS, Linux and Windows (via WSL2).
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Python 3.10 or higher | — | Check: `python3 --version`. CI tests Python 3.11 |
+| Python 3.10 to 3.14 | — | Check: `python3 --version`. Python 3.15 is not yet supported: a dependency, nassl, ships no 3.15 build. CI tests Python 3.11 |
 | pip | A current release | Run `pip install --upgrade pip` first (this guide's install was verified with pip 26.2.1). The repo's CI install tests use `pip install --report`, which needs pip 22.2 or newer |
 | git | — | Only needed to clone the repo for a source install; the PyPI install does not use it |
 | Docker | Optional | Needed to run the chaos lab. **Docker Desktop** on macOS/Windows; **Docker Engine + Compose plugin** on Linux — see [Docker on Linux](#docker-on-linux-chaos-lab-only) |
@@ -22,7 +22,7 @@ Installation steps for macOS, Linux and Windows (via WSL2).
 **Install Python** (Homebrew recommended):
 
 ```bash
-brew install python@3.12
+brew install python@3.12   # example: any of python3.10 … python3.14 works
 ```
 
 **Clone and install:**
@@ -30,12 +30,13 @@ brew install python@3.12
 ```bash
 git clone https://github.com/0xD1g5/QU.I.R.K
 cd QU.I.R.K
+# e.g. python3.12; any of python3.10 ... python3.14 works
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
 ```
 
-Homebrew's `python@3.12` puts `python3.12` on your PATH; it does not replace `python3`, which can still be Apple's older interpreter. Create the venv with `python3.12`. Inside the activated venv, `python` and `pip` are the venv's own.
+Homebrew's `python@3.12` puts `python3.12` on your PATH; it does not replace `python3`, which can still be Apple's older interpreter. Create the venv with `python3.12` (or any other supported version, python3.10 … python3.14; 3.12 is just the example used here). Inside the activated venv, `python` and `pip` are the venv's own.
 
 Playwright installs Chromium to `~/Library/Caches/ms-playwright/` on macOS (one-time, a few hundred megabytes).
 
