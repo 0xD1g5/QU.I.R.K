@@ -16,9 +16,13 @@ import datetime
 # See CLAUDE.md "Staleness Review Cadence" for the bump procedure.
 STALENESS_THRESHOLD_DAYS: int = 90
 
+# Re-verified 2026-10-29 (235-11): qramm.org lists 4 dimensions (CVI, SGRM, DPE,
+# ITR), 12 practices and 120 questions; csnp/qramm
+# framework/Complete_QRAMM_Questions.md carries the same 120 question texts
+# (2 differ only in a curly apostrophe / a missing '?').
 QRAMM_MODEL = {
     "qramm_version": "1.0",
-    "last_verified": "2026-08-11",
+    "last_verified": "2026-10-29",
     "source_url": "https://qramm.org",
     "github_url": "https://github.com/csnp/qramm",
     "license": "MIT",
