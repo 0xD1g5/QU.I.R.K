@@ -1096,7 +1096,7 @@ the connector rows.
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
 | JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
-| Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
+| Source code | semgrep (registry pack `p/cryptography`, ruleset unavailable in 5.28.0: known defect, the domain reads Not assessed; see [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
 | Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `kerberos_probe_principal`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
 | SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
@@ -1110,7 +1110,7 @@ the connector rows.
 | Kubernetes | EKS/GKE/AKS encryption + secret type enumeration | `connectors.enable_k8s`, `k8s_provider`, `k8s_cluster_name`, `k8s_kubeconfig`, `k8s_context` | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#kubernetes--enable_k8s--gcp--enable_gcp) |
 | Vault | Transit keys + PKI + auth methods | `connectors.enable_vault`, `vault_addr`, `vault_token`, `vault_transit_mount` | `quirk-scanner[cloud]` (`hvac`) | [connector-field-reference.md](connector-field-reference.md#hashicorp-vault--enable_vault) |
 | Docker (image SBOM) | (uses container scanner) | (see Container row) | `syft` | [`docs/connectors/docker.md`](connectors/docker.md) |
-| Git (semgrep) | (uses source scanner) | (see Source row) | `semgrep` | [`docs/connectors/git.md`](connectors/git.md) |
+| Git (semgrep) | (uses source scanner; known defect, ruleset unavailable in 5.28.0) | (see Source row) | `semgrep` | [`docs/connectors/git.md`](connectors/git.md) |
 | PQC probe | Negotiates `X25519MLKEM768` against every TLS target (post-quantum hybrid key exchange) | none: runs with the TLS phase | host `openssl` with ML-KEM support (advisory fallback without it) | `pqc-hybrid-detected` |
 | S/MIME | S/MIME signing certificates in AD `userCertificate` / `userSMIMECertificate` over anonymous LDAP | `connectors.enable_smime`, `smime_targets`, `smime_search_base`, `smime_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (weak-signing-alg / weak-rsa-key / expired certificate rows, protocol `SMIME`) |
 | AD CS | Read-only LDAP enumeration of AD CS certificate authorities and templates (ESC1, ESC2, ESC3, ESC6) | `connectors.enable_adcs`, `adcs_targets`, `adcs_search_base`, `adcs_user`, `adcs_password` or `QUIRK_ADCS_PASSWORD`, `adcs_timeout` | `quirk-scanner[adcs]` (`ldap3`) | `coverage-gap\|ESC4\|reason=not-ldap-observable` |
@@ -1214,13 +1214,15 @@ findings. Requires `syft` on `PATH` and `connectors.enable_container=true`.
 
 #### Source-code scanner
 
-Runs semgrep with the registry pack `p/cryptography` against each directory in
-`source_targets`. As of 2026-10-12 the Semgrep registry answered HTTP 404 for that pack
-name (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
+**Known defect (5.28.0):** source code scanning does not currently work. The scanner is
+built to run semgrep with the registry pack `p/cryptography` against each directory in
+`source_targets`, but as of 2026-10-12 the Semgrep registry answers HTTP 404 for that pack
+name, so a scan records a "ruleset unavailable" error, Scan Coverage shows `skipped: failed`,
+the source domain reads Not assessed and no source findings are produced (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
 path to an existing local directory (for example a clone); remote URLs are not fetched,
 and a path that is missing or contains `..` or shell metacharacters is rejected with an
-`invalid_input` row. Findings carry the semgrep rule id and `file:line`. Requires
-`semgrep` on `PATH` and `connectors.enable_source=true`.
+`invalid_input` row. Once a working ruleset is configured, findings carry the semgrep rule id and `file:line`. Requires
+`semgrep` on `PATH` and `connectors.enable_source=true` (known defect: ruleset unavailable).
 
 #### DNSSEC scanner
 
@@ -2297,7 +2299,7 @@ Set in `config.yaml` under the `scan.timeouts` block. All values are in seconds.
 | `scan.timeouts.ssh_seconds` | 6 | SSH |
 | `scan.timeouts.jwt_seconds` | 10 | JWT / API |
 | `scan.timeouts.container_seconds` | 120 | Container (Syft) |
-| `scan.timeouts.source_seconds` | 300 | Source code (Semgrep) |
+| `scan.timeouts.source_seconds` | 300 | Source code (Semgrep; known defect, ruleset unavailable in 5.28.0) |
 | `scan.timeouts.dnssec_seconds` | 10 | DNSSEC |
 | `scan.timeouts.saml_seconds` | 10 | SAML |
 | `scan.timeouts.kerberos_seconds` | 10 | Kerberos |

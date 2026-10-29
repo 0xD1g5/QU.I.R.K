@@ -72,7 +72,7 @@ When the `syft` tool is installed (it is not installed with QU.I.R.K.), QU.I.R.K
 
 ### Source Code Scanning
 
-When the `semgrep` tool is installed (it is not installed with QU.I.R.K.), QU.I.R.K. runs it with the `p/cryptography` ruleset against local source directories; repository URLs are rejected as invalid input. Each result is recorded with its file path and line number. Known issue: the Semgrep registry returns HTTP 404 for that ruleset (checked 2026-10-13), so semgrep stops with a configuration error and source scanning currently produces no results; see the [Git connector page](connectors/git.md).
+When the `semgrep` tool is installed (it is not installed with QU.I.R.K.), QU.I.R.K. asks it for the `p/cryptography` ruleset against local source directories; repository URLs are rejected as invalid input. Each result is recorded with its file path and line number. Known defect: that ruleset is unavailable (the Semgrep registry returns HTTP 404 for it, checked 2026-10-13), so semgrep exits 7, QU.I.R.K. records a "ruleset unavailable" scan error, the source domain reads Not assessed, and source scanning produces no findings; see the [Git connector page](connectors/git.md).
 
 ### Cloud Key Management Connectors
 

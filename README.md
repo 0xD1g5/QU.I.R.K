@@ -90,7 +90,7 @@ The dashboard has no login by default and is meant for local use. To require one
 | **Code signing** | Code-signing certificates from LDAP `userCertificate` and from the Code Signing EKU on leaf certificates the TLS phase captured | `--inventory-code-signing` |
 | **DNSSEC** | DNSKEY / DS algorithms | `enable_dnssec` |
 | **Container images** | Crypto libraries found in the image SBOM | `enable_container`, `syft` |
-| **Source code** | Cryptographic API usage (Semgrep `p/cryptography`) | `enable_source`, `semgrep` |
+| **Source code** | Known defect in 5.28.0: the Semgrep `p/cryptography` ruleset is unavailable, so the source domain reads Not assessed | `enable_source`, `semgrep` |
 | **Databases** | PostgreSQL / MySQL TLS enforcement | `enable_db` |
 | **AWS** | ACM, KMS, CloudFront, ELB listeners, RDS and S3 encryption (EKS is under Kubernetes) | `enable_aws` / `enable_s3` |
 | **Azure** | Application Gateway TLS policy and Blob encryption. Key Vault key scanning has a known defect and currently records no keys | `enable_azure` / `enable_blob` |

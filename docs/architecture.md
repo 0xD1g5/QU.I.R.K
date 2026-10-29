@@ -57,7 +57,7 @@ QUIRK reads credentials at scan time from sources outside the QUIRK process and 
 | Database (Postgres / MySQL) | `connectors.pg_scanner_password` / `mysql_scanner_password` in `config.yaml` | Plaintext in config file ⚠ | No (rotate per engagement; least-privilege read-only DB user recommended) |
 | Kubernetes | kubeconfig (default `~/.kube/config`, override `connectors.k8s_kubeconfig`) | Filesystem outside QUIRK | No |
 | Container image (SBOM) | Image reference passed to `syft`; any registry authentication is `syft`'s own, outside QUIRK | Outside QUIRK | No |
-| Source code (semgrep) | Local repository path passed to `semgrep`; QUIRK does not clone or authenticate | Filesystem | No |
+| Source code (semgrep; known defect, ruleset unavailable in 5.28.0) | Local repository path passed to `semgrep`; QUIRK does not clone or authenticate | Filesystem | No |
 
 The database connector passwords (`connectors.pg_scanner_password`, `connectors.mysql_scanner_password`) and the optional `connectors.vault_token` are the credential sources that can land plaintext in a QUIRK-owned config file; the `connectors` section also holds other credential fields such as `adcs_password` and SNMPv3 credentials. Operators should treat `config.yaml` as a secret artifact for the engagement and pair it with a least-privilege, read-only scanner database account.
 
@@ -78,7 +78,7 @@ The scanner and connector phases, grouped by family, are listed below. Each is a
 | `run_scan.py:2866` (`"pqc_probe"`) | `quirk/scanner/pqc_probe.py` | Hybrid ML-KEM TLS probe |
 | `run_scan.py:3170` (`"jwt_scanning"`) | `quirk/scanner/jwt_scanner.py` | JWT / API token algorithm inventory |
 | `run_scan.py:3189` (`"container_scanning"`) | `quirk/scanner/container_scanner.py` | Crypto-library inventory of container images: runs syft, keeps only packages on its crypto-library allowlist (one `CONTAINER` endpoint each), and discards the rest of syft's package list (no SBOM is written) |
-| `run_scan.py:3208` (`"source_scanning"`) | `quirk/scanner/source_scanner.py` | semgrep-driven source-code crypto detection |
+| `run_scan.py:3208` (`"source_scanning"`) | `quirk/scanner/source_scanner.py` | semgrep-driven source-code crypto detection (known defect in 5.28.0: ruleset unavailable, domain reads Not assessed) |
 | `run_scan.py:3234` / `:3287` (`"openapi_scanning"`, `"fuzz_scanning"`) | `quirk/scanner/openapi_scanner.py`, `rest_fuzzer.py` | OpenAPI spec crypto inventory; opt-in REST fuzzing |
 | `run_scan.py:3634` (`"dnssec_scanning"`) | `quirk/scanner/dnssec_scanner.py` | DNSSEC algorithm chain inspection |
 | `run_scan.py:3679` (`"kerberos_scanning"`) | `quirk/scanner/kerberos_scanner.py` | KDC enctype inventory |

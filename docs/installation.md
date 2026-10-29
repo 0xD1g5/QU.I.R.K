@@ -229,7 +229,7 @@ playwright install-deps chromium   # no sudo prefix: it asks for sudo itself
 
 ```bash
 sudo apt install -y nmap     # richer host discovery (--discovery nmap)
-pip install semgrep          # source-code crypto scanning
+pip install semgrep          # source scanning: known defect in 5.28.0, ruleset unavailable
 # syft (container scanning): https://github.com/anchore/syft#installation
 ```
 
@@ -292,7 +292,7 @@ Install only what you need:
 | Web dashboard + PDF export | `pip install -e '.[dashboard]'` (used in the macOS and Linux install steps above) |
 | Kerberos scanning | `pip install -e '.[identity]'` — adds `impacket` and `ldap3`; `lxml`, `signxml` and `dnspython[dnssec]` are already core dependencies |
 | Container scanning | Install the Anchore Syft CLI and put it on your PATH: see [Syft's installation instructions](https://github.com/anchore/syft#installation) (the `syft` package on PyPI is an unrelated project) |
-| Source code scanning | `pip install semgrep` |
+| Source code scanning (known defect in 5.28.0: ruleset unavailable) | `pip install semgrep` |
 | AWS connector | Included in base install (boto3 is a core dependency) |
 | Azure connector | Included in base install (azure-identity and azure-keyvault-* are core dependencies) |
 
