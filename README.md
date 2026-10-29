@@ -1,16 +1,16 @@
 <picture>
-<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo-dark.svg">
-<source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo.svg">
-<img src="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/brand/quirk-logo.svg" alt="QU.I.R.K." height="64">
+<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.28.0/docs/brand/quirk-logo-dark.svg">
+<source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.28.0/docs/brand/quirk-logo.svg">
+<img src="https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.28.0/docs/brand/quirk-logo.svg" alt="QU.I.R.K." height="64">
 </picture>
 
 [![Python Staleness Gate](https://img.shields.io/github/actions/workflow/status/0xD1g5/QU.I.R.K/python-staleness.yml?branch=main&label=staleness%20gate)](https://github.com/0xD1g5/QU.I.R.K/actions/workflows/python-staleness.yml)
 [![PyPI version](https://img.shields.io/pypi/v/quirk-scanner.svg)](https://pypi.org/project/quirk-scanner/)
-[![License: MIT](https://img.shields.io/github/license/0xD1g5/QU.I.R.K)](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/LICENSE)
-[![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/release-process.md#attestation-verification-for-downstream-consumers)
-[![Security Policy](https://img.shields.io/badge/security-policy-blue)](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/SECURITY.md)
+[![License: MIT](https://img.shields.io/github/license/0xD1g5/QU.I.R.K)](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/LICENSE)
+[![Sigstore attested](https://img.shields.io/badge/sigstore-attested-blue)](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/release-process.md#attestation-verification-for-downstream-consumers)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue)](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/SECURITY.md)
 
-# QU.I.R.K. — v5.27.0
+# QU.I.R.K. — v5.28.0
 
 **Quantum Infrastructure Readiness Kit** is a consulting-grade cryptographic inventory and quantum-readiness assessment tool.
 
@@ -23,9 +23,9 @@ It produces three things:
 - a prioritized migration roadmap, in client-ready PDF, DOCX and HTML reports.
 
 > [!IMPORTANT]
-> **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, HTTP and SNMP requests, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and the dashboard's New Scan form can also check targets against an optional trusted-targets allowlist (`security.trusted_targets`), and the check covers `targets.include_ips` and the host-naming connector fields it recognizes, whether or not that connector is enabled. Known gaps in 5.28.0: a connector target field written as a single value instead of a list may not be checked, LDAP referrals returned to the AD CS, S/MIME and code-signing scanners are not checked, and a non-ASCII IPv6 zone id is not rejected. See the [Operator's Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/operators-guide.md).
+> **Only scan systems you own or are explicitly authorized to assess.** QU.I.R.K. actively connects to the targets you give it: TLS handshakes, SSH negotiation, HTTP and SNMP requests, LDAP and Kerberos queries, and optional read-only OT/ICS probes. Get written authorization before scanning anyone else's infrastructure. The CLI and the dashboard's New Scan form can also check targets against an optional trusted-targets allowlist (`security.trusted_targets`), and the check covers `targets.include_ips` and the host-naming connector fields it recognizes, whether or not that connector is enabled. Known gaps in 5.28.0: a connector target field written as a single value instead of a list may not be checked, LDAP referrals returned to the AD CS, S/MIME and code-signing scanners are not checked, and a non-ASCII IPv6 zone id is not rejected. See the [Operator's Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/operators-guide.md).
 
-![QU.I.R.K. dashboard — executive summary](https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.27.0/docs/images/dashboard-hero.png)
+![QU.I.R.K. dashboard — executive summary](https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v5.28.0/docs/images/dashboard-hero.png)
 *The executive summary for a scan of the bundled chaos lab, which is deliberately weak. The score is capped at 20 because six CRITICAL findings are open, even though the computed score is 78. It shows the harvest-now-decrypt-later verdict, the first three remediation steps, and the six subscores.*
 
 ## For your role
@@ -55,7 +55,7 @@ playwright install chromium    # needed for the PDF report; one-time download
 quirk serve                    # opens the dashboard at http://127.0.0.1:8512
 ```
 
-On Linux, Chromium also needs system libraries: run `playwright install-deps chromium` once, without a `sudo` prefix (Playwright asks for root itself; see [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/installation.md#linux-ubuntu--debian) if you have no sudo). Without Chromium the scan still writes the HTML report and skips the PDF.
+On Linux, Chromium also needs system libraries: run `playwright install-deps chromium` once, without a `sudo` prefix (Playwright asks for root itself; see [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/installation.md#linux-ubuntu--debian) if you have no sudo). Without Chromium the scan still writes the HTML report and skips the PDF.
 
 Then click **New Scan** in the sidebar, enter your targets and start the scan. Results appear in the dashboard when it finishes.
 
@@ -66,9 +66,9 @@ quirk init                     # writes a starter config.yaml — edit the targe
 quirk --config config.yaml     # run the scan
 ```
 
-> **Use a venv.** Debian 12, Kali and other distributions that mark their system Python as "externally managed" ([PEP 668](https://peps.python.org/pep-0668/)) reject a bare `pip install` into the system Python with `error: externally-managed-environment`. Keep the quotes around `'quirk-scanner[all]'`: zsh, the default shell on macOS 10.15 and later and on Kali's desktop images, otherwise treats `[all]` as a glob and fails with `no matches found`. Full walkthrough: [Installation → Parrot OS / Kali / Debian](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/installation.md#parrot-os--kali--debian-pep-668).
+> **Use a venv.** Debian 12, Kali and other distributions that mark their system Python as "externally managed" ([PEP 668](https://peps.python.org/pep-0668/)) reject a bare `pip install` into the system Python with `error: externally-managed-environment`. Keep the quotes around `'quirk-scanner[all]'`: zsh, the default shell on macOS 10.15 and later and on Kali's desktop images, otherwise treats `[all]` as a glob and fails with `no matches found`. Full walkthrough: [Installation → Parrot OS / Kali / Debian](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/installation.md#parrot-os--kali--debian-pep-668).
 
-The dashboard has no login by default and is meant for local use. To require one, run `quirk token generate --config config.yaml`, then start `quirk serve` from the same directory; see [Configuration → dashboard authentication](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/configuration.md). For a walkthrough of each step, follow the [Getting Started guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/getting-started.md).
+The dashboard has no login by default and is meant for local use. To require one, run `quirk token generate --config config.yaml`, then start `quirk serve` from the same directory; see [Configuration → dashboard authentication](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/configuration.md). For a walkthrough of each step, follow the [Getting Started guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/getting-started.md).
 
 ## What QU.I.R.K. Scans
 
@@ -106,7 +106,7 @@ The dashboard has no login by default and is meant for local use. To require one
 | **Modbus/TCP** | One read-only device-identification request | `--enable-modbus`, `[hw]` extra |
 | **BACnet/IP** | Who-Is, then model name and firmware revision | `--enable-bacnet`, `[hw]` extra |
 
-`[all]` covers the cloud, database, broker, email, AD CS, report and dashboard dependencies. It deliberately leaves out **`[hw]`** (SNMP, Modbus, BACnet), **`[api]`** (REST fuzzing) and **`[identity]`** (Kerberos). Install those explicitly, e.g. `pip install 'quirk-scanner[all,hw]'`. The [Configuration Reference](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/configuration.md) documents every key.
+`[all]` covers the cloud, database, broker, email, AD CS, report and dashboard dependencies. It deliberately leaves out **`[hw]`** (SNMP, Modbus, BACnet), **`[api]`** (REST fuzzing) and **`[identity]`** (Kerberos). Install those explicitly, e.g. `pip install 'quirk-scanner[all,hw]'`. The [Configuration Reference](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/configuration.md) documents every key.
 
 ## Output
 
@@ -117,44 +117,48 @@ The dashboard has no login by default and is meant for local use. To require one
 - **Distributed mode**: on-prem sensors scan isolated network segments and push their results to a central console. `quirk sensor merge` builds one CBOM and score from every endpoint of each sensor's latest push. A Windows sensor build ships as a GitHub Release asset.
 - **Integrations**: notifications for scheduled scans and hardware lifecycle changes, SIEM CEF export, and Jira / ServiceNow ticket creation.
 
-Four sample CBOMs live in [`examples/cbom/`](https://github.com/0xD1g5/QU.I.R.K/tree/v5.27.0/examples/cbom): TLS-only, identity, data at rest and data in motion. They are built from synthesized chaos-lab endpoints, not from a live scan.
+Four sample CBOMs live in [`examples/cbom/`](https://github.com/0xD1g5/QU.I.R.K/tree/v5.28.0/examples/cbom): TLS-only, identity, data at rest and data in motion. They are built from synthesized chaos-lab endpoints, not from a live scan.
 
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
-| [Getting Started](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/getting-started.md) | From install to first scan in three steps, using the dashboard |
-| [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/installation.md) | System requirements and install steps for macOS, Linux and Windows WSL |
-| [Configuration Reference](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/configuration.md) | Every config.yaml option and every flag in `quirk --help` |
-| [Operator's Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/operators-guide.md) | Running engagements: scope, allowlists, scheduling, sensors |
-| [Connector Guides](https://github.com/0xD1g5/QU.I.R.K/tree/v5.27.0/docs/connectors) | Setup for AWS, Azure, GCP, Kubernetes, HashiCorp Vault, databases, Docker and Git |
-| [Cloud Console Deployment](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/deployment-cloud-console.md) | Running the console on a cloud VM with internal sensors pushing to it |
-| [Report Interpretation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/report-interpretation.md) | What the score, subscores and common findings mean, with Client Conversation notes |
-| [CBOM Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
-| [Chaos Lab Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/chaos-lab.md) | A Docker lab of **deliberately weak** crypto services to scan. Its compose file publishes almost every service port on all host interfaces, so we recommend running it on an isolated host that untrusted networks cannot reach |
-| [Intelligence Schema](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/intelligence-schema.md) | The `intelligence-*.json` output format |
-| [Upgrade Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/upgrade-guide.md) | Cross-version upgrades with `quirk db migrate` |
-| [Release Process](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/release-process.md) | Publishing, and Sigstore attestation verification |
+| [Getting Started](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/getting-started.md) | From install to first scan in three steps, using the dashboard |
+| [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/installation.md) | System requirements and install steps for macOS, Linux and Windows WSL |
+| [Configuration Reference](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/configuration.md) | Every config.yaml option and every flag in `quirk --help` |
+| [Operator's Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/operators-guide.md) | Running engagements: scope, allowlists, scheduling, sensors |
+| [Connector Guides](https://github.com/0xD1g5/QU.I.R.K/tree/v5.28.0/docs/connectors) | Setup for AWS, Azure, GCP, Kubernetes, HashiCorp Vault, databases, Docker and Git |
+| [Cloud Console Deployment](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/deployment-cloud-console.md) | Running the console on a cloud VM with internal sensors pushing to it |
+| [Report Interpretation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/report-interpretation.md) | What the score, subscores and common findings mean, with Client Conversation notes |
+| [CBOM Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/cbom-guide.md) | What a CBOM is and how to cite it as compliance evidence |
+| [Chaos Lab Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/chaos-lab.md) | A Docker lab of **deliberately weak** crypto services to scan. Its compose file publishes almost every service port on all host interfaces, so we recommend running it on an isolated host that untrusted networks cannot reach |
+| [Intelligence Schema](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/intelligence-schema.md) | The `intelligence-*.json` output format |
+| [Upgrade Guide](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/upgrade-guide.md) | Cross-version upgrades with `quirk db migrate` |
+| [Release Process](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/release-process.md) | Publishing, and Sigstore attestation verification |
 
-## What's New in v5.27
+## What's New in v5.28
 
-v5.27.0 is the first release since v5.25.0, so it carries both the v5.26 accessibility work and the v5.27 launch-readiness work. There are no score-model changes (`SCORING_VERSION` stays 3.0), so v5.27 scores are comparable with v5.25 scores.
+**Scores change when you upgrade, and most estates score lower.** v5.28.0 replaces the readiness score model (`SCORING_VERSION` 4.0 replaces 3.0), so a v5.28 score is not comparable with a score from an earlier version. See [Report Interpretation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/report-interpretation.md) for the model and worked examples.
 
-- **Score gauges no longer draw mirrored.** A score of 20 out of 100 used to draw an arc that looked about 90% full.
-- **Accessibility.** More dashboard badges meet WCAG AA contrast, and a dashboard table too wide or too tall for its space is a single Tab stop that the keyboard can scroll.
-- **A brand identity.** The logo appears in this README, the report colophon, the PDF footer, the favicon and the dashboard sidebar, and the dashboard accent is now Ink-violet.
-- **Every user-facing doc was reviewed claim by claim**, and the README hero image was retaken.
-- **Security hardening** of configuration loading, URL fetching and sensor enrollment.
-- **Upgrade notes.** `quirk serve` exits with an error when its config file exists but cannot be read, and protected API routes answer 503 in that state. `quirk sensor enroll` and `quirk sensor push` require an `https://` console URL for non-loopback hosts unless `--allow-insecure-console` is given, so re-enroll existing sensors that use an `http://` console.
+- **Classical keys are not counted as ready.** RSA, ECDSA and EdDSA certificate keys are all treated as quantum-vulnerable; only a post-quantum key exchange or an ML-DSA, SLH-DSA or composite certificate key earns credit.
+- **Observing more healthy endpoints no longer raises the score.** A weakness costs points by how many endpoints carry it, saturating at 40, so a wider scan cannot dilute a problem away.
+- **The dashboard and the report agree on more.** Trend, timeline and multi-sensor merge scores now derive their findings the way the headline score does, and certificate-expiry findings and refused mail ports feed both scores. Tests pin this on covered fixtures only.
+- **Finding state follows what scans observed.** Closure states, drift and sensor merge reflect what each scan saw.
+- **Findings that never fired now do:** code-signing certificates, Kerberos encryption types, JWKS authentication, `--auth-basic` and unsigned (`alg:none`) tokens.
+- **QRAMM shows "Not assessed"** for a dimension with no answered question, instead of a made-up level.
+- **Known defects.** Source code scanning reports "ruleset unavailable" because the upstream Semgrep ruleset it used is gone, and a scan that sets `source_targets` scores lower.
+- **Known defects, Azure.** Key Vault key scanning has a known defect and currently records no keys.
+- **Known defects, scores.** The dashboard and the report can still differ in the score they give one scan; known cases are the legacy TLS version finding, weak cipher suites, undersized ECDSA certificate keys, end-of-life crypto libraries in container images, Kerberos weak-encryption and DNSSEC findings, TLS-designated ports, and the drift notification, and other findings may also differ.
+- **Known defects, Windows sensor.** The installer does not yet write a sensor identity.
 
-The full per-release history is in [CHANGELOG.md](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/CHANGELOG.md).
+The full per-release history is in [CHANGELOG.md](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/CHANGELOG.md).
 
 ## Install
 
-- **PyPI:** `pip install 'quirk-scanner[all]'` (see Quick Start). Releases are published through PyPI Trusted Publishers with Sigstore attestations; verify them as described in [Release Process](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/release-process.md#attestation-verification-for-downstream-consumers).
-- **Windows sensor:** a zip with the frozen `quirk.exe` and PowerShell install and uninstall scripts is attached to each [GitHub Release](https://github.com/0xD1g5/QU.I.R.K/releases) from v5.12.0 onward. The installer registers a daily Scheduled Task. Known defect in 5.28.0: the installer writes a random sensor ID that the console does not recognise and gives the task no scan config, so the task's pushes are rejected until you set the console's sensor ID in the sensor config by hand; see [Operator's Guide → Windows sensor deployment](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/operators-guide.md#88-windows-sensor-deployment-zip--scheduled-task).
+- **PyPI:** `pip install 'quirk-scanner[all]'` (see Quick Start). Releases are published through PyPI Trusted Publishers with Sigstore attestations; verify them as described in [Release Process](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/release-process.md#attestation-verification-for-downstream-consumers).
+- **Windows sensor:** a zip with the frozen `quirk.exe` and PowerShell install and uninstall scripts is attached to each [GitHub Release](https://github.com/0xD1g5/QU.I.R.K/releases) from v5.12.0 onward. The installer registers a daily Scheduled Task. Known defect in 5.28.0: the installer writes a random sensor ID that the console does not recognise and gives the task no scan config, so the task's pushes are rejected until you set the console's sensor ID in the sensor config by hand; see [Operator's Guide → Windows sensor deployment](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/operators-guide.md#88-windows-sensor-deployment-zip--scheduled-task).
 
-> **No `curl | bash` installer.** This is deliberate. Piping HTTP into a shell bypasses the integrity guarantees of Sigstore attestations and Trusted Publishers. See [`docs/release-process.md`](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/docs/release-process.md).
+> **No `curl | bash` installer.** This is deliberate. Piping HTTP into a shell bypasses the integrity guarantees of Sigstore attestations and Trusted Publishers. See [`docs/release-process.md`](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/release-process.md).
 
 <details>
 <summary>Develop from source</summary>
@@ -174,4 +178,4 @@ The editable install is for contributors. End users should install from PyPI.
 
 ## License
 
-MIT. See [LICENSE](https://github.com/0xD1g5/QU.I.R.K/blob/v5.27.0/LICENSE).
+MIT. See [LICENSE](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/LICENSE).

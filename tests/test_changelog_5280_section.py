@@ -190,6 +190,19 @@ def test_readme_no_unqualified_parity_claim():
     assert _parity_violations(_README.read_text(encoding="utf-8")) == []
 
 
+def test_readme_whats_new_discloses_divergences():
+    """README What's New and the CHANGELOG disclose the same divergence phrases (235-10)."""
+    text = _README.read_text(encoding="utf-8")
+    m = re.search(r"^## What's New in v5\.28\s*$", text, re.M)
+    assert m, "README.md has no \"## What's New in v5.28\" heading"
+    rest = text[m.end():]
+    nxt = re.search(r"^## ", rest, re.M)
+    sec = (rest[: nxt.start()] if nxt else rest).lower()
+    phrases = list(_DIVERGENCE_PHRASES.values()) + [p for _, p in _TODO_DIVERGENCE_PHRASES]
+    missing = [p for p in phrases if p.lower() not in sec]
+    assert not missing, f"README What's New v5.28 omits divergence phrases: {missing}"
+
+
 def test_parity_detector_self_test():
     bad1 = "TLS and mail findings are now derived the same way on the dashboard and in the report"
     bad2 = "Both surfaces compute the same headline"
