@@ -55,7 +55,8 @@ def test_missing_nmap_format(monkeypatch):
 
     monkeypatch.setattr(shutil, "which", lambda name: None)
     ok, msg = doctor_cmd._check_binary("nmap")
-    assert ok is False
+    assert ok is True  # Phase 235 D-24: optional binary, informational
+    assert "informational" in msg
     assert "QRK-INSTALL-006" in msg, f"Expected QRK-INSTALL-006 in msg, got: {msg!r}"
 
 
@@ -66,7 +67,8 @@ def test_missing_syft_format(monkeypatch):
 
     monkeypatch.setattr(shutil, "which", lambda name: None)
     ok, msg = doctor_cmd._check_binary("syft")
-    assert ok is False
+    assert ok is True  # Phase 235 D-24: optional binary, informational
+    assert "informational" in msg
     assert "QRK-INSTALL-007" in msg
 
 

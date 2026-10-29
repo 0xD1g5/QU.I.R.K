@@ -75,7 +75,7 @@ Wire format: `[QRK-<DOMAIN>-NNN] <cause> Fix: <fix>`
 | QRK-INSTALL-002 | Dashboard extras not installed. | Run `pip install 'quirk-scanner[dashboard]'` then retry `quirk serve`. |
 | QRK-INSTALL-003 | Cannot open the scan database. | Run `quirk doctor` to diagnose. Ensure the configured db path is readable. |
 | QRK-INSTALL-004 | Dashboard port is already in use. | Run `lsof -i :<port>` to find the conflicting process, or use `quirk serve --port <other>`. |
-| QRK-INSTALL-005 | Python interpreter version is below the minimum supported. | Install Python 3.11 or newer; re-run `quirk doctor`. |
+| QRK-INSTALL-005 | Python interpreter version is below the minimum supported. | Install Python 3.10 to 3.14; re-run `quirk doctor`. |
 | QRK-INSTALL-006 | `nmap` binary not found in PATH. | Install nmap (`brew install nmap` / `apt install nmap`) and ensure it is on PATH. |
 | QRK-INSTALL-007 | `syft` binary not found in PATH. | Install Anchore syft from https://github.com/anchore/syft#installation. |
 | QRK-INSTALL-008 | `semgrep` binary not found in PATH. | Run `pip install semgrep` or follow https://semgrep.dev/docs/getting-started. |

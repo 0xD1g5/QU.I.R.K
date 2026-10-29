@@ -40,13 +40,75 @@ def test_doctor_exits_0_all_pass(monkeypatch):
     assert exc.value.code == 0, f"expected exit 0, got {exc.value.code}"
 
 
-def test_doctor_exits_1_missing_binary(monkeypatch):
-    """run_doctor() exits 1 when a required scanner binary is missing (D-14 cat 2)."""
+def _stub_common(monkeypatch):
+    monkeypatch.setattr(
+        "quirk.cli.doctor_cmd._check_compliance_freshness",
+        lambda: (True, "[green][✓][/green] mocked freshness"),
+    )
+
+
+def test_doctor_exits_0_with_only_optional_binaries_missing(monkeypatch, capsys):
+    """Phase 235 D-24: nmap/syft/semgrep are informational; exit 0 when only they are missing."""
     monkeypatch.setattr("shutil.which", lambda x: None)
-    with pytest.raises(SystemExit) as exc:
-        from quirk.cli.doctor_cmd import run_doctor
-        run_doctor()
-    assert exc.value.code == 1, f"expected exit 1, got {exc.value.code}"
+    _stub_common(monkeypatch)
+    monkeypatch.setenv("QUIRK_DB_PATH", "/tmp/quirk-doctor-test.db")
+    monkeypatch.setattr("os.path.exists", lambda p: True)
+    monkeypatch.setattr("os.access", lambda p, m: True)
+    with mock.patch("sqlite3.connect") as mock_conn:
+        mock_conn.return_value.execute = lambda q: None
+        mock_conn.return_value.close = lambda: None
+        with mock.patch("quirk.cli.doctor_cmd.urlopen", side_effect=_ok_dashboard), \
+             mock.patch("quirk.cli.doctor_cmd.socket.gethostbyname", return_value="93.184.216.34"):
+            with pytest.raises(SystemExit) as exc:
+                from quirk.cli.doctor_cmd import run_doctor
+                run_doctor()
+    assert exc.value.code == 0, f"expected exit 0, got {exc.value.code}"
+    out = capsys.readouterr().out
+    for name in ("nmap", "syft", "semgrep"):
+        assert name in out
+    assert out.count("(informational)") >= 3
+
+
+def test_doctor_exits_1_below_python_floor(monkeypatch):
+    """A Python below the floor is still a hard failure."""
+    monkeypatch.setattr("quirk.cli.doctor_cmd._PYTHON_MIN", (99, 0))
+    monkeypatch.setattr("shutil.which", lambda x: "/usr/bin/" + x)
+    _stub_common(monkeypatch)
+    monkeypatch.setenv("QUIRK_DB_PATH", "/tmp/quirk-doctor-test.db")
+    monkeypatch.setattr("os.path.exists", lambda p: True)
+    monkeypatch.setattr("os.access", lambda p, m: True)
+    with mock.patch("sqlite3.connect") as mock_conn:
+        mock_conn.return_value.execute = lambda q: None
+        mock_conn.return_value.close = lambda: None
+        with mock.patch("quirk.cli.doctor_cmd.urlopen", side_effect=_ok_dashboard), \
+             mock.patch("quirk.cli.doctor_cmd.socket.gethostbyname", return_value="93.184.216.34"):
+            with pytest.raises(SystemExit) as exc:
+                from quirk.cli.doctor_cmd import run_doctor
+                run_doctor()
+    assert exc.value.code == 1
+
+
+def test_python_floor_is_3_10():
+    from quirk.cli import doctor_cmd
+    assert doctor_cmd._PYTHON_MIN == (3, 10)
+
+
+def test_doctor_clean_cwd_no_db_exits_0(monkeypatch, tmp_path, capsys):
+    """Clean machine: no database yet, no optional binaries -> exit 0, no DB created."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("QUIRK_DB_PATH", raising=False)
+    monkeypatch.setattr("shutil.which", lambda x: None)
+    _stub_common(monkeypatch)
+    with mock.patch("quirk.cli.doctor_cmd.urlopen", side_effect=_ok_dashboard), \
+         mock.patch("quirk.cli.doctor_cmd.socket.gethostbyname", return_value="93.184.216.34"):
+        with pytest.raises(SystemExit) as exc:
+            from quirk.cli.doctor_cmd import run_doctor
+            run_doctor()
+    assert exc.value.code == 0, f"expected exit 0, got {exc.value.code}"
+    out = capsys.readouterr().out
+    assert "first scan" in out
+    assert not (tmp_path / "quirk-output" / "quirk.db").exists()
+    assert not (tmp_path / "quirk-output").exists()
 
 
 def test_informational_checks_never_exit_1(monkeypatch):
