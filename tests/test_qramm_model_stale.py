@@ -17,8 +17,18 @@ from quirk.qramm.model_meta import is_qramm_model_stale
 
 
 def test_is_qramm_model_stale_far_future_is_stale() -> None:
-    """2026-12-31 is ~240 days past 2026-05-05 — clearly stale."""
-    assert is_qramm_model_stale(today=datetime.date(2026, 12, 31)) is True
+    """A date 150 days past the staleness threshold is clearly stale.
+
+    Derived from the catalog's own ``last_verified`` (235-11): the earlier
+    hard-coded 2026-12-31 stopped being stale the moment the catalog was
+    honestly re-verified on 2026-10-29.
+    """
+    from quirk.qramm.model_meta import QRAMM_MODEL, STALENESS_THRESHOLD_DAYS
+
+    far = datetime.date.fromisoformat(QRAMM_MODEL["last_verified"]) + datetime.timedelta(
+        days=STALENESS_THRESHOLD_DAYS + 150
+    )
+    assert is_qramm_model_stale(today=far) is True
 
 
 def test_is_qramm_model_stale_near_date_is_fresh() -> None:

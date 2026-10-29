@@ -5,6 +5,7 @@ Scanner module: quirk/scanner/source_scanner.py
 """
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -32,6 +33,18 @@ def fake_semgrep(tmp_path, monkeypatch):
     repo.mkdir()
     bindir = tmp_path / "bin"
     bindir.mkdir()
+
+    # macOS: a default close_fds=True spawn after Network.framework is loaded by
+    # an earlier test in the same pytest process dies with SIGSEGV, so the fake
+    # semgrep printed nothing and these tests failed only in the full suite.
+    # Keep the REAL subprocess.run, just spawned fork-safely (close_fds=False).
+    real_run = subprocess.run
+
+    def _fork_safe_run(*args, **kwargs):
+        kwargs.setdefault("close_fds", False)
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", _fork_safe_run)
 
     def _install(stdout: str, code: int) -> str:
         exe = bindir / "semgrep"

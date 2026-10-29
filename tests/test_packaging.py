@@ -112,8 +112,8 @@ def test_every_tracked_quirk_data_file_is_package_data():
             for p in (root / "quirk").glob(pat) if p.is_file()
         )
     tracked = subprocess.run(
-        ["git", "ls-files", "quirk"], cwd=root, capture_output=True,
-        text=True, check=True,
+        ["git", "-C", str(root), "ls-files", "quirk"], capture_output=True,
+        text=True, check=True, close_fds=False,
     ).stdout.split()
     data = {f for f in tracked if not f.endswith(".py")}
     assert data - covered == set(), sorted(data - covered)
