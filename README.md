@@ -55,7 +55,13 @@ playwright install chromium    # needed for the PDF report; one-time download
 quirk serve                    # opens the dashboard at http://127.0.0.1:8512
 ```
 
-On Linux, Chromium also needs system libraries: run `playwright install-deps chromium` once, without a `sudo` prefix (Playwright asks for root itself; see [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/installation.md#linux-ubuntu--debian) if you have no sudo). Without Chromium the scan still writes the HTML report and skips the PDF.
+On Linux, Chromium also needs system libraries. Run this once after the block above, without a `sudo` prefix (Playwright asks for root itself; see [Installation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/installation.md#linux-ubuntu--debian) if you have no sudo). Skip it on macOS and Windows:
+
+```bash
+playwright install-deps chromium    # Linux only: Chromium's system libraries
+```
+
+Without Chromium the scan still writes the HTML report and skips the PDF.
 
 Then click **New Scan** in the sidebar, enter your targets and start the scan. Results appear in the dashboard when it finishes.
 
