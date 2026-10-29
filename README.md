@@ -146,7 +146,7 @@ Four sample CBOMs live in [`examples/cbom/`](https://github.com/0xD1g5/QU.I.R.K/
 
 **Scores change when you upgrade, and most estates score lower.** v5.28.0 replaces the readiness score model (`SCORING_VERSION` 4.0 replaces 3.0), so a v5.28 score is not comparable with a score from an earlier version. See [Report Interpretation](https://github.com/0xD1g5/QU.I.R.K/blob/v5.28.0/docs/report-interpretation.md) for the model and worked examples.
 
-- **Classical keys are not counted as ready.** RSA, ECDSA and EdDSA certificate keys are all treated as quantum-vulnerable; only a post-quantum key exchange or an ML-DSA, SLH-DSA or composite certificate key earns credit.
+- **Classical keys are not counted as ready.** RSA, ECDSA and EdDSA certificate keys are all treated as quantum-vulnerable; only a post-quantum key exchange or an ML-DSA, SLH-DSA or composite certificate key earns credit. A live TLS scan does not yet read an ML-DSA certificate (that endpoint is recorded as a scan error, not as a key), so the certificate-key credit is not reachable from a TLS scan today.
 - **Observing more healthy endpoints no longer raises the score.** A weakness costs points by how many endpoints carry it, saturating at 40, so a wider scan cannot dilute a problem away.
 - **The dashboard and the report agree on more.** Trend, timeline and multi-sensor merge scores now derive their findings the way the headline score does, and certificate-expiry findings and refused mail ports feed both scores. Tests pin this on covered fixtures only.
 - **Finding state follows what scans observed.** Closure states, drift and sensor merge reflect what each scan saw.

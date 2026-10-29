@@ -22,7 +22,9 @@ now 4.0, and 4.0 scores are not comparable with scores from earlier versions.
 - Classical certificate keys (RSA, ECDSA and EdDSA) no longer count toward readiness. All three
   are treated as quantum-vulnerable and cost the agility penalty; the old credit for ECDSA is gone.
   Only a post-quantum key exchange, or an ML-DSA, SLH-DSA or composite certificate key, earns
-  agility credit, and it earns it once.
+  agility credit, and it earns it once. A live TLS scan does not yet read an ML-DSA certificate (that
+  endpoint is recorded as a scan error, not as a key), so that certificate-key credit is not
+  reachable from a TLS scan today.
 - Penalty counts use an absolute curve anchored at `N_REF=40`: a weakness costs points according
   to how many endpoints or certificates carry it, saturating at 40, not according to its share of
   the scan. Observing more healthy classical endpoints therefore no longer raises a score, and a
