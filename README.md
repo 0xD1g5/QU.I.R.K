@@ -153,6 +153,7 @@ Four sample CBOMs live in [`examples/cbom/`](https://github.com/0xD1g5/QU.I.R.K/
 - **Findings that never fired now do:** code-signing certificates, Kerberos encryption types, JWKS authentication, `--auth-basic` and unsigned (`alg:none`) tokens.
 - **QRAMM shows "Not assessed"** for a dimension with no answered question, instead of a made-up level.
 - **Known defects.** Source code scanning reports "ruleset unavailable" because the upstream Semgrep ruleset it used is gone, and a scan that sets `source_targets` scores lower.
+- **Known defects, Semgrep not installed.** Semgrep is not installed with QU.I.R.K. If it is missing and `source_targets` is set, the source phase is recorded as ran with no findings, so Scan Coverage shows Source code as assessed and clean, and `quirk doctor` still exits 0. Run `semgrep --version` before trusting a clean source result.
 - **Known defects, Azure.** Key Vault key scanning has a known defect and currently records no keys.
 - **Known defects, scores.** The dashboard and the report can still differ in the score they give one scan; known cases are the legacy TLS version finding, weak cipher suites, undersized ECDSA certificate keys, end-of-life crypto libraries in container images, Kerberos weak-encryption and DNSSEC findings, TLS-designated ports, and the drift notification, and other findings may also differ.
 - **Known defects, Windows sensor.** The installer does not yet write a sensor identity.
