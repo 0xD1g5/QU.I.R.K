@@ -16,14 +16,31 @@ D-24 made a missing semgrep informational in `quirk doctor`, removing the last e
 
 ## README claim check (done 2026-10-30, by reading the code path)
 
-README.md:104 says "the Semgrep `p/cryptography` ruleset is unavailable, so the source domain reads Not assessed".
-**That claim is FALSE when semgrep is not installed.** "Not assessed" only arises from the *raise* path
+README.md:104 said "the Semgrep `p/cryptography` ruleset is unavailable, so the source domain reads Not assessed".
+**That claim was FALSE when semgrep is not installed.** "Not assessed" only arises from the *raise* path
 (`SourceRulesetUnavailable` -> `_wrapped_phase` except branch -> `record_failed`, `run_scan.py:327-338`). The
-missing-binary path never raises, returns `[]`, and takes the `record_ran` branch. The same applies to
-`docs/report-interpretation.md:1968` ("In 5.28.0, source code scanning always records its phase as `failed`"), which
-is also untrue without semgrep; that doc was NOT edited here (it is a synced, master-guide-feeding doc; fold into the
-5.28.1 doc pass). Disclosed meanwhile by a new Known-defects line in the repo README (ledger row
-`DCL-README-P235-0014`). The published PyPI page (5.28.0, frozen) keeps the old text.
+missing-binary path never raises, returns `[]`, and takes the `record_ran` branch. The same applied to
+`docs/report-interpretation.md:1968`.
+
+## Status of the wording fixes (updated 2026-10-30)
+
+- DONE, repo README: :104, :155 and :156 name both Semgrep cases (3fff0460). Ledger row `DCL-README-P235-0014` /
+  `DCL-README-P235-0009`.
+- DONE, `docs/report-interpretation.md` (~:1968): fixed in 0bfe552f.
+- DONE, guides (operator decision "Fix all, one more CI round (Recommended)"; commit: the `docs(235)` commit that
+  carries this todo update, find it with `git log --oneline -3 -- docs/architecture.md`): `docs/architecture.md:81`,
+  `docs/operators-guide.md:1099` and `:1221`, `docs/connectors/git.md:12`, `docs/quirk-overview.md:75`,
+  `docs/chaos-lab.md:319` and the port-table row at :1635 now name both cases; `docs/quirk-master-guide.md`
+  regenerated; vault re-synced; 7 doc-claim-ledger rows re-anchored.
+- DONE, GitHub release v5.28.0 body: the orchestrator appended a "Correction (2026-10-30)" paragraph with
+  `gh release edit`; the original text is unchanged.
+- 5.28.1 TASK: correct the PyPI long description. It is frozen at 5.28.0 and says only "so the source domain reads
+  Not assessed"; it comes free with the corrected README in the 5.28.1 wheel, so verify the 5.28.1 PyPI page after
+  publishing.
+- 5.28.1 TASK: correct the CHANGELOG `[5.28.0]` Known-defects wording (source scanning "records a 'ruleset
+  unavailable' scan error and reads Not assessed" is unqualified), or add a 5.28.1 note that states both cases.
+- The operator override for SC4 ("Override: accept until 5.28.1 (Recommended)") covers the frozen PyPI description
+  until then.
 
 ## Candidate fix
 

@@ -154,6 +154,10 @@ Added 2026-10-16 at the operator's request: the public social-media announcement
 - [x] **LAUNCH-04**: Every README link resolves from PyPI and every README/PyPI-description claim is
       true for `v5.28.0`; no open high-priority todo contradicts a public claim.
       Evidence: 235-evidence/readme-claim-reverify.md and pypi-links.json (31 of 31 links ok from the PyPI description).
+      SC4 passes via the operator override "Override: accept until 5.28.1 (Recommended)" (2026-10-30), which covers the
+      frozen PyPI 5.28.0 description (it still says the source domain reads Not assessed, false without Semgrep; CR-02;
+      corrected in the repo README by 3fff0460 and carried to 5.28.1 by the 261030-semgrep-missing todo), plus the
+      caveat that the README/PyPI hero image is the 5.27.0 screenshot (scoring 3.0).
 - [x] **LAUNCH-05**: A recorded go/no-go lists every LAUNCH criterion with evidence and the operator's
       sign-off; nothing is announced publicly before a recorded "go".
       Evidence: 235-LAUNCH-GATE.md records Launch gate: GO, operator sign-off 2026-10-30.

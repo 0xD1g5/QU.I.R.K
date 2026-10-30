@@ -1096,7 +1096,7 @@ the connector rows.
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
 | JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
-| Source code | semgrep (registry pack `p/cryptography`, ruleset unavailable in 5.28.0: known defect, the domain reads Not assessed; see [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
+| Source code | semgrep (registry pack `p/cryptography`, ruleset unavailable in 5.28.0: known defect: with Semgrep installed the domain reads Not assessed, and with Semgrep missing the phase is wrongly recorded as ran with no findings and shown as assessed and clean; see [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
 | Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `kerberos_probe_principal`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
 | SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
@@ -1218,7 +1218,7 @@ findings. Requires `syft` on `PATH` and `connectors.enable_container=true`.
 built to run semgrep with the registry pack `p/cryptography` against each directory in
 `source_targets`, but as of 2026-10-12 the Semgrep registry answers HTTP 404 for that pack
 name, so a scan records a "ruleset unavailable" error, Scan Coverage shows `skipped: failed`,
-the source domain reads Not assessed and no source findings are produced (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
+with Semgrep installed the source domain reads Not assessed and no source findings are produced; with Semgrep missing the phase is wrongly recorded as ran with no findings, so Scan Coverage shows Source code as assessed and clean and `quirk doctor` still exits 0 (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
 path to an existing local directory (for example a clone); remote URLs are not fetched,
 and a path that is missing or contains `..` or shell metacharacters is rejected with an
 `invalid_input` row. Once a working ruleset is configured, findings carry the semgrep rule id and `file:line`. Requires
