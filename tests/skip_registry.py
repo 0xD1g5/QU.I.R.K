@@ -113,21 +113,7 @@ ALLOWED_SKIPS = [
     ("test_report_render_undetermined_hosts.py", "test_docx_shows_undetermined_headline_and_count", "optional_extra", 'python-docx not installed'),
     ("test_report_render_undetermined_hosts.py", "test_cross_surface_parity_undetermined_count", "optional_extra", "python-docx not installed"),
     ("test_scheduler_cmd.py", "test_signal_sets_stop_flag", "live_infra", "SIGTERM not supported on Windows"),
-    ("test_score_clamp_property.py", "test_agility_ceiling_saturates_on_reference_estate", "live_infra", "Requires the Phase 210 live-scan artifact intelligence-20260928-014244.json preserved on disk under quirk-output/ (per .continue-here.md); a fresh checkout or a pruned quirk-output/ has no such file, so the pinned-oracle clamp-saturation test skips honestly rather than asserting on data that isn't there."),
-    # 999.115 P2b — the ONE remaining xfail in the scoring property suite, and the
-    # first xfail this ledger has ever carried. It is not an environment gap: it is a
-    # standing, measured statement of a KNOWN OPEN DEFECT, kept numeric rather than
-    # allowed to decay into prose. Observing more HEALTHY endpoints still raises the
-    # computed score with every weakness count held identical (71 -> 74 -> 78 -> 82);
-    # the consequence ceiling masks most of it in the emitted number (18/18/20/20) but
-    # does not fix it. `strict=True` means the day it starts passing, it HARD-FAILS and
-    # somebody must come back here and promote it — which is exactly what happened to
-    # the seven sibling properties 999.115 closed, none of which were ever registered
-    # here because they were removed rather than kept. Do NOT relax strict mode, and do
-    # NOT widen this entry to the file: the other properties in it are green gates.
-    # Root cause and proposed fix:
-    # .planning/todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md
-    ("test_score_properties.py", "test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints", "known_open_defect", "999.115 P2b: scan-depth dilution survives all six model changes; xfail(strict=True) keeps the gap standing and numeric. See .planning/todos/pending/p2b-healthy-endpoints-dilute-the-readiness-score.md"),
+    ("test_score_clamp_property.py", "test_agility_stays_below_cap_on_reference_estate", "live_infra", "Requires the Phase 210 live-scan artifact intelligence-20260928-014244.json preserved on disk under quirk-output/ (per .continue-here.md); a fresh checkout or a pruned quirk-output/ has no such file, so the pinned-oracle agility-below-cap test skips honestly rather than asserting on data that isn't there."),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v2c_happy_path_parses_last_octet_ip", "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_v3_path_uses_usm_and_v3arch_walk_cmd", "optional_extra", "pysnmp not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_bounds_oversized_table_at_max_entries", "optional_extra", "pysnmp not installed"),
@@ -287,6 +273,8 @@ ALLOWED_SKIPS = [
     ("test_modbus_scanner.py", "test_single_inflight_no_writes", "ci_extras_gap", "hw extra absent from .[all]; pymodbus not installed"),
     ("test_snmp_scanner_contract.py", "test_arp_walk_import_guard_returns_empty_with_zero_network_calls", "ci_extras_gap", "hw extra absent from .[all]; pysnmp not installed"),
     ("test_identity_surface.py", "Issue3ScanWindowRegressionTest.test_issue3_scan_window_returns_all_identity_protocols", "ci_extras_gap", "identity extra absent from .[all]; impacket not installed"),
+    # Phase 230 D-07a: fake-KDC wire proof is local-only (impacket absent from .[all]).
+    ("test_kerberos_preauth_wire.py", "TestKerberosPreauthWire", "ci_extras_gap", "identity extra absent from .[all]; impacket not installed (Phase 230 DETECT-02: proof is local-only)"),
 
     # Phase 150 D-09/D-10 CI-parity gap closure (Plan 06, Task 2): `api` extras
     # group (schemathesis, openapi-spec-validator) absent from .[all].

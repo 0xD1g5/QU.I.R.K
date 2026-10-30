@@ -454,32 +454,247 @@ def test_cbom_paths_none_without_output_dir(tmp_path):
 # DIST-01 / CD-05 (Phase 125): same-second scanned_at tiebreak
 # ---------------------------------------------------------------------------
 
-def test_same_second_scanned_at_tie_returns_one_row_per_sensor(tmp_path):
-    """DIST-01: when two rows for the same sensor share the same scanned_at,
-    _collect_union_endpoints must return exactly ONE row per sensor (highest id).
-
-    RED: currently the subquery JOIN on scanned_at == max_ts returns ALL rows
-    with the same max_ts — both tie candidates appear in the union, producing
-    non-deterministic merged CBOM content on repeated runs.
-    """
+def _union_rows(tmp_path, eps, sensors, pushes):
+    """Seed Sensor, SensorPush and endpoint rows; return [(sensor_id, host, id)] twice."""
+    from quirk.models import SensorPush
     from quirk.merge.scan import _assemble_union
     from quirk.db import get_session
 
-    T = datetime(2026, 6, 1, 12, 0, 0)  # same-second tie
+    db_path, _ = _setup_real_db(tmp_path, [], sensors)
+    with get_session(db_path) as db:
+        for sid, pid, rec in pushes:
+            db.add(SensorPush(payload_id=pid, sensor_id=sid, received_at=rec))
+        db.commit()
+        for ep in eps:
+            db.add(ep)
+        db.commit()
+    out = []
+    with get_session(db_path) as db:
+        for _ in range(2):
+            out.append([(e.sensor_id, e.host, e.id) for e in _assemble_union(db)])
+    return out
 
+
+def _tag(host, sid, pid, T):
+    return _tls_ep(host=host, sensor_id=sid, push_payload_id=pid, scanned_at=T)
+
+
+def test_union_keeps_every_endpoint_of_latest_push(tmp_path):
+    """FIND-13 (D-13): all hosts of the latest push kept, older push excluded;
+    two calls return the identical ordered list (CD-05 determinism)."""
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [_tag("x", "s1", "p1", T), _tag("y", "s1", "p1", T)] + [
+        _tag(h, "s1", "p2", T + timedelta(hours=1)) for h in ("a", "b", "c")
+    ]
+    first, second = _union_rows(
+        tmp_path, eps, [_sensor("s1", T)],
+        [("s1", "p1", T), ("s1", "p2", T + timedelta(hours=1))],
+    )
+    assert sorted(h for _, h, _ in first) == ["a", "b", "c"]
+    assert first == second
+    assert [i for _, _, i in first] == sorted(i for _, _, i in first)
+
+
+def test_same_received_at_resolves_to_higher_pushid(tmp_path):
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [_tag("old", "s1", "p1", T), _tag("new", "s1", "p2", T)]
+    first, _ = _union_rows(
+        tmp_path, eps, [_sensor("s1", T)], [("s1", "p1", T), ("s1", "p2", T)],
+    )
+    assert [h for _, h, _ in first] == ["new"]
+
+
+def test_empty_latest_push_contributes_zero_rows(tmp_path):
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [_tag("old", "s1", "p1", T)]
+    first, _ = _union_rows(
+        tmp_path, eps, [_sensor("s1", T)],
+        [("s1", "p1", T), ("s1", "p2", T + timedelta(hours=1))],
+    )
+    assert first == []
+
+
+def test_legacy_sensor_same_second_rows_all_kept(tmp_path):
+    """Untagged (pre-Phase-229) rows fall back to the session bracket; the old
+    DIST-01 same-second shape now keeps all rows, in stable id order."""
+    T = datetime(2026, 6, 1, 12, 0, 0)
     eps = [
         _tls_ep(host="host-a.example", sensor_id="s1", scanned_at=T),
-        _tls_ep(host="host-b.example", sensor_id="s1", scanned_at=T),  # same sensor, same ts
+        _tls_ep(host="host-b.example", sensor_id="s1", scanned_at=T),
+        _tls_ep(host="stale.example", sensor_id="s1", scanned_at=T - timedelta(hours=2)),
     ]
-    db_path, _ = _setup_real_db(tmp_path, eps, sensors=[
-        _sensor("s1", last_push_at=T, cadence_minutes=60)
-    ])
+    first, second = _union_rows(tmp_path, eps, [_sensor("s1", T)], [])
+    assert [h for _, h, _ in first] == ["host-a.example", "host-b.example"]
+    assert first == second
 
+
+def test_legacy_sensor_with_only_null_scanned_at_is_skipped_not_crashed(tmp_path):
+    """229-REVIEW WR-01: an untagged sensor whose every row has scanned_at NULL
+    used to raise TypeError (None - timedelta). It contributes zero rows; other
+    sensors are unaffected."""
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [
+        _tls_ep(host="null-a", sensor_id="s0", scanned_at=None),
+        _tls_ep(host="null-b", sensor_id="s0", scanned_at=None),
+        _tag("s1-real", "s1", "p1", T),
+        _tls_ep(host="legacy", sensor_id="s2", scanned_at=T),
+    ]
+    first, second = _union_rows(
+        tmp_path, eps, [_sensor("s0", T), _sensor("s1", T), _sensor("s2", T)],
+        [("s1", "p1", T)],
+    )
+    assert [(s, h) for s, h, _ in first] == [("s1", "s1-real"), ("s2", "legacy")]
+    assert first == second
+
+
+def test_forged_tag_does_not_leak_across_sensors(tmp_path):
+    T = datetime(2026, 6, 1, 12, 0, 0)
+    eps = [
+        _tag("s1-real", "s1", "p1", T),
+        _tag("s2-forged", "s2", "p1", T),  # s2 row carrying s1's payload id
+        _tag("s2-real", "s2", "p2", T),
+    ]
+    first, _ = _union_rows(
+        tmp_path, eps, [_sensor("s1", T), _sensor("s2", T)],
+        [("s1", "p1", T), ("s2", "p2", T)],
+    )
+    assert [(s, h) for s, h, _ in first] == [("s1", "s1-real"), ("s2", "s2-real")]
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 (XSURF-07, D-10): merge score derives findings over the union
+# ---------------------------------------------------------------------------
+
+def _ceiling_endpoints():
+    """4 sensors, one TLS row each (one per sensor_id so the union keeps all);
+    sensor s0's cert is expired (CRITICAL)."""
+    eps = []
+    for i in range(4):
+        eps.append(_tls_ep(
+            host=f"h{i}.example", protocol="TLS", sensor_id=f"s{i}",
+            cert_not_after=datetime(2020, 1, 1) if i == 0 else None,
+            scanned_at=datetime(2026, 5, 25, 12, 0, 0),
+        ))
+    return eps
+
+
+def _ceiling_sensors():
+    return [_sensor(f"s{i}", datetime(2026, 5, 25, 12, 0, 0)) for i in range(4)]
+
+
+# Scoring 4.0 (Phase 234): 27 -> 31, still capped <= 34 (POOR) by the CRITICAL ceiling.
+PINNED_MERGE_CEILING_SCORE = 31
+
+
+def test_merge_score_applies_critical_ceiling(tmp_path):
+    from quirk.db import get_session
+    from quirk.engine.findings_evaluator import derive_report_findings
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+    from quirk.merge.scan import merge_scan, _assemble_union
+
+    db_path, _ = _setup_real_db(tmp_path, _ceiling_endpoints(), _ceiling_sensors())
     with get_session(db_path) as db:
         union = _assemble_union(db)
+        assert len(union) == 4
+        result = merge_scan(db, stale_days=30)
+        expected = compute_readiness_score(
+            build_evidence_summary(union, derive_report_findings(union)),
+            profile="balanced",
+        )["score"]
+    assert result["score"] == expected
+    assert result["score"] <= 34
+    assert result["rating"] == "POOR"
+    assert result["score"] == PINNED_MERGE_CEILING_SCORE
 
-    sensor_rows = [ep for ep in union if ep.sensor_id == "s1"]
-    assert len(sensor_rows) == 1, (
-        f"DIST-01: same-second tie must yield exactly ONE row per sensor (highest id), "
-        f"got {len(sensor_rows)}. DIST-01 not yet fixed — subquery lacks id tiebreak."
-    )
+
+def test_merge_cli_prints_band_at_or_below_floor(tmp_path, capsys):
+    import argparse
+    import re
+
+    from quirk.cli.sensor_cmd import _cmd_merge
+
+    db_path, _ = _setup_real_db(tmp_path, _ceiling_endpoints(), _ceiling_sensors())
+    with pytest.raises(SystemExit) as exc:
+        _cmd_merge(argparse.Namespace(db=db_path, stale_days=30))
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    m = re.search(r"Score: (\d+) \((\w+)\)", out)
+    assert m, out
+    assert m.group(2) == "POOR"
+    assert int(m.group(1)) <= 34
+
+
+def test_merge_uses_supplied_deriver(tmp_path):
+    from quirk.db import get_session
+    from quirk.merge.scan import merge_scan
+
+    db_path, _ = _setup_real_db(tmp_path, _ceiling_endpoints(), _ceiling_sensors())
+    seen = []
+
+    def _deriver(eps):
+        seen.append(len(list(eps)))
+        return []
+
+    with get_session(db_path) as db:
+        result = merge_scan(db, stale_days=30, findings_deriver=_deriver)
+    assert seen == [4]
+    assert result["score"] > 34
+
+
+def _divergent_union_endpoints():
+    """3 healthy TLS rows plus one Kerberos weak-etype row: the dashboard and report
+    pipelines disagree on this union (the Kerberos finding is dashboard-only)."""
+    eps = [
+        _tls_ep(host=f"h{i}.example", protocol="TLS", sensor_id=f"s{i}",
+                scanned_at=datetime(2026, 5, 25, 12, 0, 0))
+        for i in range(3)
+    ]
+    eps.append(_tls_ep(
+        host="dc.example", port=88, protocol="KERBEROS", sensor_id="s3",
+        tls_version=None, cipher_suite=None, cert_pubkey_alg="rc4-hmac",
+        cert_pubkey_size=None, cert_sig_alg=None, cert_subject=None, cert_issuer=None,
+        service_detail="etype:23:rc4-hmac:CRITICAL",
+        scanned_at=datetime(2026, 5, 25, 12, 0, 0),
+    ))
+    return eps
+
+
+def test_persisted_merge_score_is_independent_of_entry_point(tmp_path):
+    """228-REVIEW CR-01: `quirk sensor merge` and the dashboard auto-merge persist the
+    same MergeRun.score for the same union (run_auto_merge mirrors _cmd_merge, D-02)."""
+    import argparse
+
+    from quirk.cli.sensor_cmd import _cmd_merge
+    from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
+    from quirk.dashboard.api.routes.sensor import run_auto_merge
+    from quirk.db import get_session
+    from quirk.engine.findings_evaluator import derive_report_findings
+    from quirk.merge.scan import _assemble_union
+
+    cli_dir, auto_dir = tmp_path / "cli", tmp_path / "auto"
+    cli_dir.mkdir()
+    auto_dir.mkdir()
+    cli_db, _ = _setup_real_db(cli_dir, _divergent_union_endpoints(), _ceiling_sensors())
+    auto_db, _ = _setup_real_db(auto_dir, _divergent_union_endpoints(), _ceiling_sensors())
+
+    # Non-vacuity: the two pipelines must disagree on this union, or the test proves nothing.
+    with get_session(cli_db) as db:
+        union = _assemble_union(db)
+        dash = compute_readiness_score(
+            build_evidence_summary(union, derive_dashboard_scoring_findings(union)))["score"]
+        rep = compute_readiness_score(
+            build_evidence_summary(union, derive_report_findings(union)))["score"]
+    assert dash != rep
+
+    with pytest.raises(SystemExit):
+        _cmd_merge(argparse.Namespace(db=cli_db, stale_days=30))
+    run_auto_merge(auto_db, str(tmp_path / "absent-config.yaml"))
+
+    scores = []
+    for path in (cli_db, auto_db):
+        with get_session(path) as db:
+            row = db.query(MergeRun).order_by(MergeRun.merged_at.desc()).first()
+            assert row is not None, f"no MergeRun persisted in {path}"
+            scores.append(row.score)
+    assert scores[0] == scores[1] == rep

@@ -6,6 +6,7 @@ priority: medium
 area: quirk/util/optional_extra.py (REGISTRY cloud and db entries, probe_missing_extras)
 status: pending
 resolves_phase: null
+owner: "999.127"
 ---
 
 # The `cloud` and `db` missing-extra advisories claim a scan was skipped when it ran

@@ -24,6 +24,9 @@ its own row if it becomes a real intent.
 2. `261012-gui-first-cli-only-admin-commands-triage.md`: 11 subcommands have no API route. Triage
    which ones belong in the GUI. Includes the remote-bind token setup that needs a shell.
 3. `261012-gui-first-per-scan-report-download.md`: the dashboard serves reports for the latest scan only.
+   Phase 227 (2026-10-15, D-09) re-homed two doc224 todos here as members of this sub-item:
+   `261012-doc224-dashboard-job-reports-not-downloadable.md` and
+   `261013-doc224-reports-route-latest-only-premise-is-false.md` (both `owner: "999.121"`).
 
 ## Feasibility & Effort
 
@@ -47,4 +50,7 @@ All checks run 2026-10-12 against `origin/main` `a073cab9`.
   selects the newest stamp in the output dir. Reports for earlier scans exist on disk but have no
   route. The memory/precedent that artifacts are stamped by render time, not `scan_run_id`, means
   the scan↔report association has to be built first. That is the main unknown, so spike it.
+- **Sub-item 3, re-homed doc224 members:** `quirk/dashboard/api/routes/reports.py:15` (re-grepped 2026-10-15) still states "nothing on disk associates them", the premise the second todo calls false; the first todo's job-report links hit the same latest-only route.
 - **Spike?** Only for sub-item 3's scan↔report association. 1 and 2 are design decisions.
+
+Phase 230 (2026-10-23): + `261023-detect-kerberos-probe-principal-dashboard-parity`.

@@ -6,6 +6,7 @@ priority: low
 area: run_scan.py (--targets-file help), quirk/util/targets.py
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # `--targets-file` help says it replaces config targets entirely; include_ips survive

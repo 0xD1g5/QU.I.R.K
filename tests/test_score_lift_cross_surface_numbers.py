@@ -308,7 +308,15 @@ def test_projected_aggregate_equals_independent_rescore(tmp_path):
     resolved["certificate_observations"]["self_signed_count"] = 0  # self-signed-certificates
     resolved["protocol_counts"]["UNKNOWN"] = 0  # unknown-open-services
     resolved["finding_severity_counts"]["LOW"] = 0  # legacy-tls-versions
-    resolved["cert_key_type_counts"]["ECDSA"] = 1  # ecdsa-adoption-planning
+    # ecdsa-adoption-planning (Phase 234 O-4: PQC/hybrid certificate adoption,
+    # modelled as all classical certificate keys migrated to PQC).
+    _classical = int(resolved["cert_key_type_counts"].get("RSA", 0)) + int(
+        resolved["cert_key_type_counts"].get("ECDSA", 0)
+    )
+    _observed = int(resolved["certificate_observations"].get("certs_observed", 0))
+    resolved["cert_key_type_counts"]["RSA"] = 0
+    resolved["cert_key_type_counts"]["ECDSA"] = 0
+    resolved["cert_key_type_counts"]["PQC"] = max(1, _classical, _observed)
     # tls-enum-coverage and crypto-governance-review are also present in this
     # fixture's roadmap items but have NO mutator in the Evidence-Delta Map
     # (honest-absence slugs) — nothing to apply for them.

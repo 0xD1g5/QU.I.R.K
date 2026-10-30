@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-12
+source: Phase 224 plan 06 (docs/chaos-lab.md audit)
+priority: medium
+area: quantum-chaos-enterprise-lab/docker-compose.yml, quirk/scanner/hardware_scanner.py, quirk/scanner/codesign_scanner.py, quirk/scanner/email_scanner.py
+status: pending
+resolves_phase: null
+owner: "999.119"
+---
+
 # Chaos-lab fixtures the scanner cannot reach from the host: hwcompat-http (20222), ldaps code-signing (389), email, fuzz-target (20100), root-config DNSSEC zones
 
 **Filed:** 2026-10-12 (Phase 224 plan 06, docs/chaos-lab.md audit)
 **Priority:** P2 — two documented lab expectations cannot occur in a normal host-side scan
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P2 → medium).
 
 ## What happens
 

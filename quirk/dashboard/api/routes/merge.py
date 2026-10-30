@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
 from quirk.dashboard.api.schemas import MergeLatestData, MergeLatestResponse
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
@@ -89,11 +90,8 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
     per_segment_scores: Dict[str, Optional[float]] = {}
     for seg, eps in segment_eps.items():
         try:
-            # D-07 (184.4) / Phase 199 TRIAGE-10: intentionally findings-less —
-            # per_segment_scores (MergeLatestData.per_segment_scores) is a
-            # Dict[str, Optional[float]]; only the numeric score is ever
-            # assigned into it below, never a rating/band.
-            evidence = build_evidence_summary(eps, findings=None)
+            # Phase 228 D-08/D-10: findings derived over this segment's subset.
+            evidence = build_evidence_summary(eps, derive_dashboard_scoring_findings(eps))
             result = compute_readiness_score(evidence)
             per_segment_scores[seg] = result.get("score")
         except Exception as exc:
@@ -116,12 +114,10 @@ def get_merge_latest(db: Session = Depends(get_db)) -> dict:
     live_score: Optional[float] = latest_run.score
     if endpoints:
         try:
-            # D-07 (184.4) / Phase 199 TRIAGE-10: intentionally findings-less —
-            # only overall_result["score"] is read below into live_score
-            # (nullable float); MergeLatestData carries no rating/band field,
-            # so this evidence's severity counts are never consulted for a
-            # band anywhere on this response.
-            overall_evidence = build_evidence_summary(endpoints, findings=None)
+            # Phase 228 D-08/D-10: findings derived over the whole union.
+            overall_evidence = build_evidence_summary(
+                endpoints, derive_dashboard_scoring_findings(endpoints)
+            )
             overall_result = compute_readiness_score(overall_evidence)
             live_score = overall_result.get("score")
         except Exception as exc:

@@ -55,16 +55,19 @@ def _max_subscore_evidence() -> dict:
 def _zero_subscore_evidence() -> dict:
     """Evidence that drives every subscore to 0.
 
-    Each category's negative impacts must exceed score_cap=25.  Setting
-    endpoints=1 and all finding/defect counters to 1 maximizes each per-ratio
-    penalty at the full weight value, sinking every subscore below 0 (then
-    clamped to 0 by _apply_weighted_impacts).
+    Each category's negative impacts must exceed score_cap=25. Phase 234
+    (scoring 4.0, O-3): maximum penalty is an absolute count, not a share, so
+    every weakness counter (and `scan_error.count`) is set to N_REF = 40,
+    where `min(1, count / 40) ** 0.5` reaches 1 and each term costs its full
+    weight, sinking every subscore below 0 (then clamped to 0 by
+    _apply_weighted_impacts). On 3.0 a count of 1 over 1 endpoint did the
+    same job as a share of 1.0.
     """
     return {
-        "totals": {"endpoints": 1, "findings": 100},
-        "scan_error": {"rate": 1.0},
-        "plaintext_http_count": 1,
-        "http_on_tls_port_count": 1,
+        "totals": {"endpoints": 40, "findings": 100},
+        "scan_error": {"rate": 1.0, "count": 40},
+        "plaintext_http_count": 40,
+        "http_on_tls_port_count": 40,
         # Phase 188 SCORE-06: one representative protocol_counts literal per
         # assessed-predicate (KERBEROS/SAML/DNSSEC for identity_trust,
         # POSTGRESQL for data_at_rest, KAFKA-PLAIN for data_in_motion) so all
@@ -79,35 +82,43 @@ def _zero_subscore_evidence() -> dict:
         },
         "finding_severity_counts": {"HIGH": 100, "CRITICAL": 100, "LOW": 100},
         "certificate_observations": {
-            "expired_count": 1,
-            "expiring_count": 1,
-            "self_signed_count": 1,
+            "expired_count": 40,
+            "expiring_count": 40,
+            "self_signed_count": 40,
         },
         "mtls_present_count": 0,
         "cert_key_type_counts": {"RSA": 1, "ECDSA": 0},
-        "identity_weak_etype_count": 1,
-        "saml_weak_signing_count": 1,
-        "dnssec_weak_algo_count": 1,
-        "smime_weak_signing_count": 1,
-        "smime_expired_count": 1,
-        "smime_weak_key_count": 1,
-        "adcs_weak_template_count": 1,
-        "adcs_misconfig_count": 1,
-        "adcs_weak_signing_count": 1,
-        "adcs_coverage_gap_count": 1,
-        "dar_db_plaintext_count": 1,
-        "dar_db_weak_ssl_count": 1,
-        "dar_storage_unencrypted_count": 1,
-        "dar_storage_aws_managed_count": 1,
-        "dar_k8s_unencrypted_count": 1,
-        "dar_k8s_inaccessible_count": 1,
-        "dar_vault_weak_count": 1,
-        "motion_email_plaintext_count": 1,
-        "motion_email_starttls_missing_count": 1,
-        "motion_email_weak_cipher_count": 1,
-        "motion_broker_plaintext_count": 1,
-        "motion_broker_weak_tls_count": 1,
-        "motion_broker_weak_cipher_count": 1,
+        # Phase 234: on 3.0 the unknown share (100 of 1 endpoint) was unbounded
+        # and sank agility alone; the 4.0 curve saturates at N_REF, so the
+        # remaining agility counters are driven to N_REF as well
+        # (6 unknown + 8 classical key + 6 + 4 + 6 + 4 = 34 > 25).
+        "bearer_token_weak_alg_count": 40,
+        "openapi_plaintext_server_count": 40,
+        "codesign_weak_algo_count": 40,
+        "fuzz_finding_count": 40,
+        "identity_weak_etype_count": 40,
+        "saml_weak_signing_count": 40,
+        "dnssec_weak_algo_count": 40,
+        "smime_weak_signing_count": 40,
+        "smime_expired_count": 40,
+        "smime_weak_key_count": 40,
+        "adcs_weak_template_count": 40,
+        "adcs_misconfig_count": 40,
+        "adcs_weak_signing_count": 40,
+        "adcs_coverage_gap_count": 40,
+        "dar_db_plaintext_count": 40,
+        "dar_db_weak_ssl_count": 40,
+        "dar_storage_unencrypted_count": 40,
+        "dar_storage_aws_managed_count": 40,
+        "dar_k8s_unencrypted_count": 40,
+        "dar_k8s_inaccessible_count": 40,
+        "dar_vault_weak_count": 40,
+        "motion_email_plaintext_count": 40,
+        "motion_email_starttls_missing_count": 40,
+        "motion_email_weak_cipher_count": 40,
+        "motion_broker_plaintext_count": 40,
+        "motion_broker_weak_tls_count": 40,
+        "motion_broker_weak_cipher_count": 40,
     }
 
 

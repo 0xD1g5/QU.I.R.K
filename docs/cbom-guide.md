@@ -109,7 +109,7 @@ protocol. The CBOM builder has a dedicated branch for these record types:
 - **SSH** — KEX, host-key, encryption and MAC algorithms parsed from ssh-audit JSON
 - **JWT** and **bearer token** — the declared JWT algorithm
 - **Container** — cryptographic library names found by Syft (recorded as a coverage note)
-- **Source code** — an algorithm hint taken from the semgrep rule ID
+- **Source code** — an algorithm hint taken from the semgrep rule ID (known defect in 5.28.0: ruleset unavailable, so no source records are produced)
 - **Cloud** (AWS, Azure, GCP) — KMS and Key Vault key specs and certificate algorithms
 - **Identity** (Kerberos, SAML, DNSSEC, S/MIME, AD CS) and **code signing** — the algorithm named by the finding
 - **Data at rest** (Vault, MySQL, PostgreSQL/RDS, S3 / Azure Blob) — an algorithm only when the record names one; plaintext and unencrypted endpoints produce a coverage note instead. Azure Blob rows currently never register an algorithm: every Blob container, including one encrypted with a customer-managed or platform-managed key, gets the `unencrypted S3/Blob endpoint` coverage note (a known defect)
@@ -252,7 +252,7 @@ standard. Grover's algorithm searches an unsorted space of N items in O(sqrt(N))
 
 > **Note on `alg:none`:** The `quantum-vulnerable` label for a JWT whose `alg` is `none` reflects
 > that `nist_level == 0`, but the actual risk is a critical authentication bypass, not a quantum
-> computing threat. `quirk analyze-token` reports `alg:none` as a CRITICAL finding.
+> computing threat. A scan run with a bearer credential (`--auth-bearer`) whose JWT declares `alg:none`, or no `alg`, reports the CRITICAL finding "Bearer token is unsigned (alg:none)", and `quirk analyze-token` reports it as a CRITICAL finding offline. The CBOM still classifies the declared `none` at level 0, and a missing `alg` registers no algorithm component.
 
 ---
 

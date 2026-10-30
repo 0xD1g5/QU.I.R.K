@@ -1,9 +1,21 @@
+---
+type: todo
+created: 2026-10-12
+source: Phase 224 plan 06 (docs/chaos-lab.md audit)
+priority: low
+area: quantum-chaos-enterprise-lab/expected_results_hwcompat.md, expected_results_v4.md, README.md, docker-compose.yml comments
+status: pending
+resolves_phase: null
+owner: "999.119"
+---
+
 # Chaos-lab oracle, README and compose-comment drift found by the docs/chaos-lab.md audit
 
 **Filed:** 2026-10-12 (Phase 224 plan 06). Plan 06 may not edit `quantum-chaos-enterprise-lab/**`, so these
 lab-side defects are recorded here; `docs/chaos-lab.md` was corrected to the checked truth in each case.
 **Priority:** P3 — lab files that disagree with the code and with each other
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P3 → low).
 
 ## Drift found (each verified against code or compose at the time of the audit)
 

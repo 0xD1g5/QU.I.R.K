@@ -50,9 +50,15 @@ class TestAsHeaders:
         assert ctx.as_headers() == {}
 
     def test_basic_scheme(self):
-        ctx = _make_ctx("basic", b"dXNlcjpwYXNz")
+        ctx = _make_ctx("basic", b"user:pass")
         headers = ctx.as_headers()
         assert headers == {"Authorization": "Basic dXNlcjpwYXNz"}
+
+    def test_basic_scheme_rejects_pre_encoded_value(self):
+        ctx = _make_ctx("basic", b"dXNlcjpwYXNz")
+        with pytest.raises(ValueError) as ei:
+            ctx.as_headers()
+        assert "dXNlcjpwYXNz" not in str(ei.value)
 
 
 class TestQueryParam:

@@ -241,7 +241,9 @@ def run_auto_merge(db_path: str, config_path: str) -> None:
                 if latest_push is not None and latest_push <= latest_merge.merged_at:
                     return  # already covered — no-op (D-05)
 
-            # D-12: reuse merge_scan() unchanged
+            # D-12: reuse merge_scan() exactly as _cmd_merge does. No findings_deriver:
+            # MergeRun.score must not depend on which entry point ran the merge
+            # (228-REVIEW CR-01); /api/merge/latest recomputes its displayed score live.
             result = merge_scan(db, output_dir=output_dir)
             # get_session commit-on-exit persists MergeRun (merge_scan used flush)
 
@@ -316,7 +318,9 @@ class PushEnvelope(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    payload_id: str
+    # 229-REVIEW WR-02: a blank id is unmatchable as the merge's latest-push key
+    # and, being UNIQUE, would 409 every later blank push. 64 = column width.
+    payload_id: str = Field(min_length=1, max_length=64, pattern=r"\S")
     pushed_at: str
     schema_version: str
     sensor_version: str

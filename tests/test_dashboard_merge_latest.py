@@ -315,3 +315,111 @@ class TestMergeLatestWithData:
         # exactly 99 legitimately, the assertion below only checks type consistency.)
         assert isinstance(per_seg["dmz"], (int, float)) and not isinstance(per_seg["dmz"], bool)
         assert isinstance(per_seg["corp"], (int, float)) and not isinstance(per_seg["corp"], bool)
+
+
+def test_merge_latest_scores_apply_critical_ceiling():
+    """Phase 228 XSURF-07: overall and per-segment merge scores derive dashboard
+    findings; an expired cert caps its segment and the overall, not the other."""
+    client, TestingSession = _make_isolated_client()
+    db = TestingSession()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    from quirk.models import CryptoEndpoint
+
+    def _ep(host, sensor, seg, not_after):
+        return CryptoEndpoint(
+            host=host, port=443, protocol="TLS", segment=seg, sensor_id=sensor,
+            scanned_at=now, service_detail="pqc-hybrid-detected",
+            tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+            tls_weak_ciphers_present=False, tls_legacy_suites_present=False,
+            cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+            cert_not_after=not_after, cert_subject="CN=clean",
+            cert_issuer="CN=CA", tls_supported_versions="TLSv1.3",
+        )
+
+    good = now + timedelta(days=200)
+    for i in range(3):
+        db.add(_ep(f"a{i}.example.com", "sensor-a", "seg-a", good))
+        db.add(_ep(f"b{i}.example.com", "sensor-b", "seg-b", good))
+    db.add(_ep("bad.example.com", "sensor-b", "seg-b", now - timedelta(days=5)))
+    db.commit()
+    _seed_merge_run(db, score=90, endpoint_count=7, sensor_count=2)
+    db.close()
+
+    data = client.get("/api/merge/latest").json()["merge"]
+    segs = data["per_segment_scores"]
+    assert segs["seg-b"] is not None and segs["seg-b"] <= 34
+    assert segs["seg-a"] is not None and segs["seg-a"] > 34
+    assert data["score"] <= 34
+
+
+def test_per_segment_scores_use_every_endpoint_of_latest_push():
+    """FIND-13 (SC#3): merge_scan then GET /api/merge/latest keep every endpoint
+    of each sensor's latest push; per-segment scores equal an independent
+    computation over the full latest-push rows, not the single highest-id row."""
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+    from quirk.dashboard.api.routes.merge import derive_dashboard_scoring_findings
+    from quirk.merge.scan import merge_scan
+    from quirk.models import CryptoEndpoint, MergeRun, Sensor, SensorPush
+
+    client, TestingSession = _make_isolated_client()
+    db = TestingSession()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    good = now + timedelta(days=200)
+    bad = now - timedelta(days=5)
+
+    def _ep(host, sensor, seg, pid, not_after):
+        return CryptoEndpoint(
+            host=host, port=443, protocol="TLS", segment=seg, sensor_id=sensor,
+            push_payload_id=pid, scanned_at=now, service_detail="pqc-hybrid-detected",
+            tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+            tls_weak_ciphers_present=False, tls_legacy_suites_present=False,
+            cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+            cert_not_after=not_after, cert_subject="CN=clean",
+            cert_issuer="CN=CA", tls_supported_versions="TLSv1.3",
+        )
+
+    for sid, seg in (("s1", "dmz"), ("s2", "core")):
+        db.add(Sensor(sensor_id=sid, segment=seg, enrolled_at=now,
+                      last_push_at=now, expected_cadence_minutes=1440))
+    db.commit()
+    for sid, pid, rec in (
+        ("s1", "old-1", now - timedelta(hours=2)), ("s1", "new-1", now),
+        ("s2", "old-2", now - timedelta(hours=2)), ("s2", "new-2", now),
+    ):
+        db.add(SensorPush(payload_id=pid, sensor_id=sid, received_at=rec))
+    db.commit()
+    # Older pushes: other hosts (must be excluded).
+    db.add(_ep("old-d.example", "s1", "dmz", "old-1", bad))
+    db.add(_ep("old-c.example", "s2", "core", "old-2", bad))
+    # Latest pushes: weak row first, healthy rows last (highest id is healthy).
+    db.add(_ep("d0.example", "s1", "dmz", "new-1", bad))
+    db.add(_ep("d1.example", "s1", "dmz", "new-1", good))
+    db.add(_ep("d2.example", "s1", "dmz", "new-1", good))
+    db.add(_ep("c0.example", "s2", "core", "new-2", bad))
+    db.add(_ep("c1.example", "s2", "core", "new-2", good))
+    db.commit()
+
+    # No hand-seeded MergeRun: merge_scan writes it.
+    merge_scan(db, now=now)
+    db.commit()  # merge_scan leaves commit to the caller (WR-04)
+    run = db.query(MergeRun).order_by(MergeRun.id.desc()).first()
+    assert run.endpoint_count == 5
+
+    expected = {}
+    single = {}
+    for seg, pid in (("dmz", "new-1"), ("core", "new-2")):
+        eps = (db.query(CryptoEndpoint)
+               .filter(CryptoEndpoint.segment == seg, CryptoEndpoint.push_payload_id == pid)
+               .order_by(CryptoEndpoint.id).all())
+        score = lambda e: compute_readiness_score(
+            build_evidence_summary(e, derive_dashboard_scoring_findings(e))).get("score")
+        expected[seg] = score(eps)
+        single[seg] = score(eps[-1:])
+    db.close()
+
+    per_seg = client.get("/api/merge/latest").json()["merge"]["per_segment_scores"]
+    assert per_seg == expected
+    # Non-vacuity: a one-row-per-sensor union would have scored differently.
+    assert expected["dmz"] != single["dmz"]
+    assert expected["core"] != single["core"]

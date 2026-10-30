@@ -6,6 +6,7 @@ priority: medium
 area: quirk/errors.py, quirk/cli/doctor_cmd.py, docs/error-codes.md (generated)
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # Four error hints name a header, config blocks, a Python floor or a file that is not what the product uses

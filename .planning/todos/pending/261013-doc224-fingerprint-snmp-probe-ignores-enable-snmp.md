@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/hardware_scanner.py (fingerprint_one Step 3), run_scan.py (SSH phase hardware fingerprint)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # Hardware fingerprinting sends an SNMP probe even when `enable_snmp` is false

@@ -529,14 +529,25 @@ export interface QRAMMProfileResponse {
 }
 
 export interface QRAMMScoreResponse {
-  overall: number
+  // Phase 234 D-14: mean over assessed dimensions only; null when none is assessed (Indeterminate).
+  overall: number | null
   maturity: string
   dimensions: Record<string, { score: number; weighted: number }>
   profile_multiplier: number
+  // Phase 234 D-15/D-23: optional because a score saved before Phase 234 lacks them (D-25 legacy).
+  answered_by_dimension?: Record<string, number>
+  assessed_dimensions?: string[]
+  dimensions_assessed?: number
+  dimensions_total?: number
 }
+
+// Phase 231 D-02: mirrors quirk.qramm.compliance_map.RowCoverageStatus
+// Phase 234 D-15: "stale" = answers changed after the saved score (relevance_score null).
+export type QRAMMRowCoverageStatus = "covered" | "partial" | "self-assessed" | "pending" | "n/a" | "stale"
 
 // Phase 55 QRAMM-15: Compliance Map row returned by
 // GET /api/qramm/sessions/{id}/compliance-map
+// Phase 231: coverage_status carries the per-session assessment state; scanner_informed stays scanner-only (D-04).
 export interface QRAMMComplianceMapRow {
   practice_number: string
   practice_area: string
@@ -545,6 +556,21 @@ export interface QRAMMComplianceMapRow {
   static_weight: number
   relevance_score: number | null
   scanner_informed: boolean
+  coverage_status: QRAMMRowCoverageStatus | null
+}
+
+// Phase 231 D-20: GET /api/qramm/sessions/{id} (routes/qramm.py SessionRead). `score` is the
+// persisted score_json dict, or null when the session has never been scored. Only the fields
+// the print hook reads are declared.
+export interface QRAMMSessionDetail {
+  session_id: number
+  status: string | null
+  score: QRAMMScoreResponse | null
+  // Phase 234 D-15/D-25: live answers differ from the saved counts, or the score is legacy.
+  score_stale?: boolean
+  // Phase 234 D-25/D-27: "current" | "recalculate" (legacy score) | "stale" (answers changed after
+  // the score), null when unscored. Print consumes it (234 review IN-03).
+  score_overall_state?: "current" | "recalculate" | "stale" | null
 }
 
 // Phase 193 Plan 07 (PARITY-02): mirrors

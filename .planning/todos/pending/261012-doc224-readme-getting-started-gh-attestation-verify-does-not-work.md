@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-12
+source: Phase 224 plan 08 (docs/release-process.md audit)
+priority: high
+area: .github/workflows/release.yml (header comment), docs/UAT-SERIES.md
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
+
 # README and getting-started tell users to run `gh attestation verify`, which fails for the PyPI wheel
 
 **Filed:** 2026-10-12 (Phase 224 plan 08, docs/release-process.md audit)
 **Priority:** P1 for the launch doc review — a security verification instruction that cannot succeed
 **Status:** partially fixed (README + getting-started + master guide fixed 2026-10-12; workflow comment and UAT cases still open)
+Frontmatter added by Phase 227 (D-02): priority: high derived literally from the body "P1 for the launch doc review"; the launch gate closed 2026-10-15, but no priority is invented here (orchestrator ruling on RESEARCH Open Question 2). This is a fifth out-of-scope high todo, named in HORIZON 999.129.
 
 ## What happens
 

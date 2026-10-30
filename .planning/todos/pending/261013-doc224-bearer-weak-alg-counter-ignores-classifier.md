@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/evidence.py (bearer_token_weak_alg_count)
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # Bearer-token "weak algorithm" counter counts every declared alg, including quantum-safe ML-DSA
@@ -22,3 +23,10 @@ When fixed, update docs/report-interpretation.md §3 Agility table, "Bearer toke
 - **Verdict: CONFIRMED, effort S.** `evidence.py:423-424` (`if _bt_alg and _bt_alg.lower() != "none"`).
 - Fix: gate the increment on `classify_algorithm(alg)` quantum level 0 (quantum-vulnerable).
 - Unknown: classifier spelling for JOSE alg names (`ML-DSA-65` vs `MLDSA65`); add a test for both.
+
+## Phase 230 disposition (2026-10-23)
+
+Left pending, owner unchanged. Plan 230-04 corrected the `evidence.py` comment and the none/missing exclusions but found
+this NOT trivially closable: `bearer_token_weak_alg_count` still counts any non-"none" declared alg without consulting
+the classifier, so an ML-DSA bearer is still counted as weak. Fixing it moves the Agility score and is a scoring-model
+change, not a DETECT-05 follow-through.

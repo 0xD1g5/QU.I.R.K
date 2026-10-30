@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/source_scanner.py, quirk/util/subprocess_input.py (validate_repo_path), docs/configuration.md (source_targets rows)
 status: pending
 resolves_phase: null
+owner: "999.127"
 ---
 
 # `connectors.source_targets` rejects repository URLs, but the docs say URLs work

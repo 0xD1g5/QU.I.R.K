@@ -6,6 +6,7 @@ priority: medium
 area: quirk/intelligence/evidence.py (cert_key_type_counts), quirk/intelligence/scoring.py
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # ML-DSA and DSA certificates take the "Certificate key types undetermined" -8 penalty

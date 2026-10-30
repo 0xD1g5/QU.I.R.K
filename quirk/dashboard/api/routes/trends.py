@@ -4,9 +4,9 @@ Returns HTTP 200 with score_delta=null and zeroed counts when fewer than two
 distinct sessions exist (D-06). NULL scanned_at rows are excluded from session
 grouping and endpoint fetches (D-13).
 
-Session grouping uses func.strftime microsecond-precision grouping (%Y-%m-%d %H:%M:%f)
-to produce one logical session row per scan run. This ensures two scans started
-within the same second appear as distinct timeline points (CR-05 fix).
+Sessions are grouped by scan_run_id via the shared
+quirk.intelligence.trends.list_session_timestamps (legacy NULL-run rows fall
+back to millisecond buckets, CR-05).
 """
 from __future__ import annotations
 
@@ -15,11 +15,11 @@ from typing import List
 
 from fastapi import APIRouter, Depends, Query
 from quirk.dashboard.api.middleware.auth import require_auth
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
+from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
 from quirk.dashboard.api.schemas import (
     FindingCounts,
     SampleFinding,
@@ -34,50 +34,15 @@ from quirk.intelligence.trends import (
     _count_by_bucket,
     _fetch_session_endpoints,
     compute_trend_report,
+    list_session_timestamps,
 )
-from quirk.models import CryptoEndpoint
 
 router = APIRouter(dependencies=[Depends(require_auth)])
 
 
 def _list_session_timestamps(db: Session) -> List[datetime]:
-    """Return up to 10 most recent distinct session timestamps (newest first).
-
-    RVW-003: a session is one `scan_run_id`, represented by its *earliest*
-    endpoint timestamp. Grouping on the millisecond-precision strftime key
-    instead made one scan look like many sessions — a scan's stages each stamp
-    their own rows as they run, so a 10-endpoint scan could yield 10 "sessions",
-    and the trend delta was then computed between two stages of the same scan.
-
-    Rows predating the column (scan_run_id IS NULL) keep the old key so existing
-    databases still render trends: millisecond-precision strftime (%Y-%m-%d
-    %H:%M:%f) — SQLite's %f returns 3 decimal digits (ms), not 6 (µs) — so two
-    scans started in different milliseconds stay distinct (CR-05). NULL
-    scanned_at rows are excluded (D-13) via explicit isnot(None) filter.
-    """
-    rows = (
-        db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
-        .filter(CryptoEndpoint.scanned_at.isnot(None))
-        .all()
-    )
-    earliest: dict[str, datetime] = {}
-    for row_ts, row_run_id in rows:
-        if row_ts is None:
-            continue
-        if isinstance(row_ts, str):
-            try:
-                row_ts = datetime.fromisoformat(row_ts)
-            except ValueError:
-                continue
-        # Legacy key preserves millisecond precision by truncating microseconds
-        # to a whole millisecond — the same bucket the strftime %f key produced.
-        key = row_run_id or stamp_utc_iso(row_ts.replace(
-            microsecond=(row_ts.microsecond // 1000) * 1000
-        ))
-        prev = earliest.get(key)
-        if prev is None or row_ts < prev:
-            earliest[key] = row_ts
-    return sorted(earliest.values(), reverse=True)[:10]
+    """Delegate to the shared lister; kept for existing importers (D-10)."""
+    return list_session_timestamps(db, limit=10)
 
 
 @router.get("/trends", response_model=TrendReportResponse)
@@ -99,6 +64,7 @@ def get_trends(db: Session = Depends(get_db)) -> TrendReportResponse:
             current_ts=sessions[0],
             previous_ts=None,
             db=db,
+            findings_deriver=derive_dashboard_scoring_findings,
         )
         return _to_response(report)
 
@@ -107,6 +73,7 @@ def get_trends(db: Session = Depends(get_db)) -> TrendReportResponse:
         current_ts=sessions[0],
         previous_ts=sessions[1],
         db=db,
+        findings_deriver=derive_dashboard_scoring_findings,
     )
     return _to_response(report)
 
@@ -160,28 +127,6 @@ def _to_response(report) -> TrendReportResponse:
     )
 
 
-def _list_session_timestamps_n(db: Session, n: int) -> List[datetime]:
-    """Return up to n most recent distinct session timestamps (newest first).
-
-    Variant of _list_session_timestamps() with a parameterized LIMIT.
-    Do NOT modify _list_session_timestamps() — it is hardcoded to LIMIT 10
-    and consumed by get_trends. (CONTEXT.md D-03)
-    Uses microsecond-precision strftime format (%Y-%m-%d %H:%M:%f) — CR-05.
-    """
-    ts_usec = func.strftime(
-        "%Y-%m-%d %H:%M:%f", CryptoEndpoint.scanned_at
-    ).label("ts_usec")
-    rows = (
-        db.query(ts_usec)
-        .filter(CryptoEndpoint.scanned_at.isnot(None))
-        .group_by("ts_usec")
-        .order_by(ts_usec.desc())
-        .limit(n)
-        .all()
-    )
-    return [datetime.fromisoformat(r.ts_usec) for r in rows]
-
-
 @router.get("/trends/timeline", response_model=TrendTimelineResponse)
 def get_trends_timeline(
     n: int = Query(default=30, ge=2, le=200),
@@ -195,7 +140,7 @@ def get_trends_timeline(
     dependencies=[Depends(require_auth)] declaration — no per-route
     annotation needed (RESEARCH.md Pitfall 5).
     """
-    sessions = _list_session_timestamps_n(db, n)
+    sessions = list_session_timestamps(db, limit=n)
     if not sessions:
         return TrendTimelineResponse(sessions=[])
     points: List[TrendSessionPoint] = []
@@ -203,12 +148,8 @@ def get_trends_timeline(
         eps = _fetch_session_endpoints(db, ts)
         if not eps:
             continue
-        # D-07 (184.4): intentionally findings-less — TrendSessionPoint (schemas.py)
-        # exposes only `score: Optional[float]` (Phase 199 / TRIAGE-10 widening)
-        # and `subscores: SubScores` from this evidence/score_dict; it has no
-        # rating/band field, so this timeline point can never render a
-        # severity-blind band.
-        evidence = build_evidence_summary(eps)
+        # Phase 228 D-08/D-12: derive dashboard findings; no try/except on purpose.
+        evidence = build_evidence_summary(eps, derive_dashboard_scoring_findings(eps))
         score_dict = compute_readiness_score(evidence)
         sub = score_dict["subscores"]
         keys = [

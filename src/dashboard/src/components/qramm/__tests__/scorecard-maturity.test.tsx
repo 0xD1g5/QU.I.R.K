@@ -3,7 +3,15 @@ import { render, cleanup, screen } from "@testing-library/react"
 import { ScorecardTab } from "@/components/qramm/ScorecardTab"
 import { QRAMMContext } from "@/context/QRAMMContext"
 import type { ScoreResult } from "@/context/QRAMMContext"
-import { MATURITY_BAR_CLASS, DIMENSION_COUNT } from "@/lib/qramm-constants"
+import {
+  MATURITY_BAR_CLASS,
+  MATURITY_BADGE_CLASS,
+  MATURITY_LABEL,
+  DIMENSION_COUNT,
+  DIMENSIONS,
+} from "@/lib/qramm-constants"
+import type { Dimension } from "@/lib/qramm-constants"
+import { buildAnswers, buildCatalog, buildCtx, withAnsweredCounts } from "./scorecard-fixtures"
 
 // D-10 (WR-11, WR-12):
 //  - Bar width = (count / DIMENSION_COUNT) * 100 (NOT hardcoded /4)
@@ -14,26 +22,18 @@ import { MATURITY_BAR_CLASS, DIMENSION_COUNT } from "@/lib/qramm-constants"
 
 afterEach(() => cleanup())
 
-function buildCtx(scoreResult: ScoreResult | null) {
-  return {
-    sessionId: 1 as number | null,
-    setSessionId: () => {},
-    answers: new Map(),
-    setAnswer: () => {},
-    resetAnswers: () => {},
-    profile: null,
-    setProfile: () => {},
-    scoreResult,
-    setScoreResult: () => {},
-    confirmAnswer: () => {},
-    clearPendingDebounces: () => {},
-  }
-}
-
-function renderWith(scoreResult: ScoreResult | null) {
-  const qnToDim = new Map<number, string>()
+// Phase 231 D-07a: a dimension with no answered question reads "Not assessed",
+// so every fixture renders a real catalog (30 questions per dimension) and, by
+// default, one answered question in every dimension it scores.
+function renderWith(
+  scoreResult: ScoreResult | null,
+  answeredPerDim: Partial<Record<Dimension, number>> = { CVI: 1, SGRM: 1, DPE: 1, ITR: 1 },
+  perDim = 30,
+) {
+  const qnToDim = buildCatalog(perDim)
+  const answers = buildAnswers(qnToDim, answeredPerDim)
   return render(
-    <QRAMMContext.Provider value={buildCtx(scoreResult)}>
+    <QRAMMContext.Provider value={buildCtx(withAnsweredCounts(scoreResult, qnToDim, answers), answers)}>
       <ScorecardTab qnToDim={qnToDim} />
     </QRAMMContext.Provider>,
   )
@@ -153,5 +153,121 @@ describe("ScorecardTab — D-10 (WR-11, WR-12) maturity bar math + class", () =>
       /border-quantum-/.test((el as HTMLElement).className),
     )
     expect(hasBorder).toBe(true)
+  })
+})
+
+// Phase 231 QRAMM-18 (D-07, D-08, D-21a): an unanswered dimension is "Not
+// assessed", not maturity level 1. The predicate is the live answered count.
+
+function score(dims: Record<Dimension, number>): ScoreResult {
+  return {
+    overall: 40,
+    maturity: "Basic",
+    dimensions: Object.fromEntries(
+      DIMENSIONS.map((d) => [d, { score: dims[d], weighted: dims[d] / 4 }]),
+    ),
+    profile_multiplier: 1.0,
+  }
+}
+
+function summaryRow(dim: Dimension): HTMLTableRowElement {
+  const rows = Array.from(document.querySelectorAll("tbody tr")) as HTMLTableRowElement[]
+  const row = rows.find((r) => r.cells[0]?.textContent === dim)
+  if (!row) throw new Error(`no Dimension Summary row for ${dim}`)
+  return row
+}
+
+function levelCount(level: number): string | null {
+  const bar = document.querySelector(`[data-testid="maturity-bar-${level}"]`)
+  const levelRow = bar?.parentElement?.parentElement
+  return levelRow?.querySelector(".font-data")?.textContent ?? null
+}
+
+describe("ScorecardTab — Phase 231 QRAMM-18 Not assessed dimensions", () => {
+  it("renders Not assessed for a dimension with no answered question", () => {
+    renderWith(score({ CVI: 2, SGRM: 3, DPE: 3, ITR: 0 }), { CVI: 1, SGRM: 1, DPE: 1, ITR: 0 })
+    const row = summaryRow("ITR")
+    const badge = row.cells[4].firstElementChild as HTMLElement
+    expect(row.cells[4].textContent).toBe("Not assessed")
+    // Colour tokens only: the base Badge class itself carries a bare `border`.
+    const maturityTokens = Object.values(MATURITY_BADGE_CLASS)
+      .join(" ")
+      .split(" ")
+      .filter((t) => /quantum-|severity-/.test(t))
+    expect(maturityTokens.length).toBeGreaterThan(0)
+    for (const token of maturityTokens) {
+      expect(badge.className.split(" ")).not.toContain(token)
+    }
+    expect(badge.className).toContain("bg-secondary")
+    expect(row.cells[1].textContent).toBe("—")
+    expect(row.cells[2].textContent).toBe("—")
+  })
+
+  it("excludes a not-assessed dimension from the Maturity Distribution", () => {
+    renderWith(score({ CVI: 1, SGRM: 0, DPE: 0, ITR: 0 }), { CVI: 1 })
+    expect(levelCount(1)).toBe("1")
+    const bar1 = document.querySelector('[data-testid="maturity-bar-1"]') as HTMLElement
+    expect(bar1.style.width).toBe(`${(1 / DIMENSION_COUNT) * 100}%`)
+    expect(screen.getByTestId("maturity-not-assessed").textContent).toBe("3 dimensions not assessed")
+  })
+
+  it("buckets a partially answered dimension by its score", () => {
+    renderWith(score({ CVI: 0, SGRM: 0, DPE: 3.2, ITR: 0 }), { DPE: 1 })
+    expect(levelCount(3)).toBe("1")
+    expect(levelCount(1)).toBe("0")
+    expect(summaryRow("DPE").cells[4].textContent).toBe(MATURITY_LABEL[3])
+    expect(summaryRow("DPE").cells[1].textContent).toBe("3.20")
+  })
+
+  it("decides assessment from the live answered count, never from the stored score", () => {
+    // SGRM answered but its stored score is the 0.0 placeholder (scored before
+    // the answer); ITR unanswered but carries a stale non-zero score.
+    renderWith(score({ CVI: 2, SGRM: 0, DPE: 2, ITR: 2 }), { CVI: 1, SGRM: 1, DPE: 1 })
+    expect(summaryRow("SGRM").cells[4].textContent).toBe(MATURITY_LABEL[1])
+    expect(summaryRow("SGRM").cells[1].textContent).toBe("0.00")
+    expect(summaryRow("ITR").cells[4].textContent).toBe("Not assessed")
+    expect(levelCount(1)).toBe("1")
+    expect(levelCount(2)).toBe("2")
+    expect(screen.getByTestId("maturity-not-assessed").textContent).toBe("1 dimension not assessed")
+  })
+
+  it("treats one answered question as assessed even when completion rounds to 0%", () => {
+    renderWith(score({ CVI: 2, SGRM: 2, DPE: 2, ITR: 2 }), { CVI: 1, SGRM: 1, DPE: 1, ITR: 1 }, 300)
+    expect(summaryRow("ITR").cells[5].textContent).toBe("0%")
+    expect(summaryRow("ITR").cells[4].textContent).toBe(MATURITY_LABEL[2])
+    expect(screen.queryByTestId("maturity-not-assessed")).toBeNull()
+  })
+
+  it("shows no not-assessed line when every dimension is answered", () => {
+    renderWith(score({ CVI: 2, SGRM: 3, DPE: 3, ITR: 4 }))
+    expect(screen.queryByTestId("maturity-not-assessed")).toBeNull()
+    expect(screen.queryByText("Not assessed")).toBeNull()
+  })
+
+  it("shows no not-assessed line before a score exists", () => {
+    renderWith(null, {})
+    expect(screen.queryByTestId("maturity-not-assessed")).toBeNull()
+    expect(screen.queryByText("Not assessed")).toBeNull()
+    expect(summaryRow("CVI").cells[4].textContent).toBe("—")
+  })
+
+  it("keeps the 0% completion cell for a not-assessed dimension", () => {
+    renderWith(score({ CVI: 2, SGRM: 0, DPE: 2, ITR: 2 }), { CVI: 1, DPE: 1, ITR: 1 })
+    expect(summaryRow("SGRM").cells[5].textContent).toBe("0%")
+    expect(summaryRow("CVI").cells[5].textContent).toBe("3%")
+  })
+
+  it("renders the not-assessed line under the Indeterminate em-dash state", () => {
+    const indeterminate: ScoreResult = {
+      overall: 0,
+      maturity: "Indeterminate",
+      dimensions: Object.fromEntries(
+        DIMENSIONS.map((d) => [d, { score: null as unknown as number, weighted: 0 }]),
+      ),
+      profile_multiplier: 1.0,
+    }
+    renderWith(indeterminate, { CVI: 1, SGRM: 1 })
+    expect(document.querySelector('[data-testid="maturity-bar-1"]')).toBeNull()
+    expect(screen.getByTestId("maturity-not-assessed").textContent).toBe("2 dimensions not assessed")
   })
 })

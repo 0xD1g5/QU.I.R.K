@@ -149,9 +149,15 @@ def build_phased_roadmap(
     # 999.113 tail: `scan_error` is set on ANY probed port that yielded no crypto
     # evidence -- overwhelmingly ports where nothing was listening, not scanner
     # faults. Carry the evidenced count so the item can say which it is instead of
-    # reporting a closed-port sweep as unreliability. The RATE is deliberately left
-    # alone: it is a scoring input (scoring.py:483, :490) and changing it here would
-    # move the emitted score.
+    # reporting a closed-port sweep as unreliability.
+    #
+    # Phase 234 review D-31 (WR-04): scoring 4.0 penalises the scan-error COUNT
+    # (D-03, through the count curve); it no longer reads the rate. So the
+    # "Increase scan coverage" item triggers on the count, the input the scorer
+    # actually reads, the same "fires when the scorer's penalty fires" rule as
+    # the PQC certificate item. The rate is kept for the why text only. Under
+    # the old `rate >= 0.2` trigger a large estate with a few scan errors lost
+    # points with no item and no lift, and a small one got the item.
     scan_error_count = max(0, _as_int(scan_error.get("count", 0)))
     evidenced_count = max(0, endpoints - scan_error_count)
     tls_enum_cov = max(
@@ -160,6 +166,13 @@ def build_phased_roadmap(
     )
     rsa_count = max(0, _as_int(cert_keys.get("RSA", 0)))
     ecdsa_count = max(0, _as_int(cert_keys.get("ECDSA", 0)))
+    # Phase 234 O-4: the certificate-key item fires exactly when the scorer's
+    # key-type penalty fires (scoring.py: classical keys present, or some
+    # observed certificates with no determined key type, D-29), so PQC
+    # certificate count and certs observed are read with the same coercion the
+    # scorer uses.
+    pqc_cert_count = max(0, _as_int(cert_keys.get("PQC", 0)))
+    certs_observed = max(0, _as_int(cert_obs.get("certs_observed", 0)))
 
     reasons = _driver_reasons(scoring)
     items: Dict[str, Dict[str, Any]] = {}
@@ -212,7 +225,7 @@ def build_phased_roadmap(
             priority=30,
         )
 
-    if scan_error_rate >= 0.2:
+    if scan_error_count > 0:
         _add_candidate(
             items,
             phase="NOW",
@@ -311,17 +324,28 @@ def build_phased_roadmap(
             priority=90,
         )
 
-    if rsa_count > 0 and ecdsa_count == 0:
+    # Phase 234 O-4: retargeted from the ECDSA-adoption title. Under scoring 4.0
+    # every classical certificate key (RSA/ECDSA/EdDSA) is quantum-vulnerable,
+    # so recommending ECDSA as an improvement would be wrong advice. The item
+    # now recommends PQC/hybrid certificates and fires on the same condition as
+    # the scorer's key-type penalty, ECDSA-only estates included. Its slug stays
+    # `ecdsa-adoption-planning` (remediation.py, D-01: the slug is identity).
+    if rsa_count + ecdsa_count > 0 or certs_observed > pqc_cert_count:
         _add_candidate(
             items,
             phase="LATER",
-            title="Plan ECDSA adoption",
+            title="Plan post-quantum (PQC/hybrid) certificate adoption",
             why=_why(
                 (
-                    "Certificate portfolio appears RSA-only; introduce ECDSA "
-                    "rollout planning for agility."
+                    "Certificate keys are classical (RSA/ECDSA/EdDSA) or "
+                    "undetermined, and all classical keys are quantum-vulnerable; "
+                    "plan migration to ML-DSA or composite (hybrid) certificates "
+                    "as CA and client support allows."
                 ),
-                _driver_hint(reasons, ("rsa-only", "ecdsa adoption")),
+                _driver_hint(
+                    reasons,
+                    ("quantum-vulnerable certificate", "certificate key types undetermined"),
+                ),
             ),
             owner_placeholder="[owner: cryptography-architecture]",
             dependencies=("CA support validation", "Client support matrix"),

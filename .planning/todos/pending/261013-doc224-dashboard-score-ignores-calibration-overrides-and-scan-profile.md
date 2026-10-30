@@ -6,6 +6,7 @@ priority: medium
 area: quirk/dashboard/api/routes/scan.py (get_latest_scan scoring block, _derive_roadmap)
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # Dashboard score ignores `intelligence.calibration_overrides` and uses the newest run's profile for every scan

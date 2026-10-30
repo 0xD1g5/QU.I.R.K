@@ -6,6 +6,7 @@ priority: low
 area: quirk/notify/dispatcher.py, quirk/notify/channels/slack.py, quirk/cli/ticket_cmd.py
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # A skipped Slack delivery is audited as `ok`; two install hints name the wrong package

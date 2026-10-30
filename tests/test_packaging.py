@@ -94,3 +94,29 @@ def test_identity_scanners_importable_without_impacket():
     from quirk.scanner.saml_scanner import scan_saml_targets, LXML_AVAILABLE
     assert DNSPYTHON_AVAILABLE, "dnspython[dnssec] should be available (now a core dep)"
     assert LXML_AVAILABLE, "lxml should be available (now a core dep)"
+
+
+def test_every_tracked_quirk_data_file_is_package_data():
+    """235-11: a data file tracked under quirk/ that no package-data glob
+    covers is silently absent from the wheel (cmvp_curated.csv was)."""
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parent.parent
+    cfg = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    patterns = cfg["tool"]["setuptools"]["package-data"]["quirk"]
+    covered = set()
+    for pat in patterns:
+        covered.update(
+            p.relative_to(root).as_posix()
+            for p in (root / "quirk").glob(pat) if p.is_file()
+        )
+    import shutil
+
+    from tests.cli_helpers import run_fork_safe
+
+    tracked = run_fork_safe(
+        [shutil.which("git"), "-C", str(root), "ls-files", "quirk"],
+        check=True,
+    ).stdout.split()
+    data = {f for f in tracked if not f.endswith(".py")}
+    assert data - covered == set(), sorted(data - covered)

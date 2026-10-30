@@ -1,8 +1,11 @@
 """quirk doctor — Phase 52 DOCS-05: pre-engagement health check for operators.
 
-Exit semantics (per Phase 52 D-14):
+Exit semantics (per Phase 52 D-14, amended by Phase 235 D-24):
     Non-informational checks -> set failed=True on failure -> sys.exit(1)
     Informational checks     -> display [!] only -> never set failed
+Phase 235 D-24: the optional scanner binaries (nmap, syft, semgrep) and a
+not-yet-created database are informational. Exit 1 is reserved for a bad
+Python, stale compliance data, a malformed config, or an unreadable database.
 
 Phase 75 D-01..D-03 (APCL-01 / WR-01, WR-02, WR-03):
   - ``_check_dashboard`` and ``_check_network`` return a typed status dict
@@ -14,7 +17,8 @@ Phase 75 D-01..D-03 (APCL-01 / WR-01, WR-02, WR-03):
     single canonical resolver; it raises ``ValueError`` when multiple
     legacy DBs are present.
 
-Per Phase 75 D-18, ``quirk doctor`` exit-code semantics are unchanged.
+Per Phase 75 D-18, ``quirk doctor`` exit-code semantics were unchanged until
+Phase 235 D-24 (see above).
 """
 from __future__ import annotations
 
@@ -34,7 +38,7 @@ from rich.table import Table
 from quirk.errors import format_error
 from quirk.util.safe_exc import safe_str
 
-_PYTHON_MIN = (3, 11)
+_PYTHON_MIN = (3, 10)
 
 _BINARY_TO_CODE = {"nmap": "INSTALL-006", "syft": "INSTALL-007", "semgrep": "INSTALL-008"}
 _CONFIG_DEFAULT_PATH = "./config.yaml"
@@ -55,7 +59,8 @@ def _check_binary(name: str) -> Tuple[bool, str]:
     if path:
         return True, f"[green][✓][/green] {path}"
     code = _BINARY_TO_CODE.get(name, "INSTALL-006")
-    return False, f"[red][✗] {format_error(code)}[/red]"
+    # Phase 235 D-24: optional scanner binaries are informational, never a failure.
+    return True, f"[yellow][!] {format_error(code)} (informational)[/yellow]"
 
 
 def _check_compliance_freshness() -> Tuple[bool, str]:
@@ -113,6 +118,15 @@ def _check_db() -> dict:
                 "ok": False,
                 "detail": safe_str(ve),
                 "remediation": "Set QUIRK_DB_PATH to disambiguate between the legacy DB files listed above.",
+            }
+        if not os.path.isfile(resolved):
+            # Phase 235 D-24: first-run machine. Do not connect (it would fail or
+            # silently create an empty DB); report informationally.
+            return {
+                "ok": True,
+                "informational": True,
+                "detail": f"no database yet at {resolved} — created by the first scan",
+                "remediation": "",
             }
     try:
         conn = sqlite3.connect(resolved, timeout=2)
@@ -229,7 +243,9 @@ def _render_status_informational(result: dict) -> str:
 def run_doctor() -> None:
     """Phase 52 DOCS-05 entrypoint. Prints a Rich health table and exits 0 or 1.
 
-    Phase 75 D-18: exit-code semantics unchanged from Phase 52.
+    Phase 235 D-24: optional scanner binaries and a not-yet-created database are
+    informational; exit 1 is reserved for a bad Python, stale compliance data, a
+    malformed config, or an unreadable database.
     """
     console = Console()
     table = Table(title="QU.I.R.K. Health Check", show_header=True, header_style="bold")
@@ -243,10 +259,9 @@ def run_doctor() -> None:
     failed = failed or (not ok)
     table.add_row("Python environment", status)
 
-    # 2. Scanner binaries (non-informational)
+    # 2. Scanner binaries (informational — Phase 235 D-24)
     for binary in ("nmap", "syft", "semgrep"):
-        ok, status = _check_binary(binary)
-        failed = failed or (not ok)
+        _ok, status = _check_binary(binary)
         table.add_row(f"Binary: {binary}", status)
 
     # 3. Compliance framework freshness (non-informational)
@@ -261,7 +276,13 @@ def run_doctor() -> None:
     # 5. Database connectivity (non-informational) — Phase 75 D-02 typed dict
     db_result = _check_db()
     failed = failed or (not db_result["ok"])
-    table.add_row("Database (quirk.db)", _render_status(db_result))
+    if db_result.get("informational"):
+        table.add_row(
+            "Database (quirk.db)",
+            f"[yellow][!] {db_result['detail']} (informational)[/yellow]",
+        )
+    else:
+        table.add_row("Database (quirk.db)", _render_status(db_result))
 
     # 6. Configuration validity
     cfg_failed, _info, status = _check_config()

@@ -26,8 +26,30 @@ from quirk.severity_bands import (
 # right to; 999.115 supersedes it by DISCLOSING the discontinuity rather than
 # avoiding it forever, which is the honest form of the same concern. See
 # .planning/decisions/999.115-severity-caps-the-number-supersedes-184.4-D-03.md
-SCORING_VERSION = "3.0"
-SCORING_VERSION_NOTE = "scoring v3 — not comparable with v2 or earlier scores"
+#
+# Phase 234 (SCORE-09) bumped this 3.0 -> 4.0. Scoring 3.0 divided every
+# weakness count by a population that grows with scan depth, so observing more
+# HEALTHY endpoints raised the score while the absolute exposure stood still
+# (P2b, 999.120). 4.0 makes three changes together:
+#   - every ratio site is an absolute-count curve, `min(1, count / N_REF) **
+#     0.5`, with N_REF = 40 as a CONTINUITY ANCHOR (the ladder skeleton
+#     population, not a fitted value), so R1-R4 are unchanged at their own size
+#     and only the dependence on estate size is removed. Small estates become
+#     more lenient (O-3): 1 plaintext endpoint out of 1 scores hygiene 22, not 7;
+#   - the scan-error terms read the scan-error COUNT, not its rate (D-03);
+#   - classical certificate keys (RSA, ECDSA, EdDSA) are never a positive
+#     signal: any of them costs a flat -8, and the single +8 PQC credit is
+#     earned by a PQC/hybrid key exchange OR a PQC certificate key (D-04, O-2,
+#     O-4).
+# Kerberos placeholder rows also stop counting as identity evidence (D-11).
+# The Phase 234 code review corrected three 4.0 rules before release (so the
+# version stays 4.0; no 4.0 score has shipped): the mTLS bonus is a presence
+# credit, not a count curve (D-28); the "key types undetermined" -8 applies
+# whenever undetermined certificates exist, independent of PQC (D-29); and
+# Kerberos rows carrying a scan error are not identity evidence (D-30).
+# Decision record: .planning/decisions/234-p2b-fix-and-ladder-remeasurement.md
+SCORING_VERSION = "4.0"
+SCORING_VERSION_NOTE = "scoring v4 — not comparable with v3 or earlier scores"
 
 # Phase 188 SCORE-06 / plan 188-03: the once-composed not-computed statement
 # lives in quirk.reports.content_model, NOT here — html_renderer.py,
@@ -130,7 +152,10 @@ SCORE_WEIGHTS: Dict[str, float] = {
     # assessment should assume. Raising it above 8.0 is defensible; lowering it
     # is not. See tests/test_score_properties.py::test_p8_*.
     "agility_unverified_key_type_penalty": 8.0,
-    "agility_has_ecdsa_bonus": 4.0,
+    # "agility_has_ecdsa_bonus" (4.0) was REMOVED by Phase 234 D-04/O-2:
+    # ECDSA and EdDSA keys are quantum-vulnerable, so a classical key type is
+    # never a positive signal. Removing the key (not zeroing it) follows the
+    # 999.115 C precedent; tests/test_score_weights_invariant.py records it.
     "agility_pqc_hybrid_bonus": 8.0,   # Phase 90 PQC-03 — X25519MLKEM768 ceiling anchor
     "agility_weak_jwt_alg_ratio": 6.0,      # Phase 94 SCORE-01 — alg:none / quantum-vulnerable alg in bearer token
     "agility_openapi_plaintext_ratio": 4.0, # Phase 94 SCORE-01 — OpenAPI spec declares http:// servers
@@ -183,13 +208,40 @@ def _as_float(v: Any) -> float:
 #
 # The exponent is insensitive across 0.4-0.6; 0.5 is the midpoint of that
 # measured-stable range, not a tuned value.
+#
+# Phase 234 (scoring 4.0) keeps this exponent and curve family but changes the
+# curve's INPUT from a prevalence ratio to an absolute count saturating at
+# N_REF (see `_count_curve` below): the "it narrows the P2b dilution" note
+# above is historical; 4.0 removes the dilution rather than narrowing it.
 PREVALENCE_CURVE_EXPONENT: float = 0.5
 
 
-def _ratio(num: int, den: int) -> float:
-    if den <= 0:
+# Phase 234 D-01 (scoring 4.0) — the curve's input is an ABSOLUTE COUNT.
+#
+# Under 3.0 every site was `(count / population) ** exponent`, and every
+# population it divided by (assessable endpoints, observed certificates) grows
+# with scan depth: observing more healthy endpoints shrank every ratio and
+# raised the score while the estate's absolute exposure stood still (P2b,
+# 999.120). The denominator is gone. A weakness count saturates at N_REF.
+#
+# N_REF is a CONTINUITY ANCHOR, not a fitted value (operator decision O-3). It
+# is the calibration ladder's skeleton population (40 assessable endpoints and
+# 40 certificates), so R1-R4 score exactly what they did under 3.0 at their own
+# size and only the dependence on estate size is removed. Every N_REF from 5 to
+# 100 keeps the ladder in its bands, because the ceilings dominate the emitted
+# scores; that is why it is an operator anchor rather than a measurement. One
+# constant serves both the endpoint and the certificate families.
+#
+# The consequence is accepted, and disclosed: small estates are more lenient.
+# One plaintext endpoint out of one scores hygiene 22 under 4.0 (7 under 3.0).
+N_REF: int = 40
+
+
+def _count_curve(count: int) -> float:
+    """`min(1, count / N_REF) ** PREVALENCE_CURVE_EXPONENT`; 0.0 for count <= 0."""
+    if count <= 0:
         return 0.0
-    return max(0.0, num / den) ** PREVALENCE_CURVE_EXPONENT
+    return min(1.0, count / N_REF) ** PREVALENCE_CURVE_EXPONENT
 
 
 def _clamp(v: float, lo: float, hi: float) -> float:
@@ -356,18 +408,49 @@ def _apply_weighted_impacts(
 
 
 def _endpoints_assessed(endpoints: int) -> bool:
-    """hygiene / modern_tls / agility_signals all read endpoint-wide ratios
-    against the same `denom` -- they were assessed iff any ASSESSABLE endpoint
+    """hygiene / modern_tls / agility_signals all read endpoint-wide counts
+    (Phase 234: counts, no longer ratios) -- they were assessed iff any ASSESSABLE endpoint
     exists. Callers must pass the ADVISORY/CLOSED-excluded count
     (`assessable_endpoint_count`), not `totals.endpoints` — see the CR-02
     comment at the call site in compute_readiness_score()."""
     return endpoints > 0
 
 
-def _identity_assessed(cert_obs: Mapping[str, Any], protocol_counts: Mapping[str, Any]) -> bool:
+def _identity_assessed(
+    cert_obs: Mapping[str, Any],
+    protocol_counts: Mapping[str, Any],
+    placeholders: int = 0,
+    kerberos_errors: int = 0,
+) -> bool:
+    """identity_trust was assessed iff a certificate was observed or any
+    identity protocol produced real evidence.
+
+    Phase 234 D-11: Kerberos placeholder rows (the KDC answered but no etype
+    data was obtained, e.g. `kerberos-etypes-unavailable-principal-unknown` or
+    `kerberos-no-preauth`) are NOT identity evidence. `placeholders` is
+    evidence's `kerberos_placeholder_count`; it is subtracted from the
+    KERBEROS count only, floored at 0. `protocol_counts` itself is never
+    edited, because reports, the CBOM and the dashboard read it.
+
+    Phase 234 review D-30 (WR-01): Kerberos rows that carry a scan_error (an
+    unreachable or never-probed KDC, an unrecognised reply, a KRB-ERROR) are
+    not identity evidence either. `kerberos_errors` is evidence's
+    `kerberos_scan_error_count`, subtracted the same way. Without it a failed
+    or unprobed KDC made identity_trust assessed at a clean 25/25 on zero
+    evidence and raised the headline.
+    """
     if _as_int(cert_obs.get("certs_observed", 0)) > 0:
         return True
-    return sum(_as_int(protocol_counts.get(k, 0)) for k in _IDENTITY_PROTOCOL_KEYS) > 0
+    total = 0
+    for k in _IDENTITY_PROTOCOL_KEYS:
+        value = max(0, _as_int(protocol_counts.get(k, 0)))
+        if k == "KERBEROS":
+            value = max(
+                0,
+                value - max(0, _as_int(placeholders)) - max(0, _as_int(kerberos_errors)),
+            )
+        total += value
+    return total > 0
 
 
 def _dar_assessed(protocol_counts: Mapping[str, Any]) -> bool:
@@ -405,35 +488,21 @@ def compute_readiness_score(
 
     endpoints = max(0, _as_int(totals.get("endpoints", 0)))
 
-    # 999.113 D1/D2 — each ratio divides by the population its own numerator is
-    # drawn from, not by `totals.endpoints` (a probe count that includes ports
-    # where nothing was found and inflates with scan configuration rather than
-    # infrastructure). `_ratio()` already guards `den <= 0` by returning 0.0,
-    # so a zero population yields no penalty rather than a fabricated one or a
-    # ZeroDivisionError -- do not re-clamp these to a minimum of 1 the way the
-    # old single `denom` was.
+    # Phase 234 D-01 (scoring 4.0): NO term divides by a population any more.
+    # Every weakness term is `_count_curve(count) * weight`; see N_REF above.
+    # The 999.113 denominators (certificate population, assessable endpoints,
+    # and the approximate domain/connector population) are gone, which also
+    # makes 999.113's "domain denominator is approximate" follow-up moot.
     #
-    # Certificate-family ratios (expired/expiring/self-signed) divide by the
-    # certificate population, `certificate_observations.certs_observed`.
+    # Two of those populations survive as GATES only, never as divisors:
+    #   - `cert_denom` (certificates observed) gates the "certificate key types
+    #     undetermined" penalty below and the identity assessed predicate;
+    #   - `endpoint_denom` (ADVISORY/CLOSED-excluded assessable endpoints) is
+    #     the `_endpoints_assessed` boolean gate (212 section 6: keep the gate,
+    #     drop the division). Pre-184.1 evidence dicts that lack
+    #     `assessable_endpoint_count` fall back to `endpoints`.
     cert_denom = max(0, _as_int(cert_obs.get("certs_observed", 0)))
-    #
-    # Endpoint-family ratios (plaintext HTTP, HTTP-on-TLS, legacy TLS, unknown
-    # services, mTLS) divide by the ADVISORY/CLOSED-excluded assessable
-    # endpoint count, matching `_endpoints_assessed`'s own documented contract
-    # (see that function's docstring). Pre-184.1 evidence dicts that lack
-    # `assessable_endpoint_count` fall back to `endpoints` for backward
-    # compatibility (same fallback `assessable_endpoints` below already uses).
     endpoint_denom = max(0, _as_int(evidence.get("assessable_endpoint_count", endpoints)))
-    #
-    # Domain/connector ratios (DAR db/storage/k8s/vault, motion email/broker,
-    # agility jwt/openapi/codesign/fuzz, identity kerberos/saml/dnssec/smime/
-    # adcs) have no honest population of their own in `evidence` (e.g. "how
-    # many databases were observed" is not counted). D3: moved to
-    # `endpoint_denom` as a STRICT IMPROVEMENT over the probe count, NOT a
-    # correct denominator -- filed as a follow-up todo, see
-    # .planning/todos/pending/999.113-domain-connector-ratio-denominator-is-approximate.md
-    domain_denom = endpoint_denom
-    #
     #
     # 999.115 -- `actionable_denom` and `agility_high_impact_ratio` are GONE.
     # 999.113 D1(d) corrected this ratio's denominator from `totals.findings`
@@ -456,7 +525,11 @@ def compute_readiness_score(
     plaintext_http_count = max(0, _as_int(evidence.get("plaintext_http_count", 0)))
     http_on_tls_count = max(0, _as_int(evidence.get("http_on_tls_port_count", 0)))
     mtls_present_count = max(0, _as_int(evidence.get("mtls_present_count", 0)))
-    scan_error_rate = _clamp(_as_float(scan_error.get("rate", 0.0)), 0.0, 1.0)
+    # Phase 234 D-03: the scan-error terms read the scan-error COUNT through
+    # the same curve. The rate (count / total endpoints) diluted exactly like
+    # the ratio sites. There is deliberately no fallback to the rate.
+    scan_error_count = max(0, _as_int(scan_error.get("count", 0)))
+    scan_error_penalty = _count_curve(scan_error_count)
 
     unknown_count = max(0, _as_int(protocol_counts.get("UNKNOWN", 0)))
     # Phase 211-03 (DENOM-04 residual / 17-vs-18 divergence leg 2): read the
@@ -483,6 +556,8 @@ def compute_readiness_score(
 
     rsa_count = max(0, _as_int(cert_keys.get("RSA", 0)))
     ecdsa_count = max(0, _as_int(cert_keys.get("ECDSA", 0)))
+    # Phase 234 O-4: ML-DSA / SLH-DSA / composite certificate keys.
+    pqc_cert_count = max(0, _as_int(cert_keys.get("PQC", 0)))
 
     kerberos_weak_count = max(0, _as_int(evidence.get("identity_weak_etype_count", 0)))
     saml_weak_count = max(0, _as_int(evidence.get("saml_weak_signing_count", 0)))
@@ -503,100 +578,129 @@ def compute_readiness_score(
     dar_vault_weak = max(0, _as_int(evidence.get("dar_vault_weak_count", 0)))
 
     hygiene_impacts: List[Tuple[str, float]] = [
-        ("Plaintext HTTP exposure", -_ratio(plaintext_http_count, endpoint_denom) * w["hygiene_plaintext_http_ratio"]),
-        ("HTTP on TLS-designated ports", -_ratio(http_on_tls_count, endpoint_denom) * w["hygiene_http_on_tls_ratio"]),
-        ("Scan error rate", -scan_error_rate * w["hygiene_scan_error_rate"]),
+        ("Plaintext HTTP exposure", -_count_curve(plaintext_http_count) * w["hygiene_plaintext_http_ratio"]),
+        ("HTTP on TLS-designated ports", -_count_curve(http_on_tls_count) * w["hygiene_http_on_tls_ratio"]),
+        # Phase 234 review D-31 (IN-02): the term reads the scan-error COUNT
+        # (D-03), so the client-facing driver label says "Scan errors", not
+        # "rate". roadmap._driver_hint matches the token "scan error".
+        ("Scan errors", -scan_error_penalty * w["hygiene_scan_error_rate"]),
     ]
     hygiene_score, hygiene_drivers = _apply_weighted_impacts(hygiene_impacts)
 
     modern_tls_impacts: List[Tuple[str, float]] = [
-        ("Legacy TLS versions present", -_ratio(legacy_tls_count, endpoint_denom) * w["modern_tls_legacy_versions_ratio"]),
-        ("Unknown open services", -_ratio(unknown_count, endpoint_denom) * w["modern_tls_unknown_ratio"]),
-        ("Assessment visibility blockers", -scan_error_rate * w["modern_tls_scan_error_rate"]),
+        ("Legacy TLS versions present", -_count_curve(legacy_tls_count) * w["modern_tls_legacy_versions_ratio"]),
+        ("Unknown open services", -_count_curve(unknown_count) * w["modern_tls_unknown_ratio"]),
+        ("Assessment visibility blockers", -scan_error_penalty * w["modern_tls_scan_error_rate"]),
     ]
     modern_tls_score, modern_tls_drivers = _apply_weighted_impacts(modern_tls_impacts)
 
     identity_trust_impacts: List[Tuple[str, float]] = [
-        ("Expired certificates", -_ratio(expired_count, cert_denom) * w["identity_expired_ratio"]),
-        ("Expiring certificates", -_ratio(expiring_count, cert_denom) * w["identity_expiring_ratio"]),
-        ("Self-signed certificates", -_ratio(self_signed_count, cert_denom) * w["identity_self_signed_ratio"]),
-        ("mTLS enforcement signals", _ratio(mtls_present_count, endpoint_denom) * w["identity_mtls_ratio_bonus"]),
-        ("RC4/DES Kerberos etypes detected", -_ratio(kerberos_weak_count, domain_denom) * w["identity_kerberos_weak_etype_ratio"]),
-        ("Weak SAML signing key", -_ratio(saml_weak_count, domain_denom) * w["identity_saml_weak_signing_ratio"]),
-        ("Weak DNSSEC signing algorithm", -_ratio(dnssec_weak_count, domain_denom) * w["identity_dnssec_weak_algo_ratio"]),
-        ("Weak S/MIME signing", -_ratio(smime_weak_signing_count, domain_denom) * w["identity_smime_weak_signing_count"]),
-        ("Expired S/MIME cert", -_ratio(smime_expired_count, domain_denom) * w["identity_smime_expired_count"]),
-        ("Weak S/MIME key",     -_ratio(smime_weak_key_count, domain_denom) * w["identity_smime_weak_key_count"]),
-        ("Weak AD CS template",         -_ratio(adcs_weak_template_count, domain_denom) * w["identity_adcs_weak_template_count"]),
-        ("AD CS template misconfig",    -_ratio(adcs_misconfig_count, domain_denom)     * w["identity_adcs_misconfig_count"]),
-        ("Weak AD CS signing algo",     -_ratio(adcs_weak_signing_count, domain_denom)  * w["identity_adcs_weak_signing_count"]),
-        ("AD CS coverage gap (ESC4/5/7/8)", -_ratio(adcs_coverage_gap_count, domain_denom) * w["identity_adcs_coverage_gap_count"]),
+        ("Expired certificates", -_count_curve(expired_count) * w["identity_expired_ratio"]),
+        ("Expiring certificates", -_count_curve(expiring_count) * w["identity_expiring_ratio"]),
+        ("Self-signed certificates", -_count_curve(self_signed_count) * w["identity_self_signed_ratio"]),
+        # Phase 234 review D-28: a PRESENCE credit, +6 once when any mTLS
+        # endpoint is observed. D-02 had made it a count curve, so every
+        # further mTLS-enforcing endpoint raised identity_trust up to N_REF:
+        # observing more healthy endpoints raised the score, which SCORE-09
+        # forbids. Same single-step shape as the PQC credit (D-04). The weight
+        # key keeps its `_ratio_bonus` name because calibration_overrides
+        # address weights by name.
+        ("mTLS enforcement signals", (w["identity_mtls_ratio_bonus"] if mtls_present_count > 0 else 0.0)),
+        ("RC4/DES Kerberos etypes detected", -_count_curve(kerberos_weak_count) * w["identity_kerberos_weak_etype_ratio"]),
+        ("Weak SAML signing key", -_count_curve(saml_weak_count) * w["identity_saml_weak_signing_ratio"]),
+        ("Weak DNSSEC signing algorithm", -_count_curve(dnssec_weak_count) * w["identity_dnssec_weak_algo_ratio"]),
+        ("Weak S/MIME signing", -_count_curve(smime_weak_signing_count) * w["identity_smime_weak_signing_count"]),
+        ("Expired S/MIME cert", -_count_curve(smime_expired_count) * w["identity_smime_expired_count"]),
+        ("Weak S/MIME key",     -_count_curve(smime_weak_key_count) * w["identity_smime_weak_key_count"]),
+        ("Weak AD CS template",         -_count_curve(adcs_weak_template_count) * w["identity_adcs_weak_template_count"]),
+        ("AD CS template misconfig",    -_count_curve(adcs_misconfig_count)     * w["identity_adcs_misconfig_count"]),
+        ("Weak AD CS signing algo",     -_count_curve(adcs_weak_signing_count)  * w["identity_adcs_weak_signing_count"]),
+        ("AD CS coverage gap (ESC4/5/7/8)", -_count_curve(adcs_coverage_gap_count) * w["identity_adcs_coverage_gap_count"]),
     ]
     identity_trust_score, identity_trust_drivers = _apply_weighted_impacts(identity_trust_impacts)
 
     pqc_hybrid_count = max(0, _as_int(evidence.get("pqc_hybrid_endpoint_count", 0)))
 
     agility_impacts: List[Tuple[str, float]] = [
-        ("Unknown service inventory", -_ratio(unknown_count, endpoint_denom) * w["agility_unknown_ratio"]),
+        ("Unknown service inventory", -_count_curve(unknown_count) * w["agility_unknown_ratio"]),
     ]
-    if rsa_count > 0 and ecdsa_count == 0:
-        agility_impacts.append(("RSA-only certificate posture", -w["agility_rsa_only_penalty"]))
-    elif ecdsa_count > 0:
-        agility_impacts.append(("ECDSA adoption signal", w["agility_has_ecdsa_bonus"]))
-    elif cert_denom > 0:
+    # Phase 234 D-04 / O-2: classical certificate keys (RSA, ECDSA, EdDSA; the
+    # evidence builder counts EdDSA under ECDSA) are all quantum-vulnerable, so
+    # any of them costs a flat -8. It is not count-based: the key TYPE is the
+    # signal, and one quantum-vulnerable certificate needs replacing just as
+    # surely as forty. The 3.0 ECDSA +4 bonus is gone, so observing more
+    # classical endpoints can never raise the score.
+    if rsa_count + ecdsa_count > 0:
+        agility_impacts.append(
+            ("Quantum-vulnerable certificate keys (RSA/ECDSA/EdDSA)", -w["agility_rsa_only_penalty"])
+        )
+    elif cert_denom > pqc_cert_count:
         # 999.115 P8 — certificates WERE observed but no key type was
-        # determined for any of them. Before this branch existed, such a scan
-        # matched neither arm above and so took neither the penalty nor the
-        # bonus: it scored identically to a fully-modern ECDSA estate, and
-        # strictly better than one that honestly reported RSA. See
-        # tests/test_score_properties.py::test_p8_*, which measured a clean
-        # estate scoring 100 with unreported key types against 95 with
-        # RSA-only.
+        # determined for some of them. Before this branch existed, such a scan
+        # took no key-type penalty and scored strictly better than one that
+        # honestly reported RSA. See tests/test_score_properties.py::test_p8_*.
+        # The penalty equals the classical one, so not looking never pays.
         #
-        # Guarded on `cert_denom > 0` so a scan that observed NO certificates
-        # at all is untouched — that is genuine absence of the subject, which
+        # A scan that observed NO certificates at all is untouched (0 > 0 is
+        # false) — that is genuine absence of the subject, which
         # `_identity_assessed` already handles, not a failure to determine a
         # property of certificates that are right there.
+        #
+        # Phase 234 review D-29 (WR-02): inside this branch RSA + ECDSA is 0,
+        # so `cert_denom > pqc_cert_count` means "some observed certificates
+        # have no determined key type". The 234 guard was `cert_denom > 0 and
+        # pqc_cert_count == 0`, which let ONE PQC certificate switch the
+        # penalty off for every undetermined one (39 undetermined + 1 PQC
+        # outscored 39 RSA + 1 PQC). The penalty is now independent of PQC;
+        # the PQC credit below is applied separately. An all-PQC estate
+        # (every certificate PQC) is still not penalised.
         agility_impacts.append(
             ("Certificate key types undetermined", -w["agility_unverified_key_type_penalty"])
         )
-    if pqc_hybrid_count > 0:
-        agility_impacts.append(("PQC-hybrid key exchange (X25519MLKEM768)", w["agility_pqc_hybrid_bonus"]))
+    # Phase 234 D-04 / O-4: ONE +8 credit for observing post-quantum crypto,
+    # whether a PQC/hybrid key exchange or a PQC certificate key. Never +16:
+    # the two observations share the credit. The step a single PQC observation
+    # produces is deliberate, sanctioned credit under O-2, not dilution. The
+    # 84 "no PQC, no 100" ceiling below stays keyed on key exchange only.
+    if pqc_hybrid_count > 0 or pqc_cert_count > 0:
+        agility_impacts.append(
+            ("Post-quantum key exchange or certificate key", w["agility_pqc_hybrid_bonus"])
+        )
 
     # Phase 94 SCORE-01: bearer-token weak alg and OpenAPI plaintext signals
     bearer_weak_jwt_alg = max(0, _as_int(evidence.get("bearer_token_weak_alg_count", 0)))
     openapi_plaintext = max(0, _as_int(evidence.get("openapi_plaintext_server_count", 0)))
     agility_impacts.extend([
         ("Bearer token weak algorithm",
-         -_ratio(bearer_weak_jwt_alg, domain_denom) * w["agility_weak_jwt_alg_ratio"]),
+         -_count_curve(bearer_weak_jwt_alg) * w["agility_weak_jwt_alg_ratio"]),
         ("OpenAPI plaintext servers (http://)",
-         -_ratio(openapi_plaintext, domain_denom) * w["agility_openapi_plaintext_ratio"]),
+         -_count_curve(openapi_plaintext) * w["agility_openapi_plaintext_ratio"]),
     ])
 
     # Phase 95 SCORE-01: code-signing cert weak algorithm agility signal
     codesign_weak = max(0, _as_int(evidence.get("codesign_weak_algo_count", 0)))
     agility_impacts.append(
         ("Code-signing cert weak algorithm",
-         -_ratio(codesign_weak, domain_denom) * w["agility_codesign_weak_algo_ratio"])
+         -_count_curve(codesign_weak) * w["agility_codesign_weak_algo_ratio"])
     )
 
     # Phase 96 SCORE-01: active REST fuzz CRITICAL/HIGH crypto-posture findings agility signal
     fuzz_findings = max(0, _as_int(evidence.get("fuzz_finding_count", 0)))
     agility_impacts.append(
         ("Active REST fuzz crypto-posture findings",
-         -_ratio(fuzz_findings, domain_denom) * w["agility_fuzz_crypto_posture_ratio"])
+         -_count_curve(fuzz_findings) * w["agility_fuzz_crypto_posture_ratio"])
     )
 
     agility_score, agility_drivers = _apply_weighted_impacts(agility_impacts)
 
     dar_impacts: List[Tuple[str, float]] = [
-        ("Database plaintext connections", -_ratio(dar_db_plaintext, domain_denom) * w["dar_db_plaintext_ratio"]),
-        ("Database weak SSL configuration", -_ratio(dar_db_weak_ssl, domain_denom) * w["dar_db_weak_ssl_ratio"]),
-        ("Object storage unencrypted", -_ratio(dar_storage_unencrypted, domain_denom) * w["dar_storage_unencrypted_ratio"]),
-        ("Object storage platform-managed keys", -_ratio(dar_storage_aws_managed, domain_denom) * w["dar_storage_aws_managed_ratio"]),
-        ("Kubernetes etcd unencrypted", -_ratio(dar_k8s_unencrypted, domain_denom) * w["dar_k8s_unencrypted_ratio"]),
-        ("Kubernetes etcd encryption inaccessible", -_ratio(dar_k8s_inaccessible, domain_denom) * w["dar_k8s_inaccessible_ratio"]),
-        ("Vault weak crypto posture", -_ratio(dar_vault_weak, domain_denom) * w["dar_vault_weak_ratio"]),
+        ("Database plaintext connections", -_count_curve(dar_db_plaintext) * w["dar_db_plaintext_ratio"]),
+        ("Database weak SSL configuration", -_count_curve(dar_db_weak_ssl) * w["dar_db_weak_ssl_ratio"]),
+        ("Object storage unencrypted", -_count_curve(dar_storage_unencrypted) * w["dar_storage_unencrypted_ratio"]),
+        ("Object storage platform-managed keys", -_count_curve(dar_storage_aws_managed) * w["dar_storage_aws_managed_ratio"]),
+        ("Kubernetes etcd unencrypted", -_count_curve(dar_k8s_unencrypted) * w["dar_k8s_unencrypted_ratio"]),
+        ("Kubernetes etcd encryption inaccessible", -_count_curve(dar_k8s_inaccessible) * w["dar_k8s_inaccessible_ratio"]),
+        ("Vault weak crypto posture", -_count_curve(dar_vault_weak) * w["dar_vault_weak_ratio"]),
     ]
     dar_score, dar_drivers = _apply_weighted_impacts(dar_impacts)
 
@@ -612,15 +716,15 @@ def compute_readiness_score(
 
     motion_impacts: List[Tuple[str, float]] = [
         ("Email plaintext or missing STARTTLS",
-         -_ratio(motion_email_plaintext_num, domain_denom) * w["motion_email_plaintext_ratio"]),
+         -_count_curve(motion_email_plaintext_num) * w["motion_email_plaintext_ratio"]),
         ("Weak cipher on email TLS",
-         -_ratio(motion_email_weak_cipher, domain_denom) * w["motion_email_weak_cipher_ratio"]),
+         -_count_curve(motion_email_weak_cipher) * w["motion_email_weak_cipher_ratio"]),
         ("Plaintext broker listeners",
-         -_ratio(motion_broker_plaintext, domain_denom) * w["motion_broker_plaintext_ratio"]),
+         -_count_curve(motion_broker_plaintext) * w["motion_broker_plaintext_ratio"]),
         ("Weak TLS on brokers",
-         -_ratio(motion_broker_weak_tls, domain_denom) * w["motion_broker_weak_tls_ratio"]),
+         -_count_curve(motion_broker_weak_tls) * w["motion_broker_weak_tls_ratio"]),
         ("Weak cipher on broker TLS",
-         -_ratio(motion_broker_weak_cipher, domain_denom) * w["motion_broker_weak_cipher_ratio"]),
+         -_count_curve(motion_broker_weak_cipher) * w["motion_broker_weak_cipher_ratio"]),
     ]
     motion_score, motion_drivers = _apply_weighted_impacts(motion_impacts)
 
@@ -639,11 +743,16 @@ def compute_readiness_score(
     # excludes ADVISORY/CLOSED) is the honest signal; `endpoints` remains the
     # fallback for hand-built pre-184.1 evidence dicts that lack the key.
     # Same computation as `endpoint_denom` above (999.113) -- reused here rather
-    # than recomputed to guarantee the "assessed" predicate and the ratio
-    # denominator can never drift apart.
+    # than recomputed. Since Phase 234 it is ONLY this boolean gate; no term
+    # divides by it.
     assessable_endpoints = endpoint_denom
     endpoints_assessed = _endpoints_assessed(assessable_endpoints)
-    identity_assessed = _identity_assessed(cert_obs, protocol_counts)
+    identity_assessed = _identity_assessed(
+        cert_obs,
+        protocol_counts,
+        placeholders=max(0, _as_int(evidence.get("kerberos_placeholder_count", 0))),
+        kerberos_errors=max(0, _as_int(evidence.get("kerberos_scan_error_count", 0))),
+    )
     dar_assessed = _dar_assessed(protocol_counts)
     motion_assessed = _motion_assessed(protocol_counts)
 
@@ -677,9 +786,9 @@ def compute_readiness_score(
 
     if domains_assessed == 0:
         # Phase 181 honest-absence precedent: never fabricate a 0/100 headline
-        # for a scan that assessed nothing. `_ratio()` guards `den <= 0` by
-        # returning 0.0, so the family denominators above can never trigger a
-        # ZeroDivisionError here anyway, but this branch also skips
+        # for a scan that assessed nothing. No term divides by a population
+        # (Phase 234 D-01), so nothing above can raise ZeroDivisionError; this
+        # branch exists because it also skips
         # `band_for_score`/`cap_band_for_severity` entirely
         # (the latter raises ValueError for a band outside BAND_ORDER).
         total_score = None

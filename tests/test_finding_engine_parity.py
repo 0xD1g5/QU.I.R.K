@@ -61,7 +61,15 @@ _EXPIRED = _ep(
     cert_not_before=_PAST, cert_not_after=_PAST,
 )
 
-_ALL = [_UNDERSIZED_RSA, _SELF_SIGNED, _EXPIRED]
+# Phase 228 D-01: near-expiry uses the wall clock (both generators do).
+_NEAR_EXPIRY = _ep(
+    id=4, host="10.0.0.4", cert_pubkey_alg="RSA", cert_pubkey_size=4096,
+    cert_subject="CN=soon.example", cert_issuer="CN=Real CA",
+    cert_not_before=_PAST,
+    cert_not_after=datetime.datetime.now() + datetime.timedelta(days=10),
+)
+
+_ALL = [_UNDERSIZED_RSA, _SELF_SIGNED, _EXPIRED, _NEAR_EXPIRY]
 
 # IDENT-03: the three conditions both derivation paths are expected to detect,
 # named by (host, report_needle, dashboard_needle) so each side's title can be
@@ -70,6 +78,7 @@ _SHARED_CONDITION_NEEDLES = [
     ("10.0.0.1", "undersized RSA", "undersized RSA"),
     ("10.0.0.2", "self-signed", "self-signed"),
     ("10.0.0.3", "expired", "expired"),
+    ("10.0.0.4", "expiring", "expiring"),
 ]
 
 # IDENT-03: known, bounded identity divergences between the report and
@@ -86,6 +95,16 @@ _KNOWN_IDENTITY_DIVERGENCES = frozenset(
         ("TLS certificate expired", "Certificate expired"),
     ]
 )
+
+
+def _is_known_divergence(report_title, dash_title):
+    """D-178-A exact pairs, plus D-178-C (Phase 228): the near-expiry dashboard
+    title embeds a day count (so it cannot be an exact allowlist pair) and D-02
+    forbids changing it. Bounded in docs/reviews/178-derivation-path-divergence.md."""
+    if (report_title, dash_title) in _KNOWN_IDENTITY_DIVERGENCES:
+        return True
+    return (report_title == "TLS certificate expiring within 30 days"
+            and dash_title.startswith("Certificate expiring in "))
 
 
 def _report_titles():
@@ -202,7 +221,7 @@ class TestIdentityParity:
             dash_title = _title_for(dash, host, dash_needle)
             if report_title is None or dash_title is None:
                 continue
-            if (report_title, dash_title) in _KNOWN_IDENTITY_DIVERGENCES:
+            if _is_known_divergence(report_title, dash_title):
                 continue
             report_fp = TicketingChannel.compute_fingerprint(
                 {"host": host, "port": 443, "title": report_title}
@@ -263,7 +282,7 @@ class TestIdentityParity:
             )
             if report_fp == dash_fp:
                 continue
-            if (report_title, dash_title) not in _KNOWN_IDENTITY_DIVERGENCES:
+            if not _is_known_divergence(report_title, dash_title):
                 unbounded.append((host, report_title, dash_title))
         assert not unbounded, (
             "IDENT-03: unbounded identity divergence(s) found — add to "
@@ -271,3 +290,105 @@ class TestIdentityParity:
             "docs/reviews/178-derivation-path-divergence.md, or fix the "
             f"underlying titles: {unbounded}"
         )
+
+
+# --- Phase 228 (XSURF-05 / XSURF-06) -------------------------------------
+
+import ast
+from pathlib import Path
+
+from quirk.dashboard.api.routes.scan import findings_for_endpoint
+from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
+
+_REPO = Path(__file__).resolve().parent.parent
+
+
+def test_near_expiry_is_medium_on_both_surfaces():
+    """D-01: within 30 days is MEDIUM on dashboard and report; expired stays CRITICAL."""
+    report = _severity_for(_report_titles(), "10.0.0.4", "expiring")
+    dash = _severity_for(_dashboard_titles(), "10.0.0.4", "expiring")
+    assert report == "MEDIUM"
+    assert dash == "MEDIUM"
+    assert _severity_for(_dashboard_titles(), "10.0.0.3", "expired") == "CRITICAL"
+
+
+_NON_TLS_PROTOCOLS = [
+    "SMTP-STARTTLS", "SMTPS", "IMAPS", "POP3S", "KAFKA-TLS", "AMQPS",
+    "REDIS-TLS", "CODE_SIGNING", "SMIME", "ADCS", "VAULT", "AWS", "AZURE",
+    "AZURE_BLOB", "GCP", "CLOUD_SQL", "JWT", "OPENAPI", "ZZZ-UNKNOWN",
+]
+
+_TLS_TITLE_PREFIXES = (
+    "Legacy TLS version", "Weak cipher suites enabled", "Certificate expired",
+    "Certificate expiring in", "TLS certificate uses undersized RSA key",
+    "TLS certificate is self-signed", "TLS certificate issued by untrusted CA",
+    "Quantum-",
+)
+
+
+def _tls_shaped_row(protocol):
+    return _ep(
+        id=50, host="10.9.9.9", port=9999, protocol=protocol,
+        tls_version="TLSv1", tls_weak_ciphers_present=True,
+        cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+        cert_subject="CN=x.example", cert_issuer="CN=x.example",
+        cert_not_before=_PAST,
+        cert_not_after=datetime.datetime.now() + datetime.timedelta(days=10),
+    )
+
+
+@pytest.mark.parametrize("protocol", _NON_TLS_PROTOCOLS)
+def test_non_tls_rows_get_no_tls_certificate_findings(protocol):
+    titles = [f.title for f in findings_for_endpoint(_tls_shaped_row(protocol))]
+    bad = [t for t in titles if t.startswith(_TLS_TITLE_PREFIXES)]
+    assert not bad, f"D-05: {protocol} row got TLS/cert findings {bad}"
+
+
+def test_tls_row_still_gets_tls_certificate_findings():
+    titles = [f.title for f in findings_for_endpoint(_tls_shaped_row("TLS"))]
+    for prefix in ("Legacy TLS version", "Weak cipher suites enabled",
+                   "Certificate expiring in", "TLS certificate uses undersized RSA key",
+                   "TLS certificate is self-signed"):
+        assert any(t.startswith(prefix) for t in titles), (prefix, titles)
+
+
+def test_jwks_and_http_blocks_are_ungated():
+    jwks = _ep(id=60, host="10.8.8.8", port=443, protocol="ADVISORY",
+               service_detail=ADVISORY_JWKS_VERIFY_DISABLED)
+    http = _ep(id=61, host="10.8.8.9", port=80, protocol="HTTP")
+    assert findings_for_endpoint(jwks), "JWKS advisory finding lost"
+    assert any(f.title == "Unencrypted HTTP service" for f in findings_for_endpoint(http))
+
+
+def _func_node(path, name):
+    tree = ast.parse((_REPO / path).read_text())
+    for n in ast.walk(tree):
+        if isinstance(n, ast.FunctionDef) and n.name == name:
+            return n
+    raise AssertionError(f"{name} not found in {path}")
+
+
+def _is_bare_tls_compare(test):
+    if not (isinstance(test, ast.Compare) and len(test.ops) == 1
+            and isinstance(test.ops[0], ast.Eq)):
+        return False
+    consts = [c for c in [test.left, *test.comparators]
+              if isinstance(c, ast.Constant) and c.value == "TLS"]
+    return bool(consts)
+
+
+def test_both_pipelines_call_the_shared_tls_predicate():
+    for path, name in (
+        ("quirk/dashboard/api/routes/scan.py", "findings_for_endpoint"),
+        ("quirk/engine/findings_evaluator.py", "evaluate_endpoints"),
+    ):
+        fn = _func_node(path, name)
+        calls = [
+            c for c in ast.walk(fn)
+            if isinstance(c, ast.Call)
+            and getattr(c.func, "id", getattr(c.func, "attr", None)) == "runs_tls_certificate_checks"
+        ]
+        assert calls, f"{name} must call runs_tls_certificate_checks"
+        inline = [n for n in ast.walk(fn)
+                  if isinstance(n, ast.If) and _is_bare_tls_compare(n.test)]
+        assert not inline, f"{name} has an inline copy of the TLS gate"

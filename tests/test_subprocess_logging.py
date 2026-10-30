@@ -65,9 +65,10 @@ def test_container_subprocess_failure_logs_warning_and_returns_empty(monkeypatch
     assert "subprocess failed" in warnings[0].getMessage()
 
 
-def test_source_subprocess_failure_logs_warning_and_returns_empty(monkeypatch, caplog):
+def test_source_subprocess_failure_logs_warning_and_raises(monkeypatch, caplog):
     """source_scanner.scan_source_repo: simulated json.JSONDecodeError
-    must produce a WARNING log record and return [] (partial result)."""
+    must produce a WARNING log record and raise SourceScanError (235-01 D-09:
+    a present-but-failing semgrep is never a clean empty result)."""
     _force_caplog(caplog)
 
     monkeypatch.setattr(source_scanner.shutil, "which", lambda _: "/usr/bin/semgrep")
@@ -82,9 +83,9 @@ def test_source_subprocess_failure_logs_warning_and_returns_empty(monkeypatch, c
     with tempfile.TemporaryDirectory() as td:
         # validate_repo_path requires the path to exist + be a directory.
         with caplog.at_level(logging.WARNING, logger="quirk.scanner.source_scanner"):
-            result = source_scanner.scan_source_repo(td, timeout=30)
+            with pytest.raises(source_scanner.SourceScanError):
+                source_scanner.scan_source_repo(td, timeout=30)
 
-    assert result == []
     warnings = [
         r for r in caplog.records
         if r.levelno == logging.WARNING and r.name == "quirk.scanner.source_scanner"

@@ -6,6 +6,7 @@ priority: medium
 area: .githooks/pre-commit, scripts/verify_phase_gates.py, CONTRIBUTING.md
 status: pending
 resolves_phase: null
+owner: "999.129"
 ---
 
 # The pre-commit hook CONTRIBUTING.md used to tell contributors to install rejects every commit in a fresh clone

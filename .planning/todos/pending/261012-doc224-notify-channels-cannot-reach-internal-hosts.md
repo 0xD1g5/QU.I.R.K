@@ -6,6 +6,7 @@ priority: low
 area: quirk/notify/channels/email.py, webhook.py, slack.py (validate_external_url without allow_internal), quirk/notify/config.py
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # Notification channels have no `allow_internal` opt-in, so an internal SMTP relay or webhook is refused

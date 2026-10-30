@@ -16,14 +16,14 @@ capture sizes its viewport to the content, so height varies (approved: 2362).
 import re
 import shutil
 import struct
-import tomllib
 from pathlib import Path
 
 from tests.cli_helpers import run_fork_safe
+from tests.pyproject_helpers import pyproject_version
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HERO_REL = "docs/images/dashboard-hero.png"
-VERSION = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+VERSION = pyproject_version()
 RAW_HERO = f"https://raw.githubusercontent.com/0xD1g5/QU.I.R.K/v{VERSION}/" + HERO_REL
 MAX_BYTES = 1_048_576
 

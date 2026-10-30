@@ -36,7 +36,15 @@ from quirk.qramm.compliance_map import (
     PRACTICE_AREA_TO_DIMENSION,
     QRAMM_COMPLIANCE_WEIGHTS,
     SCANNER_COVERAGE,
-    SCANNER_COVERAGE_STATUS,
+)
+from quirk.qramm.assessment_state import (
+    DIMENSIONS,
+    answered_by_dimension,
+    is_dimension_assessed,
+    is_score_stale,
+    overall_state,
+    row_coverage_status,
+    score_answered_counts,
 )
 from quirk.qramm.evidence_bridge import populate_cvi_suggestions
 from quirk.qramm.model_meta import QRAMM_MODEL
@@ -97,6 +105,16 @@ class SessionRead(BaseModel):
     model_version: Optional[str]
     score: Optional[Dict[str, Any]] = None
     answers_count: int
+    # Phase 234 D-15: True when answers changed after the score was saved
+    # (live answered counts differ from those persisted with the score), or
+    # the score predates persisted counts (D-25). Surfaces show
+    # "Stale — recalculate" instead of the saved values.
+    score_stale: bool = False
+    # Phase 234 D-25 / D-27: None (unscored) | "current" | "recalculate" (a
+    # score saved before Phase 234, whose overall still averaged a
+    # Not-assessed dimension in as 0) | "stale" (answers changed after the
+    # score was saved). Only "current" is ever shown as a maturity level.
+    score_overall_state: Optional[str] = None
 
 
 class AnswerItem(BaseModel):
@@ -132,10 +150,17 @@ class QrammScoreResponse(BaseModel):
     module is deferred to v5.0 per CONTEXT Deferred Ideas (Discretion D-16).
 
     Field shape mirrors the response dict built at the score_session return
-    site exactly — no field renames, no new fields, no removals.
+    site exactly — no field renames, no removals.
+
+    Phase 234 D-14 / D-15 (SCORE-10) adds four fields: ``answered_by_dimension``
+    (per-dimension answered counts, persisted with the score so a later
+    answer marks it stale), ``assessed_dimensions``, ``dimensions_assessed``
+    and ``dimensions_total`` ("N of 4 assessed"). ``overall`` is the mean
+    over assessed dimensions only and is None only when no dimension is
+    assessed, which this route cannot reach (it returns 422 with no answers).
     """
     session_id: int
-    overall: float
+    overall: Optional[float]
     maturity: str
     # ``dimensions`` is a 4-key mapping (CVI/SGRM/DPE/ITR) where each value is
     # a per-dimension breakdown {score, weighted, practices}. Schema-narrowing
@@ -143,6 +168,10 @@ class QrammScoreResponse(BaseModel):
     # Any] sites.
     dimensions: Dict[str, Any]
     profile_multiplier: float
+    answered_by_dimension: Dict[str, int]
+    assessed_dimensions: List[str]
+    dimensions_assessed: int
+    dimensions_total: int
 
 
 # ---------- Phase 54 Plan 01: new Pydantic models ----------
@@ -196,8 +225,13 @@ class ComplianceMapRow(BaseModel):
     relevance_score: Optional[float]
     scanner_informed: bool
     # Phase 74-03 D-10 (WR-11): coverage status for this row's dimension.
-    # 'covered' | 'partial' | 'pending' | 'n/a'. 'pending'/'n/a' rows are
-    # excluded from the rollup; 'partial' contributes at half-weight.
+    # 'covered' | 'partial' | 'self-assessed' | 'pending' | 'n/a' | 'stale'
+    # (Phase 234 D-15: score predates the live answers; relevance None).
+    # 'pending'/'n/a' rows are excluded from the rollup; 'partial'
+    # contributes at half-weight. Phase 231 D-02/D-03: 'self-assessed' is an
+    # answered manual dimension (SGRM/DPE/ITR) scored at full weight with no
+    # scanner ceiling; any dimension with zero answered questions is
+    # 'pending' (D-02a). Derived per session (quirk.qramm.assessment_state).
     coverage_status: Optional[str] = None
 
 
@@ -330,6 +364,16 @@ def read_session(session_id: int, db: Session = Depends(get_db)) -> SessionRead:
                 status_code=422,
                 detail=f"Session JSON corrupt: {safe_str(e)}",
             )
+    # Phase 234 D-15 / D-25: compare live answered counts (catalog-mapped,
+    # 231 D-09) with the counts persisted alongside the score.
+    score_stale = False
+    if score is not None:
+        scored_answered = score_answered_counts(score)
+        score_stale = is_score_stale(
+            _live_answered_by_dimension(db, session_id),
+            scored_answered,
+            score_has_counts=scored_answered is not None,
+        )
     return SessionRead(
         session_id=session.id,
         org_name=session.org_name,
@@ -339,6 +383,8 @@ def read_session(session_id: int, db: Session = Depends(get_db)) -> SessionRead:
         model_version=session.model_version,
         score=score,
         answers_count=answers_count,
+        score_stale=score_stale,
+        score_overall_state=overall_state(score, stale=score_stale),
     )
 
 
@@ -461,8 +507,17 @@ def score_session(
     for dim, pmap in dim_to_practices.items():
         dimension_scores[dim] = compute_dimension_score(list(pmap.values())) if pmap else 0.0
 
+    # Phase 234 D-14: the assessed set comes from the answered question
+    # numbers mapped through the catalog (231 D-09), never from a score test
+    # (SCOREFIX-02's 0.0 is a placeholder). The counts are persisted with the
+    # score so a later answer marks it stale (D-15).
+    answered = answered_by_dimension([r.question_number for r in rows])
+    assessed = [d for d in DIMENSIONS if is_dimension_assessed(answered[d])]
+
     # Overall via scoring.compute_overall_score (applies multiplier + maturity)
-    overall_block = compute_overall_score(dimension_scores, multiplier=multiplier)
+    overall_block = compute_overall_score(
+        dimension_scores, multiplier=multiplier, assessed=assessed
+    )
 
     # Build per-dimension breakdown response
     dim_breakdown: Dict[str, Any] = {}
@@ -479,6 +534,10 @@ def score_session(
         maturity=overall_block["maturity"],
         dimensions=dim_breakdown,
         profile_multiplier=float(multiplier),
+        answered_by_dimension=answered,
+        assessed_dimensions=list(overall_block["assessed_dimensions"]),
+        dimensions_assessed=int(overall_block["dimensions_assessed"]),
+        dimensions_total=int(overall_block["dimensions_total"]),
     )
 
     # Persist (Phase 77 D-16: serialize the typed model for round-trip stability
@@ -696,9 +755,9 @@ def get_compliance_map(
 
     Returns 96 rows (12 practice areas × 8 frameworks). When the session has
     no score_json, every row carries relevance_score=None (HTTP 200 — never
-    404/409 per Phase 55 D-03). When scored, raw = static_weight ×
-    dimension_score, capped at SCANNER_COVERAGE[dimension] × static_weight
-    per Phase 55 D-07.
+    404/409 per Phase 55 D-03). Each row's coverage_status is derived per
+    session from the answered questions (Phase 231 D-02); see
+    build_compliance_rows for the relevance formulas.
     """
     session = _get_session_or_404(db, session_id)
 
@@ -709,14 +768,73 @@ def get_compliance_map(
         except (TypeError, ValueError):
             score_data = None
 
+    # Phase 231 D-02: one query of the session's answered question numbers,
+    # mapped to dimensions through the QRAMM_QUESTIONS catalog (D-09).
+    answered = _live_answered_by_dimension(db, session_id)
+    return build_compliance_rows(score_data, answered)
+
+
+def _live_answered_by_dimension(db: Session, session_id: int) -> Dict[str, int]:
+    """Live per-dimension answered counts for a session (231 D-09 catalog)."""
+    answered_qns = [
+        qn for (qn,) in db.query(QRAMMAnswer.question_number).filter(
+            QRAMMAnswer.session_id == session_id,
+            QRAMMAnswer.answer_value.isnot(None),
+        )
+    ]
+    return answered_by_dimension(answered_qns)
+
+
+def build_compliance_rows(
+    score_data: Optional[Dict[str, Any]],
+    answered: Dict[str, int],
+) -> List[ComplianceMapRow]:
+    """Pure row builder behind GET /compliance-map (Phase 231).
+
+    ``answered`` is the per-dimension answered-question count. Per row:
+    - no dimension score (unscored session) -> relevance_score None;
+    - 'pending' / 'n/a' (zero answered, D-02a) -> None (Phase 74-03 D-10);
+    - 'self-assessed' -> static_weight × (score / 4.0), full weight, no
+      SCANNER_COVERAGE cap and no half-weight (Phase 231 D-03);
+    - 'covered' / 'partial' -> static_weight × (score / 4.0), capped at
+      SCANNER_COVERAGE[dimension] × static_weight (Phase 55 D-07), halved
+      for 'partial' (Phase 74-03 D-10a).
+    - 'stale' (Phase 234 D-15 / D-25) -> None: the live answered count
+      differs from the count persisted with the score, or the score has no
+      persisted counts (legacy). Never self-assessed, never in the rollup.
+    scanner_informed stays SCANNER_COVERAGE[dimension] > 0.0 (D-04).
+
+    An unscored session (``score_data`` None) has no score to be stale, so
+    it keeps the live-answer statuses. Stale is derived server-side from the
+    live answer rows: a persisted score_json can only make a dimension
+    stale, never upgrade it (T-234-02).
+    """
+    scored_counts: Optional[Dict[str, int]] = None
+    score_has_counts = True
+    if score_data is not None:
+        scored_counts = score_answered_counts(score_data)
+        score_has_counts = scored_counts is not None
     rows: List[ComplianceMapRow] = []
     # Sort practice areas for stable ordering across responses.
     for practice_area in sorted(QRAMM_COMPLIANCE_WEIGHTS.keys()):
         dimension = PRACTICE_AREA_TO_DIMENSION[practice_area]
         ceiling = SCANNER_COVERAGE.get(dimension, 0.0)
         scanner_informed = ceiling > 0.0
-        # Phase 74-03 D-10 (WR-11): explicit coverage status.
-        coverage_status = SCANNER_COVERAGE_STATUS.get(dimension)
+        # Phase 231 D-02: per-session status from the answered count.
+        # Phase 234 D-15 / D-25: stale when the persisted count differs or is
+        # absent (a count missing for one dimension is treated as legacy for
+        # that dimension, so a partial blob cannot vouch for it).
+        scored_answered: Optional[int] = None
+        dim_has_count = score_has_counts
+        if scored_counts is not None:
+            scored_answered = scored_counts.get(dimension)
+            dim_has_count = scored_answered is not None
+        coverage_status = row_coverage_status(
+            dimension,
+            answered.get(dimension, 0),
+            scored_answered,
+            score_has_counts=dim_has_count,
+        )
 
         # Read raw dimension score (0.0–4.0 scale) — see Phase 55
         # RESEARCH Pitfall 2: read ["score"], NOT ["weighted"].
@@ -735,9 +853,13 @@ def get_compliance_map(
             )
             if dim_score is None:
                 relevance_score: Optional[float] = None
-            elif coverage_status in ("pending", "n/a"):
+            elif coverage_status in ("pending", "n/a", "stale"):
                 # Phase 74-03 D-10: pending / n/a rows excluded from rollup.
+                # Phase 234 D-15: stale rows likewise carry no relevance.
                 relevance_score = None
+            elif coverage_status == "self-assessed":
+                # Phase 231 D-03: full weight, no scanner ceiling.
+                relevance_score = static_weight * (dim_score / 4.0)
             else:
                 # Normalize dim_score from 0.0–4.0 to 0.0–1.0 before
                 # multiplying by weight, so output stays in 0.0–1.0 range.

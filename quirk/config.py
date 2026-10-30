@@ -288,6 +288,11 @@ class ConnectorsCfg:
     enable_smime: bool = False
     # Identity connector target lists (v4.2, per D-05)
     kerberos_targets: list = field(default_factory=list)
+    # Phase 230 D-24: client principal named in the Kerberos etype probe. A
+    # principal name, not a secret (so not in CREDENTIAL_REGISTRY). Must match
+    # kerberos_scanner.DEFAULT_PROBE_PRINCIPAL (drift-guarded by a test; config
+    # does not import the scanner).
+    kerberos_probe_principal: str = "Administrator"
     saml_targets: list = field(default_factory=list)
     dnssec_targets: list = field(default_factory=list)
     # Phase 89 LAB-06: optional resolver override for DNSSEC scanning (host:port, e.g. 127.0.0.1:15353)
@@ -366,12 +371,12 @@ class ConnectorsCfg:
     # Phase 93 AUTH-01: opt-in flag for authenticated scanning (ephemeral credentials only).
     # Scheduler rejects configs where this is True (D-11 / QRK-SCHED-AUTH-001).
     enable_authenticated_mode: bool = False
-    # Phase 133 SNMP-01: opt-in SNMP hardware fingerprinting; requires quirk-scanner[hw] extras.
+    # Phase 133 SNMP-01: opt-in SNMP hardware fingerprinting; requires 'quirk-scanner[hw]' extras.
     # Default False — zero behavior change for existing scans without [hw] installed.
     enable_snmp: bool = False
     snmp_community: str = "public"
     # Phase 141 OTICS-01/02 / D-06: opt-in OT/ICS protocol fingerprinting; requires
-    # quirk-scanner[hw] extras (pymodbus / bacpypes3). Default False — zero behavior
+    # 'quirk-scanner[hw]' extras (pymodbus / bacpypes3). Default False — zero behavior
     # change for existing scans. Scan-wide only — no per-host allowlist (RESEARCH Pitfall 3).
     enable_modbus: bool = False
     enable_bacnet: bool = False
@@ -826,6 +831,16 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
                 if k in _KNOWN_CONNECTOR_KEYS}
     # Coerce broker list fields through _as_str_list to guard against scalar YAML values
     # (T-33-03: user-supplied namespace/region strings must be proper lists before hostname construction)
+    # 230-REVIEW-R12 CR-01 / R13 CR-01/CR-02: any value that is not a list is
+    # one target.  A str was iterated one character at a time ("0" resolves
+    # to 0.0.0.0), a number raised in the scan, and a mapping's keys were
+    # probed while enforce_trusted_targets found no host in it and passed.
+    # Elements are kept as they are: the scanner rejects any that is not a
+    # usable host name, where _as_str_list would turn None into "None".  An
+    # empty string still means no targets.
+    _kt = conn_raw.get("kerberos_targets")
+    if _kt is not None and not isinstance(_kt, (list, tuple)):
+        conn_raw["kerberos_targets"] = [_kt] if _kt != "" else []
     if "broker_azure_namespaces" in conn_raw:
         conn_raw["broker_azure_namespaces"] = _as_str_list(conn_raw["broker_azure_namespaces"])
     if "broker_sqs_regions" in conn_raw:
@@ -947,6 +962,17 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
                 priv_protocol=priv_protocol,
             )
         conn_raw["snmp_v3_credentials"] = snmp_v3_credentials
+
+    # Phase 230 D-24: the probe principal is placed in the AS-REQ cname; reject
+    # non-string / blank values at load time rather than probing as "".
+    if "kerberos_probe_principal" in conn_raw:
+        _kpp = conn_raw["kerberos_probe_principal"]
+        if not isinstance(_kpp, str) or not _kpp.strip():
+            raise ValueError(
+                "connectors.kerberos_probe_principal must be a non-empty principal "
+                f"name (got {_kpp!r}); e.g. \"Administrator\"."
+            )
+        conn_raw["kerberos_probe_principal"] = _kpp.strip()
 
     # Phase 72 D-02 / WR-11: build connectors then stamp user-set field set so the
     # profile-application code can distinguish user-explicit values from defaults.

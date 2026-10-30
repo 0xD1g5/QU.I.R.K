@@ -66,6 +66,21 @@ _REQUIRED_ENVELOPE_KEYS = frozenset({
 })
 
 
+# 229-REVIEW WR-02: SensorPush.payload_id and CryptoEndpoint.push_payload_id are
+# both String(64). An empty id used to be stored as "" on SensorPush but NULL on the
+# endpoint rows, so the merge's latest-push key matched nothing.
+_PAYLOAD_ID_MAX_LEN = 64
+
+
+def _valid_payload_id(payload_id: object) -> bool:
+    """True for a non-blank string of at most ``_PAYLOAD_ID_MAX_LEN`` characters."""
+    return (
+        isinstance(payload_id, str)
+        and bool(payload_id.strip())
+        and len(payload_id) <= _PAYLOAD_ID_MAX_LEN
+    )
+
+
 def run_console(argv: list[str]) -> None:
     """Main entrypoint for ``quirk console`` subcommands.
 
@@ -417,6 +432,14 @@ def _cmd_import_results(args: argparse.Namespace) -> None:
         )
         sys.exit(1)
 
+    if not _valid_payload_id(envelope.get("payload_id")):
+        print(
+            "ERROR: .qpush envelope payload_id must be a non-empty string of at "
+            f"most {_PAYLOAD_ID_MAX_LEN} characters",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     # Route to ingest entry point — Phase 108 stub (Phase 109 replaces the body)
     # skip_replay_window=True: air-gap carve-out per D-15
     # qpush_sig is the embedded HMAC-SHA256 value from the WR-03 framing header,
@@ -523,6 +546,10 @@ def _ingest_envelope(
         segment: str = envelope.get("segment", "")
         payload_id: str = envelope.get("payload_id", "")
         findings: list = envelope.get("findings", []) or []
+        if not _valid_payload_id(payload_id):
+            # WR-02: both callers validate first; this keeps the ingest
+            # contract itself from ever storing an unmatchable push key.
+            raise ValueError("invalid payload_id")
 
         # --- Dedup: insert SensorPush row; flush to trigger UNIQUE constraint ---
         # SQLite enforces PRAGMA foreign_keys=ON (quirk/db.py), so an unenrolled
@@ -580,6 +607,11 @@ def _ingest_envelope(
                 # (forward-compat — older sensors may emit None in per-finding dict)
                 sensor_id=sensor_id,
                 segment=segment,
+                # Phase 229 D-12: push identity. The SensorPush row above was flushed
+                # first, so a duplicate payload never writes a tagged row.
+                # WR-02: stamped verbatim (no `or None`) so it always equals
+                # SensorPush.payload_id, the key _assemble_union selects on.
+                push_payload_id=payload_id,
             )
             db.add(ep)
 

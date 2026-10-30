@@ -47,7 +47,8 @@ def _make_isolated_client():
 
 
 def _seed_endpoint(db, *, host, port=443, segment=None, sensor_id=None,
-                   scanned_at=None, protocol="HTTPS", tls_version=None,
+                   scanned_at=None, protocol="TLS",  # 228 D-05: TLS findings now require protocol "TLS"
+                   tls_version=None,
                    cert_pubkey_alg=None, tls_weak_ciphers_present=False):
     from quirk.models import CryptoEndpoint
     if scanned_at is None:

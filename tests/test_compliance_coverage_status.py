@@ -35,3 +35,23 @@ def test_coverage_status_zero_weight_dimensions_pending() -> None:
     assert SCANNER_COVERAGE_STATUS["SGRM"] == "pending"
     assert SCANNER_COVERAGE_STATUS["DPE"] == "pending"
     assert SCANNER_COVERAGE_STATUS["ITR"] == "pending"
+
+
+def test_static_status_dict_is_scanner_only() -> None:
+    """Phase 231 D-02: 'self-assessed' is a per-session row status, never a
+    scanner coverage status. QRAMM-F01 lifts scanner coverage here; operator
+    self-assessment must not leak into this dict."""
+    assert "self-assessed" not in SCANNER_COVERAGE_STATUS.values()
+    assert set(SCANNER_COVERAGE_STATUS.values()) <= _VALID_VALUES
+
+
+def test_row_status_values_include_self_assessed() -> None:
+    """Phase 231 D-02: the per-row Literal carries every scanner status plus
+    'self-assessed'."""
+    import typing
+
+    from quirk.qramm.compliance_map import RowCoverageStatus
+
+    row_values = set(typing.get_args(RowCoverageStatus))
+    assert "self-assessed" in row_values
+    assert _VALID_VALUES <= row_values

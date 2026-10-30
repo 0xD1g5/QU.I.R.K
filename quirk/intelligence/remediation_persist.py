@@ -37,6 +37,7 @@ from quirk.intelligence.evidence import (
 )
 from quirk.intelligence.remediation import (
     DEFAULT_ITEM_STATE,
+    DETECTED_ITEM_STATE,
     REMEDIATION_CONSTITUENCY,
     slug_for_title,
 )
@@ -131,6 +132,7 @@ def _upsert_item(
     phase: str,
     priority: Optional[int],
     constituency: str,
+    state: str,
 ) -> RemediationItem:
     row = (
         session.query(RemediationItem)
@@ -158,7 +160,9 @@ def _upsert_item(
         phase=phase,
         priority=priority,
         constituency=constituency,
-        state=DEFAULT_ITEM_STATE,  # D-12: never write the closed state here.
+        # D-12: never write the closed state here. `state` applies to the
+        # insert only; the idempotent branch above never touches it.
+        state=state,
         first_seen_scan_run_id=first_seen,
         created_at=datetime.now(timezone.utc),
     )
@@ -190,6 +194,10 @@ def persist_remediation_snapshot(
     Returns a counters dict for the caller to log:
       {"items": N written/updated, "fingerprints": M join rows written,
        "skipped_findings": K roadmap candidates with no resolvable slug}.
+    On an exception the dict also carries ``"failed": 1`` so the caller can
+    tell a failed write from a genuinely clean scan and skip closure
+    (229-REVIEW CR-02): with no current-scan rows, closure would otherwise
+    read every prior fingerprint as absent.
 
     This function must NEVER be able to fail a scan: remediation persistence
     is advisory bookkeeping layered on top of endpoint data that has already
@@ -236,6 +244,11 @@ def persist_remediation_snapshot(
                 kind, constituency_titles = REMEDIATION_CONSTITUENCY.get(
                     slug, ("evidence_only", ())
                 )
+                constituents = _select_constituent_findings(
+                    kind, constituency_titles, finding_list
+                )
+                # D-23: state follows whether constituents were detected, not
+                # the item kind (counter-driven items can have none).
                 row = _upsert_item(
                     session,
                     slug=slug,
@@ -244,12 +257,12 @@ def persist_remediation_snapshot(
                     phase=item.get("phase"),
                     priority=_SLUG_PRIORITY.get(slug),
                     constituency=kind,
+                    state=(
+                        DETECTED_ITEM_STATE if constituents else DEFAULT_ITEM_STATE
+                    ),
                 )
                 counters["items"] += 1
 
-                constituents = _select_constituent_findings(
-                    kind, constituency_titles, finding_list
-                )
                 if not constituents:
                     continue
 
@@ -270,7 +283,10 @@ def persist_remediation_snapshot(
                             host=finding.get("host"),
                             port=finding.get("port"),
                             finding_title=finding.get("title"),
-                            state=DEFAULT_ITEM_STATE,  # D-12: never write the closed state here.
+                            # Rows exist only for detected findings (the
+                            # `if not constituents: continue` guard above), so
+                            # `open` cannot imply remediation (D-12).
+                            state=DETECTED_ITEM_STATE,
                             observed_at=datetime.now(timezone.utc),
                         )
                     )
@@ -278,4 +294,4 @@ def persist_remediation_snapshot(
         return counters
     except Exception as exc:  # noqa: BLE001 — must never fail a scan
         logger.error("remediation_persist: failed, continuing scan: %r", exc)
-        return {"items": 0, "fingerprints": 0, "skipped_findings": 0}
+        return {"items": 0, "fingerprints": 0, "skipped_findings": 0, "failed": 1}

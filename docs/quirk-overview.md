@@ -64,7 +64,7 @@ When the `ssh-audit` tool is installed and on `PATH`, QU.I.R.K. runs ssh-audit a
 
 ### API & JWT Token Analysis
 
-QU.I.R.K. fetches JWKS (JSON Web Key Set) documents from the base URLs you configure (at `/.well-known/jwks.json` or `/oauth/jwks`, or through `/.well-known/openid-configuration`) and records each key's algorithm (its key type when the key declares no `alg`) and, for RSA and EC keys, its key size. `quirk analyze-token` decodes a single token and reports its algorithm, flagging `alg:none` as CRITICAL.
+QU.I.R.K. fetches JWKS (JSON Web Key Set) documents from the base URLs you configure (at `/.well-known/jwks.json` or `/oauth/jwks`, or through `/.well-known/openid-configuration`) and records each key's algorithm (its key type when the key declares no `alg`) and, for RSA and EC keys, its key size. `quirk analyze-token` decodes a single token and reports its algorithm, flagging `alg:none` as CRITICAL. A scan run with a bearer credential (`--auth-bearer`) whose JWT declares `alg: none`, or declares no `alg`, also reports the CRITICAL finding "Bearer token is unsigned (alg:none)".
 
 ### Container Image Scanning
 
@@ -72,7 +72,7 @@ When the `syft` tool is installed (it is not installed with QU.I.R.K.), QU.I.R.K
 
 ### Source Code Scanning
 
-When the `semgrep` tool is installed (it is not installed with QU.I.R.K.), QU.I.R.K. runs it with the `p/cryptography` ruleset against local source directories; repository URLs are rejected as invalid input. Each result is recorded with its file path and line number. Known issue: the Semgrep registry returns HTTP 404 for that ruleset (checked 2026-10-13), so semgrep stops with a configuration error and source scanning currently produces no results; see the [Git connector page](connectors/git.md).
+When the `semgrep` tool is installed (it is not installed with QU.I.R.K.), QU.I.R.K. asks it for the `p/cryptography` ruleset against local source directories; repository URLs are rejected as invalid input. Each result is recorded with its file path and line number. Known defect: that ruleset is unavailable (the Semgrep registry returns HTTP 404 for it, checked 2026-10-13), so semgrep exits 7, QU.I.R.K. records a "ruleset unavailable" scan error, the source domain reads Not assessed, and source scanning produces no findings; see the [Git connector page](connectors/git.md).
 
 ### Cloud Key Management Connectors
 
@@ -86,7 +86,7 @@ In the CBOM, AWS KMS and GCP Cloud KMS key specifications are normalized to algo
 
 ### Identity Protocol Scanning
 
-**Kerberos** (needs the `[identity]` extra, which `[all]` does not include). QU.I.R.K. sends an unauthenticated AS-REQ over TCP (retrying over UDP if the TCP probe fails) to read the encryption types the KDC advertises, and rates them with a fixed map: the DES types are CRITICAL, RC4-HMAC and AES-128 are HIGH, and AES-256 types are SAFE. Known issue: a KDC that requires pre-authentication, which is the usual configuration, is currently recorded as `kerberos-no-preauth` with no encryption types, so the map is not applied. It also attempts an anonymous LDAP bind to read `msDS-SupportedEncryptionTypes`.
+**Kerberos** (needs the `[identity]` extra, which `[all]` does not include). QU.I.R.K. sends an unauthenticated AS-REQ over TCP (retrying over UDP if the TCP probe fails) to read the encryption types the KDC advertises, and rates them with a fixed map: the DES types are CRITICAL, RC4-HMAC and AES-128 are HIGH, and AES-256 types are SAFE. It also attempts an anonymous LDAP bind to read `msDS-SupportedEncryptionTypes`.
 
 **SAML / OIDC.** QU.I.R.K. fetches SAML metadata and OIDC discovery documents and parses the signing certificates (SAML) and signing-algorithm declarations (OIDC) they contain.
 
@@ -113,7 +113,7 @@ The overall 0–100 score is computed over the subscores that had evidence to as
 
 ### Data at Rest and Data in Motion
 
-Connectors and scanners cover stored-data encryption (databases, S3 and Azure Blob object storage, Kubernetes, HashiCorp Vault) and in-transit TLS posture for email (SMTP, IMAP, POP3) and message brokers (Kafka, RabbitMQ, Redis); several of these need an optional extra (`[db]`, `[cloud]` or `[motion]`). Results from these surfaces feed the Data at Rest and Data in Motion subscores. Known issue: the default *standard* profile probes the seven mail ports on every TLS host, and a port that refuses the connection currently counts as missing STARTTLS or as plaintext, lowering Data in Motion even where no mail server runs.
+Connectors and scanners cover stored-data encryption (databases, S3 and Azure Blob object storage, Kubernetes, HashiCorp Vault) and in-transit TLS posture for email (SMTP, IMAP, POP3) and message brokers (Kafka, RabbitMQ, Redis); several of these need an optional extra (`[db]`, `[cloud]` or `[motion]`). Results from these surfaces feed the Data at Rest and Data in Motion subscores.
 
 ### Web Dashboard
 

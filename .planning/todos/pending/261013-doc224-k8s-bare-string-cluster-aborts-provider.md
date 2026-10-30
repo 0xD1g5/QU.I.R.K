@@ -6,6 +6,7 @@ priority: low
 area: quirk/scanner/k8s_connector.py
 status: pending
 resolves_phase: null
+owner: "999.126"
 ---
 
 # One malformed GKE/AKS cluster entry skips every later cluster

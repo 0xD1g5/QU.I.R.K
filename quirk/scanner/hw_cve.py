@@ -29,7 +29,7 @@ from typing import Optional
 STALENESS_THRESHOLD_DAYS: int = 30
 
 CVE_TABLE_META = {
-    "last_verified": "2026-10-13",
+    "last_verified": "2026-10-29",
     "source": "NVD",
     "source_url": "https://nvd.nist.gov",
 }
@@ -95,6 +95,10 @@ def _cve(
 # Re-verified 2026-10-13 against the live NVD REST API (cveId lookups, all 6
 # IDs): no corrections needed; none REJECTED; severity, published and
 # affected_before all match NVD.
+# Re-verified 2026-10-29 (235-11) against the live NVD REST API (cveId
+# lookups, all 6 IDs): none REJECTED; baseSeverity and published match for all
+# 6; versionEnd* ranges match for the 3 IDs that carry them. No new-CVE delta
+# query was run this time.
 CVE_TABLE: dict = {
     ("Schneider Electric", "M221"): [
         _cve(

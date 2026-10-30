@@ -159,3 +159,182 @@ class TestPqcPresenceBonus:
         baseline = compute_readiness_score(_base_evidence(pqc_hybrid_endpoint_count=0))
         negative = compute_readiness_score(_base_evidence(pqc_hybrid_endpoint_count=-5))
         assert baseline["subscores"]["agility_signals"] == negative["subscores"]["agility_signals"]
+
+
+# ---- Phase 234 D-04 / O-2 / O-4: the classical key rule and the single PQC credit ----
+
+def _agility(ev):
+    return compute_readiness_score(ev)["subscores"]["agility_signals"]
+
+
+def test_ecdsa_cert_keys_take_the_classical_penalty():
+    """O-2: ECDSA (and EdDSA) certificate keys are quantum-vulnerable, exactly
+    like RSA. An ECDSA-only estate scores the same agility as an RSA-only one:
+    classical keys are never a positive signal (D-04 removed the ECDSA +4)."""
+    certs = {"certs_observed": 3}
+    ecdsa = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 0, "ECDSA": 3},
+    )
+    rsa = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 3, "ECDSA": 0},
+    )
+    assert _agility(ecdsa) == _agility(rsa), (
+        f"ECDSA-only agility {_agility(ecdsa)} != RSA-only agility "
+        f"{_agility(rsa)}: a classical key type is being scored as a signal"
+    )
+
+
+def test_pqc_cert_key_earns_single_credit():
+    """O-4 / D-04: a PQC certificate key earns the PQC credit even with no
+    PQC key exchange observed, so it scores strictly above the same estate
+    whose certificates report no PQC key."""
+    certs = {"certs_observed": 2}
+    pqc = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 0, "ECDSA": 0, "PQC": 2},
+        pqc_hybrid_endpoint_count=0,
+    )
+    none = _base_evidence(
+        certificate_observations=certs,
+        cert_key_type_counts={"RSA": 0, "ECDSA": 0, "PQC": 0},
+        pqc_hybrid_endpoint_count=0,
+    )
+    assert _agility(pqc) > _agility(none), (
+        f"PQC certificate keys gave agility {_agility(pqc)}, not above "
+        f"{_agility(none)} without them"
+    )
+
+
+def test_pqc_cert_and_pqc_kex_credit_once_not_twice():
+    """D-04: a PQC certificate key and a PQC/hybrid key exchange share ONE
+    credit (+8), never +16.
+
+    The fixture leaves room for +16 to be visible: 40 UNKNOWN services and
+    40 weak bearer-token algorithms (each saturating its -6 term) plus an RSA
+    certificate (the classical -8, present in every arm) put agility at 5
+    before any credit, so a doubled credit (21) would score above the single
+    one (13) rather than clamping into it.
+    """
+    common = dict(
+        assessable_endpoint_count=40,
+        protocol_counts={"UNKNOWN": 40},
+        bearer_token_weak_alg_count=40,
+        certificate_observations={"certs_observed": 2},
+        pqc_hybrid_endpoint_count=1,
+    )
+    kex_only = _base_evidence(
+        cert_key_type_counts={"RSA": 1, "ECDSA": 0, "PQC": 0}, **common,
+    )
+    kex_and_cert = _base_evidence(
+        cert_key_type_counts={"RSA": 1, "ECDSA": 0, "PQC": 1}, **common,
+    )
+    no_credit = _base_evidence(
+        cert_key_type_counts={"RSA": 1, "ECDSA": 0, "PQC": 0},
+        **{**common, "pqc_hybrid_endpoint_count": 0},
+    )
+    # Headroom: the single credit is visible and a second +8 would not clamp.
+    assert _agility(kex_only) > _agility(no_credit)
+    assert _agility(kex_only) + 8 <= 25, (
+        f"fixture has no headroom: kex-only agility {_agility(kex_only)}"
+    )
+    assert _agility(kex_and_cert) == _agility(kex_only), (
+        f"PQC cert + PQC KEX gave agility {_agility(kex_and_cert)}, "
+        f"KEX alone {_agility(kex_only)}: the credit was counted twice"
+    )
+
+
+def test_pqc_cert_does_not_lift_pqc_readiness_ceiling():
+    """D-04: the 84 "no PQC, no 100" ceiling stays keyed on post-quantum KEY
+    EXCHANGE only. A PQC certificate key alone does not lift it."""
+    ev = _base_evidence(
+        certificate_observations={"certs_observed": 1},
+        cert_key_type_counts={"RSA": 0, "ECDSA": 0, "PQC": 1},
+        pqc_hybrid_endpoint_count=0,
+        # No HIGH findings, so the consequence ceiling cannot win instead.
+        finding_severity_counts={},
+    )
+    result = compute_readiness_score(ev)
+    reason = result["rating_cap_reason"] or ""
+    assert "no post-quantum key exchange observed" in reason, (
+        f"rating_cap_reason {reason!r} does not name the PQC-readiness ceiling"
+    )
+
+
+# ---- Phase 234 code review WR-02 / D-29: undetermined keys and one PQC certificate ----
+
+def _cert_estate(key_alg_for_39):
+    """40 TLS certificate rows plus 40 UNKNOWN services, through the row layer.
+
+    39 certificates carry ``key_alg_for_39`` (``"RSA"`` or ``None`` for a key
+    type the scanner did not determine); the 40th is an ML-DSA-65 certificate
+    (the O-4 PQC bucket). The 40 UNKNOWN services saturate the -6 unknown term
+    in both arms, so agility sits below 25 and a hidden -8 cannot be absorbed
+    by the clamp.
+    """
+    from datetime import datetime, timedelta
+    from types import SimpleNamespace
+
+    from quirk.intelligence.evidence import build_evidence_summary
+
+    ref = datetime(2026, 10, 1, 12, 0, 0)
+    fields = (
+        "host", "port", "protocol", "scanned_at", "tls_version",
+        "tls_supported_versions", "cipher_suite", "cert_subject", "cert_issuer",
+        "cert_pubkey_alg", "cert_pubkey_size", "cert_sig_alg", "cert_not_before",
+        "cert_not_after", "scan_error", "tls_blocker_reason", "service_detail",
+        "severity",
+    )
+
+    def row(**kw):
+        base = {name: None for name in fields}
+        base["scanned_at"] = ref
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    rows = []
+    for i in range(40):
+        rows.append(row(
+            host=f"c{i}.d29.example", port=443, protocol="TLS",
+            tls_version="TLSv1.3", tls_supported_versions="TLSv1.2,TLSv1.3",
+            cipher_suite="TLS_AES_256_GCM_SHA384",
+            cert_subject=f"CN=c{i}", cert_issuer="CN=D29 CA",
+            cert_not_before=ref - timedelta(days=30),
+            cert_not_after=datetime(2099, 1, 1),
+            cert_pubkey_alg="ML-DSA-65" if i == 39 else key_alg_for_39,
+        ))
+    rows += [row(host=f"u{i}.d29.example", port=9000 + i, protocol="UNKNOWN")
+             for i in range(40)]
+    return build_evidence_summary(rows, [], reference_utc=ref)
+
+
+def test_undetermined_keys_with_one_pqc_cert_never_beat_classical_keys():
+    """D-29: not looking at certificate keys must never score better than
+    finding classical keys, even when one certificate is PQC.
+
+    WR-02 reproduction: under the 234 rule ``elif C > 0 and PQC == 0`` one
+    PQC certificate switched the "key types undetermined" -8 off, so 39
+    undetermined + 1 PQC outscored 39 RSA + 1 PQC (999.115 P8 regression).
+    """
+    rsa = _cert_estate("RSA")
+    undetermined = _cert_estate(None)
+    # Non-vacuity: the two arms differ only in the 39 key types.
+    assert rsa["cert_key_type_counts"] == {"RSA": 39, "ECDSA": 0, "PQC": 1}
+    assert undetermined["cert_key_type_counts"] == {"RSA": 0, "ECDSA": 0, "PQC": 1}
+    assert (rsa["certificate_observations"]["certs_observed"]
+            == undetermined["certificate_observations"]["certs_observed"] == 40)
+    assert _agility(rsa) < 25, f"no agility headroom: RSA arm {_agility(rsa)}"
+
+    r_rsa = compute_readiness_score(rsa)
+    r_und = compute_readiness_score(undetermined)
+    assert _agility(undetermined) <= _agility(rsa), (
+        f"39 undetermined + 1 PQC agility {_agility(undetermined)} > 39 RSA + "
+        f"1 PQC agility {_agility(rsa)}: not looking at keys paid"
+    )
+    assert r_und["score"] <= r_rsa["score"], (
+        f"39 undetermined + 1 PQC scored {r_und['score']} > 39 RSA + 1 PQC "
+        f"{r_rsa['score']}"
+    )
+    reasons = [d.get("reason", "") for d in r_und.get("drivers", [])]
+    assert "Certificate key types undetermined" in reasons, reasons

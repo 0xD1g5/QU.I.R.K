@@ -6,6 +6,7 @@ priority: high
 area: quirk/errors.py, tests/test_cmvp_freshness.py, docs/error-codes.md (generated)
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # Two error hints tell operators to run `quirk compliance cmvp refresh`, the command the project forbids for re-verification

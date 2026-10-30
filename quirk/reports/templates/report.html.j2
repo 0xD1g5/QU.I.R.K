@@ -14,6 +14,7 @@
       --surface2: #1a1a26;
       --border: #2a2a3a;
       --accent: #3b9dff;
+      --brand-accent: #af89f5; /* dashboard dark --ds-accent; cover title + header borders (D-03) */
       --text: #e8e8f0;
       --text-muted: #8888aa;
       --critical: #e53935;
@@ -37,19 +38,13 @@
     a { color: var(--accent); text-decoration: none; }
     .report-header {
       background: var(--surface);
-      border-bottom: 2px solid var(--accent);
+      border-bottom: 2px solid var(--brand-accent);
       padding: 24px 40px;
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: 20px;
     }
-    .wordmark {
-      font-size: 28px;
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      font-family: 'Courier New', Courier, monospace;
-    }
+    .report-header-logo { height: 28px; width: auto; display: block; }
     .report-meta {
       color: var(--text-muted);
       font-size: 12px;
@@ -192,7 +187,7 @@
     /* Cover page: dark background, accent top border; print uses break-after:page */
     .cover-page {
       background: var(--bg);
-      border-top: 4px solid var(--accent);
+      border-top: 4px solid var(--brand-accent);
       padding: 48px 40px 32px;
       display: flex;
       flex-direction: column;
@@ -215,7 +210,7 @@
     .cover-title {
       font-size: 36px;
       font-weight: 900;
-      color: var(--accent);
+      color: var(--brand-accent);
       letter-spacing: 0.04em;
       line-height: 1.1;
       margin-bottom: 16px;
@@ -322,7 +317,7 @@
 <body>
 
 <header class="report-header">
-  <span class="wordmark">QU.I.R.K.</span>
+  {% if colophon_logo_b64 %}<img class="report-header-logo" src="data:image/svg+xml;base64,{{ colophon_logo_b64 }}" alt="QU.I.R.K.">{% endif %}
   <span class="report-meta">Quantum Readiness Report &nbsp;|&nbsp; {{ org_name | sanitize }} &nbsp;|&nbsp; {{ generated_at }}</span>
   {#- Phase 200 / RPT-01: identity carries into the running header beyond the
      cover page. Each piece is independently optional — absent field emits

@@ -6,6 +6,7 @@ priority: low
 area: quirk/cbom/builder.py
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # The PQC probe's ADVISORY row produces a phantom, empty `protocol:tls` CBOM component

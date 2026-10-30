@@ -228,7 +228,7 @@ def test_cbom_tls_plus_codesign_real_scanner_shape_no_dup():
         cert_pubkey_size=2048,
         cert_sig_alg="sha256",
         cert_not_after=not_after,
-        tls_capabilities_json=json.dumps({"eku_oids": ["1.3.6.1.5.5.7.3.3"]}),
+        cert_eku_oids="1.3.6.1.5.5.7.3.3",
     )
 
     # Real scanner path — emits a CODE_SIGNING endpoint carrying the surrogate fields.

@@ -6,6 +6,7 @@ priority: low
 area: quirk/cli/doctor_cmd.py
 status: pending
 resolves_phase: null
+owner: "999.128"
 ---
 
 # `quirk doctor` tells users to run `quirk dashboard up`, a command that does not exist

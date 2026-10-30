@@ -22,6 +22,18 @@ import {
   DIMENSION_COUNT,
 } from "@/lib/qramm-constants"
 import { getBenchmarks } from "@/lib/qramm-benchmarks"
+import {
+  isDimensionAssessed,
+  ASSESSMENT_LABEL,
+  ASSESSMENT_BADGE_VARIANT,
+  dimensionStateFromAnswered,
+  dimensionsAssessedLabel,
+  notAssessedCountLabel,
+  overallDisplayState,
+  overallMaturityLabel,
+  suppressedOverallLabel,
+  type AssessmentState,
+} from "@/lib/qramm-assessment"
 import type { QRAMMScoreResponse } from "@/types/api"
 
 interface ScorecardTabProps {
@@ -45,9 +57,59 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
       if (a?.answer_value != null) answered[dim] = (answered[dim] ?? 0) + 1
     }
     return Object.fromEntries(
-      DIMENSIONS.map(d => [d, totals[d] ? Math.round(((answered[d] ?? 0) / totals[d]) * 100) : 0])
-    )
+      DIMENSIONS.map(d => [
+        d,
+        {
+          answered: answered[d] ?? 0,
+          total: totals[d] ?? 0,
+          pct: totals[d] ? Math.round(((answered[d] ?? 0) / totals[d]) * 100) : 0,
+        },
+      ])
+    ) as Record<string, { answered: number; total: number; pct: number }>
   }, [ctx.answers, qnToDim])
+
+  // Phase 231 D-07: assessed = at least one answered question (shared predicate); 0.0 is also SCOREFIX-02's placeholder, so never test the score.
+  const assessedByDim = useMemo(
+    () =>
+      Object.fromEntries(
+        DIMENSIONS.map(d => [d, isDimensionAssessed(completionByDim[d].answered)])
+      ) as Record<string, boolean>,
+    [completionByDim],
+  )
+  const notAssessedCount = DIMENSIONS.filter(d => !assessedByDim[d]).length
+
+  // Phase 234 D-15/D-25: compare live answered counts with the counts saved with the score.
+  // W2: an unscored session has nothing to be stale, so it keeps today's statuses (Python's
+  // score_data-is-None branch). A count missing for one dimension inside the saved blob reads
+  // stale for that dimension (234-02 Deviation 2, T-234-02): it can never vouch for answers.
+  const scoredAnswered = ctx.scoreResult?.answered_by_dimension
+  const scoreHasCounts = ctx.scoreResult == null || scoredAnswered !== undefined
+  const stateByDim = useMemo(() => {
+    const out: Record<string, AssessmentState> = {}
+    for (const d of DIMENSIONS) {
+      const count = scoredAnswered?.[d]
+      const dimHasCount =
+        scoreHasCounts && (ctx.scoreResult == null || typeof count === "number")
+      out[d] = dimensionStateFromAnswered(
+        d,
+        completionByDim[d].answered,
+        typeof count === "number" ? count : undefined,
+        dimHasCount,
+      )
+    }
+    return out
+  }, [ctx.scoreResult, scoredAnswered, scoreHasCounts, completionByDim])
+  const staleByDim = useMemo(
+    () =>
+      Object.fromEntries(
+        DIMENSIONS.map(d => [d, ctx.scoreResult != null && stateByDim[d] === "stale"])
+      ) as Record<string, boolean>,
+    [ctx.scoreResult, stateByDim],
+  )
+  const anyStale = DIMENSIONS.some(d => staleByDim[d])
+  // D-25/D-27: a legacy or stale score's overall never reads as a maturity level.
+  const overallState = overallDisplayState(ctx.scoreResult, anyStale)
+  const overallSuppressed = suppressedOverallLabel(overallState)
 
   // Approximate maturity distribution by bucketing each dimension's score.
   // When every dimension's score is null (Phase 74 "Indeterminate" sentinel),
@@ -57,13 +119,15 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
     const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 }
     if (!ctx.scoreResult) return dist
     for (const dim of DIMENSIONS) {
+      if (!isDimensionAssessed(completionByDim[dim].answered)) continue
+      if (staleByDim[dim]) continue  // D-15: a stale dimension never counts toward a maturity level
       const dscore = ctx.scoreResult.dimensions[dim]?.score
       if (dscore == null) continue
       const bucket = Math.max(1, Math.min(4, Math.round(dscore)))
       dist[bucket] += 1
     }
     return dist
-  }, [ctx.scoreResult])
+  }, [ctx.scoreResult, completionByDim, staleByDim])
 
   const isIndeterminate = useMemo(() => {
     if (!ctx.scoreResult) return false
@@ -213,10 +277,60 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                   </div>
                 )
               })}
+              {ctx.scoreResult && notAssessedCount >= 1 && (
+                <p className="text-xs text-muted-foreground" data-testid="maturity-not-assessed">
+                  {notAssessedCountLabel(notAssessedCount)}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Phase 234 D-23: overall QRAMM over assessed dimensions, with "N of 4 dimensions assessed". */}
+      {ctx.scoreResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Overall Maturity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {/* D-25: a score saved before Phase 234 averaged unassessed dimensions in as 0, so it
+                shows Recalculate; D-27: a score whose answers changed since it was saved shows
+                Stale. Neither shows a maturity level or a count. */}
+            <div className="flex items-baseline gap-3">
+              <span
+                className={overallSuppressed != null ? "text-sm font-semibold" : "font-data text-2xl"}
+                data-testid="qramm-overall"
+              >
+                {overallSuppressed != null
+                  ? overallSuppressed
+                  : typeof ctx.scoreResult.overall === "number"
+                    ? ctx.scoreResult.overall.toFixed(2)
+                    : "—"}
+              </span>
+              {overallSuppressed == null && (
+                <span className="text-sm font-semibold" data-testid="qramm-overall-maturity">
+                  {overallMaturityLabel(ctx.scoreResult.overall)}
+                </span>
+              )}
+            </div>
+            {overallSuppressed == null &&
+              typeof ctx.scoreResult.dimensions_assessed === "number" && (
+                <p className="text-xs text-muted-foreground" data-testid="qramm-dimensions-assessed">
+                  {dimensionsAssessedLabel(
+                    ctx.scoreResult.dimensions_assessed,
+                    ctx.scoreResult.dimensions_total ?? DIMENSION_COUNT,
+                  )}
+                </p>
+              )}
+            {anyStale && (
+              <p className="text-xs text-muted-foreground" data-testid="qramm-score-stale">
+                {ASSESSMENT_LABEL.stale}: answers changed after this score was saved
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dimension summary table */}
       <Card>
@@ -246,8 +360,16 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                 // Phase 74 "Indeterminate" sentinel: d.score can be null even
                 // when d itself is present. Guard with a numeric typeof check
                 // before invoking .toFixed / Math.round (D-10 null-safety).
-                const dscore = typeof d?.score === "number" ? d.score : null
-                const dweighted = typeof d?.weighted === "number" ? d.weighted : null
+                // D-21a: a not-assessed dimension's stored 0.0 is a placeholder, not a measurement.
+                // Phase 234: both read from the shared rule (dimensionStateFromAnswered), so its
+                // pending-first precedence holds here too; never re-derived locally.
+                const notAssessed = ctx.scoreResult != null && stateByDim[dim] === "not-assessed"
+                // D-15: a stale dimension's saved score no longer describes its answers.
+                const stale = staleByDim[dim]
+                const dscore =
+                  !notAssessed && !stale && typeof d?.score === "number" ? d.score : null
+                const dweighted =
+                  !notAssessed && !stale && typeof d?.weighted === "number" ? d.weighted : null
                 const maturityInt =
                   dscore != null
                     ? Math.max(1, Math.min(4, Math.round(dscore)))
@@ -265,7 +387,11 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                       {benchmark != null ? benchmark.toFixed(2) : "—"}
                     </TableCell>
                     <TableCell>
-                      {maturityInt != null ? (
+                      {notAssessed ? (
+                        <Badge variant="secondary">{ASSESSMENT_LABEL["not-assessed"]}</Badge>
+                      ) : stale ? (
+                        <Badge variant={ASSESSMENT_BADGE_VARIANT.stale}>{ASSESSMENT_LABEL.stale}</Badge>
+                      ) : maturityInt != null ? (
                         <Badge className={MATURITY_BADGE_CLASS[maturityInt]}>
                           {MATURITY_LABEL[maturityInt]}
                         </Badge>
@@ -274,7 +400,7 @@ export function ScorecardTab({ qnToDim }: ScorecardTabProps) {
                       )}
                     </TableCell>
                     <TableCell className="font-data">
-                      {completionByDim[dim]}%
+                      {completionByDim[dim].pct}%
                     </TableCell>
                   </TableRow>
                 )

@@ -6,6 +6,7 @@ priority: low
 area: quirk/notify/config.py (load_notifications_config)
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # A malformed notification config disables lifecycle (and scan) notifications with no log line

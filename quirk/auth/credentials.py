@@ -9,10 +9,12 @@ Public surface:
   CredentialContext.from_cli(...)  -> Optional[CredentialContext]
   CredentialContext.as_headers()   -> dict[str, str]
   CredentialContext.query_param()  -> tuple[str, str] | None
+  CredentialContext.bearer_alg_state() -> tuple[str, str | None]   # Phase 230 DETECT-05
   CredentialContext.close()        -> None
 """
 from __future__ import annotations
 
+import base64
 import getpass
 import os
 from dataclasses import dataclass, field
@@ -54,6 +56,7 @@ class CredentialContext:
         """Materialize auth headers — str only at injection boundary (D-04).
 
         Returns {} for api_key_query scheme; query placement via query_param() (D-03).
+        Basic: the secret is user:password and is base64-encoded here (RFC 7617).
         """
         # D-02/D-05: This decode materializes a new immortal str the GC controls and
         # close() cannot zero. The str-copy proliferation is explicitly accepted under
@@ -65,7 +68,11 @@ class CredentialContext:
         if self.scheme == "api_key_header":
             return {self._header_name or "X-Api-Key": secret}
         if self.scheme == "basic":
-            return {"Authorization": f"Basic {secret}"}
+            # RFC 7617: secret is user:password; encoded here (UTF-8), never by the operator.
+            if ":" not in secret:
+                raise ValueError(_BASIC_FORM_ERROR)
+            token = base64.b64encode(secret.encode("utf-8")).decode("ascii")
+            return {"Authorization": "Basic " + token}
         # api_key_query: secret goes on query string, never in headers (D-03)
         return {}
 
@@ -107,6 +114,29 @@ class CredentialContext:
         except Exception:
             # Opaque (non-JWT) bearer token or malformed header — no declared alg.
             return None
+
+    def bearer_alg_state(self) -> tuple[str, Optional[str]]:
+        """Tri-state view of a bearer token's declared JWT algorithm (Phase 230 DETECT-05).
+
+        Returns ``("declared", alg)``, ``("missing", None)`` (a JWT whose header has
+        no alg) or ``("opaque", None)`` (non-bearer scheme, non-JWT, or any decode
+        failure). ``bearer_declared_alg`` cannot tell missing from opaque.
+
+        Security: only the alg string is returned; the raw token is never returned,
+        logged, or persisted.
+        """
+        if self.scheme != "bearer":
+            return ("opaque", None)
+        try:
+            import jwt  # PyJWT (core dep); lazy import keeps module load light
+            token = self._secret_buf.decode("utf-8")
+            header = jwt.get_unverified_header(token)
+        except Exception:
+            return ("opaque", None)
+        alg = header.get("alg")
+        if not alg:
+            return ("missing", None)
+        return ("declared", str(alg))
 
     def close(self) -> None:
         """Zero the secret buffer in place (best-effort, D-04/D-05)."""
@@ -169,7 +199,9 @@ class CredentialContext:
             )
 
         if basic is not None:
-            raw = _resolve_reference("basic", basic, prompt="Basic auth credentials: ")
+            raw = _resolve_reference("basic", basic, prompt="Basic auth (user:password): ")
+            if ":" not in raw:
+                raise ValueError(_BASIC_FORM_ERROR)
             return cls(
                 scheme="basic",
                 _secret_buf=bytearray(raw.encode("utf-8")),
@@ -179,6 +211,12 @@ class CredentialContext:
 
 
 _FILE_REF_PLACEHOLDER = "<@file reference>"
+
+# Phase 230 / D-12: fixed text, never interpolates the resolved value.
+_BASIC_FORM_ERROR = (
+    "The 'basic' credential must resolve to user:password (QUIRK base64-encodes "
+    "it); the resolved value contains no ':'. Do not pre-encode it."
+)
 
 
 def _resolve_reference(scheme: str, ref: str, *, prompt: str) -> str:

@@ -6,6 +6,7 @@ priority: medium
 area: quirk/cli/ticket_cmd.py, quirk/ticketing/base.py (dispatch_finding), quirk/cli/export_cmd.py
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # `quirk ticket create` exits 0 when every ticket failed; `quirk export --siem` exits 2 after delivering events

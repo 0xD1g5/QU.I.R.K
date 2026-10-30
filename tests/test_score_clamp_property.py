@@ -131,18 +131,20 @@ _CATEGORY_CALL_ORDER = [
     "motion",
 ]
 
-# Pinned oracles measured directly against the reference estate on
-# 2026-09-28 via the spy technique below. Tolerance 0.05 per D-05. These are
-# NOT the CONTEXT.md planning-time hypotheses copied verbatim -- they are
-# this plan's own re-measurement, which happened to match those hypotheses
-# to four decimal places (see 211-DENOM-EVIDENCE.md for the side-by-side).
+# Pinned oracles measured directly against the reference estate via the spy
+# technique below. Tolerance 0.05 per D-05. First measured on 2026-09-28
+# (scoring 3.0: hygiene 16.9306, modern_tls 16.8347, identity_trust 8.9191,
+# agility 36.5918, dar 22.4242, motion 13.2079; see 211-DENOM-EVIDENCE.md).
+# Re-measured on 2026-10-27 under scoring 4.0 (Phase 234, D-10/D-26): the
+# absolute-count curve moves every category, and the classical-key rule (O-2)
+# turns the 3.0 has-ECDSA +4 into a -8, so Agility no longer saturates.
 _PINNED_PRE_CLAMP_TOTALS = {
-    "hygiene": 16.9306,
-    "modern_tls": 16.8347,
-    "identity_trust": 8.9191,
-    "agility": 36.5918,
-    "dar": 22.4242,
-    "motion": 13.2079,
+    "hygiene": 10.0,
+    "modern_tls": 9.1518,
+    "identity_trust": 12.749,
+    "agility": 24.0513,
+    "dar": 19.0144,
+    "motion": 9.1432,
 }
 _TOLERANCE = 0.05
 
@@ -175,12 +177,19 @@ def _capture_pre_clamp_totals(monkeypatch, evidence: dict) -> dict[str, float]:
     return totals, result
 
 
-def test_agility_ceiling_saturates_on_reference_estate(monkeypatch):
-    """The 25-point clamp on Agility absorbs real signal on the reference
-    estate: the pre-clamp total exceeds the cap, and the emitted subscore is
-    pinned at exactly the cap. This is the exact insensitivity this
-    milestone exists to remove -- P7a already tracks it (see
-    211-DENOM-EVIDENCE.md's ownership check)."""
+def test_agility_stays_below_cap_on_reference_estate(monkeypatch):
+    """Under scoring 4.0 the reference estate's Agility subscore sits BELOW the
+    25-point cap, both pre-clamp and emitted, so the clamp absorbs no real
+    signal there.
+
+    History: on scoring 3.0 this test asserted the opposite (pre-clamp Agility
+    above the cap, emitted pinned at exactly the cap), the clamp insensitivity
+    211-DENOM-EVIDENCE.md recorded. That saturation came from the 3.0 has-ECDSA
+    +4 bonus. Phase 234 (D-04, O-2) removed it: classical certificate keys
+    (RSA/ECDSA/EdDSA) are never a positive signal, they cost a flat -8, and
+    only a PQC key exchange or PQC certificate key earns the single +8 credit.
+    The property inverted, so the test was renamed (D-26) and states the 4.0
+    property. Local-only: it skips without the preserved reference artifact."""
     if not _REFERENCE_ARTIFACT.exists():
         pytest.skip(f"reference artifact not on disk: {_REFERENCE_ARTIFACT}")
 
@@ -191,14 +200,14 @@ def test_agility_ceiling_saturates_on_reference_estate(monkeypatch):
         "score_cap"
     ].default
 
-    # Ceiling saturation: Agility's pre-clamp total exceeds the cap, and the
-    # emitted subscore is pinned at exactly the cap.
-    assert totals["agility"] > cap, (
-        f"Expected Agility pre-clamp total to exceed the {cap} cap "
-        f"(ceiling saturation); measured {totals['agility']}"
+    # No ceiling saturation under 4.0: Agility's pre-clamp total is below the
+    # cap, and the emitted subscore is below it too (the clamp absorbs nothing).
+    assert totals["agility"] < cap, (
+        f"Expected Agility pre-clamp total to stay below the {cap} cap under "
+        f"scoring 4.0 (no classical-key bonus); measured {totals['agility']}"
     )
-    assert result["subscores"]["agility_signals"] == int(cap), (
-        f"Expected Agility's emitted subscore to be pinned at the cap "
+    assert result["subscores"]["agility_signals"] < int(cap), (
+        f"Expected Agility's emitted subscore to stay below the cap "
         f"({int(cap)}); got {result['subscores']['agility_signals']}"
     )
 

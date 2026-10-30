@@ -6,6 +6,7 @@ priority: high
 area: packaging/windows/install.ps1, packaging/windows/uninstall.ps1, quirk/cli/sensor_cmd.py
 status: pending
 resolves_phase: null
+owner: "999.129"
 ---
 
 # Windows installer cannot produce a working sensor: no -SensorId, no scan config, and reinstall replaces the identity

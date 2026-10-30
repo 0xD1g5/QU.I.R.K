@@ -3,7 +3,8 @@
 These tests verify the scanner+findings are wired into run_scan.py without
 requiring a live scan. Behavior validated:
 
-- Imports for scan_email_targets and evaluate_email_endpoints exist.
+- Imports for scan_email_targets exist; email findings reach the report via
+  derive_report_findings -> evaluate_protocol_service_endpoints (Phase 228 D-25).
 - email_endpoints aggregation list is initialized and consumed.
 - The phase timer is named "email_scanning".
 - The cfg.connectors.enable_email gate is present.
@@ -28,8 +29,16 @@ def test_run_scan_imports_email_scanner(src: str):
 
 
 def test_run_scan_imports_evaluate_email_endpoints(src: str):
-    assert "evaluate_email_endpoints" in src
-    assert src.count("evaluate_email_endpoints") >= 2, "import + call expected"
+    # Phase 228 D-25: run_scan.py reaches the email evaluator through the shared
+    # composer; the composer's partition helper is what calls it.
+    import inspect
+
+    from quirk.engine import findings_evaluator
+
+    assert "derive_report_findings(" in src
+    assert "evaluate_email_endpoints(" in inspect.getsource(
+        findings_evaluator.evaluate_protocol_service_endpoints
+    )
 
 
 def test_run_scan_email_phase_timer_label(src: str):

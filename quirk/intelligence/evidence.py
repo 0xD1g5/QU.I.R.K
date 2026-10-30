@@ -26,7 +26,20 @@ from quirk.util.weak_crypto import (
 # this mapping honest, not the mapping table itself.
 from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 
-EVIDENCE_SCHEMA_VERSION = "1.2.0"
+# 1.3.0 (Phase 234, additive): cert_key_type_counts.PQC and
+# kerberos_placeholder_count.
+# 1.4.0 (Phase 234 code review, additive): kerberos_scan_error_count (D-30).
+EVIDENCE_SCHEMA_VERSION = "1.4.0"
+
+# Phase 234 O-4: substrings that mark a post-quantum (ML-DSA / SLH-DSA, or a
+# composite containing one) certificate key, matched after "_" -> "-" on the
+# upper-cased name. Phase 234 review D-31 (IN-05) adds the pre-FIPS and other
+# PQC signature names: DILITHIUM (oqs names before ML-DSA), FALCON / FN-DSA,
+# and SPHINCS (SPHINCS+, the pre-FIPS SLH-DSA).
+_PQC_CERT_KEY_TOKENS = (
+    "ML-DSA", "MLDSA", "SLH-DSA", "SLHDSA", "DILITHIUM", "FALCON", "FN-DSA",
+    "FNDSA", "SPHINCS",
+)
 
 # Phase 184.1 SCORE-01 D-06/D-07 — protocols that are not scanned assets and must be
 # excluded from both the coverage numerator (assessed_crypto_count) and denominator
@@ -38,6 +51,34 @@ EVIDENCE_SCHEMA_VERSION = "1.2.0"
 # tests/test_evidence_protocol_disposition.py, not by this comment — a new protocol
 # literal must be classified there before it can be trusted here.
 _NON_ASSET_PROTOCOLS = frozenset({"ADVISORY", "CLOSED"})
+# Phase 229 D-20: public name for the closure live-row guard (the private name stays).
+NON_ASSET_PROTOCOLS = _NON_ASSET_PROTOCOLS
+
+# Phase 228 XSURF-08 (D-13/D-14/D-21). Sibling of quirk.engine.findings_evaluator.EMAIL_PROTOCOLS
+# (kept local: importing quirk.engine here risks an import cycle). A test pins this set
+# against email_scanner.EMAIL_PORTS so a new email label cannot escape the predicate.
+_EMAIL_PROBE_PROTOCOLS = frozenset({"SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS",
+                                    "POP3-STARTTLS", "POP3S"})
+_NO_RESPONSE_BLOCKERS = frozenset({"CONNECTION_REFUSED", "TIMEOUT"})
+
+
+def _is_unanswered_email_probe(ep) -> bool:
+    """True when a mail-port probe got no response at all (D-13/D-14/D-21).
+
+    The service never spoke, so the row says nothing about plaintext. Every TIMEOUT is
+    excluded because no persisted field separates a pre-banner from a post-banner timeout.
+    The scanner still persists the row as the probe record; for scoring it is treated like
+    CLOSED (excluded from coverage), so excluding it cannot raise the score by dilution.
+    A row that negotiated TLS (non-empty tls_version) is never unanswered.
+    """
+    proto = str(getattr(ep, "protocol", "") or "").upper()
+    if proto not in _EMAIL_PROBE_PROTOCOLS:
+        return False
+    blocker = str(getattr(ep, "tls_blocker_reason", "") or "")
+    if blocker not in _NO_RESPONSE_BLOCKERS:
+        return False
+    return not (getattr(ep, "tls_version", "") or "")
+
 
 _PROTOCOL_KEYS = ("TLS", "HTTP", "SSH", "UNKNOWN", "KERBEROS", "SAML", "DNSSEC",
                   "POSTGRESQL", "MYSQL", "RDS", "S3", "AZURE_BLOB", "KUBERNETES", "VAULT",
@@ -142,7 +183,7 @@ def build_evidence_summary(
     expiring_cutoff = ref_utc + timedelta(days=max(0, int(expiring_days)))
 
     protocol_counts = {k: 0 for k in _PROTOCOL_KEYS}
-    cert_key_type_counts = {"RSA": 0, "ECDSA": 0}
+    cert_key_type_counts = {"RSA": 0, "ECDSA": 0, "PQC": 0}
     tls_enum_success_count = 0
 
     certs_observed = 0
@@ -159,6 +200,10 @@ def build_evidence_summary(
     # rows such as a failed SMTP-STARTTLS handshake (D-04) and plaintext HTTP (D-08).
     assessed_crypto_count = 0
     assessable_endpoint_count = 0
+    # Phase 234 D-11: Kerberos rows the KDC answered without etype data.
+    kerberos_placeholder_count = 0
+    # Phase 234 review D-30: Kerberos rows that carry a scan_error.
+    kerberos_scan_error_count = 0
 
     identity_weak_etype_count = 0
     saml_weak_signing_count = 0
@@ -233,6 +278,10 @@ def build_evidence_summary(
         port = int(getattr(ep, "port", 0) or 0)
 
         proto = str(getattr(ep, "protocol", "") or "").upper()
+        # Phase 228 XSURF-08 (D-13/D-21): refused / timed-out mail ports are skipped here,
+        # before every counter, so they tick neither protocol_counts, coverage, nor motion.
+        if _is_unanswered_email_probe(ep):
+            continue
         if proto in protocol_counts:
             protocol_counts[proto] += 1
 
@@ -252,10 +301,34 @@ def build_evidence_summary(
         if scan_error:
             scan_error_count += 1
 
+        # Phase 234 D-11: a KERBEROS row with no scan_error and no `etype:`
+        # service_detail is a placeholder (kerberos-no-preauth,
+        # kerberos-etypes-unavailable-principal-unknown / -preauth-no-etype-info,
+        # or an unreachable row without a recorded error). The KDC answered, so
+        # it stays an assessable endpoint, but no crypto was assessed: it is
+        # excluded from assessed_crypto_count and, in the scorer, from identity
+        # presence. Every real etype row carries "etype:{id}:{name}:{sev}".
+        is_kerberos_placeholder = (
+            proto == "KERBEROS"
+            and not scan_error
+            and "etype:" not in _ep_sd
+        )
+        if is_kerberos_placeholder:
+            kerberos_placeholder_count += 1
+        # Phase 234 review D-30 (WR-01): a KERBEROS row that carries a
+        # scan_error (kerberos-unreachable with a TCP error, a never-probed
+        # invalid target, an unrecognised reply, a KRB-ERROR) has no etype
+        # data either. It was already outside assessed_crypto_count; this
+        # counter lets the scorer's identity gate subtract it as well, the
+        # same way it subtracts D-11 placeholders. protocol_counts is never
+        # edited, because reports, the CBOM and the dashboard read it.
+        if proto == "KERBEROS" and scan_error:
+            kerberos_scan_error_count += 1
+
         # Phase 184.1 SCORE-01 D-01/D-02/D-05/D-06/D-07/D-09 — coverage counters.
         if proto not in _NON_ASSET_PROTOCOLS:
             assessable_endpoint_count += 1
-            if proto != "UNKNOWN" and not scan_error:
+            if proto != "UNKNOWN" and not scan_error and not is_kerberos_placeholder:
                 assessed_crypto_count += 1
 
         blocker = str(getattr(ep, "tls_blocker_reason", "") or "")
@@ -263,14 +336,36 @@ def build_evidence_summary(
             mtls_targets.add((host, port))
 
         key_alg = str(getattr(ep, "cert_pubkey_alg", "") or "").upper()
-        if key_alg.startswith("RSA"):
+        cert_not_after = getattr(ep, "cert_not_after", None)
+        # Phase 234 O-4: the PQC bucket is checked FIRST. Composite names
+        # carry the classical half too ("rsa3072_mldsa44", an ECDSA-first
+        # composite), so the RSA/EC prefix checks would otherwise claim them.
+        # It is certificate-gated (the row carries a certificate expiry), so an
+        # ML-DSA name on a KMS key, JWT or DNSSEC row never earns certificate
+        # credit. RSA/ECDSA keep their meaning for non-score consumers. Note:
+        # ML-DSA leaf certificates cannot reach this today, because
+        # `cryptography` raises "Unknown key type" in tls_scanner._pubkey_info
+        # (Phase 234 D-20; follow-up todo filed by plan 234-08).
+        # Phase 234 review D-31 (IN-06): a PQC or composite NAME on a row with
+        # no certificate lands in no bucket. It earns no certificate credit
+        # (above), and it must not fall through to the RSA/EC prefix checks
+        # either: "RSA3072_MLDSA44" on a KMS row used to count as an RSA
+        # certificate key (the -8 and the PQC-certificate roadmap item for a
+        # key that is not a certificate). Plain classical names keep their
+        # bucket on any row, as before (KMS RSA keys still count).
+        is_pqc_name = any(
+            token in key_alg.replace("_", "-") for token in _PQC_CERT_KEY_TOKENS
+        )
+        if is_pqc_name:
+            if isinstance(cert_not_after, datetime):
+                cert_key_type_counts["PQC"] += 1
+        elif key_alg.startswith("RSA"):
             cert_key_type_counts["RSA"] += 1
         elif key_alg.startswith(("EC", "ECDSA")):
             cert_key_type_counts["ECDSA"] += 1
         elif key_alg.startswith(("ED25519", "ED448", "EDDSA")):
             cert_key_type_counts["ECDSA"] += 1
 
-        cert_not_after = getattr(ep, "cert_not_after", None)
         if isinstance(cert_not_after, datetime):
             certs_observed += 1
             na = _as_utc_naive(cert_not_after)
@@ -423,9 +518,12 @@ def build_evidence_summary(
 
         # ---- Phase 94 — Bearer token weak algorithm counter (TOKEN-02, SCORE-01) ----
         elif proto == "BEARER_TOKEN":
-            # Increment when a bearer token has a declared algorithm that is not alg:none
-            # (alg:none is a separate CRITICAL finding; this counter tracks quantum-vulnerable
-            # conventional algorithms like HS256, RS256, ES256 — all currently quantum-vulnerable).
+            # Increment when a bearer token has a declared algorithm that is not alg:none.
+            # alg:none is the separate CRITICAL "Bearer token is unsigned (alg:none)"
+            # (findings_evaluator.evaluate_bearer_token_endpoints); a missing alg is stored
+            # as cert_pubkey_alg=None so it is not counted here either (D-15, no double
+            # count). This counter tracks quantum-vulnerable conventional algorithms
+            # like HS256, RS256, ES256.
             _bt_alg = str(getattr(ep, "cert_pubkey_alg", "") or "")
             if _bt_alg and _bt_alg.lower() != "none":
                 bearer_token_weak_alg_count += 1
@@ -486,8 +584,9 @@ def build_evidence_summary(
         elif proto in {"SMTP-STARTTLS", "IMAP-STARTTLS", "POP3-STARTTLS"}:
             tls_v = str(getattr(ep, "tls_version", "") or "")
             if not tls_v:
-                # A1 verified: email_scanner.py line 498 always sets ep.protocol = protocol_label
+                # A1 verified: email_scanner.py always sets ep.protocol = protocol_label
                 # even on STARTTLS failure; tls_version stays empty → ticks the counter.
+                # Refused/timed-out probes never reach here (skipped above, Phase 228).
                 motion_email_starttls_missing_count += 1
             else:
                 cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
@@ -504,8 +603,8 @@ def build_evidence_summary(
         elif proto in {"SMTPS", "IMAPS", "POP3S"}:
             tls_v = str(getattr(ep, "tls_version", "") or "")
             if not tls_v:
-                # A2 verified: email_scanner.py emits the endpoint even when implicit-TLS
-                # port is unresponsive (tls_blocker_reason set, tls_version empty).
+                # A2 verified: rows with an empty tls_version reaching here are answered-but-
+                # failed probes; refused/timed-out ports are skipped above (Phase 228).
                 motion_email_plaintext_count += 1
             else:
                 cipher = str(getattr(ep, "cipher_suite", "") or "").upper()
@@ -557,6 +656,8 @@ def build_evidence_summary(
         "protocol_counts": protocol_counts,
         "assessed_crypto_count": assessed_crypto_count,
         "assessable_endpoint_count": assessable_endpoint_count,
+        "kerberos_placeholder_count": kerberos_placeholder_count,
+        "kerberos_scan_error_count": kerberos_scan_error_count,
         "plaintext_http_count": len(plaintext_http_targets),
         "http_on_tls_port_count": len(http_on_tls_port_targets),
         "mtls_present_count": len(mtls_targets),

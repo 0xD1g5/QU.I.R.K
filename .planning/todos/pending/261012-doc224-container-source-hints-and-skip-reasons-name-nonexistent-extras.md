@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/container_scanner.py, quirk/scanner/source_scanner.py, run_scan.py
 status: pending
 resolves_phase: null
+owner: "999.127"
 ---
 
 # Container/source scanner hints and three phase-skip reasons name extras that do not install the tool

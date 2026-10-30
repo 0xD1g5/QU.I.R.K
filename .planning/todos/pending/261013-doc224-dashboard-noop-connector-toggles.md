@@ -6,6 +6,7 @@ priority: medium
 area: src/dashboard/src/components/ConnectorsPanel.tsx, quirk/dashboard/api/routes/jobs.py, run_scan.py
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # Connectors panel offers toggles that do nothing on a dashboard scan

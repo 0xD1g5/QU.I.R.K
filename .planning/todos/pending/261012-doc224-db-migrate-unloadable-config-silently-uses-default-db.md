@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-13
+source: Phase 224 gap closure C (docs/upgrade-guide.md audit)
+priority: low
+area: run_scan.py (_resolve_db_path)
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
+
 # `quirk db migrate --config <file>` silently migrates `./quirk.db` when the config cannot be loaded
 
 **Filed:** 2026-10-13 (Phase 224 gap closure C, docs/upgrade-guide.md audit)
 **Priority:** P3 — operator trap, same family as `261012-doc224-db-migrate-default-path-creates-empty-db`
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P3 → low).
 
 ## What happens
 

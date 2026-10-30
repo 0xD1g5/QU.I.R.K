@@ -19,6 +19,18 @@ from typing import Dict, Final, Literal, Tuple
 # weight=0.0 ambiguity flagged in audit row qramm-compliance/WR-11.
 CoverageStatus = Literal["covered", "partial", "pending", "n/a"]
 
+# Phase 231 D-02: per-row, per-session status. 'self-assessed' = a manual
+# dimension (no scanner evidence) with at least one answered question.
+# SCANNER_COVERAGE_STATUS stays scanner-only; this Literal is what the
+# compliance-map endpoint emits per row (quirk.qramm.assessment_state).
+# Phase 234 D-15 (SCORE-10): 'stale' = the dimension's live answered count
+# differs from the count persisted with its score (or the score predates
+# persisted counts, D-25). A stale row is never 'self-assessed', carries no
+# relevance score and never counts toward a maturity level.
+RowCoverageStatus = Literal[
+    "covered", "partial", "self-assessed", "pending", "n/a", "stale",
+]
+
 
 FRAMEWORK_KEYS: Tuple[str, ...] = (
     "NIST_PQC", "NSM10", "CNSA2", "ISO27001",

@@ -6,6 +6,7 @@ priority: low
 area: quirk/dashboard/api/schemas.py, quirk/dashboard/api/routes/config.py
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # Connector overlay: submit and preview disagree on whole-number floats, and the submit 422 echoes input

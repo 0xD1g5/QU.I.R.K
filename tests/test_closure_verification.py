@@ -28,7 +28,10 @@ from pathlib import Path
 
 import pytest
 
+from quirk.ticketing.base import TicketingChannel
+
 from quirk.db import get_session, init_db
+from quirk.intelligence.remediation_persist import persist_remediation_snapshot
 from quirk.models import (
     CryptoEndpoint,
     RemediationClosureEvent,
@@ -40,10 +43,31 @@ from quirk.models import (
 PRIOR_SCAN_ID = "scan-prior-0001"
 CURRENT_SCAN_ID = "scan-current-0002"
 SLUG = "plaintext-http-exposure"
-FINGERPRINT = "fp-aaaa1111"
 HOST = "10.0.0.5"
 PORT = 443
+TITLE = "Plaintext HTTP service detected"
+FINDING = {
+    "host": HOST,
+    "port": PORT,
+    "title": TITLE,
+    "severity": "MEDIUM",
+    "recommendation": "Terminate TLS at this endpoint.",
+}
+# D-07: the fingerprint is the production formula, not a hand-typed literal.
+FINGERPRINT = TicketingChannel.compute_fingerprint(dict(FINDING))
 PROTOCOL = "TLS"
+
+
+def _live_current_row(host, port, protocol, scan_run_id, **kw):
+    """A current-scan row as production writes a SUCCESSFUL probe: carrying the
+    family's evidence field (229-12 FIND-11 requires it for a per-host recheck)."""
+    evidence = {
+        "TLS": {"tls_capabilities_json": '{"ok": true}'},
+        "HTTP": {"service_detail": "HTTP/1.1 200 OK"},
+    }.get(protocol, {})
+    for k, v in evidence.items():
+        kw.setdefault(k, v)
+    return CryptoEndpoint(host=host, port=port, protocol=protocol, scan_run_id=scan_run_id, **kw)
 HEALTHY_TLS = {"tls": {"status": "healthy", "evidence_field": "tls_capabilities_json", "endpoints_seen": 1, "endpoints_with_evidence": 1}}
 
 
@@ -100,59 +124,46 @@ def _seed_two_scans(
                 )
             )
 
-        if include_prior_fingerprint:
-            session.add(
-                RemediationItemFingerprint(
-                    remediation_item_id=None,
-                    slug=SLUG,
-                    scan_run_id=PRIOR_SCAN_ID,
-                    finding_fingerprint=FINGERPRINT,
-                    host=HOST,
-                    port=PORT,
-                    finding_title="Plaintext HTTP service detected",
-                    state=prior_fingerprint_state,
-                    observed_at=p_created,
-                )
-            )
         for extra in extra_prior_fingerprints:
             session.add(RemediationItemFingerprint(**extra))
 
         if include_current_endpoint:
-            session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=CURRENT_SCAN_ID))
-
-        if include_current_fingerprint:
-            session.add(
-                RemediationItemFingerprint(
-                    remediation_item_id=None,
-                    slug=SLUG,
-                    scan_run_id=CURRENT_SCAN_ID,
-                    finding_fingerprint=FINGERPRINT,
-                    host=HOST,
-                    port=PORT,
-                    finding_title="Plaintext HTTP service detected",
-                    state="not_observed",
-                    observed_at=now,
-                )
-            )
-
-        if include_items:
-            session.add(
-                RemediationItem(
-                    slug=SLUG,
-                    scan_run_id=PRIOR_SCAN_ID,
-                    title="Remove plaintext HTTP exposure",
-                    phase="NOW",
-                    priority=10,
-                    constituency="fingerprint",
-                    state="open",
-                    first_seen_scan_run_id=PRIOR_SCAN_ID,
-                    created_at=p_created,
-                )
-            )
+            session.add(_live_current_row(HOST, PORT, PROTOCOL, CURRENT_SCAN_ID))
 
         session.commit()
 
+    # D-07: rows come from the production writer (state "open"), never hand-seeded.
+    endpoints = [CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL)]
+    if include_prior_fingerprint:
+        persist_remediation_snapshot(db_path, PRIOR_SCAN_ID, endpoints, [dict(FINDING)])
+    if include_current_fingerprint:
+        persist_remediation_snapshot(db_path, CURRENT_SCAN_ID, endpoints, [dict(FINDING)])
+    else:
+        # The current scan's snapshot still runs when the finding is gone (the
+        # writer then writes only the not_observed governance items). Without it
+        # closure refuses with refused_missing_snapshot (229-REVIEW CR-02).
+        persist_remediation_snapshot(db_path, CURRENT_SCAN_ID, endpoints, [])
+    with get_session(db_path) as session:
+        if not include_items:
+            # The writer also writes the item; drop it where a test wants fingerprints only.
+            session.query(RemediationItem).filter(
+                RemediationItem.scan_run_id == PRIOR_SCAN_ID
+            ).delete()
+        if prior_fingerprint_state != "open":
+            session.query(RemediationItemFingerprint).filter(
+                RemediationItemFingerprint.scan_run_id == PRIOR_SCAN_ID,
+                RemediationItemFingerprint.finding_fingerprint == FINGERPRINT,
+            ).update({"state": prior_fingerprint_state})
+        session.commit()
+
     return db_path
+
+
+def _persist_clean_snapshot(db_path, scan_run_id):
+    """The production writer for a scan in which the finding is gone."""
+    persist_remediation_snapshot(
+        db_path, scan_run_id, [CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL)], []
+    )
 
 
 def _fp_row(session, *, scan_run_id=PRIOR_SCAN_ID, slug=SLUG, finding_fingerprint=FINGERPRINT):
@@ -322,6 +333,8 @@ def test_prior_scan_selection_does_not_use_trends_helper():
     source = Path("quirk/intelligence/closure.py").read_text(encoding="utf-8")
     assert not re.search(r"^\s*(from|import)\s+quirk\.dashboard", source, re.MULTILINE)
     assert "_list_session_timestamps(" not in source
+    assert "list_session_timestamps(" not in source  # D-23
+    assert "from quirk.intelligence.trends import list_session_timestamps" not in source
     assert "import quirk.dashboard" not in source
     assert "trends._list_session_timestamps" not in source
 
@@ -619,8 +632,9 @@ def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
     # Scan 2: rechecked, absent, healthy probe -> closes.
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan2))
         session.commit()
+    _persist_clean_snapshot(db_path, scan2)  # CR-02: the fixed scan's snapshot ran
     counters2 = compute_closure(db_path, scan2)
     assert counters2["closed"] == 1
 
@@ -651,8 +665,9 @@ def test_resurfaced_can_close_again_and_history_is_retained(tmp_path):
     # Scan 4: rechecked with a healthy probe, absent -> recloses.
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan4))
         session.commit()
+    _persist_clean_snapshot(db_path, scan4)  # CR-02: the fixed scan's snapshot ran
     counters4 = compute_closure(db_path, scan4)
     assert counters4["reclosed"] == 1
 
@@ -692,7 +707,9 @@ def test_scope_mismatch_cannot_produce_resurfaced(tmp_path):
     assert counters.get("resurfaced", 0) == 0
     with get_session(db_path) as session:
         current_row = _fp_row(session, scan_run_id=CURRENT_SCAN_ID)
-        assert current_row.state == "not_observed"
+        # D-02: a detected row is "open" whether or not scans are comparable;
+        # incomparability only refuses transitions, never downgrades.
+        assert current_row.state == "open"
         assert _events(session, event_type="resurfaced") == []
 
 
@@ -882,8 +899,9 @@ def test_resurfaced_event_survives_a_database_reopen(tmp_path):
 
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan2, created_at=now - timedelta(days=3))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan2))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan2))
         session.commit()
+    _persist_clean_snapshot(db_path, scan2)  # CR-02: the fixed scan's snapshot ran
     compute_closure(db_path, scan2)
 
     with get_session(db_path) as session:
@@ -906,8 +924,9 @@ def test_resurfaced_event_survives_a_database_reopen(tmp_path):
 
     with get_session(db_path) as session:
         _seed_signature(session, scan_run_id=scan4, created_at=now - timedelta(days=1))
-        session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=PROTOCOL, scan_run_id=scan4))
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, scan4))
         session.commit()
+    _persist_clean_snapshot(db_path, scan4)  # CR-02: the fixed scan's snapshot ran
     compute_closure(db_path, scan4)
 
     # Close every prior session and open a FRESH one — the durability claim is that
@@ -978,3 +997,279 @@ def test_no_transition_reads_the_event_table():
     assert _compute_closure_reads_closure_event_table(fixture_source), (
         "negative control fixture should have tripped the D-29 AST-walk guard"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 229 (FIND-11): closure recorded on the observing scan; protocol-set
+# clauses (c)/(d) with a live-row guard (D-03/D-05/D-20/D-21).
+# ---------------------------------------------------------------------------
+def _health(**families):
+    """Probe-health blob; each kwarg is family=status."""
+    return {
+        fam: {"status": status, "evidence_field": "x", "endpoints_seen": 1, "endpoints_with_evidence": 1}
+        for fam, status in families.items()
+    }
+
+
+def _scenario(tmp_path, *, prior_protocols=(), current_rows=(), health=None):
+    """Two comparable scans; prior/current CryptoEndpoint rows at HOST:PORT.
+
+    current_rows items are (protocol, service_detail, scan_error).
+    """
+    db_path = _seed_two_scans(
+        tmp_path,
+        include_current_endpoint=False,
+        current_probe_health=health if health is not None else {},
+    )
+    with get_session(db_path) as session:
+        for proto in prior_protocols:
+            session.add(CryptoEndpoint(host=HOST, port=PORT, protocol=proto, scan_run_id=PRIOR_SCAN_ID))
+        for proto, detail, err in current_rows:
+            session.add(
+                _live_current_row(
+                    HOST, PORT, proto,
+                    CURRENT_SCAN_ID, **({"service_detail": detail} if detail is not None else {}),
+                    scan_error=err,
+                )
+            )
+        session.commit()
+    return db_path
+
+
+def _counts(db_path):
+    with get_session(db_path) as session:
+        return (
+            session.query(RemediationItemFingerprint).count(),
+            session.query(RemediationItem).count(),
+            session.query(RemediationClosureEvent).count(),
+        )
+
+
+def _assert_not_closed(db_path, counters):
+    assert counters["closed"] == 0
+    with get_session(db_path) as session:
+        assert _fp_row(session).state != "closed"
+        assert _events(session, event_type="closed") == []
+        assert (
+            session.query(RemediationItemFingerprint)
+            .filter_by(scan_run_id=CURRENT_SCAN_ID, state="closed")
+            .count()
+            == 0
+        )
+
+
+def test_closure_is_recorded_on_the_current_scan(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(tmp_path, include_items=True)
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+
+    assert counters["closed"] == 1
+    with get_session(db_path) as session:
+        assert _fp_row(session).state == "closed"
+        cur = _fp_row(session, scan_run_id=CURRENT_SCAN_ID)
+        assert cur.state == "closed"
+        assert (cur.slug, cur.finding_fingerprint, cur.host, cur.port, cur.finding_title) == (
+            SLUG, FINGERPRINT, HOST, PORT, TITLE,
+        )
+        assert len(_events(session, event_type="closed")) == 1
+
+
+def test_current_item_inserted_closed_when_absent(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(tmp_path, include_items=True)
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+
+    assert counters["items_closed"] == 1
+    with get_session(db_path) as session:
+        assert session.query(RemediationItem).filter_by(slug=SLUG, scan_run_id=PRIOR_SCAN_ID).one().state == "closed"
+        cur = session.query(RemediationItem).filter_by(slug=SLUG, scan_run_id=CURRENT_SCAN_ID).one()
+        assert cur.state == "closed"
+
+
+def test_existing_current_item_is_never_flipped(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(tmp_path, include_items=True)
+    with get_session(db_path) as session:
+        session.add(
+            RemediationItem(
+                slug=SLUG, scan_run_id=CURRENT_SCAN_ID, title="Remove plaintext HTTP exposure",
+                phase="NOW", priority=10, constituency="fingerprint", state="open",
+                first_seen_scan_run_id=PRIOR_SCAN_ID, created_at=datetime.now(timezone.utc),
+            )
+        )
+        session.commit()
+    compute_closure(db_path, CURRENT_SCAN_ID)
+    with get_session(db_path) as session:
+        assert session.query(RemediationItem).filter_by(slug=SLUG, scan_run_id=CURRENT_SCAN_ID).one().state == "open"
+
+
+def test_closure_rerun_writes_no_new_rows_or_events(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(tmp_path, include_items=True)
+    compute_closure(db_path, CURRENT_SCAN_ID)
+    before = _counts(db_path)
+    compute_closure(db_path, CURRENT_SCAN_ID)
+    assert _counts(db_path) == before
+
+
+def test_next_scan_treats_inserted_closed_rows_as_unchanged(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _seed_two_scans(tmp_path, include_items=True)
+    compute_closure(db_path, CURRENT_SCAN_ID)
+    third = "scan-third-0003"
+    with get_session(db_path) as session:
+        _seed_signature(session, scan_run_id=third, created_at=datetime.now(timezone.utc) + timedelta(days=1), digest="digest-a", target_set_digest="tsd-a")
+        session.add(_live_current_row(HOST, PORT, PROTOCOL, third))
+        session.commit()
+    before = _counts(db_path)
+    counters = compute_closure(db_path, third)
+    assert counters["closed"] == 0 and counters["reclosed"] == 0
+    assert _counts(db_path) == before
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        [("CLOSED", "TIMEOUT", None)],
+        [("ADVISORY", None, None)],
+        [("TLS", None, "connection timed out")],
+    ],
+    ids=["closed-timeout", "advisory-only", "scan-error"],
+)
+def test_non_live_current_rows_never_close(tmp_path, rows):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(tmp_path, current_rows=rows, health=_health(tls="healthy", http="healthy"))
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["refused_probe"] == 1
+    _assert_not_closed(db_path, counters)
+
+
+def test_prior_http_family_decides_when_current_is_tls(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(
+        tmp_path, prior_protocols=["HTTP"], current_rows=[("TLS", None, None)],
+        health=_health(http="healthy", tls="not_run"),
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["closed"] == 1
+
+
+def test_all_families_must_be_rechecked(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(
+        tmp_path, prior_protocols=["HTTP"], current_rows=[("HTTP", None, None), ("SAML", None, None)],
+        health=_health(http="healthy", saml="not_run"),
+    )
+    # Prior is HTTP only, so the prior-family rule closes on http alone.
+    assert compute_closure(db_path, CURRENT_SCAN_ID)["closed"] == 1
+
+    # No prior rows: the fallback uses ALL live current protocols; saml not_run refuses.
+    db_path = _scenario(
+        tmp_path / "fb", current_rows=[("HTTP", None, None), ("SAML", None, None)],
+        health=_health(http="healthy", saml="not_run"),
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["refused_probe"] == 1
+    _assert_not_closed(db_path, counters)
+
+    # Prior HTTP+SAML with saml not_run is also refused.
+    db_path = _scenario(
+        tmp_path / "pr", prior_protocols=["HTTP", "SAML"], current_rows=[("HTTP", None, None)],
+        health=_health(http="healthy", saml="not_run"),
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["refused_probe"] == 1
+    _assert_not_closed(db_path, counters)
+
+
+def test_http_no_targets_is_a_recheck_only_with_a_live_row(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(
+        tmp_path, prior_protocols=["HTTP"], current_rows=[("TLS", None, None)],
+        health=_health(http="no_targets"),
+    )
+    assert compute_closure(db_path, CURRENT_SCAN_ID)["closed"] == 1
+
+
+@pytest.mark.parametrize(
+    "prior,current,health",
+    [
+        (["HTTP", "REST_FUZZ"], [("TLS", None, None)], _health(http="healthy", tls="healthy")),
+        (["TLS", "OPENAPI"], [("TLS", None, None)], _health(tls="healthy")),
+        ([], [("TLS", None, None), ("REST_FUZZ", None, None)], _health(tls="healthy")),
+    ],
+    ids=["prior-http-restfuzz", "prior-tls-openapi", "fallback-tls-restfuzz"],
+)
+def test_unmapped_protocol_refuses(tmp_path, prior, current, health):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(tmp_path, prior_protocols=prior, current_rows=current, health=health)
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["refused_probe"] == 1
+    _assert_not_closed(db_path, counters)
+
+
+@pytest.mark.parametrize("prior", [[None], [None, "HTTP"], [""]], ids=["null", "null-and-http", "empty"])
+def test_null_prior_protocol_refuses_not_dropped(tmp_path, prior):
+    """229-REVIEW WR-05: a prior row whose protocol was never classified is
+    unmapped. It must refuse, not be dropped so the current TLS row's healthy
+    family decides (the pre-D-05 behaviour)."""
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(
+        tmp_path, prior_protocols=prior, current_rows=[("TLS", None, None)],
+        health=_health(http="healthy", tls="healthy"),
+    )
+    counters = compute_closure(db_path, CURRENT_SCAN_ID)
+    assert counters["refused_probe"] == 1
+    _assert_not_closed(db_path, counters)
+
+
+def test_advisory_prior_row_is_ignored_not_unmapped(tmp_path):
+    from quirk.intelligence.closure import compute_closure
+
+    db_path = _scenario(
+        tmp_path, prior_protocols=["HTTP", "ADVISORY"], current_rows=[("TLS", None, None)],
+        health=_health(http="healthy"),
+    )
+    assert compute_closure(db_path, CURRENT_SCAN_ID)["closed"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Plan 229-12: per-host:port recheck helper and fingerprint pin
+# ---------------------------------------------------------------------------
+def test_fingerprint_reclass_protocols_pinned_to_fingerprint_source():
+    """T-229-12-03: ``_FINGERPRINT_RECLASS_PROTOCOLS`` is re-derived from
+    quirk/scanner/fingerprint.py at run time, never trusted as a hand-written list.
+    ``fingerprint_service`` emits SSH/TLS/HTTP/UNKNOWN for an open port; the
+    reclassification set is that minus HTTP (the finding's own family) and UNKNOWN
+    (unclassified)."""
+    from quirk.intelligence import closure
+
+    src = Path(inspect.getsourcefile(__import__("quirk.scanner.fingerprint", fromlist=["x"]))).read_text(
+        encoding="utf-8")
+    emitted = set(re.findall(r'Fingerprint\(\s*True\s*,\s*"([A-Z_]+)"', src))
+    assert emitted and "HTTP" in emitted, emitted
+    assert emitted - {"HTTP", "UNKNOWN"} == set(closure._FINGERPRINT_RECLASS_PROTOCOLS)
+
+
+def test_host_port_rechecked_pure_cases():
+    """T-229-12-04 (W4): the pure per-host decision. An empty family set is never
+    vacuously 'all rechecked'."""
+    from quirk.intelligence.closure import _host_port_rechecked
+
+    healthy = {f: {"status": "healthy"} for f in ("http", "tls", "ssh", "saml", "jwt")}
+    assert _host_port_rechecked(set(), set(), {"http", "tls", "saml"}, {"HTTP", "TLS", "SAML"}, healthy) is False
+    assert _host_port_rechecked({"saml"}, set(), {"saml"}, {"SAML"}, healthy) is True
+    assert _host_port_rechecked({"http", "saml"}, set(), {"saml"}, {"SAML"}, healthy) is False
+    assert _host_port_rechecked({"http"}, {"http"}, {"tls"}, {"TLS"}, healthy) is True
+    assert _host_port_rechecked({"http"}, {"http", "tls"}, {"tls"}, {"TLS"}, healthy) is False

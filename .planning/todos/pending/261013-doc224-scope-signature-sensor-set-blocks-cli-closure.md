@@ -6,6 +6,7 @@ priority: low
 area: quirk/intelligence/scope_signature.py (sensor_set derivation and digest fields)
 status: pending
 resolves_phase: null
+owner: "999.133"
 ---
 
 # Enrolling or removing a sensor blocks closure between two CLI scans

@@ -6,6 +6,7 @@ priority: low
 area: quirk/dashboard/api/routes/reports.py (module docstring D-02/D-06), docs/operators-guide.md (report endpoints)
 status: pending
 resolves_phase: null
+owner: "999.121"
 ---
 
 # The "nothing on disk associates scan_run_id with the report stamp" premise is false

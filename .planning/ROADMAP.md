@@ -42,6 +42,7 @@
 - ✅ **v5.25 Score Truth & Release Cut** — Phases 210–214, 40 plans (**SHIPPED 2026-09-28 — tag `v5.25.0`, published to PyPI**, the first tagged release since `v5.21.0` and carrying four milestones of work; audit `tech_debt`, 15/15 requirements with 2 scope-qualified, integration 6/6 seams, Nyquist 5/5) → `.planning/milestones/v5.25-ROADMAP.md`
 - ✅ **v5.26 Accessibility & Instrument Truth** — Phases 215–221 (221 a gap-closure insert), 44 plans (development complete 2026-10-02; untagged; re-audit `tech_debt`, 15/15 requirements, integration 9/10 seams + 0 broken, Nyquist 7/7; merged to main via 11 PRs, #38–#50) → `.planning/milestones/v5.26-ROADMAP.md`
 - ✅ **v5.27 Launch Readiness** — Phases 222–226 incl. the inserts 222.1 and 225.1, 75 plans (**SHIPPED 2026-10-15 — tag `v5.27.0`, published to PyPI + GitHub Releases**, carrying the untagged v5.26 work; audit `tech_debt`, 20/20 requirements with DOC-04 accepted as scoped, integration 13/15, flows 3/3, Nyquist 7/7; launch gate satisfied; merged to main via PRs #46, #52–#61) → `.planning/milestones/v5.27-ROADMAP.md`
+- 🚧 **v5.28 Score & Finding Truth** — Phases 227–234 (in progress)
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -97,6 +98,269 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
 is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
+## Current Milestone: v5.28 Score & Finding Truth (Phases 227–234)
+
+**Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
+The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
+scoring surfaces work.
+Requirements: `.planning/REQUIREMENTS.md` (29, incl. LAUNCH-01..05 added 2026-10-16 and SCORE-10 added 2026-10-25: SCORE-08..10, XSURF-05..08, FIND-11..13,
+DETECT-01..05, QRAMM-17..20, POLISH-01..04, OWN-01).
+
+**Sequencing.** OWN-01 opens the milestone (Phase 227) because it is small and independent, and
+landing the todo -> owner gate first means every todo closed by a later phase is policed by it. Every
+phase that moves a score (XSURF in 228, the merge/closure fixes in 229, the `alg: none` score
+treatment in 230) lands BEFORE the P2b work, so the re-measured calibration ladder reflects the final
+model. P2b is split across two phases of its own and shares neither with unrelated work: Phase 233
+builds and records the third measurement instrument (SCORE-08) and the pre-change ladder, and no fix
+shape is chosen until it closes; Phase 234 applies the fix chosen by that measurement (SCORE-09) and
+re-measures all five rungs. **Release & launch gate (added 2026-10-16, operator):** Phase 235 cuts
+`v5.28.0` and gates the public social-media announcement. It runs only after Phase 234, so 212 §8's
+rule (a tag must not freeze an unmeasured number) still holds: the ladder is re-measured before the
+tag. Phases 228–232 have no hard ordering among themselves beyond the dependencies stated below.
+
+### Phases
+
+- [x] **Phase 227: Todo Ownership Gate** - Every pending `doc224` todo names a live owner or is closed with evidence, and the todo -> owner gate fails on an ownerless one
+- [x] **Phase 228: Cross-Surface Score Parity** - The dashboard and the report compute the same headline score, ceilings and subscores for the same scan
+- [x] **Phase 229: Finding & State Correctness** - Closure states, drift notifications and sensor merge reflect what each scan actually observed
+- [x] **Phase 230: Findings That Fire** - Code-signing EKU, Kerberos etype, JWKS auth, `--auth-basic` and `alg: none` detection work in real scans
+- [x] **Phase 231: QRAMM Scoring Surfaces** - The compliance map refreshes, unanswered dimensions read "Not assessed", self-assessed dimensions follow the operator's decision, and the CLI help works
+- [x] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
+- [x] **Phase 233: P2b Measurement Instrument** - A third, independent instrument measures scan-depth dilution on the calibration ladder and its result is recorded before any fix is chosen
+- [x] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
+- [ ] **Phase 235: Release & Launch Gate** - `v5.28.0` is on PyPI, a clean install works end to end as the README says, and the operator signs a go/no-go for the public announcement
+
+### Phase Details
+
+### Phase 227: Todo Ownership Gate
+**Goal**: No pending `doc224` todo is invisible to the gates: each one names a live owner (a v5.28 requirement or a HORIZON backlog row) or is closed with evidence, and a new ownerless one turns CI red.
+**Depends on**: Nothing (first phase of v5.28; independent of the scoring work)
+**Requirements**: OWN-01
+**Success Criteria** (what must be TRUE):
+  1. Counting from disk (not from `audit-open`, which caps its todo count), every pending `doc224` todo under `.planning/todos/pending/` carries an owner field that resolves to a live v5.28 requirement ID or an open HORIZON backlog row; any todo without one has been moved to `todos/completed/` with the closing evidence cited.
+  2. The four out-of-scope high-priority todos (Azure Key Vault keys, Semgrep `p/cryptography` 404, CMVP-refresh error hints, Windows `install.ps1` sensor identity) each name a HORIZON backlog owner.
+  3. `tests/test_backlog_reconciliation_gate.py` fails when a fixture `doc224` todo with no owner field is added, and passes on the real pending pool.
+  4. Each todo named by a v5.28 requirement points at that requirement as its owner, so the phase that closes it is checkable by the gate.
+**Plans**: 9 plans (4 waves)
+
+Plans:
+- [x] 227-01-PLAN.md — Live recount + D-13 closure triage; HORIZON rows 999.126-999.137, 999.119/121/125 edits, rationale-log row (wave 1)
+- [x] 227-02-PLAN.md — Owners for the 13 requirement-named todos + 999.119/999.121 members; reused IDEA.md updates (wave 2)
+- [x] 227-03-PLAN.md — Owners + IDEA.md for 999.126/999.127/999.128 (3 of the SC#2 highs) (wave 2)
+- [x] 227-04-PLAN.md — Owner + IDEA.md for 999.129; D-02 frontmatter for 6 bare todos (wave 2)
+- [x] 227-05-PLAN.md — Owners + IDEA.md for 999.130/999.131 (wave 2)
+- [x] 227-06-PLAN.md — Owners + IDEA.md for 999.132/999.133/999.134 (wave 2)
+- [x] 227-07-PLAN.md — Owners + IDEA.md for 999.135/999.136/999.137 (wave 2)
+- [x] 227-08-PLAN.md — doc224 live-owner gate leg, fixture matrix, D-17 comment rewrite, mutation probes (wave 3)
+- [x] 227-09-PLAN.md — UAT Series 227 + worklist regen, STATE obligation note, VALIDATION flip, Obsidian note + UAT vault sync (wave 4)
+
+### Phase 228: Cross-Surface Score Parity
+**Goal**: For the same scan, the dashboard and the CLI/HTML report show the same headline score, the same consequence ceilings and the same subscores, on every score surface (headline, trend, multi-sensor merge, per-segment).
+**Depends on**: Nothing hard (lands before Phase 233 so the P2b ladder is measured on the parity-fixed model)
+**Requirements**: XSURF-05, XSURF-06, XSURF-07, XSURF-08
+**Success Criteria** (what must be TRUE):
+  1. A scan containing a certificate expiring within 30 days shows that finding at the same severity on the dashboard and in the report, and the headline score is identical on both surfaces.
+  2. A scan with certificate/TLS findings on S/MIME, AD CS, Vault or database rows shows the same headline score, ceiling and lift badges on the dashboard as in the report.
+  3. A scan run that triggers a CRITICAL or HIGH consequence ceiling shows the ceiling-applied score in the trend timeline, the multi-sensor merge score and each per-segment score, matching the headline.
+  4. On a default scan where mail ports refuse the connection, those ports are not counted as plaintext and the Data in Motion subscore is not lowered by them.
+  5. Each closed todo (`261013-doc224-cert-expiry-severity-diverges-dashboard-vs-report`, `-dashboard-only-findings-diverge-headline-and-lifts`, `-trend-and-merge-scores-skip-consequence-ceilings`, `-email-refused-ports-counted-as-plaintext`) is in `todos/completed/` citing its closing commit.
+**Plans**: 10 plans (6 waves)
+
+Plans:
+- [x] 228-01-PLAN.md — Engine: shared TLS-check predicate + report finding composer; run_scan.py uses it (D-05, D-25) (wave 1)
+- [x] 228-02-PLAN.md — Evidence: refused/timed-out mail ports skipped like CLOSED rows (XSURF-08, D-13/D-14/D-21) (wave 1)
+- [x] 228-03-PLAN.md — Dashboard: near-expiry MEDIUM, TLS-only cert checks, one scoring-findings helper incl. /compare (D-01/D-05/D-08/D-20/D-23) (wave 2)
+- [x] 228-05-PLAN.md — Trends + merge shared modules take a findings deriver; CLI merge and Slack band apply ceilings (D-09/D-10/D-11) (wave 2)
+- [x] 228-04-PLAN.md — Severity-divergence AST gate + filed divergence todos, 999.132 body fix, sensor-merge fold (D-03/D-04/D-07/D-22) (wave 3)
+- [x] 228-06-PLAN.md — Dashboard trend/timeline/merge/auto-merge routes derive findings; findings-less gate rewrite (D-08/D-12/D-26) (wave 3)
+- [x] 228-07-PLAN.md — Pinned API-level parity tests: no-CRITICAL scan, trend/merge/segment/compare (D-16/D-28) (wave 4)
+- [x] 228-08-PLAN.md — Docs, master-guide regen, chaos-lab, changelog fragment, vault sync (D-18/D-24/D-27) (wave 5)
+- [x] 228-09-PLAN.md — Operator visual check on a scratch-DB dashboard (checkpoint) (wave 5)
+- [x] 228-10-PLAN.md — UAT Series 228, D-19 todo closures with requirement flips, STATE, Obsidian (wave 6)
+**UI hint**: yes
+
+### Phase 229: Finding & State Correctness
+**Goal**: Remediation state, drift notifications and merged sensor data reflect what each scan actually observed, so a consultant can trust "open", "closed" and "changed since last scan".
+**Depends on**: Phase 228 (FIND-13 and XSURF-07 both touch the multi-sensor merge score path; merge correctness lands on the ceiling-applied merge)
+**Requirements**: FIND-11, FIND-12, FIND-13
+**Success Criteria** (what must be TRUE):
+  1. A finding detected in a scan is stored as `open` (and read back as `open`, not `not_observed`); when a later scan observes it closed, the closure is recorded on that later scan run, not the prior one; and a plaintext-HTTP finding can reach a closed state.
+  2. With three or more scan runs in the database, the drift notification compares the two newest distinct scan runs and never compares a scan run with itself.
+  3. After two sensors each push a multi-endpoint scan, `quirk sensor merge` and `GET /api/merge/latest` both return every endpoint from each sensor's latest push, not one row per sensor.
+  4. The three owning todos (`261013-doc224-closure-states-...`, `-notifier-session-key-ignores-scan-run-id`, `-sensor-merge-keeps-one-endpoint-per-sensor`) are closed with their commits cited.
+**Plans**: 11 plans (7 waves)
+
+Plans:
+- [x] 229-01-PLAN.md — Writer: detected remediation rows written `open`, counter-only items stay `not_observed` (D-01/D-02/D-23) (wave 1)
+- [x] 229-02-PLAN.md — `http` probe family, opt-in `no_targets` recheck, cached fingerprint is not a recheck (D-05/D-21/D-22) (wave 1)
+- [x] 229-05-PLAN.md — Shared `list_session_timestamps`; notifier and trend timeline key sessions by scan run (FIND-12, D-08..D-11/D-25) (wave 1)
+- [x] 229-06-PLAN.md — `crypto_endpoints.push_payload_id` additive column, stamped at ingest (FIND-13, D-12/D-19) (wave 1)
+- [x] 229-03-PLAN.md — Closure: protocol-set live-row guard, prior-protocol families, closed rows on the observing scan (D-03/D-05/D-20/D-07) (wave 2)
+- [x] 229-07-PLAN.md — Merge union keeps every endpoint of each sensor's latest push; CLI + API proof (FIND-13, D-13/D-14/D-15) (wave 2)
+- [x] 229-04-PLAN.md — End-to-end closure state model on production writers: HTTP fast, TLS deep/fast, guardrail negatives (D-06/D-07) (wave 3)
+- [x] 229-08-PLAN.md — D-24 deferrals with live owners (new HORIZON row), notifications/trends docs, changelog fragment (wave 4)
+- [x] 229-09-PLAN.md — Operators guide §8.4/§15-§16, report-interpretation §16, master guide, vault sync (D-16) (wave 5)
+- [x] 229-10-PLAN.md — UAT Series 229 and D-17 todo closures with requirement flips (wave 6)
+- [x] 229-11-PLAN.md — Full suite vs main (failing-node sets), VALIDATION finalisation, Obsidian phase note (wave 7)
+- [x] 229-12-PLAN.md — Gap closure (229-VERIFICATION gap 1): per-host:port recheck rule, a co-resident live row never closes a failed/absent finding probe; fail-first regressions, §16 docs, UAT-229-02/03 (FIND-11, D-20/D-05) (gap wave 1)
+
+### Phase 230: Findings That Fire
+**Goal**: Detection paths that exist in the code but never fire in a real scan now produce their findings, each proven by a test that exercises the real capture or the real wire rather than an injected fixture.
+**Depends on**: Nothing hard (lands before Phase 233 because DETECT-05's score treatment changes the model the ladder is measured on)
+**Requirements**: DETECT-01, DETECT-02, DETECT-03, DETECT-04, DETECT-05
+**Success Criteria** (what must be TRUE):
+  1. A real scan with `--inventory-code-signing` against an endpoint serving a code-signing-EKU certificate reports it from the TLS phase's own capture, and the proving test runs the real TLS capture path.
+  2. Kerberos etype enumeration returns the KDC's etypes against a KDC that requires pre-authentication, using the pinned impacket version, rather than reading pre-auth-required as no pre-auth.
+  3. A wire-level test shows the JWKS target receives the `--auth-*` credential headers, while the scan log shows them redacted; `--auth-basic user:pass` sends `Authorization: Basic <base64(user:pass)>`, and its `--help` text and the `docs/configuration.md` row describe the same form.
+  4. A scan that encounters a bearer token declaring `alg: none` produces a CRITICAL finding, and the phase records how that finding is treated by the score.
+  5. The owning todos (`261013-doc224-codesign-tls-eku-path-dead-in-real-scans`, `-kerberos-preauth-required-read-as-no-preauth`) and `999.125` items 1-3 are closed or updated with their closing commits.
+**Plans**: 8 plans (7 waves; 230-08 is gap closure)
+
+Plans:
+- [x] 230-01-PLAN.md — DETECT-01: leaf EKU at both TLS parse sites into a persisted `cert_eku_oids` column; real loopback-TLS proof (D-01..D-04/D-02a) (wave 1)
+- [x] 230-03-PLAN.md — DETECT-03/04: JWKS credentials reach the wire with log-boundary redaction; RFC 7617 `--auth-basic` (D-09..D-13) (wave 1)
+- [x] 230-04-PLAN.md — DETECT-05: `alg: none` / missing-alg bearer token is an ordinary CRITICAL (D-14..D-17/D-15a/D-16a) (wave 2)
+- [x] 230-02-PLAN.md — DETECT-02: returned KRB_ERROR 25 decoded; configurable probe principal (default Administrator); honest code-6 row; live Samba AD DC re-measure (D-05..D-08a/D-24..D-27) (wave 3)
+- [x] 230-05-PLAN.md — Docs, doc-claim ledger, master guide, chaos-lab oracle from the live re-measure, vault (D-18/D-18a/D-28) (wave 4)
+- [x] 230-06-PLAN.md — UAT Series 230, requirement flips with todo closures, new owned todos (D-19/D-20) (wave 5)
+- [x] 230-07-PLAN.md — Full-suite baseline compare, VALIDATION sign-off, Obsidian phase note (D-22/D-23) (wave 6)
+- [x] 230-08-PLAN.md — Gap closure, criterion 2: the UDP fallback shares the TCP classifier, so `kerberos-no-preauth` comes only from a matching AS-REP; getaddrinfo-family connected UDP socket; live re-measure 0/65 (D-29..D-31) (wave 7)
+
+### Phase 231: QRAMM Scoring Surfaces
+**Goal**: QRAMM's scoring surfaces show what was actually assessed: the compliance map updates after scoring, unanswered dimensions are not scored as level 1, self-assessed dimensions are treated the way the operator decides, and the QRAMM-adjacent CLI commands behave like CLI commands.
+**Depends on**: Nothing (independent of the readiness-score work). QRAMM-19's treatment of SGRM/DPE/ITR is an operator decision taken in this phase's discuss step, before planning.
+**Requirements**: QRAMM-17, QRAMM-18, QRAMM-19, QRAMM-20
+**Success Criteria** (what must be TRUE):
+  1. After a successful Calculate Score, the compliance map tab shows the new rows without a page reload or remount, and the existing no-refetch-loop test stays green.
+  2. A dimension with no answers shows "Not assessed" on the QRAMM scorecard and is not counted as level 1 in the Maturity Distribution.
+  3. Manually assessed SGRM, DPE and ITR rows are shown or excluded on the compliance map exactly as the operator decided in the discuss step, and the same treatment appears on every surface that reads those rows, including the print/PDF QRAMM page.
+  4. `quirk qramm --help`, `quirk doctor --help` and `quirk cve --help` each print their own usage and exit 0 without running anything; an unknown action exits non-zero with an error; and `cve status --format` appears in the help.
+  5. Todo `261002` (Causes A and B plus the scorecard flaw) and `261012-doc224-doctor-qramm-cve-do-not-implement-help` are closed with commits cited.
+**Plans**: 10 plans (6 waves)
+**UI hint**: yes
+
+Plans:
+- [x] 231-01-PLAN.md — QRAMM-19: per-session assessed state; endpoint emits `self-assessed` at full weight, zero-answer dimensions `pending`/null (D-01..D-04, D-02a); shared contract fixture + pytest parity half; print data from `GET /sessions/{id}` server half (D-20) (wave 1)
+- [x] 231-02-PLAN.md — QRAMM-20: argparse for `doctor`/`qramm`/`cve`; `--help` runs nothing, unknown action exits 2, `cve status --format {text,json}` (D-11, D-12, D-12a) (wave 1)
+- [x] 231-03-PLAN.md — QRAMM-18/19: `lib/qramm-assessment.ts` shared labels, predicate and coverage sentence; `coverage_status` on the row type (D-05, D-07, D-07a, D-09) (wave 1)
+- [x] 231-04-PLAN.md — QRAMM-18: scorecard "Not assessed", excluded from Maturity Distribution, "—" scores; existing cases re-fixtured, assertions kept (D-07, D-08, D-21a) (wave 2)
+- [x] 231-05-PLAN.md — QRAMM-17/19: compliance map refetch via `reloadKey` + sr-only status; Assessment column, three-tier legend, shared sentence (D-10, D-05, D-06a, D-21c) (wave 2)
+- [x] 231-06-PLAN.md — QRAMM-19: print hook reads `GET /sessions/{id}` through the real hook; print Assessment column, per-framework counts, chips (D-20, D-06a, D-21a/b) (wave 2)
+- [x] 231-07-PLAN.md — Cross-surface parity vitest; single bundle rebuild; live print/PDF check on a scratch DB (D-09, D-15, D-20) (wave 3)
+- [x] 231-08-PLAN.md — Docs: operators-guide §21 + new §22 QRAMM tabs, report-interpretation §9; ledger rows enumerated from source and re-verified; master guide, vault (D-13, D-18) (wave 4)
+- [x] 231-09-PLAN.md — UAT Series 231; requirement flips with todo closures; owner-gate liveness kept non-vacuous (D-18, D-19) (wave 5)
+- [x] 231-10-PLAN.md — Full-suite baseline compare, Python 3.11 run, dashboard gates, VALIDATION sign-off, Obsidian phase note (D-16) (wave 6)
+
+### Phase 232: Post-Launch Visible Fixes
+**Goal**: The small defects a public user sees first are gone: the dashboard's own font loads, install hints work when pasted into zsh, the report header carries the current brand, and the README works on PyPI.
+**Depends on**: Nothing (independent)
+**Requirements**: POLISH-01, POLISH-02, POLISH-03, POLISH-04
+**Success Criteria** (what must be TRUE):
+  1. With `quirk serve` running, `GET /fonts/JetBrainsMono[wght].ttf` returns the font file with a font content type (not `index.html`), the dashboard renders in JetBrains Mono, and a test probes the route.
+  2. Every runtime `quirk-scanner[extra]` install hint printed by the tool runs unchanged when pasted into zsh, and the guard test fails on an unquoted hint of any form, not only bare `quirk[`.
+  3. A generated HTML and PDF report header shows the wordmark as specified in `BRAND-GUIDELINES.md`, with no old electric-blue `QU.I.R.K.` wordmark.
+  4. Every link in `README.md` resolves (HTTP 200) when followed from the PyPI project page rendering.
+  5. Todos `261015-install-hints-unquoted-and-guard-scope`, `261003-brand-identity-non-dashboard-residue` (report-header leg) and `261014-readme-relative-links-dont-resolve-on-pypi` are closed or updated with commits cited, and audit item W15 is recorded as fixed.
+**Plans**: 6 plans (4 waves)
+**UI hint**: yes
+
+Plans:
+- [x] 232-01-PLAN.md — POLISH-01: `/fonts` StaticFiles mount before the SPA catch-all + `mimetypes.add_type("font/ttf", ".ttf")`; red-first route test reading URLs from the built CSS; mutations; python:3.11-slim leg (D-01..D-03) (wave 1)
+- [x] 232-02-PLAN.md — POLISH-02: 3.10-safe pyproject version helper; every printed hint a full `pip install 'quirk-scanner[<extra>]'` (AST node over `git ls-files`); widened unquoted-hint guard with tracked-set floors; config_template wrong-name hints; mutations M1-M7 (D-04..D-06) (wave 1)
+- [x] 232-03-PLAN.md — POLISH-03: report header Paper SVG logo `<img>`, `.wordmark` rule removed, no fallback text; header + PDF nodes; report-interpretation; cover-title reading recorded (D-07..D-10) (wave 1)
+- [x] 232-04-PLAN.md — POLISH-04: README links tag-pinned blob/tree URLs; parser-based git-object gate + markdown-it differential; ledger re-anchored in the same commit (D-11..D-13) (wave 2, after 02)
+- [x] 232-05-PLAN.md — Records: UAT Series 232, coverage-gaps regen, vault sync, todos 261015/261014 completed + 261003 re-pointed, follow-up todos, W15 recorded fixed, POLISH flips with their todos (D-14, D-15) (wave 3)
+- [x] 232-06-PLAN.md — Proof: full-suite failing-set compare, 3.11 clone-based leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` observation at HEAD (D-16, CITRUTH-03) (wave 4)
+
+### Phase 233: P2b Measurement Instrument
+**Goal**: Scan-depth dilution is measured, on the five-rung calibration ladder, by a third instrument independent of the two Phase 212 used, and that measurement (plus the pre-change ladder values) is recorded before any P2b fix shape is chosen. This is a spike: its effort and the fix it points to are decided by its result.
+**Depends on**: Phases 228, 229 and 230 (every score-moving change in the milestone lands first, so the instrument measures the final model)
+**Requirements**: SCORE-08
+**Success Criteria** (what must be TRUE):
+  1. A recorded instrument exists that measures how much the readiness score moves on each calibration-ladder rung when only healthy endpoints are added, and its method is documented as independent of both Phase 212 instruments.
+  2. The instrument's per-rung results and the current (pre-change) score for all five rungs are written into the phase record, with the commit they were measured at.
+  3. The phase record names the fix shape the measurement supports (or states that none of the candidates is supported) and the effort that follows from it, and no scoring code is changed in this phase.
+  4. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` is still `xfail(strict=True)` at phase close.
+**Plans**: 6 plans (6 waves)
+
+Plans:
+- [x] 233-01-PLAN.md — SCORE-08: fail-first `tests/test_p2b_instrument.py` pinning the instrument contract (rows reproduce the ladder, closed-form agreement + per-term probes on E=C and E≠C bases, independence incl. subprocess `sys.modules` leg, 212 continuity 71/74, ceiling identity, healthy rows, CLI, read-only snapshot) (D-02, D-03, D-05, D-10) (wave 1)
+- [x] 233-02-PLAN.md — SCORE-08: `scripts/p2b_closed_form.py`, stdlib-only closed-form score model with the ceiling squeeze; mutations (D-03, D-12) (wave 2)
+- [x] 233-03-PLAN.md — SCORE-08: `scripts/p2b_instrument.py` row-level sweep through `build_evidence_summary`, ECDSA/RSA/certless healthy rows + 212 mutator, emitted/computed/ceiling per point, JSON/Markdown, read-only real-estate mode (D-01, D-04..D-09, D-18) (wave 3)
+- [x] 233-04-PLAN.md — SCORE-08: run at a recorded sha; decision record `.planning/decisions/233-p2b-third-instrument-measurement.md` with per-rung tables, closed-form diff and its provenance limits, fix-shape verdict + effort; report-interpretation pointer + ledger gate (D-11..D-13, D-15, D-19, D-20) (wave 4)
+- [x] 233-05-PLAN.md — UAT Series 233, coverage-gaps regen, vault sync, SCORE-08 flipped by hand; criteria 3/4 re-checked (D-14, D-17) (wave 5)
+- [x] 233-06-PLAN.md — Proof: full-suite failing-set compare, 3.11 clone leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` at HEAD (D-14, CITRUTH-03) (wave 6)
+
+### Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement
+**Goal**: The readiness score no longer rewards scan depth: adding healthy endpoints to an observation does not raise it, and the whole calibration ladder is re-measured on the changed model so every rung's new value is known and agreed across surfaces.
+**Depends on**: Phase 233 (the fix shape is the one Phase 233's measurement supports)
+**Requirements**: SCORE-09, SCORE-10
+**Success Criteria** (what must be TRUE):
+  1. `test_p2b_score_does_not_improve_by_observing_more_healthy_endpoints` passes without `xfail`, and its `known_open_defect` row in `tests/skip_registry.py` is removed.
+  2. All five calibration-ladder rungs are re-measured after the change and recorded beside their Phase 233 pre-change values.
+  3. For the same scan, the CLI report and the dashboard show the same new readiness score.
+  4. Re-running the Phase 233 instrument on the changed model shows no score increase from adding only healthy endpoints, and `999.120` is closed with the commit cited.
+  5. (SCORE-10, added 2026-10-25) The overall QRAMM score no longer counts a "Not assessed" dimension as 0, and the CLI, dashboard and print/PDF surfaces show the same overall for the same session. A dimension score saved before newer answers is never shown labelled "Self-assessed" or counted as a maturity level (Phase 231 R1 WR-01, todo `261025-qramm-stale-score-labelled-self-assessed`). This is a separate QRAMM-model change, not part of the P2b fix.
+**Plans**: 9 plans (9 sequential waves)
+
+Plans:
+- [x] 234-01-PLAN.md — SCORE-09: confirm the 233 baseline; 4.0 closed form spec-first from CONTEXT (D-06); gate nodes non-increase / non-vacuity / scan-error / flat continuity red first (D-07, D-03, D-08, D-22) (wave 1)
+- [x] 234-02-PLAN.md — SCORE-10 backend: overall over assessed dims, null when none (D-14); stale detection via persisted answered counts (D-15); legacy scores read recalculate/stale (D-25); contract cases red first (wave 2)
+- [x] 234-03-PLAN.md — SCORE-09: ONE scoring 4.0 commit — count curve N_REF=40 (D-01..D-03), classical-key −8 + PQC credit once (D-04, O-2), PQC cert-key bucket (O-4), Kerberos placeholder (D-11), version 4.0; un-xfail P2b + registry row; O-6 domain-step pin; D-26 rename (wave 3)
+- [x] 234-04-PLAN.md — SCORE-10 dashboard: scorecard overall + "N of 4 assessed" (D-23), stale / recalculate on scorecard, compliance map, print; vitest parity; bundle rebuild (wave 4)
+- [x] 234-05-PLAN.md — SCORE-09: roadmap item + lift retargeted to PQC/hybrid (O-4); re-pins and semantic rewrites classified (D-10); agility test renamed (D-26); close 999.113 (D-12) (wave 5)
+- [x] 234-06-PLAN.md — SCORE-09: re-measure all rungs and readings beside 233; real-estate reading (snapshot); live CLI-vs-dashboard check (D-13); decision record (D-16) (wave 6)
+- [x] 234-07-PLAN.md — Docs: report-interpretation, operators-guide, master guide, lab oracles, changelog fragment; ledger re-anchors; vault sync (D-17, D-25 disclosure, O-3 lenience) (wave 7)
+- [x] 234-08-PLAN.md — UAT Series 234 + re-dispositions; coverage-gaps regen; SCORE-10 / SCORE-09 flips with their todos; 999.120 closed, successor 999.139 + follow-up todos (D-18, O-6, D-19..D-21) (wave 8)
+- [x] 234-09-PLAN.md — Proof: full suite (Docker masked, D-24), vitest + bundle, 3.11 leg, VALIDATION sign-off, phase note, plan ticks, push + dispatch + `branch_ci_state` at HEAD (CITRUTH-03) (wave 9)
+**UI hint**: yes
+
+### Phase 235: Release & Launch Gate
+**Goal**: The version a new user installs after the public announcement is the corrected one, and works as the README says: `v5.28.0` is merged, tagged and published, a fresh install from PyPI passes an end-to-end smoke test, every public claim is true for that release, and the operator signs a recorded go/no-go before anything is posted.
+**Depends on**: Phases 229–234 (every score-moving and first-impression fix lands first; the release follows the Phase 234 ladder re-measurement, so 212 §8 holds)
+**Requirements**: LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05
+**Success Criteria** (what must be TRUE):
+  1. `v528-open` is merged to `main` through a PR, `scripts/branch_ci_state.py --branch main` exits 0 at the merge commit, `v5.28.0` is tagged, `release.yml` publishes it, and `pip index versions quirk-scanner` lists `5.28.0`; the GitHub release notes describe v5.28 (the `github-release-notes-and-ci-failures` debug session's wrong-notes finding is re-checked and closed or fixed).
+  2. The two P1 connector defects that contradict public claims (Azure Key Vault keys emit zero endpoints, `999.126`; the Semgrep `p/cryptography` ruleset 404s, `999.127`) are each either fixed with a test against the real SDK/registry, or every claim of that capability is removed from the README, PyPI description and announcement copy. The choice is the operator's, taken in this phase's discuss step.
+  3. On a clean macOS and a clean Linux machine with no repo checkout: `pip install quirk-scanner==5.28.0` in a fresh venv, `quirk doctor`, a chaos-lab scan, `quirk serve` (dashboard loads, JetBrains Mono served, current brand), and an HTML and PDF report all succeed, and the dashboard and report show the same readiness score. Every README command is run as written and either works or is corrected, including `gh attestation verify` (`999.129`). Transcript recorded in the phase directory.
+  4. Every link in the README resolves from the PyPI project page, and every user-facing claim in `README.md` and the PyPI long description is re-verified against `v5.28.0` (doc-claim ledger gate green on `main`); any open high-priority todo that contradicts a README claim is either closed or the claim is removed.
+  5. A launch go/no-go record (`docs/launch-gate.md` or the phase VERIFICATION) lists each criterion above with its evidence link and the operator's sign-off. "No-go" names the blocking item and its owner. Nothing is posted publicly before a recorded "go".
+**Plans**: 18 plans (18 serial waves)
+
+Plans:
+- [x] 235-01-PLAN.md — Source scanner fails honestly: semgrep exit 7 / errors[] raises "ruleset unavailable", recorded as a failed phase (D-09) (wave 1)
+- [x] 235-02-PLAN.md — requires-python ">=3.10,<3.15"; doctor floor 3.10, optional binaries + first-run DB informational (D-23, D-24); validator floor (wave 2)
+- [x] 235-03-PLAN.md — PDF cover title + header border in the brand accent (D-03); browser-E2E seed on one clock (D-19) (wave 3)
+- [x] 235-04-PLAN.md — README command enumerator + live link checker; clean-environment release smoke harness (wave 4)
+- [x] 235-05-PLAN.md — Remove the working-Semgrep claim from every public doc + standing gate; gitea oracle (D-01, D-02, D-15) (wave 5)
+- [x] 235-06-PLAN.md — Doctor/Python-range guides (D-23, D-24); single-tag release runbook; release.yml attestation comment; master guide + vault (wave 6)
+- [x] 235-07-PLAN.md — README Quick Start (interpreter, Chromium); high-priority todo sweep; narrow + disclose contradicted claims (D-16, D-25) (wave 7)
+- [x] 235-08-PLAN.md — Re-verify every live README claim (by section) and the PyPI metadata against 5.28.0 (wave 8)
+- [x] 235-09-PLAN.md — CHANGELOG [5.28.0] with the scoring 4.0 upgrade notes and known defects (D-12) (wave 9)
+- [x] 235-10-PLAN.md — Version bump to 5.28.0 with README pins, What's New v5.28 (ledgered, re-checked), UAT-SERIES rows + Series 235, UAT-232-08 relabel (D-14, D-22) (wave 10)
+- [ ] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness); D-30 dashboard-vs-report pre-measurement; rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
+- [ ] 235-12-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, contributor leg, open the release PR (wave 12)
+- [ ] 235-13-PLAN.md — Operator merges (merge commit); merge tree == rehearsed tree; main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 13)
+- [ ] 235-14-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 14)
+- [ ] 235-15-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 15)
+- [ ] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed; D-30 GO preconditions (umbrella divergence todo Feasibility & Effort, score-divergence follow-up scheduled as a v5.29 candidate phase) (wave 16)
+- [ ] 235-17-PLAN.md — Private go/no-go record (SC3 by the D-30 attributed-gap rule, GO preconditions cited), claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20, D-30) (wave 17)
+- [ ] 235-18-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 18)
+
+### Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 227. Todo Ownership Gate | 9/9 | Complete (verified passed 4/4 at efadfb56, SC#4 scope accepted as doc224-only by operator; code review 1 Critical + 3 Warning fixed in-phase (efadfb56); CI green, Python CI 38793570017 + Dashboard Quality 38793574456) | 2026-10-15 |
+| 228. Cross-Surface Score Parity | 10/10 | Complete (verified passed 5/5 at 0e25abca; code review 1 Critical + 1 Warning fixed in-phase (dab89ffc, 3b1d286c), WR-01..06 deferred to owned todos; CI green at 0e25abca, Python CI 38834562847 + Dashboard Quality 38834564861) | 2026-10-15 |
+| 229. Finding & State Correctness | 12/12 | Complete (verified passed 10/10 at 1848635e after 5 verifier gaps closed in-phase (false-closure paths: co-resident rows, legacy chains x2, per-host evidence, blocked mail ports); 3-iteration code review; CI green, Python CI 38916184370 + Dashboard Quality 38916187404) | 2026-10-16 |
+| 230. Findings That Fire | 8/8 | Complete (verified passed 5/5 at 1072cdf4 after gap closure 230-08 (UDP fallback shares the TCP classifier; 0/65 false no-preauth live); review rounds R8-R22 hardened the Kerberos target path (gate/scanner same-address, IDNA wire name, zone/link-local/unspecified refusals, LDAP referrals off), R21/R22 0 blockers; follow-ups owned by 999.136; CI green, Python CI 40062953209 + Dashboard Quality 40062954891) | 2026-10-24 |
+| 231. QRAMM Scoring Surfaces | 10/10 | Complete (verified passed 5/5 at c09a809b; live print/PDF re-check passed with artifacts kept; review R1 0 blockers, WR-01 owned by SCORE-10 (Phase 234), WR-02/IN-01..04/IN-06 by 999.137, IN-05 by 999.136; 231-10 fixed the allow_abbrev gate 231-02 broke; CI green, Python CI 40207661100 + Dashboard Quality 40207663143) | 2026-10-25 |
+| 232. Post-Launch Visible Fixes | 6/6 | Complete (verified passed 5/5 at e28d45dd; criterion 4's live PyPI leg handed to Phase 235 per D-13; review 0 blockers, WR-03/IN-02 fixed, WR-01 owned by 999.127; CI green, Python CI 40525739851 + Dashboard Quality 40525744864) | 2026-10-27 |
+| 233. P2b Measurement Instrument | 6/6 | Complete (verified passed 4/4 at 0a7ab944; verdict: none of 212's three candidates supported, no ceiling shape can work, data point to absolute-count penalties at 35 ratio sites + a key-type rule, effort L; review CR-01 time bomb + WR-01..05 fixed fail-first; CI green, Python CI 40550728476 + Dashboard Quality 40550732544) | 2026-10-27 |
+| 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Complete (verified 5/5 at b2ef2634, status human_needed for 2 optional visual checks in 234-HUMAN-UAT.md; scoring 4.0: classical ≠ ready, count curve N_REF=40, PQC bucket, mTLS presence credit (D-28); P2b xfail now passes, instrument 100/100 agree, 0 rising; R5 18/71 → 18/74, R1–R4 unchanged; SCORE-10 overall over assessed dimensions; review D-27..D-31 fixed; UAT-7-29 drag assertion made layout-independent (b2ef2634); CI green, Python CI 40604747341 + Dashboard Quality 40604750364) | 2026-10-27 |
+| 235. Release & Launch Gate | 0/TBD | Not started | - |
+
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
 
 **7 phases (222–226, with 222.1 and 225.1 inserted), 75 plans, 20/20 requirements satisfied.** Audit

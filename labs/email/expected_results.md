@@ -85,16 +85,10 @@ on `port == 25`):
 **D-11 layering verified:** port 25 emits BOTH the STARTTLS-downgrade MEDIUM AND
 the weak-cipher HIGH because the (host, port, title) dedup keys differ.
 
-In addition, the main `evaluate_endpoints()` pass over the same endpoints emits
-generic certificate findings sourced from `risk_engine`'s X.509 inspection:
-
-| Severity | Title                                     | Source                                                    |
-| -------- | ----------------------------------------- | --------------------------------------------------------- |
-| HIGH     | Self-signed certificate                   | risk_engine generic cert-validation finding (one per port)|
-
-(Self-signed findings are emitted by the main TLS pipeline, not by
-`evaluate_email_endpoints`; severity may be HIGH or MEDIUM depending on the
-risk_engine's policy version. See `quirk/engine/risk_engine.py::evaluate_endpoints`.)
+Email rows get only the `evaluate_email_endpoints` findings above, on the report and on the
+dashboard alike. Since Phase 228 the generic TLS certificate checks (self-signed, legacy TLS
+version, undersized RSA key and so on) run only on `TLS` rows on both surfaces, so an email port
+yields no self-signed finding even though its lab certificate is self-signed.
 
 ## Caveats
 

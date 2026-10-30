@@ -29,6 +29,7 @@ class CryptoEndpoint(Base):
     cert_pubkey_alg = Column(String(64), nullable=True)
     cert_pubkey_size = Column(Integer, nullable=True)
     cert_spki_fingerprint = Column(String(64), nullable=True)  # Phase 191 SPKI-01: leaf-cert SPKI SHA-256 hex digest; NULL until re-scanned (D-10)
+    cert_eku_oids = Column(Text, nullable=True)  # Phase 230 DETECT-01: leaf EKU dotted OIDs, comma-separated; NULL = no EKU extension / pre-230 row
     cert_not_before = Column(DateTime, nullable=True)
     cert_not_after = Column(DateTime, nullable=True)
 
@@ -99,6 +100,11 @@ class CryptoEndpoint(Base):
     # ==========================
     sensor_id = Column(String(255), nullable=True)   # NULL = implicit local sensor; NO FK (D-03)
     segment   = Column(String(255), nullable=True)
+    # Phase 229 FIND-13 D-12: SensorPush.payload_id of the push that delivered
+    # this row; NULL for local CLI scans and sensor rows ingested before Phase 229.
+    # No FK (mirrors sensor_id D-03); no index (additive-only, _ensure_columns
+    # does not create indexes).
+    push_payload_id = Column(String(64), nullable=True)
 
     # RVW-003: stored scan-session identity. Set to the run's `started_utc`
     # ISO timestamp — the same value ScanJob.scan_run_id and

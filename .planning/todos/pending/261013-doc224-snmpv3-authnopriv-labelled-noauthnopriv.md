@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/hardware_scanner.py (Step 3 SNMPv3 ladder), quirk/scanner/snmp_scanner.py, CBOM quirk:hw-snmp-* properties
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # An SNMPv3 authNoPriv success is labelled `v3 noAuthNoPriv`, and unnegotiated protocol names are recorded

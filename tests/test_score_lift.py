@@ -104,14 +104,16 @@ def _evidence() -> dict:
 
 def _clamp_binding_evidence() -> dict:
     """Same shape as `_evidence`, but with hygiene-subscore penalties
-    (plaintext HTTP + HTTP-on-TLS-port ratios, against only 2 endpoints)
-    deliberately exceeding the 25-point clamp headroom, verified below by
+    (plaintext HTTP + HTTP-on-TLS-port counts) deliberately exceeding the
+    25-point clamp headroom, verified below by
     `test_clamp_binding_fixture_actually_binds`.
 
-    Unclamped hygiene penalty at these values:
-        plaintext_ratio(2/2=1.0)*18 + http_on_tls_ratio(2/2=1.0)*16
-            + scan_error_rate(0.5)*6
-        = 18 + 16 + 3 = 37 > 25 (score_cap) -> hygiene clamps to 0.
+    Phase 234 (scoring 4.0): penalties follow the absolute-count curve
+    `min(1, count / 40) ** 0.5`, so the clamp only binds when the counts reach
+    N_REF = 40. Unclamped hygiene penalty at these values:
+        curve(40)*18 + curve(40)*16 + curve(20)*6
+        = 18 + 16 + 4.24 = 38.24 > 25 (score_cap) -> hygiene clamps to 0.
+    (3.0 used the share of 2 endpoints: 2/2 * 18 + 2/2 * 16 + 0.5 * 6 = 37.)
 
     Live scratch run recorded during execution (201-01-SUMMARY.md) confirmed:
     base score=33 (hygiene=0, clamped from an unclamped -12), and resolving
@@ -120,10 +122,10 @@ def _clamp_binding_evidence() -> dict:
     the non-additivity this fixture exists to prove.
     """
     return {
-        "totals": {"endpoints": 2, "findings": 5},
+        "totals": {"endpoints": 40, "findings": 5},
         "protocol_counts": {"KERBEROS": 1, "UNKNOWN": 1},
-        "plaintext_http_count": 2,
-        "http_on_tls_port_count": 2,
+        "plaintext_http_count": 40,
+        "http_on_tls_port_count": 40,
         "mtls_present_count": 0,
         "certificate_observations": {
             "expired_count": 1,
@@ -132,7 +134,7 @@ def _clamp_binding_evidence() -> dict:
             "certs_observed": 3,
         },
         "cert_key_type_counts": {"RSA": 3, "ECDSA": 0},
-        "scan_error": {"rate": 0.5},
+        "scan_error": {"rate": 0.5, "count": 20},
         "finding_severity_counts": {
             "CRITICAL": 0,
             "HIGH": 1,
@@ -160,7 +162,10 @@ def _absence_evidence() -> dict:
         "mtls_present_count": 1,
         "tls_enum_coverage_ratio": 0.5,
         "certificate_observations": {"certs_observed": 3},
-        "cert_key_type_counts": {"RSA": 0, "ECDSA": 0},
+        # Phase 234 O-4: every observed certificate carries a PQC key, so the
+        # retargeted PQC/hybrid certificate item (which now also fires on
+        # certificates with undetermined key types) stays out of this fixture.
+        "cert_key_type_counts": {"RSA": 0, "ECDSA": 0, "PQC": 3},
     }
 
 
@@ -184,14 +189,21 @@ def _items(evidence: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
+def _count_curve(count: int) -> float:
+    """Independent restatement of the scoring-4.0 absolute-count curve
+    (N_REF = 40, exponent 0.5), written here rather than imported so the
+    fixture check does not lean on the module it guards."""
+    if count <= 0:
+        return 0.0
+    return min(1.0, count / 40) ** 0.5
+
+
 def test_clamp_binding_fixture_actually_binds() -> None:
     evidence = _clamp_binding_evidence()
-    denom = max(0, evidence["totals"]["endpoints"]) or 1
-    plaintext_ratio = evidence["plaintext_http_count"] / denom
-    http_on_tls_ratio = evidence["http_on_tls_port_count"] / denom
-    scan_error_rate = evidence["scan_error"]["rate"]
     unclamped_hygiene_penalty = (
-        plaintext_ratio * 18.0 + http_on_tls_ratio * 16.0 + scan_error_rate * 6.0
+        _count_curve(evidence["plaintext_http_count"]) * 18.0
+        + _count_curve(evidence["http_on_tls_port_count"]) * 16.0
+        + _count_curve(evidence["scan_error"]["count"]) * 6.0
     )
     assert unclamped_hygiene_penalty > 25.0, (
         "clamp-binding fixture does not actually exceed the 25-point hygiene "
@@ -301,7 +313,11 @@ _DELTA_APPLICATIONS = {
     "expired-certificates": lambda e: e["certificate_observations"].__setitem__(
         "expired_count", 0
     ),
-    "scan-reliability": lambda e: e["scan_error"].__setitem__("rate", 0.0),
+    # Phase 234 D-03: scoring 4.0 reads scan_error.count, so both are zeroed.
+    "scan-reliability": lambda e: (
+        e["scan_error"].__setitem__("rate", 0.0),
+        e["scan_error"].__setitem__("count", 0),
+    ),
     "unknown-open-services": lambda e: e["protocol_counts"].__setitem__("UNKNOWN", 0),
     "near-expiry-certificates": lambda e: e["certificate_observations"].__setitem__(
         "expiring_count", 0
@@ -310,8 +326,21 @@ _DELTA_APPLICATIONS = {
         "self_signed_count", 0
     ),
     "legacy-tls-versions": lambda e: e["finding_severity_counts"].__setitem__("LOW", 0),
-    "ecdsa-adoption-planning": lambda e: e["cert_key_type_counts"].__setitem__("ECDSA", 1),
+    # Phase 234 O-4: the slug now names PQC/hybrid certificate adoption; the
+    # independent model is "all classical certificate keys migrated".
+    "ecdsa-adoption-planning": lambda e: _migrate_all_cert_keys_to_pqc(e),
 }
+
+
+def _migrate_all_cert_keys_to_pqc(evidence: dict) -> None:
+    """Independent mirror of the O-4 resolver: RSA = ECDSA = 0 and
+    PQC = max(1, RSA + ECDSA, certs_observed)."""
+    keys = evidence.setdefault("cert_key_type_counts", {})
+    classical = int(keys.get("RSA", 0)) + int(keys.get("ECDSA", 0))
+    observed = int(evidence.get("certificate_observations", {}).get("certs_observed", 0))
+    keys["RSA"] = 0
+    keys["ECDSA"] = 0
+    keys["PQC"] = max(1, classical, observed)
 
 
 def _independently_resolve_all(evidence: dict, items: list) -> dict:
@@ -325,6 +354,78 @@ def _independently_resolve_all(evidence: dict, items: list) -> dict:
     for slug in present_slugs & _MODELABLE_SLUGS:
         _DELTA_APPLICATIONS[slug](resolved)
     return resolved
+
+
+def test_pqc_certificate_adoption_lift_is_positive_on_r2() -> None:
+    """Phase 234 O-4: on the R2 calibration rung (40 RSA certificates, no PQC)
+    the retargeted item projects a real, strictly positive lift. Under the
+    pre-234 resolver (add one ECDSA key) the 4.0 lift was 0: ECDSA is a
+    classical key and takes the same penalty as RSA."""
+    from tests.test_score_properties import _r2_well_run_no_pqc
+
+    evidence = _r2_well_run_no_pqc()
+    base = compute_readiness_score(evidence)["score"]
+    resolved = copy.deepcopy(evidence)
+    _migrate_all_cert_keys_to_pqc(resolved)
+    expected_lift = compute_readiness_score(resolved)["score"] - base
+    assert expected_lift > 0, f"migrate-all-to-PQC lift on R2 is {expected_lift}"
+
+    items = _items(evidence)
+    assert "ecdsa-adoption-planning" in {slug_for_title(i["title"]) for i in items}
+    lifts = compute_item_lifts(evidence, items)
+    assert lifts.get("ecdsa-adoption-planning") == expected_lift
+
+
+def test_scan_reliability_lift_follows_the_count_input() -> None:
+    """Phase 234 D-03: the scorer reads scan_error.count, so the "Increase scan
+    coverage" lift must be positive when only the count is populated."""
+    evidence = _evidence()
+    # The count is what the 4.0 scorer reads and what triggers the roadmap item
+    # (Phase 234 review D-31); the rate only feeds the why text.
+    evidence["scan_error"] = {"rate": 0.4, "count": 4}
+    items = _items(evidence)
+    assert "scan-reliability" in {slug_for_title(i["title"]) for i in items}
+    base = compute_readiness_score(evidence)["score"]
+    resolved = copy.deepcopy(evidence)
+    resolved["scan_error"]["rate"] = 0.0
+    resolved["scan_error"]["count"] = 0
+    expected_lift = compute_readiness_score(resolved)["score"] - base
+    assert expected_lift > 0
+    assert compute_item_lifts(evidence, items).get("scan-reliability") == expected_lift
+
+
+def test_scan_coverage_item_fires_on_the_scored_count_with_a_real_lift() -> None:
+    """Phase 234 review D-31 (WR-04): "Increase scan coverage" triggers on
+    scan_error.count, the input scoring 4.0 penalises, not on the rate.
+
+    WR-04 reproduction: R3 with 40 scan errors among 250 endpoints (rate
+    0.16, below the old 0.2 trigger). The count costs points (hygiene and
+    modern_tls), yet the item was absent, so the roadmap offered no
+    remediation and the projected score left those points out.
+    """
+    from tests.test_score_properties import _r3_typical_enterprise
+
+    evidence = _r3_typical_enterprise()
+    evidence["totals"]["endpoints"] = 250
+    evidence["scan_error"] = {"count": 40, "rate": 0.16}
+    clean = copy.deepcopy(evidence)
+    clean["scan_error"] = {"count": 0, "rate": 0.0}
+    # Non-vacuity: the count really costs points on this estate.
+    assert compute_readiness_score(evidence)["score"] < (
+        compute_readiness_score(clean)["score"]
+    )
+    items = _items(evidence)
+    assert "scan-reliability" in {slug_for_title(i["title"]) for i in items}
+    lift = compute_item_lifts(evidence, items).get("scan-reliability")
+    assert lift is not None and lift > 0, f"scan-reliability lift {lift!r}"
+    assert lift == (
+        compute_readiness_score(clean)["score"]
+        - compute_readiness_score(evidence)["score"]
+    )
+    # The item does not fire when nothing is penalised.
+    assert "scan-reliability" not in {
+        slug_for_title(i["title"]) for i in _items(clean)
+    }
 
 
 def test_aggregate_projection_equals_one_independent_rescore() -> None:
@@ -351,7 +452,9 @@ def test_lifts_are_not_additive_on_a_clamp_binding_fixture() -> None:
     999.115 — the non-additivity still holds and is if anything larger, but its
     DIRECTION flipped, so the assertion moved from `>` to `<`. Measured on this
     fixture: sum(lifts) = 54 against an aggregate delta of 64 (base 20 ->
-    projected 84).
+    projected 84). Phase 234 (scoring 4.0, fixture counts raised to N_REF so
+    the clamp still binds): sum(lifts) = 41 against an aggregate delta of 47
+    (base 37, ceiling-bound by 1 open HIGH from computed 54 -> projected 84).
 
     Why it flipped. Two non-linearities act on this fixture and they pull
     opposite ways. The per-subscore 25-point clamp (the one this fixture is

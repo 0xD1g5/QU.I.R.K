@@ -6,6 +6,7 @@ priority: low
 area: quirk/intelligence/scoring.py, tests/test_score_weights_invariant.py, quirk/intelligence/evidence.py
 status: pending
 resolves_phase: null
+owner: "999.131"
 ---
 
 # Three code comments repeat figures the code no longer has

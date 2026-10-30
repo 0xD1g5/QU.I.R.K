@@ -38,7 +38,7 @@ def _tls_ep_with_eku(**kwargs):
         cert_pubkey_size=4096,
         cert_sig_alg="sha256WithRSAEncryption",
         cert_not_after=_now_utc() + timedelta(days=365),
-        tls_capabilities_json=json.dumps({"eku_oids": [_CODE_SIGNING_OID]}),
+        cert_eku_oids=_CODE_SIGNING_OID,
     )
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)

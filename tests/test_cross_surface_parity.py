@@ -371,7 +371,7 @@ def test_docx_narrative_parity(tmp_path):
 # ---------------------------------------------------------------------------
 
 import uuid as _uuid
-from datetime import datetime as _datetime
+from datetime import datetime as _datetime, timedelta as _timedelta, timezone as _timezone
 from types import SimpleNamespace as _SimpleNamespace
 
 from fastapi.testclient import TestClient as _TestClient
@@ -382,8 +382,7 @@ from quirk.dashboard.api.app import create_app as _create_app
 from quirk.dashboard.api.deps import get_db as _get_db
 from quirk.models import Base as _Base, CryptoEndpoint as _CryptoEndpoint
 from quirk.engine.findings_evaluator import (
-    evaluate_endpoints as _evaluate_endpoints,
-    evaluate_identity_endpoints as _evaluate_identity_endpoints,
+    derive_report_findings as _derive_report_findings,
 )
 from quirk.intelligence.evidence import build_evidence_summary as _build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score as _compute_readiness_score
@@ -410,7 +409,7 @@ _XSURF04_RUN_ID = "2026-09-27T09:15:00"
 # Pinning the CORRECT value independently of either surface is what actually
 # catches that class of regression.
 _EXPECTED_XSURF04_CRITICAL_COUNT = 2   # 1 (deduped same-serial pair) + 1 (distinct-serial pair)
-_EXPECTED_XSURF04_CERT_COUNT = 2       # the two healthy TLS rows
+_EXPECTED_XSURF04_CERT_COUNT = 3       # two healthy TLS rows + the 228-07 near-expiry TLS row (was 2)
 # quirk/intelligence/evidence.py's `_seen_saml_certs` dedupe (D-03) is a
 # SEPARATE counter (`saml_weak_signing_count`) that feeds the headline score
 # through a ratio too small, at this fixture's scale, to reliably move the
@@ -462,7 +461,14 @@ def _xsurf04_seed_scan_run(TestingSession, scan_run_id: str) -> None:
     """
     db = TestingSession()
     try:
-        now = _datetime(2026, 9, 27, 9, 15, 0)
+        # ONE clock (Phase 230): scanned_at tracks the wall clock, like the
+        # XSURF-0508/XSURF-07 fixtures. It used to be fixed at 2026-09-27
+        # while the near-expiry row below is now+10d. evidence.py measures
+        # expiry against scanned_at and the finding generators against the
+        # wall clock, so the pinned score silently moved 31 -> 32 at
+        # 2026-10-17 09:15 UTC (fixed scanned_at + 30d passed now+10d).
+        # Only the run-id STRING is matched, so it stays a literal.
+        now = _datetime.now()
         rows = [
             # --- SAML dual-`use` same-serial pair (XSURF-01 fixture) ---
             _CryptoEndpoint(
@@ -501,6 +507,41 @@ def _xsurf04_seed_scan_run(TestingSession, scan_run_id: str) -> None:
                 cert_not_after=_datetime(2030, 1, 1),
                 tls_supported_versions="TLSv1.3",
             ),
+            # --- D-16 coverage rows (228-07). COVERAGE, NOT DETECTION: this
+            # fixture's SAML CRITICAL ceiling masks HIGH-count differences
+            # (measured 30 vs 30 across the old and new compositions), so
+            # `test_xsurf0508_no_critical_cross_surface_parity` is the
+            # detector for XSURF-05/06/08 (D-28 supersedes D-16 here;
+            # RESEARCH Pitfall 1).
+            # Near-expiry: wall clock + 10 days. scanned_at is the wall clock
+            # too (see `now` above), so evidence.py (scanned_at-relative) and
+            # both finding generators (wall-clock-relative) agree this cert is
+            # expiring within 30 days on every date the suite runs.
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.52", port=443, protocol="TLS",
+                cert_subject="CN=soon.example.com", cert_issuer="CN=Example CA",
+                cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+                cert_not_after=_datetime.now(_timezone.utc) + _timedelta(days=10),
+                tls_supported_versions="TLSv1.3",
+            ),
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.53", port=995, protocol="SMIME",
+                cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+            ),
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.54", port=25, protocol="SMTP-STARTTLS",
+                tls_blocker_reason="CONNECTION_REFUSED", tls_version="",
+                service_detail="SMTP-STARTTLS:25",
+            ),
+            _CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.80.0.54", port=465, protocol="SMTPS",
+                tls_blocker_reason="TIMEOUT", tls_version="",
+                service_detail="SMTPS:465",
+            ),
         ]
         for row in rows:
             db.add(row)
@@ -536,8 +577,7 @@ def test_xsurf04_three_number_cross_surface_equality():
     finally:
         db.close()
 
-    cfg = _SimpleNamespace(scan=_SimpleNamespace(tls_designated_ports=[]))
-    findings_a = _evaluate_endpoints(cfg, endpoints_a) + _evaluate_identity_endpoints(endpoints_a)
+    findings_a = _derive_report_findings(endpoints_a)
     evidence_a = _build_evidence_summary(endpoints_a, findings_a)
     score_raw_a = _compute_readiness_score(evidence_a, profile=None)
 
@@ -604,6 +644,9 @@ def test_xsurf04_three_number_cross_surface_equality():
     # surfaces call identically in-process (see the constants' docstring
     # above). Pin the correct value independently so a reintroduced
     # double-count trips even when it moves both surfaces together.
+    assert score_raw_a["subscores"]["data_in_motion"] is None and data["score"]["subscores"]["data_in_motion"] is None, (
+        "XSURF-08 VIOLATION: refused/timed-out mail rows must leave Data in Motion unassessed"
+    )
     assert critical_count_a == _EXPECTED_XSURF04_CRITICAL_COUNT, (
         f"XSURF-04 VIOLATION: report-pipeline CRITICAL count is "
         f"{critical_count_a}, expected exactly {_EXPECTED_XSURF04_CRITICAL_COUNT} "
@@ -614,7 +657,7 @@ def test_xsurf04_three_number_cross_surface_equality():
     assert cert_count_a == _EXPECTED_XSURF04_CERT_COUNT, (
         f"XSURF-04 VIOLATION: certificate count is {cert_count_a}, expected "
         f"exactly {_EXPECTED_XSURF04_CERT_COUNT} for this fixture's two "
-        "healthy TLS rows."
+        "healthy TLS rows + the 228-07 near-expiry TLS row."
     )
     assert evidence_a["saml_weak_signing_count"] == _EXPECTED_XSURF04_SAML_WEAK_SIGNING_COUNT, (
         f"XSURF-04 VIOLATION: build_evidence_summary's saml_weak_signing_count "
@@ -624,4 +667,285 @@ def test_xsurf04_three_number_cross_surface_equality():
         "not applied — this is checked directly because neither of the three "
         "surfaced numbers above is guaranteed sensitive to this specific site "
         "(see 210-05-SUMMARY.md Falsification section)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 Plan 07 -- no-CRITICAL seeded run (XSURF-05, XSURF-06, XSURF-08)
+#
+# Why a second scan: the XSURF-04 fixture's SAML CRITICAL ceiling caps both
+# surfaces to the same displayed score and the same HIGH count, so it cannot
+# detect a HIGH-count or non-TLS-cert divergence (RESEARCH Pitfall 1; D-28).
+# This scan has no CRITICAL, so the headline moves with every HIGH finding.
+# ---------------------------------------------------------------------------
+
+_XSURF0508_RUN_ID = "2026-10-15T11:00:00"
+
+# Each pin is MEASURED after the 228 fix and independently re-derived in
+# 228-07-SUMMARY.md. `a == b` alone is blind: before the fix the report path
+# scored 74 and the dashboard 61, but a regression that moves BOTH surfaces
+# (e.g. one shared helper counting a refused mail port as plaintext) keeps
+# a == b true. The literals are what catch that.
+# Scoring 4.0 (Phase 234): 73 -> 76, absolute-count curve; both surfaces moved together.
+_EXPECTED_XSURF0508_SCORE = 76
+# HIGH count: SMIME RSA-1024 is NOT a TLS cert row (D-05) so it must add no
+# HIGH; near-expiry is MEDIUM (D-01), not HIGH; refused/timeout mail rows add
+# no finding (D-14).
+_EXPECTED_XSURF0508_HIGH_COUNT = 0
+# The no-PQC-key-exchange cap applies (computed 91 -> displayed 76 under
+# scoring 4.0, Phase 234; was computed 87 -> displayed 73 on 3.0); a
+# CRITICAL-ceiling reason here would mean a CRITICAL leaked in.
+_EXPECTED_XSURF0508_CAP_REASON = (
+    "no post-quantum key exchange observed \u2014 score limited to 76 (computed 91)"
+)
+# Lift for the `high-impact-findings` slug; None == slug absent.
+_EXPECTED_XSURF0508_HIGH_IMPACT_LIFT = None
+
+
+def _xsurf0508_seed_scan_run(TestingSession, scan_run_id: str) -> None:
+    from quirk.scanner.email_scanner import EMAIL_PORTS
+
+    db = TestingSession()
+    try:
+        now = _datetime.now()
+        wall = _datetime.now(_timezone.utc)
+        rows = []
+        for i, host in enumerate(("10.81.0.10", "10.81.0.11")):
+            rows.append(_CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host=host, port=443, protocol="TLS",
+                tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+                cert_subject=f"CN=ok{i}.example.com", cert_issuer="CN=Example CA",
+                cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+                cert_not_after=wall + _timedelta(days=365),
+                tls_supported_versions="TLSv1.3",
+            ))
+        rows.append(_CryptoEndpoint(
+            scan_run_id=scan_run_id, scanned_at=now,
+            host="10.81.0.12", port=443, protocol="TLS",
+            tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+            cert_subject="CN=soon.example.com", cert_issuer="CN=Example CA",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_not_after=wall + _timedelta(days=10),
+            tls_supported_versions="TLSv1.3",
+        ))
+        rows.append(_CryptoEndpoint(
+            scan_run_id=scan_run_id, scanned_at=now,
+            host="10.81.0.13", port=995, protocol="SMIME",
+            cert_pubkey_alg="RSA", cert_pubkey_size=1024,
+        ))
+        for n, (port, label, _prefix, _enum) in enumerate(EMAIL_PORTS):
+            rows.append(_CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host="10.81.0.14", port=port, protocol=label,
+                tls_blocker_reason="CONNECTION_REFUSED" if n % 2 == 0 else "TIMEOUT",
+                tls_version="", service_detail=f"{label}:{port}",
+            ))
+        for row in rows:
+            db.add(row)
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_xsurf0508_no_critical_cross_surface_parity():
+    """XSURF-05/06/08 (D-16, D-28): one no-CRITICAL scan, report path vs
+    GET /api/scan/latest, every number pinned to a literal."""
+    from quirk.dashboard.api.routes.scan import lift_context_for_scan
+    from quirk.intelligence.roadmap import build_phased_roadmap
+    from quirk.intelligence.score_lift import compute_item_lifts
+
+    client, TestingSession = _xsurf04_make_client_and_session()
+    _xsurf0508_seed_scan_run(TestingSession, _XSURF0508_RUN_ID)
+
+    db = TestingSession()
+    try:
+        endpoints_a = (
+            db.query(_CryptoEndpoint)
+            .filter(_CryptoEndpoint.scan_run_id == _XSURF0508_RUN_ID).all()
+        )
+        findings_a = _derive_report_findings(endpoints_a)
+        evidence_a = _build_evidence_summary(endpoints_a, findings_a)
+        score_a = _compute_readiness_score(evidence_a, profile=None)
+        roadmap_a = build_phased_roadmap(evidence_a, score_a)
+        lifts_a = compute_item_lifts(evidence_a, roadmap_a.get("items", []), profile=None)
+        lifts_b = lift_context_for_scan(db, _XSURF0508_RUN_ID)
+    finally:
+        db.close()
+
+    resp = client.get(f"/api/scan/latest?scan_id={_XSURF0508_RUN_ID}")
+    assert resp.status_code == 200, resp.text[:300]
+    data = resp.json()
+    score_b = data["score"]
+    findings_b = data["findings"]
+
+    high_a = evidence_a["finding_severity_counts"].get("HIGH", 0)
+    high_b = sum(1 for f in findings_b if f.get("severity") == "HIGH")
+    crit_a = evidence_a["finding_severity_counts"].get("CRITICAL", 0)
+    crit_b = sum(1 for f in findings_b if f.get("severity") == "CRITICAL")
+
+    assert score_a["score"] == score_b["score"] == _EXPECTED_XSURF0508_SCORE, (
+        f"XSURF-05/06/08 VIOLATION: headline report={score_a['score']} "
+        f"dashboard={score_b['score']} expected={_EXPECTED_XSURF0508_SCORE}"
+    )
+    assert crit_a == crit_b == 0, (
+        f"XSURF-05 VIOLATION: fixture must be CRITICAL-free; report={crit_a} dashboard={crit_b}"
+    )
+    assert high_a == high_b == _EXPECTED_XSURF0508_HIGH_COUNT, (
+        f"XSURF-05/06 VIOLATION: HIGH count report={high_a} dashboard={high_b} "
+        f"expected={_EXPECTED_XSURF0508_HIGH_COUNT}"
+    )
+    assert score_a["rating_cap_reason"] == score_b["rating_cap_reason"] == _EXPECTED_XSURF0508_CAP_REASON, (
+        f"XSURF-05 VIOLATION: rating_cap_reason report={score_a['rating_cap_reason']!r} "
+        f"dashboard={score_b['rating_cap_reason']!r}"
+    )
+    assert score_a["subscores"]["data_in_motion"] is None, (
+        "XSURF-08 VIOLATION: report Data in Motion must be unassessed (refused/timed-out mail ports)"
+    )
+    assert score_b["subscores"]["data_in_motion"] is None, (
+        "XSURF-08 VIOLATION: dashboard Data in Motion must be unassessed (refused/timed-out mail ports)"
+    )
+
+    # (5) near-expiry is MEDIUM on both surfaces
+    near_b = [f for f in findings_b if "Certificate expiring in" in (f.get("title") or "")]
+    near_a = [f for f in findings_a if "TLS certificate expiring within 30 days" in str(f.get("title", ""))]
+    assert near_a and near_b, "XSURF-05 non-vacuity: near-expiry finding missing on a surface"
+    assert {f["severity"] for f in near_a} == {"MEDIUM"}, "XSURF-05 VIOLATION: report near-expiry not MEDIUM"
+    assert {f["severity"] for f in near_b} == {"MEDIUM"}, "XSURF-05 VIOLATION: dashboard near-expiry not MEDIUM"
+
+    # (6) no dashboard finding on the SMIME row
+    smime_b = [f for f in findings_b if f.get("host") == "10.81.0.13"]
+    assert smime_b == [], f"XSURF-06 VIOLATION: dashboard emitted TLS findings on an S/MIME row: {smime_b}"
+
+    # (7) lift badges
+    assert lifts_b == lifts_a, f"SC#2 VIOLATION: dashboard lifts {lifts_b} != report lifts {lifts_a}"
+    assert lifts_b.get("high-impact-findings") == _EXPECTED_XSURF0508_HIGH_IMPACT_LIFT, (
+        f"SC#2: high-impact-findings lift {lifts_b.get('high-impact-findings')!r}, "
+        f"expected {_EXPECTED_XSURF0508_HIGH_IMPACT_LIFT!r}; all lifts {lifts_b}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 Plan 07 -- XSURF-07: every trend / timeline / merge / segment /
+# compare score equals the dashboard headline for the same scan.
+# ---------------------------------------------------------------------------
+
+_XSURF07_RUN_ID = "2026-10-15T12:00:00"
+
+# Headline for the XSURF-07 fixture (3 healthy + 1 expired-cert TLS row). The
+# expired cert is CRITICAL, so the consequence ceiling caps it at <= 34. Before
+# the fix trends/timeline/merge scored the same rows with NO findings and
+# showed ~78+ -- the surfaces disagreed with the headline by 40+ points, but a
+# bare a == b between two findings-less surfaces would never see it.
+# Scoring 4.0 (Phase 234): 32 -> 33, still capped <= 34 by the CRITICAL ceiling.
+_EXPECTED_XSURF07_HEADLINE = 33
+# seg-a holds the expired row; seg-b is healthy so it is NOT capped.
+# Scoring 4.0 (Phase 234): seg-a 31 -> 33, still capped <= 34.
+_EXPECTED_XSURF07_SEG_A = 33
+_EXPECTED_XSURF07_SEG_B = 100
+# /compare side B (the XSURF-04 SAML-CRITICAL scan): identity findings must be
+# included (D-23), which caps it at 30 (the XSURF-04 headline under scoring 4.0, Phase 234;
+# 31 after the 228-07 coverage rows on 3.0, 32 before).
+_EXPECTED_XSURF07_COMPARE_B = 30
+
+
+def _xsurf07_seed(TestingSession):
+    db = TestingSession()
+    try:
+        # Phase 229 D-09: the timeline resolves sessions by scan_run_id, so a
+        # microsecond stamp is visible to /api/trends/timeline (the old
+        # whole-second workaround is no longer required).
+        now = _datetime.now()
+        wall = _datetime.now(_timezone.utc)
+
+        def _ep(host, sensor, seg, not_after):
+            return _CryptoEndpoint(
+                scan_run_id=_XSURF07_RUN_ID, scanned_at=now,
+                host=host, port=443, protocol="TLS", segment=seg, sensor_id=sensor,
+                service_detail="pqc-hybrid-detected",
+                tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+                tls_weak_ciphers_present=False, tls_legacy_suites_present=False,
+                cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+                cert_not_after=not_after, cert_subject=f"CN={host}",
+                cert_issuer="CN=CA", tls_supported_versions="TLSv1.3",
+            )
+
+        good = wall + _timedelta(days=200)
+        # One endpoint per sensor_id so _assemble_union keeps every row,
+        # including the CRITICAL one (Pitfall 6; FIND-13 is Phase 229).
+        db.add(_ep("bad.example.com", "s1", "seg-a", wall - _timedelta(days=5)))
+        db.add(_ep("a1.example.com", "s2", "seg-a", good))
+        db.add(_ep("b1.example.com", "s3", "seg-b", good))
+        db.add(_ep("b2.example.com", "s4", "seg-b", good))
+        db.commit()
+        from quirk.models import MergeRun
+        db.add(MergeRun(
+            scan_id=_XSURF07_RUN_ID, merged_at=_datetime.now(),
+            score=90, endpoint_count=4, sensor_count=4,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_xsurf07_trend_merge_segment_scores_match_headline():
+    client, TestingSession = _xsurf04_make_client_and_session()
+    _xsurf07_seed(TestingSession)
+
+    head = client.get(f"/api/scan/latest?scan_id={_XSURF07_RUN_ID}").json()["score"]["score"]
+    assert head == _EXPECTED_XSURF07_HEADLINE and head <= 34, (
+        f"XSURF-07 VIOLATION: headline {head}, expected {_EXPECTED_XSURF07_HEADLINE} (<= 34)"
+    )
+
+    trends = client.get("/api/trends").json()
+    assert trends["current_score"] == head, (
+        f"XSURF-07 VIOLATION: /api/trends current_score {trends['current_score']} != headline {head}"
+    )
+
+    tl = client.get("/api/trends/timeline").json()["sessions"]
+    assert len(tl) == 1
+    # Closes the 228-06 gap: its timeline test only asserted <= 34.
+    assert tl[0]["score"] == head, (
+        f"XSURF-07 VIOLATION: timeline point {tl[0]['score']} != headline {head}"
+    )
+
+    scans = client.get("/api/scans").json()
+    assert len(scans) == 1 and scans[0]["score"] == head, (
+        f"XSURF-07 VIOLATION: /api/scans score {[s.get('score') for s in scans]} != headline {head}"
+    )
+
+    # /api/merge/latest overall is the LIVE recompute over the union, not MergeRun.score (90).
+    merge = client.get("/api/merge/latest").json()["merge"]
+    assert merge["score"] == head, (
+        f"XSURF-07 VIOLATION: merge overall {merge['score']} != headline {head}"
+    )
+    segs = merge["per_segment_scores"]
+    for seg, pinned in (("seg-a", _EXPECTED_XSURF07_SEG_A), ("seg-b", _EXPECTED_XSURF07_SEG_B)):
+        seg_head = client.get(
+            f"/api/scan/latest?scan_id={_XSURF07_RUN_ID}&segment={seg}"
+        ).json()["score"]["score"]
+        assert segs[seg] == seg_head == pinned, (
+            f"XSURF-07 VIOLATION: segment {seg} merge={segs[seg]} "
+            f"segment-filtered headline={seg_head} expected={pinned}"
+        )
+    assert segs["seg-a"] <= 34, "XSURF-07 VIOLATION: expired cert must cap its segment"
+
+
+def test_xsurf07_compare_includes_identity_findings():
+    """D-23: /compare derives identity findings, so each side equals its headline."""
+    client, TestingSession = _xsurf04_make_client_and_session()
+    _xsurf04_seed_scan_run(TestingSession, _XSURF04_RUN_ID)
+    _xsurf0508_seed_scan_run(TestingSession, _XSURF0508_RUN_ID)
+
+    head_b = client.get(f"/api/scan/latest?scan_id={_XSURF04_RUN_ID}").json()["score"]["score"]
+    head_a = client.get(f"/api/scan/latest?scan_id={_XSURF0508_RUN_ID}").json()["score"]["score"]
+    resp = client.get(f"/api/compare?a={_XSURF0508_RUN_ID}&b={_XSURF04_RUN_ID}")
+    assert resp.status_code == 200, resp.text[:300]
+    data = resp.json()
+    assert data["scan_b"]["score"] == head_b == _EXPECTED_XSURF07_COMPARE_B and head_b <= 34, (
+        f"XSURF-07 VIOLATION: /compare side B {data['scan_b']['score']} headline {head_b} "
+        f"expected {_EXPECTED_XSURF07_COMPARE_B} (<= 34)"
+    )
+    assert data["scan_a"]["score"] == head_a == _EXPECTED_XSURF0508_SCORE, (
+        f"XSURF-07 VIOLATION: /compare side A {data['scan_a']['score']} headline {head_a}"
     )

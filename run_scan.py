@@ -24,6 +24,7 @@ if sys.platform == "win32":
 from quirk.config import load_config, _parse_host_port
 from quirk.config_redaction import credential_is_set  # Phase 192 / OBS-01 / D-05
 from quirk.util.safe_exc import safe_str
+from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
 from quirk.models import (
@@ -76,7 +77,7 @@ from quirk.discovery.nmap_provider import (
 from quirk.discovery.nmap_parser import to_targets as nmap_to_targets
 
 from quirk.assessment.operator_context import attach_context
-from quirk.engine.findings_evaluator import evaluate_endpoints, evaluate_email_endpoints, evaluate_broker_endpoints, evaluate_codesign_endpoints, evaluate_identity_endpoints
+from quirk.engine.findings_evaluator import derive_report_findings
 from quirk.reports.writer import write_reports
 from quirk.reports.content_model import ReportCongruenceError  # D-06: fail-closed report halt
 
@@ -504,6 +505,35 @@ def _is_resumed_jwt_row(e) -> bool:
         proto == "ADVISORY"
         and getattr(e, "service_detail", "") == ADVISORY_JWKS_VERIFY_DISABLED
     )
+
+
+def _bearer_token_endpoints(cred_ctx, cfg) -> list:
+    """Build the BEARER_TOKEN endpoint for an operator bearer credential.
+
+    Phase 94 TOKEN-02 + Phase 230 DETECT-05 (D-15a). Passive: the JWT header is
+    decoded UNVERIFIED for its declared algorithm only; the raw token never
+    reaches a CryptoEndpoint, the DB, or the CBOM. A declared alg is stored raw
+    (``none`` stays ``none``); a JWT with no alg is stored as
+    ``cert_pubkey_alg=None`` plus a service_detail marker. Opaque -> no endpoint.
+    """
+    if cred_ctx is None or getattr(cred_ctx, "scheme", None) != "bearer":
+        return []
+    state, alg = cred_ctx.bearer_alg_state()
+    if state == "opaque":
+        return []
+    host = (cfg.targets.fqdns[0] if getattr(cfg, "targets", None)
+            and getattr(cfg.targets, "fqdns", None) else "authenticated-scan")
+    detail = "declared_algorithm (unverified)"
+    if state == "missing":
+        detail += ": " + BEARER_ALG_ABSENT_MARKER
+    return [CryptoEndpoint(
+        host=host,
+        port=443,
+        protocol="BEARER_TOKEN",
+        cert_pubkey_alg=alg,
+        service_detail=detail,
+        severity="INFO",
+    )]
 
 
 def _is_privileged() -> Optional[bool]:
@@ -1380,8 +1410,19 @@ def main():
             return
         return
 
-    # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10) ---
+    # --- doctor subcommand: intercept before scan argparse (Phase 52 DOCS-05 / D-10, Phase 231 QRAMM-20) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "doctor":
+        doctor_parser = argparse.ArgumentParser(
+            prog="quirk doctor",
+            description=(
+                "Pre-engagement health check: Python, scanner binaries, "
+                "compliance freshness, QRAMM module, database, config, "
+                "network and dashboard checks"
+            ),
+            allow_abbrev=False,
+        )
+        # Parse BEFORE the lazy import so --help runs no check (T-231-03).
+        doctor_parser.parse_args(_sys.argv[2:])
         from quirk.cli.doctor_cmd import run_doctor
         run_doctor()
         return
@@ -1398,21 +1439,55 @@ def main():
         run_scheduler(_sys.argv[2:])
         return
 
-    # --- qramm subcommand: intercept before scan argparse (Phase 55 QRAMM-07) ---
+    # --- qramm subcommand: intercept before scan argparse (Phase 55 QRAMM-07, Phase 231 QRAMM-20) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "qramm":
-        if len(_sys.argv) > 2 and _sys.argv[2] == "status":
+        qramm_parser = argparse.ArgumentParser(
+            prog="quirk qramm",
+            description="QRAMM assessment model utilities",
+            allow_abbrev=False,
+        )
+        qramm_sub = qramm_parser.add_subparsers(dest="action", required=True)
+        qramm_sub.add_parser(
+            "status",
+            help=(
+                "Print the QRAMM model version, last_verified date and "
+                "freshness (exit 1 when stale)"
+            ),
+            allow_abbrev=False,
+        )
+        qramm_args = qramm_parser.parse_args(_sys.argv[2:])
+        if qramm_args.action == "status":
             from quirk.cli.qramm_cmd import run_qramm_status
             run_qramm_status()
-            return
-        # Future: other `quirk qramm <action>` subcommands route here.
+        return
 
-    # --- cve subcommand: intercept before scan argparse (Phase 142 CVE-02) ---
+    # --- cve subcommand: intercept before scan argparse (Phase 142 CVE-02, Phase 231 QRAMM-20) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "cve":
-        if len(_sys.argv) > 2 and _sys.argv[2] == "status":
+        cve_parser = argparse.ArgumentParser(
+            prog="quirk cve",
+            description="Firmware CVE correlation catalog utilities",
+            allow_abbrev=False,
+        )
+        cve_sub = cve_parser.add_subparsers(dest="action", required=True)
+        cve_status = cve_sub.add_parser(
+            "status",
+            help=(
+                "Print the CVE catalog's last_verified date and freshness "
+                "(exit 1 when stale)"
+            ),
+            allow_abbrev=False,
+        )
+        cve_status.add_argument(
+            "--format",
+            choices=["text", "json"],
+            default="text",
+            help="Output format (default: text)",
+        )
+        cve_args = cve_parser.parse_args(_sys.argv[2:])
+        if cve_args.action == "status":
             from quirk.cli.cve_cmd import run_cve_status
-            run_cve_status(_sys.argv[3:])
-            return
-        # Future: other `quirk cve <action>` subcommands route here.
+            run_cve_status(fmt=cve_args.format)
+        return
 
     # --- analyze-token subcommand: intercept before scan argparse (Phase 94 TOKEN-01) ---
     if len(_sys.argv) > 1 and _sys.argv[1] == "analyze-token":
@@ -1721,7 +1796,7 @@ def main():
         default=None,
         metavar="REF",
         help=(
-            "HTTP Basic credentials (base64-encoded user:pass). "
+            "HTTP Basic credentials as user:password (QUIRK base64-encodes them; do not pre-encode). "
             "Bare flag triggers getpass prompt; or supply ENVVAR_NAME or @/path/to/creds."
         ),
     )
@@ -1789,7 +1864,7 @@ def main():
     )
 
     # Phase 133 SNMP-01/D-04: opt-in SNMP hardware fingerprinting flag.
-    # Requires quirk[hw] extras (pysnmp). Off by default — no behavior change for
+    # Requires 'quirk-scanner[hw]' extras (pysnmp). Off by default — no behavior change for
     # existing scans. Advisory import guard in snmp_scanner.py catches missing pysnmp.
     parser.add_argument(
         "--enable-snmp",
@@ -1799,14 +1874,14 @@ def main():
         help=(
             "Enable SNMP hardware fingerprinting (Phase 133 SNMP-01). "
             "Probes discovered hosts on UDP/161 using SNMP v2c to collect "
-            "sysDescr/sysName/sysObjectID. Requires quirk-scanner[hw] extras."
+            "sysDescr/sysName/sysObjectID. Requires 'quirk-scanner[hw]' extras."
         ),
     )
 
     # Phase 141 OTICS-01/02/D-07: opt-in OT/ICS fingerprinting flags. These probe a
     # MATERIALLY DIFFERENT risk class than IT/network scanning — PLCs, RTUs, and building
     # controllers are industry-documented to crash or enter fail-safe states from even
-    # benign read-only Modbus/BACnet queries. Off by default. Requires quirk[hw] extras
+    # benign read-only Modbus/BACnet queries. Off by default. Requires 'quirk-scanner[hw]' extras
     # (pymodbus / bacpypes3). Strongly recommend written authorization from the OT network
     # owner before enabling on production OT networks.
     parser.add_argument(
@@ -1820,7 +1895,7 @@ def main():
             "industry-documented incidents include PLC/RTU crashes from benign read-only "
             "queries. Recommend written authorization before enabling on production OT "
             "networks. Probes port 502 with a single read-only Read Device Identification "
-            "request. Requires quirk-scanner[hw] extras."
+            "request. Requires 'quirk-scanner[hw]' extras."
         ),
     )
     parser.add_argument(
@@ -1834,7 +1909,7 @@ def main():
             "than IT scanning; industry-documented incidents include controller crashes "
             "from benign read-only queries. Recommend written authorization before "
             "enabling on production OT networks. Sends a single directed-unicast Who-Is "
-            "probe over the standard BACnet/IP UDP port. Requires quirk-scanner[hw] extras."
+            "probe over the standard BACnet/IP UDP port. Requires 'quirk-scanner[hw]' extras."
         ),
     )
 
@@ -2598,9 +2673,12 @@ def main():
             fp = fingerprint_service(host, port, timeout=fp_timeout)
             return {"host": host, "port": port, "is_open": fp.is_open, "proto": fp.proto, "detail": fp.detail}
 
-        with _phase_timer(run_stats, "fingerprinting"):
+        with _phase_timer(run_stats, "fingerprinting") as _fp_timer:
             fp_results: List[Dict[str, Any]] = []
             if fp_cached:
+                # Phase 229 D-22: a cached fingerprint is not a recheck; write
+                # no timing key so the http probe family resolves to not_run.
+                _fp_timer.mark_skipped()
                 logger.stamp(f"♻️ Using cached fingerprint results ({fp_key})")
                 fp_results = fp_cached.get("fingerprints", [])
             else:
@@ -3022,7 +3100,7 @@ def main():
         except ImportError as _snmp_import_err:
             logger.info(
                 f"SNMP fingerprint: pysnmp not installed (advisory); "
-                f"install quirk-scanner[hw] to enable. ({safe_str(_snmp_import_err)})"
+                f"run pip install 'quirk-scanner[hw]' to enable. ({safe_str(_snmp_import_err)})"
             )
             _snmp_results = []
 
@@ -3685,6 +3763,7 @@ def main():
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
                 timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
+                principal=cfg.connectors.kerberos_probe_principal,
                 logger=logger,
                 session_start=session_start,
             )
@@ -4050,20 +4129,7 @@ def main():
     # Phase 94 / TOKEN-02: classify the operator-supplied bearer credential into the CBOM.
     # Passive — the JWT header is decoded UNVERIFIED for its declared algorithm only; the
     # raw token never reaches a CryptoEndpoint, the DB, or the CBOM (only the alg string).
-    bearer_token_endpoints = []
-    if cred_ctx is not None and getattr(cred_ctx, "scheme", None) == "bearer":
-        _declared_alg = cred_ctx.bearer_declared_alg()
-        if _declared_alg:
-            _bt_host = (cfg.targets.fqdns[0] if getattr(cfg, "targets", None)
-                        and getattr(cfg.targets, "fqdns", None) else "authenticated-scan")
-            bearer_token_endpoints.append(CryptoEndpoint(
-                host=_bt_host,
-                port=443,
-                protocol="BEARER_TOKEN",
-                cert_pubkey_alg=_declared_alg,
-                service_detail="declared_algorithm (unverified)",
-                severity="INFO",
-            ))
+    bearer_token_endpoints = _bearer_token_endpoints(cred_ctx, cfg)
 
     endpoints = (inventory_endpoints + tls_endpoints + ssh_endpoints
                  + pqc_endpoints                                    # Phase 90 PQC-02
@@ -4089,34 +4155,11 @@ def main():
     # Findings + persistence + reports
     # ==============================
     with _phase_timer(run_stats, "risk_engine"):
-        findings = evaluate_endpoints(cfg, endpoints)
-        # Phase 32: email-specific findings (EMAIL-08, EMAIL-09).
-        # Titles are unique strings not produced elsewhere, so the (host, port,
-        # title, recommendation) dedup key in evaluate_endpoints will not collide
-        # with these. D-11 layered findings (port 25 + weak cipher) survive.
-        email_findings = evaluate_email_endpoints(email_endpoints)
-        if email_findings:
-            findings = (findings or []) + email_findings
-        # Phase 33: broker-specific findings (layered findings survive _dedupe_findings
-        # because titles differ per protocol; D-11/D-12 carry-forward from Phase 32).
-        broker_findings = evaluate_broker_endpoints(all_broker_eps)
-        if broker_findings:
-            findings = (findings or []) + broker_findings
-        # Phase 99 CTX-03: code-signing expiry/weak-algo findings (ZERO findings
-        # previously — codesign endpoints were collected but never evaluated).
-        codesign_findings = evaluate_codesign_endpoints(codesign_endpoints)
-        if codesign_findings:
-            findings = (findings or []) + codesign_findings
-        # Phase 210 XSURF-02: SAML identity findings. Before this, SAML weakness
-        # was scored into intelligence-*.json (identity_saml_weak_signing_ratio)
-        # but never emitted into findings-*.json, because IdentityFinding
-        # synthesis lived only in the dashboard route. evaluate_identity_endpoints
-        # is the shared evaluator (Phase 210 D-05/D-06) also used by
-        # quirk/dashboard/api/routes/scan.py::_derive_identity_findings, so both
-        # pipelines now report the same SAML findings.
-        identity_findings = evaluate_identity_endpoints(saml_endpoints)
-        if identity_findings:
-            findings = (findings or []) + identity_findings
+        # Phase 228 D-25: one shared composer runs evaluate_endpoints plus the
+        # email (Phase 32), broker (Phase 33), code-signing (Phase 99) and SAML
+        # identity (Phase 210) evaluators, so report/merge/notify share one
+        # definition of "the report's findings".
+        findings = derive_report_findings(endpoints, cfg)
 
     with _phase_timer(run_stats, "db_persist"):
         # RVW-003: stamp the stored session key on every endpoint before the
@@ -4139,6 +4182,8 @@ def main():
     # surface reads populated tables. Import is lazy so a partial install
     # cannot break run_scan.py at import time, matching write_reports'
     # collaborator-import style. Advisory bookkeeping: must never fail a scan.
+    # 229-REVIEW CR-02: read by the closure_verify gate below.
+    _remediation_counters: Dict[str, int] = {}
     with _phase_timer(run_stats, "remediation_persist") as _remediation_timer:
         if not scan_run_id or not cfg.output.db_path:
             # Phase 173 D-02: no phantom timings_sec key for a phase that did
@@ -4200,6 +4245,15 @@ def main():
             # Phase 173 D-02: no phantom timings_sec key for a phase that did
             # no real work.
             _closure_timer.mark_skipped()
+        elif _remediation_counters.get("failed"):
+            # 229-REVIEW CR-02: the remediation snapshot failed, so this scan
+            # has no fingerprint rows. Closure would read that as "every prior
+            # finding is gone" and publish closures nobody observed.
+            _closure_timer.mark_skipped()
+            logger.warning(
+                "closure_verify: skipped - remediation snapshot failed for scan_run_id=%s",
+                scan_run_id,
+            )
         else:
             try:
                 from quirk.intelligence.closure import compute_closure

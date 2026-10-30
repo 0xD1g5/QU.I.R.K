@@ -544,3 +544,66 @@ def test_email_score_delta_none_does_not_crash(tmp_path, monkeypatch):
     assert "N/A" in captured["body"], (
         "Email body must contain 'N/A' for score_delta when it is None"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 (XSURF-07): the drift band applies the consequence ceilings
+# ---------------------------------------------------------------------------
+
+
+def _seed_drift_sessions(db, prev_ts, curr_ts):
+    from quirk.models import CryptoEndpoint
+
+    def _ep(i, ts, expired):
+        return CryptoEndpoint(
+            host=f"h{i}.example", port=443, protocol="TLS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_not_after=datetime(2020, 1, 1) if expired else None,
+            segment="local", scanned_at=ts,
+        )
+
+    for i in range(4):
+        db.add(_ep(i, prev_ts, False))
+        db.add(_ep(i, curr_ts, i == 0))
+    db.commit()
+
+
+def test_drift_band_applies_ceiling(tmp_path):
+    from quirk.intelligence.trends import compute_trend_report
+    from quirk.notify.payload import _score_to_band, build_drift_summary
+
+    db_path = _make_db(tmp_path)
+    prev_ts = datetime(2026, 4, 25, 9, 0, 0)
+    curr_ts = datetime(2026, 4, 26, 9, 0, 0)
+    with get_session(db_path) as db:
+        _seed_drift_sessions(db, prev_ts, curr_ts)
+        report = compute_trend_report(curr_ts, prev_ts, db)
+        findings_less = compute_trend_report(
+            curr_ts, prev_ts, db, findings_deriver=lambda eps: []
+        ).current_score
+
+    PINNED_HEADLINE = 31  # scoring 4.0 (Phase 234): was 27 on 3.0
+    assert report.current_score == PINNED_HEADLINE
+    summary = build_drift_summary(report)
+    assert summary.score_band == _score_to_band(PINNED_HEADLINE)
+    assert summary.score_band != _score_to_band(findings_less)
+
+
+def test_dispatcher_trend_call_stays_three_positional_args():
+    import ast
+    import inspect
+
+    import quirk.notify.dispatcher as disp
+
+    tree = ast.parse(inspect.getsource(disp))
+    calls = [
+        n for n in ast.walk(tree)
+        if isinstance(n, ast.Call)
+        and getattr(n.func, "id", None) == "compute_trend_report"
+    ]
+    assert calls
+    for c in calls:
+        assert len(c.args) == 3 and not c.keywords

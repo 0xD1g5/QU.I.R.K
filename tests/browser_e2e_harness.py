@@ -34,7 +34,7 @@ import subprocess
 import sys
 import time
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -42,9 +42,9 @@ from sqlalchemy.orm import sessionmaker
 
 from quirk.models import Base, CryptoEndpoint
 
-# The scan-session key every seeded row shares. Tests may reference it.
+# The scan-session key every seeded row shares. Tests may reference it. It is an
+# opaque literal label; the seeded rows' scanned_at follows the wall clock.
 SEED_SCAN_RUN_ID = "2026-09-26T12:00:00"
-SEED_SCANNED_AT = datetime(2026, 9, 26, 12, 0, 0)
 
 # Viewport wide enough for the `hidden lg:block` full sidebar brand logo
 # (src/dashboard/src/components/sidebar.tsx) to render rather than the glyph.
@@ -233,7 +233,14 @@ def seed_dashboard_db(db_path) -> str:
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
-    common = dict(scan_run_id=SEED_SCAN_RUN_ID, scanned_at=SEED_SCANNED_AT)
+    # One clock (D-19, precedent d5b66337): scanned_at follows the wall clock and every
+    # cert date is an offset from it. The old fixed 2026-09-26 scanned_at made the web01
+    # cert (+45d) expire on 2026-11-10 against the wall clock findings_for_endpoint uses,
+    # which would have turned required Dashboard Quality CI red mid-release.
+    seed_now = (
+        datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0) - timedelta(hours=1)
+    )
+    common = dict(scan_run_id=SEED_SCAN_RUN_ID, scanned_at=seed_now)
     rows = [
         # Certificate-bearing, weak RSA-2048 + legacy TLS 1.0 support -> findings + roadmap items.
         CryptoEndpoint(
@@ -252,8 +259,8 @@ def seed_dashboard_db(db_path) -> str:
             cert_sig_alg="sha256WithRSAEncryption",
             cert_pubkey_alg="RSA",
             cert_pubkey_size=2048,
-            cert_not_before=SEED_SCANNED_AT - timedelta(days=30),
-            cert_not_after=SEED_SCANNED_AT + timedelta(days=45),
+            cert_not_before=seed_now - timedelta(days=30),
+            cert_not_after=seed_now + timedelta(days=45),
             chain_verified=True,
             severity="HIGH",
             **common,
@@ -274,8 +281,8 @@ def seed_dashboard_db(db_path) -> str:
             cert_sig_alg="ecdsa-with-SHA384",
             cert_pubkey_alg="EC",
             cert_pubkey_size=384,
-            cert_not_before=SEED_SCANNED_AT - timedelta(days=10),
-            cert_not_after=SEED_SCANNED_AT + timedelta(days=300),
+            cert_not_before=seed_now - timedelta(days=10),
+            cert_not_after=seed_now + timedelta(days=300),
             chain_verified=True,
             severity="LOW",
             **common,

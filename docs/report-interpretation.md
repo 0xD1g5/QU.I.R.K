@@ -25,8 +25,8 @@ The Quantum-Readiness Score is a single integer from 0 to 100. It summarizes you
 itself, not only the band: a scan with at least one open CRITICAL finding scores 34 or lower, which
 is `POOR`, and five or more score 25 or lower (see §3.6 for the ceilings). That holds for the
 headline score in the reports and on the dashboard's Executive page, scan history and Compare page.
-The trend timeline and the multi-sensor merge scores are computed without findings, so this
-ceiling never binds there (§3.6). On reports from before
+The same ceilings hold on the trend timeline, `/api/trends`, the multi-sensor merge and the
+per-segment scores (§3.6). On reports from before
 scoring v3 the same protection was a band-only floor, so an 89/100 score could read `FAIR` rather
 than `EXCELLENT` — see §19, "The Severity Floor," for both behaviours.
 
@@ -34,7 +34,11 @@ than `EXCELLENT` — see §19, "The Severity Floor," for both behaviours.
 
 ## 3. The Six Subscores
 
-Each subscore is worth 0–25 points. The headline Quantum-Readiness Score (0–100) is computed from the subscores of the domains that were actually assessed, rescaled to 0–100 (see §3.6). The subscore key names used in the report output are: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. §3.1–§3.4 describe the first four; §3.5 describes the last two. The impact figures in the §3.1–§3.4 tables are maximums, reached when every assessed endpoint or certificate is affected: a ratio-based driver scales with the square root of the affected share, so a quarter of the certificates being expired costs half of its maximum (7 of 14 points).
+Each subscore is worth 0–25 points. The headline Quantum-Readiness Score (0–100) is computed from the subscores of the domains that were actually assessed, rescaled to 0–100 (see §3.6). The subscore key names used in the report output are: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. §3.1–§3.4 describe the first four; §3.5 describes the last two. The impact figures in the §3.1–§3.4 tables are maximums. Under scoring 4.0 a count-based driver costs `weight × min(1, count / 40) ^ 0.5`, where `count` is the number of affected endpoints or certificates, so it reaches its maximum at 40 and does not depend on what share of the scan they are: 10 expired certificates cost 14 × √(10/40) = 7.0 of 14 points whether the scan observed 20 certificates or 2,000. Adding healthy endpoints cannot lower a penalty. The reference count of 40 (`N_REF`) is an anchor, not a fitted value: it is the size of the project's calibration estates, so they keep the scores they had under scoring v3, and only the dependence on estate size is removed.
+
+**Small estates.** Because the curve counts weaknesses rather than taking their share, a weakness on a very small estate costs less than its share would suggest. A scan of one endpoint that is a plaintext HTTP service scores hygiene 22 under scoring 4.0 (25 − 18 × √(1/40) = 22.15), where scoring v3 gave it 7 (the full 18-point penalty for 1 of 1 endpoints affected). Read a small scan's subscores with that in mind.
+
+**Newly assessed domains.** Adding healthy endpoints to a domain that is already assessed does not raise the score. The first clean result in a domain that was **not** assessed before is different: that domain joins the average (§3.6), which can raise the headline. This is coverage credit, not dilution. Measured on the project's calibration estates, one clean SMTP-STARTTLS result moved their scores from 77 to 78, 44 to 46, and 22 to 24, each going from 5 to 6 domains assessed. Scoring v3 gave the same numbers.
 
 ### 3.1 Hygiene (0–25 points)
 
@@ -44,7 +48,7 @@ Hygiene measures whether your services are using encryption in the first place. 
 |--------|-----------|---------|
 | Plaintext HTTP exposure | −18 pts | HTTP services responding on non-TLS ports |
 | HTTP on TLS-designated ports | −16 pts | HTTP found on ports expected to serve TLS (by default 443, 4433, 5001, 8443, 9443 and 10443, plus any `scan.tls_designated_ports` you configure) |
-| Scan error rate | −6 pts | Share of probed endpoints whose probe recorded a scan error (for example a connection error or timeout) |
+| Scan errors | −6 pts | Number of probed endpoints whose probe recorded a scan error (for example a connection error or timeout), saturating at 40 |
 
 > **Client Conversation — Hygiene:**
 > "Hygiene measures whether your services are using encryption in the first place. A low score here often means HTTP services are publicly accessible — not a quantum problem, a basic security problem. We recommend addressing these before the quantum migration work."
@@ -59,7 +63,9 @@ Modern TLS measures whether your encryption is current. Legacy TLS versions (1.0
 |--------|-----------|---------|
 | Legacy TLS versions allowed | −14 pts | TLS 1.0 or 1.1 accepting connections |
 | Unknown open services | −6 pts | Open ports that didn't respond to TLS, HTTP, or SSH |
-| Assessment visibility blockers | −5 pts | The same share of endpoints with a recorded scan error, weighted separately because it also limits how much of the TLS posture could be assessed |
+| Assessment visibility blockers | −5 pts | The same number of endpoints with a recorded scan error, saturating at 40, weighted separately because it also limits how much of the TLS posture could be assessed |
+
+In 5.28.0, the error recorded when source code scanning cannot run (see *Scan Coverage* below) counts as a scan error here, so a scan that sets `source_targets` scores lower on Hygiene and Modern TLS than the same scan without `source_targets`.
 
 > **Client Conversation — Modern TLS:**
 > "Modern TLS measures whether your encryption is current. TLS 1.0 and 1.1 have known weaknesses and were formally deprecated by the IETF in RFC 8996. If this score is low, some of your services are still advertising support for these versions — which needs to be addressed regardless of the quantum timeline."
@@ -68,14 +74,14 @@ Modern TLS measures whether your encryption is current. Legacy TLS versions (1.0
 
 ### 3.3 Identity Trust (0–25 points)
 
-Identity Trust measures certificate and identity-protocol health. This subscore captures expired and self-signed certificates (which cause browser warnings and break trust chains), weak Kerberos, SAML, DNSSEC, S/MIME and AD CS configurations where those scanners ran, and rewards services that enforce mutual TLS (mTLS). The impact values in the §3.1–§3.4 tables are the default (balanced) profile weights.
+Identity Trust measures certificate and identity-protocol health. This subscore captures expired and self-signed certificates (which cause browser warnings and break trust chains), weak Kerberos, SAML, DNSSEC, S/MIME and AD CS configurations where those scanners ran, and rewards services that enforce mutual TLS (mTLS). A Kerberos result with no encryption-type data does not count as identity evidence: a placeholder row, an unreachable or never-probed KDC, or a KDC error reply leaves Identity Trust unassessed unless something else assesses it. The impact values in the §3.1–§3.4 tables are the default (balanced) profile weights.
 
 | Driver | Max Impact | Trigger |
 |--------|-----------|---------|
 | Expired certificates | −14 pts | Certificates past their `Not After` date |
 | Expiring certificates | −7 pts | Certificates expiring within 30 days |
 | Self-signed certificates | −9 pts | Certificates whose subject and issuer are identical |
-| mTLS enforcement | +6 pts | Mutual TLS required — services verify client identity |
+| mTLS enforcement | +6 pts | At least one service requires mutual TLS (it verifies the client's identity). A presence credit, granted once: further mTLS services add nothing, so scanning more of them cannot raise the score |
 | Weak Kerberos encryption types | −10 pts | DES, RC4 or AES-128 Kerberos encryption types detected |
 | Weak SAML signing key | −8 pts | SAML metadata signing key rated weak |
 | Weak DNSSEC signing algorithm | −8 pts | DNSSEC zones signed with a weak algorithm, or left unsigned |
@@ -89,24 +95,23 @@ Identity Trust measures certificate and identity-protocol health. This subscore 
 
 ### 3.4 Agility Signals (0–25 points)
 
-Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA is quantum-vulnerable and harder to migrate than ECDSA because it's more deeply embedded in older infrastructure. ECDSA adoption is a positive signal that engineering teams are already comfortable with modern key types.
+Agility measures how ready you are to swap out cryptographic algorithms when the time comes. Every classical certificate key, RSA, ECDSA or EdDSA, is quantum-vulnerable, so scoring 4.0 treats them alike: none of them earns credit, and only post-quantum or hybrid cryptography does.
 
 | Driver | Max Impact | Trigger |
 |--------|-----------|---------|
 | Unknown service inventory | −6 pts | Services that couldn't be identified |
-| RSA-only posture | −8 pts | Only RSA key types found, no ECDSA (harder to migrate) |
-| ECDSA adoption | +4 pts | At least one ECDSA certificate found (Ed25519 and Ed448 keys count as ECDSA here) |
-| Certificate key types undetermined | −8 pts | Certificates were observed but none was recognised as RSA, EC or EdDSA: no key type was recorded, or the key type is another algorithm such as DSA or ML-DSA (treated as the worst case, the same penalty as RSA-only) |
-| PQC-hybrid key exchange | +8 pts | At least one endpoint negotiated the hybrid post-quantum key exchange X25519MLKEM768 (a scan run from a host whose own OpenSSL is too old to probe it also records a placeholder that currently counts here, so the bonus can appear without a real detection) |
-| Bearer token weak algorithm | −6 pts | Share of assessable endpoints with a bearer token declaring any algorithm other than `none`. Every declared algorithm counts, including one the CBOM classifier labels quantum-safe such as `ML-DSA-65` (a token declaring `alg:none` is not counted here; `quirk analyze-token` flags it as CRITICAL) |
-| OpenAPI plaintext servers | −4 pts | Share of assessable endpoints whose OpenAPI spec declares `http://` servers |
-| Code-signing cert weak algorithm | −6 pts | Share of assessable endpoints with a code-signing certificate that the code-signing scanner flagged: a weak algorithm (RSA < 2048-bit, EC < 256-bit, or SHA-1), an expired certificate, or one expiring within 90 days (`agility_codesign_weak_algo_ratio`) |
-| Active REST fuzz crypto-posture findings | −4 pts | Share of assessable endpoints with CRITICAL/HIGH crypto-posture findings from active REST fuzzing |
+| Quantum-vulnerable certificate keys (RSA/ECDSA/EdDSA) | −8 pts | At least one RSA, ECDSA or EdDSA (Ed25519, Ed448) certificate key found. A flat penalty, not count-based: one classical certificate needs replacing as surely as forty |
+| Certificate key types undetermined | −8 pts | Certificates were observed and at least one was not recognised as RSA, EC, EdDSA or post-quantum: no key type was recorded, or the key type is another algorithm such as DSA (treated as the worst case, the same penalty as a classical key). It applies even when other certificates on the scan are post-quantum: one post-quantum certificate does not excuse the undetermined ones, and the post-quantum credit below is counted separately. When classical keys were also found, the classical penalty applies instead, never both |
+| Post-quantum key exchange or certificate key | +8 pts | At least one endpoint negotiated the hybrid post-quantum key exchange X25519MLKEM768, or at least one certificate key is ML-DSA, SLH-DSA or a composite key that includes one (the earlier names Dilithium and SPHINCS+, and Falcon / FN-DSA, count too). A post-quantum or composite key name on a result that carries no certificate, such as a KMS or token-signing key, earns nothing and is not counted as a classical certificate key either. One credit, never both. Only the key exchange lifts the 84 ceiling (§3.6); a post-quantum certificate key alone does not. ML-DSA, SLH-DSA and composite certificate keys earn the credit when a scanner reports them, but today's TLS scanner cannot read an ML-DSA leaf certificate (its certificate library does not recognise the algorithm): the endpoint is recorded as a scan error with no certificate key type and no expiry date, so the certificate earns no credit and is not counted as an observed certificate. A scan run from a host whose own OpenSSL is too old to probe the key exchange also records a placeholder that currently counts here, so the credit can appear without a real detection |
+| Bearer token weak algorithm | −6 pts | Number of assessable endpoints with a bearer token declaring any algorithm other than `none`. Every declared algorithm counts, including one the CBOM classifier labels quantum-safe such as `ML-DSA-65` (a token declaring `alg:none`, or no `alg`, is not counted here: a scan reports it as the CRITICAL finding "Bearer token is unsigned (alg:none)", and `quirk analyze-token` still flags it offline) |
+| OpenAPI plaintext servers | −4 pts | Number of assessable endpoints whose OpenAPI spec declares `http://` servers |
+| Code-signing cert weak algorithm | −6 pts | Number of assessable endpoints with a code-signing certificate that the code-signing scanner flagged: a weak algorithm (RSA < 2048-bit, EC < 256-bit, or SHA-1), an expired certificate, or one expiring within 90 days (`agility_codesign_weak_algo_ratio`) |
+| Active REST fuzz crypto-posture findings | −4 pts | Number of assessable endpoints with CRITICAL/HIGH crypto-posture findings from active REST fuzzing |
 
 The "High-impact findings ratio" driver that earlier scoring versions listed here no longer exists. Open CRITICAL and HIGH findings now limit the headline score through the ceilings described in §3.6, not through the agility subscore.
 
 > **Client Conversation — Agility Signals:**
-> "Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA is quantum-vulnerable, but it's also harder to migrate than ECDSA because it's more deeply embedded in older infrastructure. Seeing ECDSA adoption is a good signal — it means your engineering team is already comfortable with modern key types, which makes the quantum migration path shorter."
+> "Agility measures how ready you are to swap out cryptographic algorithms when the time comes. RSA, ECDSA and EdDSA certificates are all classical, and a quantum computer breaks all of them, so moving from RSA to ECDSA does not make you quantum-ready. What earns credit here is post-quantum or hybrid cryptography: a post-quantum key exchange, or certificates with ML-DSA or composite keys as your CA and clients support them. The count-based drivers in this table measure how many endpoints carry a weakness, not what share of the estate they are, so scanning more healthy services does not make the number look better."
 
 ---
 
@@ -175,15 +180,26 @@ changes — not just the underlying findings — a score computed under one scor
 directly comparable to one computed under another, even for the identical estate. The executive
 and scorecard markdown, the HTML and DOCX reports, the dashboard executive page and
 `intelligence-{stamp}.json` carry a version marker next to the headline score, currently
-`Scoring version: 3.0` (on the dashboard, hovering it shows `scoring v3 — not comparable with v2 or
+`Scoring version: 4.0` (on the dashboard, hovering it shows `scoring v4 — not comparable with v3 or
 earlier scores`), for
-exactly this reason; see `CHANGELOG.md`'s 5.25.0 entry for the full migration decision record.
+exactly this reason; see `CHANGELOG.md`'s 5.25.0 entry for the v3 migration decision record.
 The dashboard's Export PDF (`/print`), trend timeline, scan history and Compare page show scores
 without the marker. QU.I.R.K. does not rewrite old report files or `intelligence-{stamp}.json`
 files to make old and new scores artificially comparable, so compare those only within the same
 scoring version. The dashboard keeps no per-scan score: its trend timeline, scan history and
 Compare page rescore every past scan from its stored endpoints with the current scoring code, so
-an old scan shows a v3 score there.
+an old scan shows a v4 score there. Saved report files, `intelligence-{stamp}.json` files and
+merge-run records keep the version they were written with: a scan from 2026-09-14 whose
+intelligence file records `scoring_version: "3.0"` and a score of 15 (computed 61) reads 18
+(computed 71) when the dashboard rescores it under 4.0.
+
+**What moves under scoring v4.** v4 changes how a weakness is weighed (§3: by count, not by share),
+not how harsh the scale is. The calibration estates the project uses keep their scores: 100, 78,
+46, 24 and 18. Only the largest one's uncapped figure moves, from 71 to 74, and its ceiling holds
+it at 18. Estates whose score was propped up by many healthy endpoints score lower, small estates
+score somewhat higher (§3, "Small estates"), and an estate with classical ECDSA certificates loses
+the old +4 ECDSA credit and takes the −8 classical-key penalty instead (§3.4). For example, the
+project's remediated multi-host reference estate moves from 84 to 80.
 
 **Expect scores to drop under scoring v3, and that is the intended correction.** Every reference
 estate the project re-scored dropped (a 31-host estate went from 87 to 18). v3 makes two
@@ -208,11 +224,12 @@ Executive Verdict and Export PDF carries a reason naming what capped it and disc
 figure — for example *"5 open CRITICAL findings — score limited to 20 (computed 81)"*. The trend
 timeline, scan history, Compare page and per-segment gauges show the number without a reason.
 
-**Not every dashboard score applies the finding ceilings.** The trend scores (`/api/trends` and
-`/api/trends/timeline`) and the multi-sensor merge scores (`/api/merge/latest`, including the
-per-segment gauges) are computed from the endpoints alone, without findings, so the CRITICAL and
-HIGH ceilings never bind there; only the no-hybrid cap at 84 does. In one test scan with a single
-expired certificate the headline score was 32 and the trend score 78.
+**Every dashboard score applies the finding ceilings.** The trend scores (`/api/trends` and
+`/api/trends/timeline`), the multi-sensor merge scores (`/api/merge/latest`, including the
+per-segment gauges), `quirk sensor merge`'s printed band and the Slack drift notification's band
+derive findings the same way the headline score does, so the CRITICAL and HIGH ceilings bind there
+too. Merge-run scores recorded before this release were computed without findings and are not
+recomputed. A history chart can therefore show a step at the release that introduced this.
 
 > **Client Conversation — Why the score dropped after an upgrade:**
 > "Your infrastructure didn't get worse and we didn't start grading harder for its own sake. The
@@ -221,6 +238,18 @@ expired certificate the headline score was 32 and the trend score 78.
 > directly, because an attacker only needs the one. Where a cap applies, the report tells you which
 > finding set it and what the number would otherwise have been — and clearing that finding set
 > lifts the cap."
+
+The dilution in that box is consequence dilution: a serious finding being averaged away by the
+healthy part of the same estate. The finding ceilings address it. A different kind, scan-depth
+dilution, was resolved by scoring v4 (Phase 234). Under v3, holding every weakness fixed, observing
+more healthy endpoints (a deeper or wider scan of the same estate) could raise the readiness score,
+because the endpoint and certificate counts that most ratio terms divided by grew with the scan,
+and a single newly observed ECDSA certificate also lifted the agility subscore. Under v4 each
+weakness is weighed by its own count (§3), scan errors are counted the same way, and the ECDSA
+credit is gone (§3.4), so adding only healthy endpoints in domains that are already assessed no
+longer raises the score. A domain assessed for the first time can still raise it (§3, "Newly
+assessed domains"). The before-and-after measurement, rung by rung, is recorded in
+`.planning/decisions/234-p2b-fix-and-ladder-remeasurement.md`.
 
 **Gauge colors now agree with the report band (SCORE-07).** The dashboard's subscore gauges (the
 0–25 gauges on the Executive page, including Data at Rest and Data in Motion) used to derive their
@@ -260,7 +289,7 @@ Every finding in a QU.I.R.K. report is assigned one of five severity levels. CRI
 
 | Severity | Color (HTML/PDF report) | What It Means | Recommended Response |
 |----------|-------|---------------|---------------------|
-| CRITICAL | Red | Cryptographic failure with no mitigation — e.g., an expired TLS certificate, an undersized SAML signing key (RSA below 2048 bits), a REST API that accepts a forged token | Immediate remediation — stop using this in production |
+| CRITICAL | Red | Cryptographic failure with no mitigation — e.g., an expired TLS certificate, an undersized SAML signing key (RSA below 2048 bits), a REST API that accepts a forged token, a bearer token whose JWT is unsigned (`alg:none` or no `alg`) | Immediate remediation — stop using this in production |
 | HIGH | Orange | Active risk with known exploit path — e.g., plaintext HTTP, HTTP on TLS port | Remediate within 30 days |
 | MEDIUM | Yellow | Risk that degrades posture but no immediate exploit — e.g., TLS handshake blocked assessment, unknown services | Investigate and validate within 90 days |
 | LOW | Blue | Technical debt or deprecated standard — e.g., legacy TLS 1.0/1.1 allowed | Schedule upgrade — typically 1–2 sprint cycles |
@@ -297,6 +326,7 @@ The table below maps common finding titles to their plain-English explanation an
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
 | mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
 | JWKS fetched with TLS certificate verification disabled | HIGH | A JWKS URL was fetched with `allow_insecure_jwks` on, so its TLS certificate check was turned off. One finding per URL fetched | Turn off `security.allow_insecure_jwks` (or `--allow-insecure-jwks`) and fix the endpoint certificate. Counted in the findings totals, but does not change the readiness score |
+| Bearer token is unsigned (alg:none) | CRITICAL | The JWT supplied with `--auth-bearer` declares `alg: none` (any case) or carries no `alg`, so it carries no signature a server could verify. Ordinary CRITICAL for scoring: it caps the rating at the top of POOR through the consequence ceiling, like any open CRITICAL | Do not use unsigned tokens; make the issuer sign with a real algorithm and have the API reject `none` |
 | Code-signing certificate uses weak algorithm: *subject* | HIGH | Code-signing certificate uses a weak key or hash: RSA < 2048-bit, EC < 256-bit, or a weak signature hash such as SHA-1 or MD5 | Replace the signing certificate with RSA ≥ 2048-bit / SHA-256 or an ECDSA P-256+ key; re-sign artifacts with the new cert |
 
 Some findings are configuration advisories, such as the JWKS row above. They are listed and counted in the findings totals but are excluded from the readiness score, so they never move the score or its ceilings.
@@ -334,13 +364,13 @@ The migration roadmap organizes findings and recommendations into three planning
 |---------|-------|-----------------|
 | **NOW** | Active classical risks: remove plaintext HTTP exposure, triage high-impact findings, replace expired certificates, increase scan coverage, assign remediation owners and SLAs | 0–30 days |
 | **NEXT** | Modernization work: classify unknown open services, renew near-expiry certificates, migrate self-signed certificates to managed PKI, disable legacy TLS versions, increase TLS enumeration coverage, automate evidence refresh | 31–90 days |
-| **LATER** | Longer-horizon agility work: plan ECDSA adoption, standardize mTLS lifecycle operations, establish crypto governance review | 90+ days |
+| **LATER** | Longer-horizon agility work: plan post-quantum (PQC/hybrid) certificate adoption, standardize mTLS lifecycle operations, establish crypto governance review | 90+ days |
 
 Which items appear depends on what the scan found: only items whose trigger is present are listed. Up to three baseline process items (assign remediation owners and SLAs, automate evidence refresh, establish crypto governance review) are added, in that order, until six items are listed, and the governance item is always present, so a scan that triggers nothing shows exactly those three. A scan that observed no endpoints at all gets three placeholder items after those three (collect initial asset scope, run baseline discovery and fingerprinting, establish recurring readiness reporting), six items in all. The list never exceeds twelve items.
 
-- **NOW** — Fix active classical security problems first. These are risks you have today, regardless of quantum. A client cannot justify deferring an expired certificate or plaintext HTTP service because "we'll handle everything during the quantum migration."
+- **NOW** — Fix active classical security problems first. These are risks you have today, regardless of quantum. A client cannot justify deferring an expired certificate or plaintext HTTP service because "we'll handle everything during the quantum migration." The "Increase scan coverage" item appears whenever any probed endpoint recorded a scan error, because that count is what lowers the Hygiene and Modern TLS subscores (§3.1, §3.2); its score lift is the points those errors cost. Before the Phase 234 code review it appeared only when 20% or more of the probed endpoints had errors, so a large estate with a few errors lost points with no roadmap item.
 - **NEXT** — Early quantum preparation that fits into the normal modernization cycle. Disabling legacy TLS, replacing self-signed certificates, and renewing near-expiry certificates are all work your team can do in regular sprint cycles without waiting for post-quantum standards to stabilize.
-- **LATER** — Agility work that prepares the estate for algorithm migration, such as planning ECDSA adoption and standardizing mTLS lifecycle operations, plus governance review. The post-quantum standards themselves are NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), and FIPS 205 (SLH-DSA); for the dated federal deadlines see §16.
+- **LATER** — Agility work that prepares the estate for algorithm migration, such as planning post-quantum (PQC/hybrid) certificate adoption and standardizing mTLS lifecycle operations, plus governance review. The roadmap item "Plan post-quantum (PQC/hybrid) certificate adoption" appears whenever certificate keys are classical (RSA, ECDSA or EdDSA) or undetermined, which replaced the earlier ECDSA-adoption item: ECDSA is classical too, so moving to it does not prepare an estate for quantum migration. The post-quantum standards themselves are NIST FIPS 203 (ML-KEM), FIPS 204 (ML-DSA), and FIPS 205 (SLH-DSA); for the dated federal deadlines see §16.
 
 > **Client Conversation — Migration Roadmap:**
 > "The migration roadmap is organized in three horizons. 'Now' items are things with known classical risk today — they need to be fixed regardless of quantum. 'Next' items are the early quantum-preparation work you can do in your normal modernization cycle. 'Later' items are the longer-horizon agility and governance work that sets you up for the post-quantum migration — the NIST FIPS 203/204/205 standards."
@@ -390,12 +420,14 @@ days" actions (per-item badge only), the HTML and PDF reports, the DOCX report, 
 (per-item badge) and its Projected Score card (aggregate), and the print/export view.
 `tests/test_score_lift_cross_surface_numbers.py` checks that the CLI markdown, HTML, DOCX and
 dashboard roadmap numbers agree for one set of evidence scored with default weights. The
-dashboard can still show different numbers for the same scan in two cases. With
-`intelligence.calibration_overrides` set, the CLI, HTML/PDF and DOCX numbers apply
-them and the dashboard's roadmap numbers do not. And the dashboard derives some findings the
-scanner's report does not, for example a HIGH finding for an S/MIME certificate with an RSA-1024
-key. That can change the §3.6 ceiling, and with it the badges: in one test scan the report showed
-a score of 83 with no badges and the dashboard 68 with a `+15` badge.
+dashboard can still show different numbers for the same scan when
+`intelligence.calibration_overrides` is set: the CLI, HTML/PDF and DOCX numbers apply
+them and the dashboard's roadmap numbers do not. The dashboard now runs its TLS certificate checks
+only on TLS rows, as the report does, so certificate data on email, broker, code-signing, S/MIME,
+AD CS, Vault, cloud (AWS, Azure, GCP and Cloud SQL), JWT and OpenAPI rows no longer produces
+dashboard-only findings. Email, broker and code-signing rows are scored on both surfaces with the
+report's own findings. Two severity differences remain on shared titles (legacy TLS version and
+weak cipher suites, tracked under 999.132).
 
 **Precondition: the four-surface equality guarantee assumes unmodified templates (999.112).**
 The numeric-equality guarantee described above — the same badge and the same projected score on
@@ -460,11 +492,14 @@ The dashboard's Export PDF (the `/print` page) includes a QRAMM (Quantum Readine
 
 ### What the section contains
 
-- **Radar chart (inline SVG)** — Rendered first in the section. A four-axis polygon plotting the four QRAMM dimensions: CVI (Cryptographic Visibility & Inventory), SGRM (Strategic Governance & Risk Management), DPE (Data Protection Engineering), and ITR (Implementation & Technical Readiness). The polygon shows the session's raw dimension scores on a 0–4 scale; closer to the outer edge means higher maturity.
+- **Radar chart (inline SVG)** — Rendered first in the section. A four-axis polygon plotting the four QRAMM dimensions: CVI (Cryptographic Visibility & Inventory), SGRM (Strategic Governance & Risk Management), DPE (Data Protection Engineering), and ITR (Implementation & Technical Readiness). The polygon shows the session's raw dimension scores on a 0–4 scale; closer to the outer edge means higher maturity. A Not assessed dimension is still plotted at 0.
 - **Executive intro paragraph** — A one-sentence summary identifying that the section reflects the most recent completed QRAMM assessment.
-- **Dimension Scorecard table** — Four rows (one per dimension) with raw score and weighted score, followed by one "Overall maturity" line.
-- **Compliance Framework Coverage summary** — An 8-row table mapping the assessment to NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Each framework shows a coverage tier badge: **Scanner-informed** (the QUIRK scanner contributes signal — currently CVI only) or **Manual only** (the framework's relevance is derived purely from manual assessment answers).
-- **Per-framework practice detail** — Below the summary table, eight subsections (one per framework) flow continuously, with no forced page break between them. Each shows every practice area's relevance score and whether it was scanner-informed.
+- **Dimension Scorecard table** — Four rows (one per dimension) with an Assessment chip (Scanner-measured, Self-assessed, Not assessed or Stale — recalculate), raw score and weighted score, followed by one "Overall maturity" line that reads the maturity level, the overall score and "N of 4 dimensions assessed", for example "Overall maturity: Below Basic (0.67) — 3 of 4 dimensions assessed". When the saved score is stale, the line reads "Overall maturity: Stale — recalculate" instead, with no maturity level, number or count. A Not assessed or Stale row shows "—" for both scores, because the stored 0.0 is a placeholder and a stale score no longer describes the answers. When any dimension is stale, a line under the table reads "Stale — recalculate: answers changed after this score was saved."
+- **Compliance Framework Coverage summary** — An 8-row table, one row per framework: NIST PQC Standards, NSM-10, CNSA 2.0, ISO 27001:2022, ETSI Quantum-Safe, PCI-DSS v4.0, Common Criteria, and BSI TR-02102. Its columns are Scanner-measured, Self-assessed, Not assessed and Stale — recalculate, and each cell is the integer count of that framework's practice areas in that state, so a reader can see how much of each framework rests on scanner evidence and how much on self-assessment. The caption above the table reads "Counts are practice areas per framework, grouped by how each was assessed." The footnote below it is the sentence quoted under Coverage caveat.
+- **Per-framework practice detail** — Below the summary table, eight subsections (one per framework) flow continuously, with no forced page break between them. Each lists every practice area with its dimension, relevance score and an Assessment chip. A Not assessed row shows "—" for its relevance score.
+- **Assessment chips** — The states print differently in black and white: Scanner-measured is a solid filled chip, Self-assessed a solid outline, and Not assessed a dashed grey outline. A Stale — recalculate chip uses the same dashed grey outline as Not assessed, with its own text. The state is always written out as text, never shown by colour alone.
+
+Before Phase 231, a print export of a scored session failed to load its QRAMM data: the page requested the score with a GET on a POST-only route, so the page never finished loading and the PDF export timed out. The page now reads the persisted score from `GET /api/qramm/sessions/{id}`.
 
 ### When no QRAMM assessment has been completed
 
@@ -476,12 +511,24 @@ This keeps the PDF structure consistent across all engagements and signals that 
 
 ### Coverage caveat
 
-QUIRK's scanner directly informs the CVI dimension (cryptographic visibility from real findings). SGRM, DPE, and ITR require manual assessment input via the dashboard's QRAMM questionnaire. The footnote in the PDF reflects this:
+CVI is scanner-measured: QUIRK's scanner informs it with cryptographic visibility from real findings. Answered SGRM, DPE and ITR dimensions are the operator's self-assessment from the dashboard's QRAMM questionnaire. They are scored at full weight, but no scanner evidence backs them, so read them as the client's own account of its governance. Any dimension with no answered question, CVI included, is Not assessed: the scorecard shows no score for it instead of a 0.0 that reads as maturity level 1. Since Phase 234 the overall QRAMM score is the mean of the **assessed** dimensions only. A Not assessed dimension is left out of the average instead of counting as 0, and every surface that shows the overall (the dashboard Scorecard tab, this print section and the API's `dimensions_assessed` field) states how many dimensions it rests on: "N of 4 dimensions assessed". With no dimension assessed the overall is pending (shown as "Indeterminate"), never 0.
 
-> "Coverage reflects QUIRK scanner findings for CVI only — SGRM, DPE, ITR require manual assessment."
+**Maturity label below 1.0.** The overall's label comes from the QRAMM maturity levels: Basic from 1.0, Developing from 1.5, Established from 2.5, Advanced from 3.5 and Optimizing from 3.95. An overall below 1.0 reads **Below Basic**, because it sits under Basic's own floor. This is common for a partly answered assessment: a dimension's score is the weakest of its practice areas, and an unanswered practice inside an answered dimension scores 0, so a dimension with a few answers can score 0.0. Before the Phase 234 code review such an overall read "Basic".
+
+**Stale — recalculate.** A saved score records how many questions were answered in each dimension. If a dimension's answered count changes after the score was saved, that dimension reads "Stale — recalculate" until **Calculate Score** is run again. A stale dimension is never shown as Self-assessed and never counts toward a maturity level, because its saved score no longer describes its answers. The overall of a stale score reads "Stale — recalculate" too, on the Scorecard tab, on the print page and in the API (`score_overall_state` is `stale`), never a maturity level or "N of 4 dimensions assessed". The check compares answered **counts**, not answer values: re-answering a question that was already answered, with a different value, does not mark the dimension stale, so run Calculate Score after any change to the answers.
+
+**Scores saved before this release.** A QRAMM score saved before Phase 234 carries no answer counts and its stored overall still averaged a Not assessed dimension in as 0. No surface shows it as a maturity level: its overall reads "Recalculate to apply the updated overall", and every answered dimension of that session reads "Stale — recalculate", because without saved counts newer answers cannot be ruled out. Both clear when the session is scored again. The print page is where this shows today, since it reads the saved score; the dashboard Scorecard tab shows a score only after a fresh Calculate Score.
+
+The footnote in the PDF states which dimensions are measured and which are self-assessed:
+
+> CVI rows are measured from QUIRK scanner evidence; SGRM, DPE and ITR rows show self-assessed answers; any dimension with no answered question reads "Not assessed".
 
 > **Client Conversation — QRAMM Governance Assessment:**
 > "The QRAMM section of the PDF gives you the governance layer — how your organization's policies, processes, and readiness posture map to the cryptographic risks we found in the technical scan. The radar chart shows maturity across four dimensions. CVI — Cryptographic Visibility — is the only dimension informed directly by the scanner findings. The other three dimensions reflect your answers in the assessment questionnaire. If you haven't completed an assessment yet, that section will show a placeholder — we can walk through it together after the technical findings review."
+
+### Dashboard QRAMM tabs
+
+The dashboard's QRAMM Assessment page uses the same states on its Compliance Map and Scorecard tabs, with the same footnote sentence, so the dashboard and the PDF never disagree about which dimensions were assessed. See `docs/operators-guide.md` §22 for how the tabs behave, including the refresh after Calculate Score.
 
 ---
 
@@ -1299,6 +1346,42 @@ items, not vulnerabilities in the CycloneDX-source sense — the CycloneDX 1.6 s
 item's slug, a description, and the analysis block above) is fully legal without fabricating any of
 that data. The item slug is the correlation key back to the report's roadmap and burndown sections.
 
+### How open, closed and Not Verified read on a report
+
+- **A finding the scan detected is Open** and its VEX entry is `exploitable`. Earlier releases
+  showed detected findings as Not Verified (`in_triage`).
+- **A closure appears on the report of the scan that observed it.** The CBOM entry for the item
+  is `resolved` only when every instance of that item is closed; while any instance is still
+  open the item stays `exploitable`.
+- **Not Verified (`in_triage`) means nothing was checked.** Reports for scans stored before this
+  release keep their Not Verified rows; they are not rewritten.
+- **Comparing old and new CBOMs.** A CBOM regenerated for an old scan still shows `in_triage`,
+  while a new scan of the same estate shows `exploitable`, so a comparison of the two will show
+  the analysis state change. That is the state model changing, not the estate.
+- **Every probe that reported a finding's host:port must have a live row there,** and a probe
+  that is healthy elsewhere in the scan does not count. A timed-out, refused or errored row at
+  the host:port never closes a finding, and neither does a placeholder row. This includes a
+  mail port that timed out or refused the connection. A finding does not
+  close while any row at its host:port is a service the scan could not identify (`UNKNOWN`),
+  even if another probe there, such as SAML or JWT, answered. A scan that reused cached fingerprint
+  results does not count as a recheck, and TLS findings close only on deep TLS scans. The live
+  row at the host:port must also carry its probe's own evidence: a TLS finding closes only when
+  that host's deep TLS enumeration succeeded, not when the host fell back to a basic handshake
+  while TLS was healthy elsewhere.
+- **A finding the scan could not recheck stays on its report as Not Verified,** rather than
+  dropping out of the burndown. A later scan that rechecks it can usually still close it, and
+  once every finding of its remediation item has closed, that item's VEX entry reads `resolved`
+  as on any other closure. Some fixed findings stay Not Verified instead;
+  `docs/operators-guide.md` §16 "Known limitations" lists the cases.
+  Findings carried from scans recorded before this release stay `not_observed` until a scan
+  detects them again; after that the normal closure rules apply.
+- **Burndown counts the rows of the scan being reported.** In a test with eight plaintext
+  hosts, one of which was moved to HTTPS, the next scan's burndown read 14 open and 2 closed
+  (each plaintext finding counts under two remediation items, so these figures are not host
+  counts; plaintext HTTP carries no algorithm and so lands in the `unmapped` bucket). The earlier scan's burndown then read the same closure, 14 open and 2 closed, where
+  before the later scan it read 16 open and 0 closed. A third scan that rechecked the estate
+  read 14 open and 0 closed, because closed rows are not carried forward.
+
 ### When closure was not computed
 
 If there is no comparable prior scan, or the current scan's scope does not match the prior scan closely enough, closure is
@@ -1366,10 +1449,11 @@ them) and would silently under-count any protocol missing from that list. The ru
   exactly what should lower coverage.
 - **Plaintext `HTTP` counts as assessed.** We successfully determined the endpoint uses no
   encryption at all — that is a completed assessment, not a gap in one.
-- **An email STARTTLS endpoint whose handshake never completed counts as assessed only when the
-  probe recorded no scan error** — for example, a refused connection, or a TCP connect that timed
-  out. A server that accepts the connection and then sends nothing records a scan error and is not
-  assessed. A server that answers but does not offer STARTTLS is also not assessed today: the probe records the mail
+- **A mail port that refused the connection or timed out before any TLS was negotiated is not
+  counted at all** — neither as assessed nor as an endpoint in the coverage ratio, the same as a
+  closed port, and it does not count as plaintext in the data-in-motion subscore. A server that
+  accepts the connection and then errors (for example, one that sends nothing) records a scan
+  error and is not assessed. A server that answers but does not offer STARTTLS is also not assessed today: the probe records the mail
   client's "STARTTLS extension not supported by server" error as a scan error, so the endpoint
   leaves the numerator like any other errored probe, produces only an INFO "Informational protocol
   observation" finding, and counts against the data-in-motion subscore as an email endpoint with
@@ -1572,12 +1656,26 @@ those bands. Because the v3 ceiling already places a CRITICAL-bearing estate in 
 rarely binds on a v3 score. A scan whose number already lands it in `FAIR` or `POOR` is unaffected
 by the floor.
 
+### What scoring v4 changed: weaknesses are counted, not diluted
+
+Scoring v4 (Phase 234) keeps the v3 ceilings, the band floor and the 84 cap for an estate with no
+post-quantum key exchange. It changes how each weakness is weighed inside a subscore: a weakness
+now costs `weight × min(1, count / 40) ^ 0.5`, a function of how many endpoints or certificates
+carry it, where v3 used the square root of their share of the scan (§3). Scan errors are counted
+the same way. RSA, ECDSA and EdDSA certificate keys all take the same −8 agility penalty, the v3
++4 credit for ECDSA is gone, and a post-quantum certificate key can earn the +8 post-quantum credit
+(§3.4). The +6 mTLS credit is granted once, when any service requires mutual TLS, so it does
+not grow with the number of mTLS services (§3.3). Under v3, scanning more healthy endpoints of the
+same estate could raise its score; under v4 it cannot (§3.6). The project's calibration estates keep their v3 scores (100, 78, 46, 24 and
+18). A v3 report and a v4 report of the same estate are still not comparable: check the
+`Scoring model` row (§27).
+
 ### Why a score can still look high next to a CRITICAL finding on an older report
 
 **"Why is my score still 89 if there's a CRITICAL finding?"** On a report produced under scoring
 v2, that was the correct reading: the floor capped the *band* only, and CRITICAL findings reached
 the number only through the agility subscore's high-impact ratio, which was diluted by the total
-finding count. On a scoring-v3 report this combination cannot occur; check the `Scoring model` row
+finding count. On a scoring-v3 or v4 report this combination cannot occur; check the `Scoring model` row
 (§27) to see which model produced a given number. Scores from different scoring versions are not
 comparable (§3.6).
 
@@ -1585,7 +1683,7 @@ comparable (§3.6).
 
 Whenever the score or band is capped, every report surface shows a short, structured explanation
 alongside the headline — not a synthetic scoring driver, not buried in a table, but directly
-beside the score/band pair itself. Under scoring v3 it names the ceiling and discloses the
+beside the score/band pair itself. Under scoring v3 and v4 it names the ceiling and discloses the
 uncapped figure:
 
 ```
@@ -1867,6 +1965,8 @@ five skip reasons, each implying a specific operator action:
 | `missing-credentials` | The scanner is enabled and has targets, but the credential it needs to authenticate is not set. Today only the Vault phase makes this check, when the phase starts during the scan (`connectors.vault_token` / `VAULT_TOKEN`); a dashboard submit does not check it. | Supply the named config key or environment variable — see the Effective config panel (`docs/operators-guide.md` §3.1.2) to check credential status before submitting a scan; the panel shows each credential as set or not set and never shows a value. |
 | `failed` | The phase started and aborted with an error. | Check the error rows / logs for that phase; this is not a configuration gap, it is a runtime failure. |
 
+In 5.28.0, source code scanning always records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. This is a known defect, not a configuration gap, and no config change fixes it.
+
 ### A skipped phase never fabricates a zero
 
 The absence of a row for a phase is never itself a signal — every one of the 25 scanner phases
@@ -2068,6 +2168,12 @@ The colophon logo is a fixed product mark: it is not configurable, adds no confi
 and is never recoloured to a client palette. The client cover logo (`report.branding.logo_path`) and
 its precedence are unchanged. Operator template overrides (`report.template_dir`) show the colophon
 logo only if they reference `colophon_logo_b64`.
+
+**Header logo (Phase 232).** As of Phase 232 the HTML report's on-screen header shows the same
+Paper-variant QU.I.R.K. logo instead of a typed product name. The header is screen-only: it is
+hidden in print and in the PDF, where the QU.I.R.K. brand appears only in the colophon. If the logo
+asset cannot be read, the header shows no logo and no text substitute. Operator template overrides
+(`report.template_dir`) show the header logo only when they use the `colophon_logo_b64` variable.
 
 Every field is independently optional — an unset field simply does not render its line/row, on any
 surface. If none of the `report.branding.*` fields are set (by the config or by a report profile), no
@@ -2322,7 +2428,7 @@ this number?**
 
 ```
 Platform version   5.21.0
-Scoring model      v3.0
+Scoring model      v4.0
 Scanner build      a612e60fd3a2
 ```
 
@@ -2349,7 +2455,9 @@ The scoring model version, read live from the scanner's own `SCORING_VERSION` co
 **This is the row that matters for comparing scores.** Scores from different models are not
 comparable. v3 is materially stricter than v2: every reference estate the project re-scored
 dropped under it (a 31-host estate went from 87 to 18, and three smaller reference estates from
-95 to 78, 91 to 46 and 85 to 24). If you are comparing a scan against an earlier one, compare this row first. If it differs, the
+95 to 78, 91 to 46 and 85 to 24). v4 (Phase 234) weighs each weakness by its count rather than its
+share of the scan, so those reference estates keep their v3 scores, while the same scan can still
+read differently under v3 and v4 (§3.6, "What moves under scoring v4"). If you are comparing a scan against an earlier one, compare this row first. If it differs, the
 two numbers do not measure the same thing, and a "score improvement" or "regression" between them
 is an artifact of the model change rather than a change in your estate.
 

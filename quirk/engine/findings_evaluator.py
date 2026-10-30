@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Tuple
 
 from quirk.compliance import COMPLIANCE_MAP, normalize_finding_title
@@ -18,6 +19,7 @@ from quirk.reports.content_model import (
 )
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
+from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 from quirk.util.weak_crypto import has_legacy_tls_versions_signal
 
@@ -276,6 +278,21 @@ def _error_category(desc: str) -> str:
     if ":" in desc:
         return desc.split(":", 1)[0].strip()
     return desc.strip()
+
+
+def runs_tls_certificate_checks(ep: Any) -> bool:
+    """True when ``ep`` is a row that gets TLS/certificate checks (Phase 228 D-05).
+
+    Exact-case ``== "TLS"`` on purpose: a case-variant protocol from a sensor
+    import must not widen the checks, and the report stays byte-identical.
+    Both pipelines must call this, never an inline ``== "TLS"`` copy.
+    """
+    return getattr(ep, "protocol", None) == "TLS"
+
+
+EMAIL_PROTOCOLS = frozenset({
+    "SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS", "POP3-STARTTLS", "POP3S",
+})
 
 
 def _has_legacy_tls_versions(ep: Any) -> bool:
@@ -574,7 +591,7 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 recommendation="Migrate management/application endpoints to HTTPS/TLS where feasible.",
             ))
 
-        if proto == "TLS":
+        if runs_tls_certificate_checks(e):
             if _has_legacy_tls_versions(e):
                 findings.append(_build_finding(
                     severity="LOW",
@@ -1294,3 +1311,77 @@ def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
                 ))
 
     return findings
+
+
+def evaluate_bearer_token_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Phase 230 DETECT-05: CRITICAL for an unsigned bearer token.
+
+    Fires when the operator-supplied bearer JWT declares ``alg: none`` (any
+    case) or carries no ``alg`` at all (stored as cert_pubkey_alg=None plus the
+    shared absence marker). The signature is never verified by the scanner; the
+    finding is about the token's construction. Only the alg metadata reaches
+    this function -- the raw token is never available here.
+    """
+    findings: List[Dict[str, Any]] = []
+    for e in endpoints:
+        alg = getattr(e, "cert_pubkey_alg", None)
+        detail = getattr(e, "service_detail", "") or ""
+        if alg:
+            if not is_unsigned_jwt_alg(alg):
+                continue
+            cause = f'The token header declares alg "{alg}" (no signature).'
+        elif BEARER_ALG_ABSENT_MARKER in detail:
+            cause = "The token header carries no alg, so no signature algorithm is declared."
+        else:
+            continue
+        findings.append(_build_finding(
+            severity="CRITICAL",
+            host=getattr(e, "host", ""),
+            port=int(getattr(e, "port", 0) or 0),
+            title="Bearer token is unsigned (alg:none)",
+            description=(
+                f"{cause} The scanner did not verify the signature, but an unsigned "
+                "token can be forged by anyone, so any verifier that accepts it "
+                "grants access to whoever constructs it."
+            ),
+            recommendation=(
+                "Issue tokens signed with an asymmetric algorithm (for example "
+                "RS256 or ES256), reject alg:none and missing-alg tokens at every "
+                "verifier, and rotate this token."
+            ),
+            quantum_vulnerable=False,
+        ))
+    return findings
+
+
+def evaluate_protocol_service_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Run the email, broker, code-signing and bearer-token evaluators with their partition.
+
+    The email and code-signing evaluators do not self-filter by protocol; the
+    broker evaluator does. This partition is shared by the report composer and
+    the dashboard (Phase 228 D-20).
+    """
+    eps = list(endpoints)
+    return (
+        evaluate_email_endpoints([e for e in eps if getattr(e, "protocol", "") in EMAIL_PROTOCOLS])
+        + evaluate_broker_endpoints(eps)
+        + evaluate_codesign_endpoints([e for e in eps if getattr(e, "protocol", "") == "CODE_SIGNING"])
+        + evaluate_bearer_token_endpoints([e for e in eps if getattr(e, "protocol", "") == "BEARER_TOKEN"])
+    )
+
+
+def derive_report_findings(endpoints, cfg=None) -> List[Dict[str, Any]]:
+    """The report headline finding composition (Phase 228 D-25).
+
+    Default deriver for the merge and notify paths (D-09). Limitation: with
+    ``cfg=None`` only WELL_KNOWN_TLS_PORTS are designated TLS ports (same class
+    as backlog 999.131).
+    """
+    eps = list(endpoints)
+    if cfg is None:
+        cfg = SimpleNamespace(scan=SimpleNamespace(tls_designated_ports=[]))
+    return (
+        evaluate_endpoints(cfg, eps)
+        + evaluate_protocol_service_endpoints(eps)
+        + evaluate_identity_endpoints(eps)
+    )

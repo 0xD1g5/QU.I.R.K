@@ -6,6 +6,7 @@ priority: low
 area: docs/brand/BRAND-GUIDELINES.md, tests/test_brand_guidelines_v2.py
 status: pending
 resolves_phase: null
+owner: "999.129"
 ---
 
 # BRAND-GUIDELINES cites "sketch 001" and "sketch 002", which live in a gitignored directory no reader can open

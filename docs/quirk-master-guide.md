@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,446 lines, in reading order.
+Five guides, 7,747 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -103,6 +103,7 @@ and the connector guides under [`connectors/`](connectors/).
   - [19. Finding Storyline Drawer (Phase 202, first released in 5.25.0 — STORY-01/STORY-02)](#19-finding-storyline-drawer-phase-202-first-released-in-5250-story-01story-02)
   - [20. Browser E2E Tests (Phase 207, first released in 5.25.0 — COV-05, COV-10)](#20-browser-e2e-tests-phase-207-first-released-in-5250-cov-05-cov-10)
   - [21. Command Reference](#21-command-reference)
+  - [22. QRAMM Assessment Tabs: Compliance Map and Scorecard (Phase 231, QRAMM-17/18/19)](#22-qramm-assessment-tabs-compliance-map-and-scorecard-phase-231-qramm-171819)
 - **[Administration](#administration)**
   - [Prerequisites](#prerequisites-6)
   - [1. Deploy the Console](#1-deploy-the-console)
@@ -125,10 +126,13 @@ From install to first scan in three steps, using the dashboard.
 ### Quickstart: the dashboard
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate   # any of python3.10 ... python3.14
 pip install 'quirk-scanner[all]'
+playwright install chromium    # needed for the PDF report; one-time download
 quirk serve
 ```
+
+QU.I.R.K. supports Python 3.10 to 3.14 (3.15 is not supported yet); `python3.12` is only an example. On Linux, also run `playwright install-deps chromium` once (see [Installation](#linux-ubuntu--debian)).
 
 > **Use a venv + quote the extras.** Debian 12, Kali (2024.4 and later), and other distributions that mark their system Python as "externally managed" ([PEP 668](https://peps.python.org/pep-0668/)) reject a bare `pip install` with `externally-managed-environment`; the `.venv` avoids this. zsh treats an unquoted `[all]` as a glob and fails with `no matches found`, so keep the quotes. Full Parrot/Kali steps: [Installation → Parrot OS / Kali / Debian](#parrot-os--kali--debian-pep-668).
 
@@ -146,7 +150,7 @@ The command line is fully supported and suits scripted or scheduled scans: see s
 
 Before you begin:
 
-- **Python 3.10 or higher** — check with `python3 --version`
+- **Python 3.10 to 3.14** (3.15 is not yet supported: a dependency, nassl, ships no 3.15 build) — check with `python3 --version`
 - **Docker** — optional; needed only to run the [chaos lab](chaos-lab.md) (Docker Desktop on macOS and Windows, Docker Engine with the Compose plugin on Linux)
 
 ---
@@ -368,7 +372,7 @@ Installation steps for macOS, Linux and Windows (via WSL2).
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Python 3.10 or higher | — | Check: `python3 --version`. CI tests Python 3.11 |
+| Python 3.10 to 3.14 | — | Check: `python3 --version`. Python 3.15 is not yet supported: a dependency, nassl, ships no 3.15 build. CI tests Python 3.11 |
 | pip | A current release | Run `pip install --upgrade pip` first (this guide's install was verified with pip 26.2.1). The repo's CI install tests use `pip install --report`, which needs pip 22.2 or newer |
 | git | — | Only needed to clone the repo for a source install; the PyPI install does not use it |
 | Docker | Optional | Needed to run the chaos lab. **Docker Desktop** on macOS/Windows; **Docker Engine + Compose plugin** on Linux — see [Docker on Linux](#docker-on-linux-chaos-lab-only) |
@@ -382,7 +386,7 @@ Installation steps for macOS, Linux and Windows (via WSL2).
 **Install Python** (Homebrew recommended):
 
 ```bash
-brew install python@3.12
+brew install python@3.12   # example: any of python3.10 … python3.14 works
 ```
 
 **Clone and install:**
@@ -390,12 +394,13 @@ brew install python@3.12
 ```bash
 git clone https://github.com/0xD1g5/QU.I.R.K
 cd QU.I.R.K
+# e.g. python3.12; any of python3.10 ... python3.14 works
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dashboard]'
 playwright install chromium
 ```
 
-Homebrew's `python@3.12` puts `python3.12` on your PATH; it does not replace `python3`, which can still be Apple's older interpreter. Create the venv with `python3.12`. Inside the activated venv, `python` and `pip` are the venv's own.
+Homebrew's `python@3.12` puts `python3.12` on your PATH; it does not replace `python3`, which can still be Apple's older interpreter. Create the venv with `python3.12` (or any other supported version, python3.10 … python3.14; 3.12 is just the example used here). Inside the activated venv, `python` and `pip` are the venv's own.
 
 Playwright installs Chromium to `~/Library/Caches/ms-playwright/` on macOS (one-time, a few hundred megabytes).
 
@@ -589,7 +594,7 @@ playwright install-deps chromium   # no sudo prefix: it asks for sudo itself
 
 ```bash
 sudo apt install -y nmap     # richer host discovery (--discovery nmap)
-pip install semgrep          # source-code crypto scanning
+pip install semgrep          # source scanning: known defect in 5.28.0, ruleset unavailable
 # syft (container scanning): https://github.com/anchore/syft#installation
 ```
 
@@ -652,7 +657,7 @@ Install only what you need:
 | Web dashboard + PDF export | `pip install -e '.[dashboard]'` (used in the macOS and Linux install steps above) |
 | Kerberos scanning | `pip install -e '.[identity]'` — adds `impacket` and `ldap3`; `lxml`, `signxml` and `dnspython[dnssec]` are already core dependencies |
 | Container scanning | Install the Anchore Syft CLI and put it on your PATH: see [Syft's installation instructions](https://github.com/anchore/syft#installation) (the `syft` package on PyPI is an unrelated project) |
-| Source code scanning | `pip install semgrep` |
+| Source code scanning (known defect in 5.28.0: ruleset unavailable) | `pip install semgrep` |
 | AWS connector | Included in base install (boto3 is a core dependency) |
 | Azure connector | Included in base install (azure-identity and azure-keyvault-* are core dependencies) |
 
@@ -1129,7 +1134,7 @@ connector disposition table" below for all 25 keys.
 | `enable_jwt` | bool | `false` | Enable JWT/REST API scanner (target-guarded — inert until `jwt_targets` is populated). The loader default is `false`; the shipped `config_template.yaml` sets it `true` |
 | `enable_container` | bool | `false` | Enable container/binary crypto scanner (target-guarded — inert until `container_targets` is populated). The loader default is `false`; the shipped template sets it `true` |
 | `enable_source` | bool | `false` | Enable source code scanner (target-guarded — inert until `source_targets` is populated). The loader default is `false`; the shipped template sets it `true` |
-| `enable_codesign` | bool | `false` | Enable code-signing certificate inventory (LDAP `userCertificate`; the TLS EKU check finds nothing in a real scan, see below). **Not a connector toggle** — driven entirely by the `--inventory-code-signing` CLI flag; this key changes zero scan behavior on its own. |
+| `enable_codesign` | bool | `false` | Enable code-signing certificate inventory (LDAP `userCertificate`, plus the TLS phase's own leaf-certificate EKU capture; see below). **Not a connector toggle** — driven entirely by the `--inventory-code-signing` CLI flag; this key changes zero scan behavior on its own. |
 | `codesign_targets` | list[string] | `[]` | LDAP URLs for code-signing certificate discovery (e.g. `ldap://dc.corp.com:389`) |
 | `codesign_search_base` | string | `null` | LDAP search base DN for `userCertificate` discovery (e.g. `dc=corp,dc=com`) |
 | `codesign_timeout` | int | `10` | Per-connection timeout (seconds) for code-signing LDAP queries |
@@ -1198,7 +1203,8 @@ from the submitted delta; explicitly unchecking it sends `vault_tls_verify: fals
 | `jwt_targets` | list[str] | `[]` | `enable_jwt` | REST endpoint URLs for the JWT/API scanner |
 | `container_targets` | list[str] | `[]` | `enable_container` | Docker image refs for the container/binary scanner |
 | `source_targets` | list[str] | `[]` | `enable_source` | Local repository directory paths for the source scanner (URLs are rejected — clone first) |
-| `kerberos_targets` | list[str] | `[]` | `enable_kerberos` | KDC hosts for the Kerberos identity scanner |
+| `kerberos_targets` | list[str] | `[]` | `enable_kerberos` | KDC hosts for the Kerberos identity scanner. List each KDC by FQDN (for example `dc.corp.example.com`): the realm is taken from the last two labels, uppercased, and an IP address is used as the realm as-is, which a real KDC rejects |
+| `kerberos_probe_principal` | str | `Administrator` | `enable_kerberos` | Client principal the etype probe names in its AS-REQ. It exists by default on Active Directory and Samba AD DC. It is a principal name, not a secret. An AS-REQ with no pre-authentication data is not a failed logon, so the probe cannot lock the account out. Set it to an account that exists if the KDC answers that the principal is unknown. YAML only; must be a non-empty string |
 | `saml_targets` | list[str] | `[]` | `enable_saml` | SAML IdP/SP metadata URLs |
 | `dnssec_targets` | list[str] | `[]` | `enable_dnssec` | Zones to query for DNSSEC posture |
 | `dnssec_resolver` | str | `null` | `enable_dnssec` | Resolver host used for DNSSEC lookups |
@@ -1551,9 +1557,10 @@ details flow only into the normal scan outputs (database, CBOM, and reports).
 
 **In-process TLS EKU check:** Even without `codesign_targets` configured, the `--inventory-code-signing`
 flag runs an in-process check over the in-memory `tls_endpoints` list, with no additional network
-connections. That check reads an EKU list the TLS scanner never records, so it finds nothing in a
-real scan, even when a scanned server's certificate carries the Code Signing EKU. Use
-`codesign_targets` to find code-signing certificates.
+connections. The TLS scanner records each leaf certificate's Extended Key Usage OIDs (on both the
+sslyze path and the fallback path, and they survive a resumed scan), and this check reports a
+`CODE_SIGNING` endpoint for any leaf whose EKU includes Code Signing (1.3.6.1.5.5.7.3.3). Use
+`codesign_targets` as well to find code-signing certificates held in LDAP.
 
 **CBOM integration:** Code-signing certificates are emitted as CycloneDX `certificate` components
 with `bom_ref = crypto/certificate/codesign/<sha256-fingerprint>`. If the same certificate was
@@ -1653,10 +1660,14 @@ OpenAPI scan results appear in the standard findings table as `CryptoEndpoint(pr
 ### Authenticated Scanning (ephemeral credentials)
 
 Phase 93 (available since release 5.0.0) introduced per-scan ephemeral credential support,
-through the `--auth-*` flags below, for the JWT/JWKS probe. **In the current release the credential
-does not reach the target:** the JWKS fetch removes the `Authorization` and `X-Api-Key` headers,
-and replaces an `api_key` query value with `REDACTED`, before each request is sent. The REST
-fuzzer does not attach the credential to its probes either. It uses a bearer token only to forge
+through the `--auth-*` flags below, for the JWT/JWKS probe. The credential is sent to the JWKS
+target with the request; only logged URLs have the `api_key` query value replaced with `REDACTED`.
+The credential goes only to URLs on the same origin (scheme, host and port) as the configured JWT
+target. When the target's OIDC discovery document names a `jwks_uri` on a different origin, QUIRK
+fetches that URL without the credential and logs one WARNING naming both origins. A JWT target
+given as `http://` still receives the credential, in cleartext, and QUIRK logs one WARNING that
+names the origin (never the secret).
+The REST fuzzer does not attach the credential to its probes. It uses a bearer token only to forge
 the `--fuzz-jwt-alg-confusion` test token. Credentials are never
 persisted to SQLite, the CBOM, log files, or the dashboard — they live only in-process for the
 duration of the run.
@@ -1682,10 +1693,10 @@ Without any `--auth-*` flag, no credential is attached to any probe.
 
 | Flag | Credential scheme | Description |
 |------|-------------------|-------------|
-| `--auth-bearer [REF]` | Bearer token (OAuth2 / JWT) | Builds an `Authorization: Bearer <token>` header for the JWKS fetch, which removes it before sending. Also feeds `--fuzz-jwt-alg-confusion`, and the token's declared algorithm is recorded as a `BEARER_TOKEN` row |
-| `--auth-api-key [REF]` | API-key header (`X-Api-Key`) | Builds an `X-Api-Key: <key>` header for the JWKS fetch, which removes it before sending |
-| `--auth-api-key-query [REF]` | API-key query parameter | Appends `?api_key=<key>` to the JWKS URLs; the fetch replaces the value with `REDACTED` before sending |
-| `--auth-basic [REF]` | HTTP Basic | Builds an `Authorization: Basic <secret>` header for the JWKS fetch, which removes it before sending. The header carries the secret exactly as resolved, not base64-encoded, so supply the already-encoded `base64(user:password)` value |
+| `--auth-bearer [REF]` | Bearer token (OAuth2 / JWT) | Builds an `Authorization: Bearer <token>` header sent with the JWKS fetch. Also feeds `--fuzz-jwt-alg-confusion`, and the token's declared algorithm is recorded as a `BEARER_TOKEN` row |
+| `--auth-api-key [REF]` | API-key header (`X-Api-Key`) | Builds an `X-Api-Key: <key>` header sent with the JWKS fetch |
+| `--auth-api-key-query [REF]` | API-key query parameter | Appends `?api_key=<key>` to the JWKS URLs; the value is sent to the target and replaced with `REDACTED` only in log output |
+| `--auth-basic [REF]` | HTTP Basic | Reads the secret as `user:password` (QUIRK base64-encodes it, per RFC 7617; do not pre-encode) and sends `Authorization: Basic <base64>` with the JWKS fetch. A value with no colon is rejected |
 
 Each flag accepts an optional `REF` argument. If `REF` is omitted the flag is treated as a bare
 flag and triggers an interactive `getpass` prompt (see "Reference model" below).
@@ -2347,12 +2358,12 @@ Authenticated-scanning, fuzzing and OpenAPI flags are covered in more depth in t
 | `--allow-insecure-jwks` | `false` | Disable TLS certificate verification for JWKS fetches. Each JWKS URL fetched this way appears as a HIGH finding titled `JWKS fetched with TLS certificate verification disabled` (counted in the findings totals, not in the readiness score). Same as `security.allow_insecure_jwks` |
 | `--job-id ID` | none | Dashboard job ID for progress reporting; does nothing when absent (set by the dashboard) |
 | `--db-path PATH` | none | SQLite path for dashboard job-progress writes and for the stage checkpoints `--resume-scan-id` needs; without it no checkpoints are written. Job progress is written only when `--job-id` is also set; nothing checks that the two are given together (set by the dashboard) |
-| `--auth-bearer [REF]` | none | Bearer token reference for the JWT/API scanner: an environment variable name or `@/path/to/file` (the file must be inside the current directory); the bare flag prompts for the value. The scanner currently strips the header before the request is sent, so the target never receives it |
-| `--auth-api-key [REF]` | none | API-key reference for the `X-Api-Key` header; same reference forms as `--auth-bearer`. The scanner currently strips the header before the request is sent |
-| `--auth-api-key-query [REF]` | none | API-key reference for the `api_key` query parameter on the JWKS/endpoint fetch URL, never a header; same reference forms. The scanner currently replaces the value with `REDACTED` before the request is sent |
-| `--auth-basic [REF]` | none | HTTP Basic credential reference (`user:pass`); same reference forms. The value is not base64-encoded, and the scanner currently strips the header before the request is sent |
+| `--auth-bearer [REF]` | none | Bearer token reference for the JWT/API scanner: an environment variable name or `@/path/to/file` (the file must be inside the current directory); the bare flag prompts for the value. The header is sent with the JWKS request |
+| `--auth-api-key [REF]` | none | API-key reference for the `X-Api-Key` header; same reference forms as `--auth-bearer`. The header is sent with the JWKS request |
+| `--auth-api-key-query [REF]` | none | API-key reference for the `api_key` query parameter on the JWKS/endpoint fetch URL, never a header; same reference forms. The value is sent to the target and replaced with `REDACTED` only in log output |
+| `--auth-basic [REF]` | none | HTTP Basic credential reference; the resolved value must be `user:password` (QUIRK base64-encodes it; do not pre-encode; a value with no colon is rejected); same reference forms. The header is sent with the JWKS request |
 | `--openapi-spec FILE_OR_URL` | none | Local OpenAPI/Swagger spec file, or an HTTP(S) URL within the configured scan targets (scope gate enforced before any fetch). Overrides `scan.openapi_spec_path` |
-| `--inventory-code-signing` | `false` | Inventory code-signing certificates from LDAP `userCertificate` attributes (Phase 95 CSIGN-01). Its in-process TLS EKU check finds nothing in a real scan |
+| `--inventory-code-signing` | `false` | Inventory code-signing certificates from LDAP `userCertificate` attributes (Phase 95 CSIGN-01) and from the Code Signing EKU on leaf certificates the TLS phase captured |
 | `--fuzz` | `false` | Enable active REST crypto-posture fuzzing (needs a local OpenAPI spec file from `--openapi-spec` or `scan.openapi_spec_path`; a URL spec is not fuzzed; TTY `CONFIRM` prompt; hard-aborts in non-TTY) |
 | `--fuzz-jwt-alg-confusion` | `false` | Also run the JWT RS256→HS256 algorithm-confusion probe; it needs `--auth-bearer` carrying an RS256 token. Acceptance = CRITICAL |
 | `--fuzz-budget N` | `50` | Maximum probe requests (hard max **500**; with `--fuzz`, values above 500 are rejected, never clamped) |
@@ -2711,10 +2722,11 @@ Notifications are **never** sent on:
 - The very first scan (no previous baseline to compare against)
 - MEDIUM-only changes with score delta within the floor
 
-> **Known limitation:** the notifier picks the two most recent endpoint timestamps, not the two
-> most recent scan runs. A scan stamps its endpoints at different moments, so when the latest scan
-> has more than one endpoint timestamp the notifier compares that scan with itself and the trigger
-> does not fire. The dashboard's Trends page groups by scan run and is not affected.
+The notifier compares the two most recent scan runs. Rows are grouped by scan run, and each run is
+represented by its earliest endpoint timestamp; older rows that carry no scan run id are grouped by
+millisecond. This is the same grouping the dashboard's Trends page uses. A sensor push that lands between
+two scheduled scans counts as its own session, so it can become the "previous" session for the next drift
+comparison, exactly as it does on the Trends page.
 
 #### Notification config block
 
@@ -3401,7 +3413,7 @@ supported route for automation, sensors and repeat engagements. This guide cover
 starts with the dashboard.
 
 **Prerequisites:**
-- Python 3.10+ (CI tests 3.11)
+- Python 3.10 to 3.14 (CI tests 3.11)
 - macOS / Linux host with outbound network reach to scan targets
 - (Optional) Docker for the chaos lab smoke test
 
@@ -3649,7 +3661,8 @@ unassessed and what to do about it:
   `identity_trust`, `agility_signals`, `data_at_rest`, and `data_in_motion`. `hygiene`,
   `modern_tls` and `agility_signals` are assessed whenever the scan finds at least one assessable
   endpoint; `identity_trust` also needs an observed certificate or a Kerberos, SAML, DNSSEC,
-  S/MIME or AD CS endpoint. The two domains most often left unassessed are:
+  S/MIME or AD CS endpoint (a Kerberos endpoint counts only when it returned encryption types; see
+  the Kerberos scanner section). The two domains most often left unassessed are:
   - `data_at_rest` — needs a database, RDS, S3, Azure Blob, Kubernetes or Vault connector
     scanner (§6) enabled and reachable.
   - `data_in_motion` — needs the email or broker scanners (§6.2) enabled and reachable.
@@ -3658,8 +3671,24 @@ unassessed and what to do about it:
 - **Scores are not comparable across scoring versions.** A lower number after a scoring-version
   upgrade may simply reflect honest exclusion of previously-fabricated points, not a regression —
   do not compare trend lines across a scoring-version boundary. See `CHANGELOG.md`'s 5.25.0
-  entry for the full migration decision record.
-- **Scoring v3 lowers scores substantially, by design.** Expect a large drop on estates carrying
+  entry for the v3 migration decision record. The current scoring version is 4.0.
+- **Scoring v4 (Phase 234) counts weaknesses instead of taking their share of the scan.** Each
+  weakness costs `weight × min(1, count / 40) ^ 0.5`, where `count` is the number of endpoints or
+  certificates that carry it, so adding only healthy endpoints in domains that are already assessed
+  no longer raises the score (under v3 a deeper scan of the same estate could raise it). Scan
+  errors are counted the same way. Every classical certificate key (RSA, ECDSA or EdDSA) costs the
+  same −8 agility penalty, and only a post-quantum key exchange or certificate key earns agility
+  credit. The project's calibration estates keep their v3 scores (100, 78, 46, 24 and 18). On a
+  real 370-endpoint scan from 2026-09-14 the dashboard's score moves from 17 (computed 69) under v3
+  to 18 (computed 71) under v4. Small estates score somewhat higher than under v3, and estates whose
+  score was propped up by many healthy endpoints score lower. The first clean result in a domain
+  that was not assessed before can still raise the score, because that domain joins the average.
+  The Phase 234 code review corrected three v4 rules before release, without moving any of the
+  numbers above: the +6 mTLS credit is granted once, when any service requires mutual TLS, not per
+  mTLS service; the "certificate key types undetermined" −8 applies even when other certificates
+  are post-quantum; and a Kerberos result that records an error is not identity evidence. The
+  scoring version stays 4.0. See `docs/report-interpretation.md` §3 and §3.6.
+- **Scoring v3 (5.25.0) lowered scores substantially, by design.** Expect a large drop on estates carrying
   open CRITICAL/HIGH findings, and a cap at the top of GOOD on any estate with no observed hybrid
   post-quantum key exchange. Two changes drive it: consequence is now **absolute** rather than
   proportional (a high count of CRITICAL/HIGH findings sets a ceiling irrespective of estate size),
@@ -3993,10 +4022,10 @@ This agreement is regression-gated for a scan scored with the default calibratio
 the two pipelines can never diverge. If an operator observes the **headline score, a subscore, the
 CRITICAL count, or the certificate count** differing between a downloaded report and the
 dashboard's live view for the same scan, check first for the known causes of a score difference:
-the report contains an `"HTTP on TLS-designated port"` finding; the scan includes Kerberos, DNSSEC,
-S/MIME or AD CS rows, whose findings only the dashboard derives (the report pipeline evaluates SAML
-identity rows but not Kerberos or DNSSEC, and runs no certificate checks on S/MIME or AD CS rows); a
-certificate is within 30 days of expiry, which the dashboard rates HIGH and the report rates MEDIUM; the config sets
+the report contains an `"HTTP on TLS-designated port"` finding; the scan includes Kerberos or DNSSEC
+rows, whose findings only the dashboard derives (the report pipeline evaluates SAML identity rows
+but not Kerberos or DNSSEC); the scan has legacy-TLS or weak-cipher findings, which the dashboard
+rates HIGH where the report rates them lower or not at all (tracked under 999.132); the config sets
 `intelligence.calibration_overrides`, which the report applies and the dashboard does not; or the
 scan is an older one, because the dashboard's Executive view scores every scan, including an older
 one opened by scan id, with the profile recorded in the newest intelligence file in the output
@@ -4122,7 +4151,10 @@ scoring engine over a copy of the scan's evidence, never a fixed points table. I
 resolution changes no scoring input (the three process/governance items, "Increase TLS
 enumeration coverage" and "Standardize mTLS lifecycle operations") show no badge at all, and neither
 does a modelable item whose rescore gains nothing. A badge is shown only for a positive gain, never
-as `0 pts`. A separate "Projected score if all items resolved:
+as `0 pts`. "Increase scan coverage" appears whenever any probed endpoint recorded a scan error,
+because that count is what the score penalises, and its badge is the points those errors cost
+(since the Phase 234 code review; it used to need 20% or more of the probed endpoints in error).
+The score driver behind it is labelled "Scan errors". A separate "Projected score if all items resolved:
 {N}" figure is one additional independent rescore with everything resolved at once — it is
 usually smaller than summing the individual badges, because the score's six domain subscores are
 each capped at 25 and can only give up so much headroom. Neither number ever changes the
@@ -4465,9 +4497,9 @@ the connector rows.
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
 | JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
-| Source code | semgrep (registry pack `p/cryptography`; see the known issue in [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
+| Source code | semgrep (registry pack `p/cryptography`, ruleset unavailable in 5.28.0: known defect, the domain reads Not assessed; see [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
-| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
+| Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `kerberos_probe_principal`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
 | SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
 | Email | 7-port email TLS probe (SMTP/IMAP/POP3 ± STARTTLS) | `connectors.enable_email`, `timeouts.email_seconds` | `sslyze` (core) | "STARTTLS downgrade risk on SMTP" |
 | Broker | Kafka / AMQP / Redis / Azure Service Bus / SQS | `connectors.enable_broker`, `connectors.broker_targets`, `broker_azure_namespaces`, `broker_sqs_regions`, `timeouts.broker_seconds` | `sslyze` (core) + `quirk-scanner[motion]` | "Plaintext Kafka listener detected" |
@@ -4479,11 +4511,11 @@ the connector rows.
 | Kubernetes | EKS/GKE/AKS encryption + secret type enumeration | `connectors.enable_k8s`, `k8s_provider`, `k8s_cluster_name`, `k8s_kubeconfig`, `k8s_context` | `quirk-scanner[cloud]` | [connector-field-reference.md](connector-field-reference.md#kubernetes--enable_k8s--gcp--enable_gcp) |
 | Vault | Transit keys + PKI + auth methods | `connectors.enable_vault`, `vault_addr`, `vault_token`, `vault_transit_mount` | `quirk-scanner[cloud]` (`hvac`) | [connector-field-reference.md](connector-field-reference.md#hashicorp-vault--enable_vault) |
 | Docker (image SBOM) | (uses container scanner) | (see Container row) | `syft` | [`docs/connectors/docker.md`](connectors/docker.md) |
-| Git (semgrep) | (uses source scanner) | (see Source row) | `semgrep` | [`docs/connectors/git.md`](connectors/git.md) |
+| Git (semgrep) | (uses source scanner; known defect, ruleset unavailable in 5.28.0) | (see Source row) | `semgrep` | [`docs/connectors/git.md`](connectors/git.md) |
 | PQC probe | Negotiates `X25519MLKEM768` against every TLS target (post-quantum hybrid key exchange) | none: runs with the TLS phase | host `openssl` with ML-KEM support (advisory fallback without it) | `pqc-hybrid-detected` |
 | S/MIME | S/MIME signing certificates in AD `userCertificate` / `userSMIMECertificate` over anonymous LDAP | `connectors.enable_smime`, `smime_targets`, `smime_search_base`, `smime_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (weak-signing-alg / weak-rsa-key / expired certificate rows, protocol `SMIME`) |
 | AD CS | Read-only LDAP enumeration of AD CS certificate authorities and templates (ESC1, ESC2, ESC3, ESC6) | `connectors.enable_adcs`, `adcs_targets`, `adcs_search_base`, `adcs_user`, `adcs_password` or `QUIRK_ADCS_PASSWORD`, `adcs_timeout` | `quirk-scanner[adcs]` (`ldap3`) | `coverage-gap\|ESC4\|reason=not-ldap-observable` |
-| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` (the TLS-certificate check finds nothing in a real scan) | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
+| Code signing | Code-signing certificates (CodeSigning EKU) from LDAP `userCertificate` and from the leaf certificates the TLS phase captured | `--inventory-code-signing`, `connectors.codesign_targets`, `codesign_search_base`, `codesign_timeout` | `quirk-scanner[adcs]` (`ldap3`) | (HIGH for SHA-1, RSA < 2048, EC < 256, or expired; protocol `CODE_SIGNING`) |
 | OpenAPI spec | Security schemes, plaintext `http://` servers and unauthenticated paths in a local or in-scope OpenAPI/Swagger spec | `--openapi-spec FILE_OR_URL` | `quirk-scanner[api]` | `plaintext_server` |
 | REST fuzzing | Active crypto-posture fuzzing of the API described by the spec (TLS downgrade, weak ciphers, HSTS, JWT alg confusion) | `--openapi-spec` plus `--fuzz`, `--fuzz-jwt-alg-confusion`, `--fuzz-budget`; see [§3.2](#32-active-rest-fuzzing---fuzz--interactive-only-by-design) | `quirk-scanner[api]` | `tls_downgrade_accepted` |
 | Hardware fingerprint | Vendor, model, firmware and CNSA 2.0 tier of SSH-reachable devices (SSH banner, HTTP management interface) | none: runs in the SSH phase; see [§9](#9-hardware-scanning) | (none, core) | (advisory device row; no score impact) |
@@ -4583,13 +4615,15 @@ findings. Requires `syft` on `PATH` and `connectors.enable_container=true`.
 
 ##### Source-code scanner
 
-Runs semgrep with the registry pack `p/cryptography` against each directory in
-`source_targets`. As of 2026-10-12 the Semgrep registry answered HTTP 404 for that pack
-name (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
+**Known defect (5.28.0):** source code scanning does not currently work. The scanner is
+built to run semgrep with the registry pack `p/cryptography` against each directory in
+`source_targets`, but as of 2026-10-12 the Semgrep registry answers HTTP 404 for that pack
+name, so a scan records a "ruleset unavailable" error, Scan Coverage shows `skipped: failed`,
+the source domain reads Not assessed and no source findings are produced (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
 path to an existing local directory (for example a clone); remote URLs are not fetched,
 and a path that is missing or contains `..` or shell metacharacters is rejected with an
-`invalid_input` row. Findings carry the semgrep rule id and `file:line`. Requires
-`semgrep` on `PATH` and `connectors.enable_source=true`.
+`invalid_input` row. Once a working ruleset is configured, findings carry the semgrep rule id and `file:line`. Requires
+`semgrep` on `PATH` and `connectors.enable_source=true` (known defect: ruleset unavailable).
 
 ##### DNSSEC scanner
 
@@ -4606,6 +4640,141 @@ Sends an unauthenticated AS-REQ to KDC port 88 on each entry in `kerberos_target
 (`aes256-cts-hmac-sha1-96`, `aes128-cts-hmac-sha1-96`, `des-cbc-md5`, etc.). DES
 enctypes are CRITICAL, `rc4-hmac` and `aes128-cts-hmac-sha1-96` are HIGH, and the AES-256
 enctypes are SAFE. Requires `quirk-scanner[identity]` (`impacket`).
+
+The probe names a client principal in its AS-REQ, set by `connectors.kerberos_probe_principal`
+(default `Administrator`, which exists by default on Active Directory and Samba AD DC). It is a
+principal name, not a secret. An AS-REQ with no pre-authentication data is not a failed logon,
+so the probe carries no lockout risk. A KDC that requires pre-authentication answers that
+request with an error that lists its supported encryption types, and the scanner now reads
+that list. This was observed against a real Samba AD DC KDC on 2026-10-23 (lab `kerberos`
+profile, reached on a remapped host port because the macOS KDC holds port 88): the default
+principal returned `aes256-cts-hmac-sha1-96` only. The same lab KDC closes about half of its
+TCP connections without sending a reply byte (42 of 90 direct probes across two runs on
+2026-10-23, through Docker Desktop's port mapping). The scanner retries such a connection once over TCP,
+then falls back to UDP, and the UDP answer goes through the same checks as a TCP answer. A UDP
+probe that fails is never reported as `kerberos-no-preauth`: that row now comes only from an
+AS-REP that answers the probe, over either transport. Measured against the same lab KDC on
+2026-10-23 after this change: 65 real scans (20 each for `Administrator`, for a principal that
+does not exist, and for an IP-literal realm, plus 5 at the default 10 s timeout) produced 0
+`kerberos-no-preauth` rows. 17 of the 65 fell back to UDP; those came back as the etypes, as
+`kerberos-etypes-unavailable-principal-unknown`, or as `kerberos-unreachable` when the UDP reply
+did not arrive through Docker Desktop's UDP proxy.
+
+If the KDC answers that the probe principal is unknown, the scanner emits the row
+`kerberos-etypes-unavailable-principal-unknown`. This is an assessment gap: it derives no
+finding and no direct score penalty, and it is not a statement that the KDC is safe. Since
+scoring 4.0 (Phase 234), a Kerberos row with no scan error and no encryption types is counted
+as a placeholder. That covers this row, `kerberos-no-preauth`,
+`kerberos-etypes-unavailable-preauth-no-etype-info`, and a `kerberos-unreachable` row that records
+no error. A placeholder does not make the identity domain assessed and is not counted as an
+assessed endpoint. The KDC did answer, so the row is still a scan target, and it lowers the scan's
+coverage (and therefore its confidence) instead of raising it. Before 4.0 such a row counted as
+Kerberos evidence and as an assessed endpoint. To get a real assessment, set
+`kerberos_probe_principal` to an account that exists.
+
+A Kerberos row that records an error is not identity evidence either (Phase 234 code review).
+That covers `kerberos-unreachable` with a connection error, a target that was never probed because
+its name was invalid, `kerberos-etypes-unavailable-unrecognised-reply` and
+`kerberos-etypes-unavailable-krb-error`. Before the fix such a row made the identity domain
+assessed at a clean 25 out of 25 with no evidence, so a failed or unprobed KDC could raise the
+score. It was already left out of the assessed endpoints, and it still counts as a scan error,
+which lowers the hygiene and modern TLS subscores.
+
+If the KDC answers that pre-authentication is required but its reply lists no encryption types
+(no error data, error data that cannot be decoded, or error data that carries only other
+pre-authentication hints such as a timestamp request), the scanner emits the row
+`kerberos-etypes-unavailable-preauth-no-etype-info`. That reply proves the KDC requires
+pre-authentication, so it is never reported as `kerberos-no-preauth`. It is treated the same way
+as the principal-unknown row: an assessment gap with no finding, no weak-etype count and no UDP
+retry.
+
+If something answers on port 88 but not as a KDC, the scanner emits the row
+`kerberos-etypes-unavailable-unrecognised-reply` and records the error on it. This covers a reply
+that decodes as neither a Kerberos error nor an AS-REP (any decoding failure counts), an AS-REP
+for a different realm or principal than the probe's (realm and principal are compared without
+regard to case), a reply that breaks Kerberos TCP framing (an HTTP or other non-Kerberos service,
+or a declared reply length over 64 KiB), and a reply that is cut off or stalls partway through.
+The row's reason names which of these happened. That row is never reported as
+`kerberos-no-preauth`, derives no finding, and is not retried over UDP. Any other unexpected
+error from the TCP probe gets the same row.
+
+The TCP probe falls back to UDP in exactly these cases, and no others:
+
+- the TCP connect fails (refused, timed out, host or network unreachable, or the target name
+  does not resolve);
+- the peer accepts but sends no reply byte before the timeout;
+- the request cannot be sent;
+- the connection fails with any other socket error before the first reply byte (for example,
+  host unreachable reported after the connect);
+- the KDC closes or resets the connection before sending any reply byte, and the one TCP retry
+  also gets no reply byte (it closes, resets, runs out of the remaining deadline, or fails to
+  connect, send or read), or the retry cannot be made (less than 0.25 s of the first attempt's
+  reply deadline is left, or the address the first attempt reached is unknown). Only a zero-byte
+  close or reset is retried. The retry connects only to the address the first attempt reached,
+  and its connect, request and reply must all finish inside the first attempt's reply deadline;
+- the KDC replies with a Kerberos error other than pre-authentication required (25) or
+  principal unknown (6).
+
+The UDP probe sends the same request to the same address and port and applies the same checks
+as the TCP probe. Its outcomes:
+
+- a pre-authentication required (25) reply gives the etype rows, or
+  `kerberos-etypes-unavailable-preauth-no-etype-info` when it lists none;
+- principal unknown (6) gives `kerberos-etypes-unavailable-principal-unknown`;
+- any other Kerberos error code gives `kerberos-etypes-unavailable-krb-error`, an assessment
+  gap like the other unavailable rows: no finding, no weak-etype count, and the error is
+  recorded on the row (the KDC answered, so it is not reported as unreachable);
+- an undecodable reply, an empty datagram, or an AS-REP for another realm or principal gives
+  `kerberos-etypes-unavailable-unrecognised-reply`;
+- a UDP timeout, a refusal, a send failure, or a name that does not resolve gives
+  `kerberos-unreachable`, unless the TCP probe had already received a Kerberos error from the KDC,
+  in which case the row is `kerberos-etypes-unavailable-krb-error` from that TCP error;
+- `kerberos-no-preauth` comes only from an AS-REP that answers the probe (matching realm and
+  principal, compared without regard to case), on either transport.
+
+The UDP socket is connected to the probed address, so a reply from any other address is ignored
+and times out as unreachable. UDP uses the address family the name resolves to, so an IPv6 KDC
+is probed over IPv6 (an IPv4 address is preferred when a name has both).
+
+Every leg is bounded, so a silent or misbehaving listener cannot stall the scan. With the
+Kerberos timeout (a fixed 10 s), the TCP connect may take up to 10 s for each address the
+target resolves to, and the request and reply then share one 10 s deadline that starts after
+the connect. The zero-byte retry connects only to the address the first attempt reached and
+gets only the time left before that deadline for its connect, request and reply, so it never
+makes the TCP leg longer than one attempt. A UDP fallback
+adds up to another 10 s, and the LDAP probe that follows has its own 10 s connect and receive
+timeouts. Name resolution is not covered by these bounds: each leg that connects to a host name
+resolves it first (the TCP retry does not; it reuses the address), and only the system resolver
+limits how long that takes. The LDAP probe follows no referral, so a directory cannot redirect it to a
+host the trusted-targets check did not see.
+
+Kerberos targets need an FQDN whose last two labels are the realm (for example
+`dc01.corp.local` gives realm `CORP.LOCAL`; a deeper name keeps only the last two, so
+`dc.corp.example.com` gives `EXAMPLE.COM`). An internationalised name's realm is its IDNA
+A-label (`kdc.пример` gives `KDC.XN--E1AFMKFD`), because RFC 4120 says a Kerberos realm string
+should hold ASCII characters only. A target is probed, and reported, under exactly the name
+the system resolver is asked for when the trusted-targets check resolves it: surrounding
+whitespace removed, an IP literal as written, otherwise the IDNA A-label (`kdc.пример` is
+probed and reported as `kdc.xn--e1afmkfd`). A trailing dot is kept in that name, so it stays
+absolute, and is dropped only from the realm. A target that is not a usable host
+name (empty, not a string, containing a NUL, a control or surrogate character or inner
+whitespace, a name IDNA cannot encode, a name with an empty label or more than one trailing
+dot, an IPv6 link-local address (`fe80::/10`) or any IPv6 address with a zone id such as
+`fe80::1%en0` (use the KDC's host name or a global address instead), the unspecified address
+(`0.0.0.0` or `::`; the kernel would probe the scanning host itself) or anything else in
+`0.0.0.0/8`, a multicast or broadcast address, or any form the
+trusted-targets check would read as a different host, such as `host:port`, `[v6]` or a URL,
+since the KDC port is always 88) is never probed, over Kerberos or LDAP. Neither is a
+target whose request cannot be built, for example because impacket rejects the configured
+`kerberos_probe_principal`. Either way the target gets a `kerberos-unreachable` row with
+`scan_error_category` `invalid_input`. An IPv4-mapped address such as `::ffff:0.0.0.0` gets the same
+treatment as its IPv4 form. A single target may be written as a YAML scalar
+(`kerberos_targets: dc01.corp.local`); it is read as a one-item list, and any other value that
+is not a list (a number, a mapping) is one target that is not a host name, so it is not probed. An etype the KDC lists
+twice gives one row. An IP-literal target is used as the
+realm as-is, and a real KDC answers that the principal is unknown in that realm, so a bare
+IP address yields the principal-unknown row, never the etypes (measured against Samba on
+2026-10-23). There is no separate realm setting; this is tracked as an open todo.
 
 ##### SAML scanner
 
@@ -4684,11 +4853,11 @@ cannot be bound or searched gets one LOW `adcs-unreachable` row. Gated by
 ##### Code-signing inventory
 
 Opt-in through the `--inventory-code-signing` CLI flag; `connectors.enable_codesign` does
-not change scan behaviour. It finds code-signing certificates in one place that works in a
-real scan: LDAP `userCertificate` attributes on `codesign_targets`, read with an anonymous
-bind. The flag also runs a second check over the certificates the TLS phase captured, but
-that check reads an EKU list the TLS scanner never records, so it finds nothing in a real
-scan, even for a server whose certificate carries the CodeSigning EKU. Findings use
+not change scan behaviour. It finds code-signing certificates from two sources: LDAP
+`userCertificate` attributes on `codesign_targets`, read with an anonymous bind, and the
+Extended Key Usage OIDs the TLS scanner records for each leaf certificate it captures, so a
+scanned server whose certificate carries the CodeSigning EKU is reported even with no LDAP
+target configured. Findings use
 protocol `CODE_SIGNING`: HIGH for a SHA-1 signature, an RSA key under 2048 bits, an EC
 key under 256 bits, or an expired certificate, and MEDIUM when expiry is within 90 days.
 The LDAP source needs `ldap3` from `quirk-scanner[adcs]`.
@@ -4738,23 +4907,26 @@ machine-readable signal:
 quirk doctor
 ```
 
-It takes no flags (extra arguments are ignored). Invoke before each client engagement.
+It takes no arguments: `quirk doctor --help` prints usage and exits 0 without running any check, and any extra argument is a usage error (exit status 2). Invoke before each client engagement.
 
 ##### Categories
 
 | # | Category | Severity | Failure exits 1? |
 |---|----------|----------|------------------|
-| 1 | Python environment (>= 3.11) | non-informational | yes |
-| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | non-informational | yes |
+| 1 | Python environment (>= 3.10 and < 3.15) | non-informational | yes |
+| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | informational | **no** (a missing binary is reported but does not set exit 1) |
 | 3 | Compliance framework freshness (within `STALENESS_THRESHOLD_DAYS`) | non-informational | yes |
 | 4 | QRAMM module availability | informational | **no** |
-| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes |
+| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes (unreadable `QUIRK_DB_PATH`, unopenable database, or more than one legacy file); a database that has not been created yet is informational |
 | 6 | Configuration (`./config.yaml` parses) | non-informational | yes (malformed); informational only if file is absent |
 | 7 | Network connectivity (DNS lookup of `example.com`) | informational | **no** |
 | 8 | Dashboard process (HTTP HEAD to `http://127.0.0.1:8512/`) | informational | **no** |
 
-The Python check requires 3.11 or newer, although the package metadata (`requires-python`)
-allows 3.10.
+The Python check accepts the same range as the package metadata (`requires-python`):
+3.10 up to and including 3.14. Python 3.15 is not yet supported. Missing optional binaries
+and a not-yet-created database are reported with `[!]` and leave the exit status at 0; a
+Python version outside the range, a failed core import, stale compliance data or an
+unreadable database still exit 1.
 
 ##### Symbols
 
@@ -5122,16 +5294,21 @@ quirk sensor merge --db /path/to/quirk.db   # merge a database other than the de
 
 `quirk sensor merge` has no output-directory flag: the CBOM files are written next to the
 console database. It re-runs `compute_readiness_score()` and `build_cbom()` over the
-console's own latest local scan session (`CryptoEndpoint` rows with no sensor) plus **one
-endpoint row per sensor**: the single most recent row that sensor pushed, not its whole
-latest push. A sensor that pushed many endpoints therefore contributes one of them to the
-merged CBOM and score (a known defect, tracked for a fix). The merge produces:
+console's own latest local scan session (`CryptoEndpoint` rows with no sensor) plus **every
+endpoint from each sensor's latest push**. A sensor that pushed many endpoints contributes
+all of them to the merged CBOM and score. Rows that sensors ingested before this release carry
+no push marker, so for those the merge falls back to the rows within five minutes of that
+sensor's newest row. Local scan rows are unchanged. The merge produces:
 
 - One merged CBOM (`cbom-<YYYYMMDDTHHMMSS>.cdx.json` + `cbom-<YYYYMMDDTHHMMSS>.cdx.xml`)
 - One unified quantum-readiness score
 - A `coverage_warning` if any enrolled sensor is overdue, meaning it has not pushed within
   twice its expected cadence (`expected_cadence_minutes`, default 1440). Sensors silent
   for longer than `--stale-days` are treated as decommissioned and left out of the warning.
+
+**Import air-gapped results in order.** When you carry results to the console as `.qpush` files,
+import them oldest first. The most recently imported file becomes that sensor's latest push, even
+if it is older than one you imported before it, and the merge then uses the older data.
 
 With no endpoints at all (no sensor has pushed), the command prints `Score: None (None)` and
 writes no CBOM. Its warning names any sensor enrolled within the last `--stale-days` days
@@ -5150,14 +5327,14 @@ version and last push time, and a status of `current`, `stale` (no push within t
 expected cadence) or `unknown` (never pushed). The **Executive** page shows the latest
 merge's coverage warning when a sensor did not contribute, and a score gauge for each
 segment. The gauges are recomputed from the current sensor rows each time the page loads
-(with the same one-endpoint-per-sensor limit), not read back from the stored merge.
+(from every endpoint of each sensor's latest push), not read back from the stored merge.
 
 #### 8.5 Windows sensor installation
 
 QU.I.R.K. sensors run on Windows with no additional configuration beyond the standard
 Python install.
 
-**Prerequisites:** Python 3.10 or newer for Windows (the package declares `requires-python >=3.10`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
+**Prerequisites:** Python 3.10 to 3.14 for Windows (the package declares `requires-python >=3.10,<3.15`; CI exercises the Windows sensor on Python 3.11), available from https://www.python.org/downloads/
 
 **Install:**
 
@@ -5526,7 +5703,7 @@ Set in `config.yaml` under the `scan.timeouts` block. All values are in seconds.
 | `scan.timeouts.ssh_seconds` | 6 | SSH |
 | `scan.timeouts.jwt_seconds` | 10 | JWT / API |
 | `scan.timeouts.container_seconds` | 120 | Container (Syft) |
-| `scan.timeouts.source_seconds` | 300 | Source code (Semgrep) |
+| `scan.timeouts.source_seconds` | 300 | Source code (Semgrep; known defect, ruleset unavailable in 5.28.0) |
 | `scan.timeouts.dnssec_seconds` | 10 | DNSSEC |
 | `scan.timeouts.saml_seconds` | 10 | SAML |
 | `scan.timeouts.kerberos_seconds` | 10 | Kerberos |
@@ -6733,8 +6910,8 @@ roadmap or it isn't). A remediation item is now a stable, kind-derived ID (e.g.
 `plaintext-http-exposure`) with its constituent findings recorded explicitly, per scan, in the
 database. That is what makes "6 of 8 verified closed" an expressible fact rather than an
 approximation, and fixing the 8th leaves a closure record instead of the item silently vanishing.
-The closures are recorded against the earlier scan's records, not the new scan's (see §16, "The
-four states"), so the new scan's own burndown does not count them.
+A closure is recorded on the scan that observed the fix, and the earlier scan's record of that
+finding is marked closed too (see §16, "The four states").
 
 Three things operators should understand about how this tracking behaves:
 
@@ -6751,13 +6928,12 @@ Three things operators should understand about how this tracking behaves:
   usable evidence — this is precisely the failure mode a prior integration defect
   demonstrated for SSH. Health is now derived from whether that family actually produced evidence,
   not from the absence of an error.
-- **`not_observed` is a real, persisted state, and it is the state every finding starts in.** A
-  finding is never inferred `closed` from absence. But in this release `not_observed` is also
-  the state a finding keeps when the scan *detected* it: nothing promotes a detected finding to
-  `open` (see §16, "The four states"). So `not_observed` means "not verified closed", which covers
-  both "found again this scan" and "not checked this run" (a narrower port scope, a disabled
-  connector, an unreachable host). Never read it as "there's nothing there", and do not read it
-  as "we did not check" either; use the scan's findings list to tell the two apart.
+- **A detected finding is `open`; `not_observed` means nothing was verified.** A finding is never
+  inferred `closed` from absence. A finding the scan detected is recorded `open`. `not_observed`
+  is kept for items where nothing was checked, such as counter-only roadmap items, and for scans
+  stored before this release, which are not rewritten and so still show their detected findings
+  as Not Verified (see §16, "The four states"). Never read `not_observed` as "there's nothing
+  there".
 
 See `docs/configuration.md` §"Remediation Aliases" for the related `remediation_aliases:` config
 key, which is meant to let an operator manually declare that two identities across engagements
@@ -6843,41 +7019,117 @@ case is a missing badge or an empty burndown block, not a broken page.
 
 #### The four states
 
-`ITEM_STATES` in `quirk/intelligence/remediation.py` defines four closure states. In this
-release only three of them are ever written, and they are written to different scans' records:
+`ITEM_STATES` in `quirk/intelligence/remediation.py` defines four closure states:
 
-- **`not_observed`** — every finding a scan detects is recorded in this state
-  (`DEFAULT_ITEM_STATE`), and nothing later moves a still-present finding to `open`. It also
-  stays the state of anything the scan could not verify (see the troubleshooting list below).
-- **`closed`** — written to the **earlier** scan's record of a finding, when that finding was
-  present in a comparable prior scan and the current scan positively rechecked the same host:port
-  with a healthy probe and did not find it. The current scan has no record of a finding it did not
-  find, so the current scan's burndown and roadmap badges never count it as closed; the closure is
-  kept on the prior scan's record and in the closure event log.
+- **`open`** — a finding the scan detected. It is written when the scan is stored.
+- **`closed`** — written on the scan that observed the fix, when the finding was present in a
+  comparable prior scan and this scan positively rechecked the same host:port and did not find it.
+  The earlier scan's record of that finding is also marked closed, so the earlier scan's burndown
+  reads the closure as well once the later scan has run. Closed rows are not carried forward: a
+  third scan that rechecks the same estate counts only its own rows, which show no closure.
+  When a finding closes on a later scan, after a scan that could not recheck it, the scan that
+  detected it is marked closed too, and its roadmap item closes once all of that item's findings
+  have closed. If every finding of the item is then closed and the closing scan has no item of
+  its own, the closing scan gets a closed item, so its CBOM VEX entry reads `resolved`.
+  A finding that had resurfaced and closes this way is recorded as reclosed.
+- **`not_observed`** — nothing was verified. Counter-only roadmap items use it, and so do scans
+  stored before this release, which keep their detected findings as Not Verified and are not
+  rewritten. A finding that a scan could not recheck, for example because its port timed out, is
+  also written to that scan as `not_observed`. It stays in that scan's burndown, and a later scan
+  that rechecks it can usually still close it. The exceptions are listed under "Known limitations"
+  below.
 - **`resurfaced`** — written to the current scan's record when a finding whose most recent earlier
   record is `closed` is detected again. It is counted as open-like for reporting, but reported as
   its own line rather than folded into `open`, and its closure history is retained.
-- **`open`** — defined, but no code path writes it, so every `open` count is 0.
 
-A plaintext HTTP finding cannot close while its host:port is still recorded with protocol `HTTP`:
-no probe family claims that protocol, so the probe-health check for that host:port reads
-`not_run`. It can close only once the current scan records that host:port under a protocol a
-healthy probe family claims (for example `TLS`, after the port is moved to HTTPS) and the finding
-is gone.
+A finding closes only when all of the following hold:
+
+- The current scan has the same scope as the prior one (see §15).
+- Every probe that reported that host:port has a live row at that same host:port in this scan. A
+  probe that is healthy elsewhere in the scan does not count. One timed-out, refused,
+  unreachable or errored row at the host:port blocks closure for every finding there, even when a
+  SAML or JWT probe answered. A mail port that timed out or refused the connection counts the
+  same way. Placeholder rows are not evidence of a recheck.
+- No row at that host:port is a service the scan could not identify, such as the `UNKNOWN` row
+  written when the HTTP probe times out. One such row blocks closure for every finding at that
+  host:port, even when another probe there, such as SAML or JWT, answered normally.
+- Every probe family that originally reported that host:port was rechecked in this scan. A run
+  that reused cached fingerprint results does not count as a recheck.
+- The current scan's remediation record was written. If writing it failed, closure is skipped for
+  that scan, because a missing record cannot be told apart from every finding being gone.
+
+Plaintext HTTP findings close when the scan's service identification now reports at that port a
+service, TLS or SSH, that was not there when the finding was detected, for example TLS after the
+port is moved to HTTPS. That still holds after an intermediate scan whose TLS check failed. A
+live plaintext HTTP row at the port also counts as a recheck. No plaintext endpoint remaining
+elsewhere in the scan counts as an HTTP recheck only together with one of these. A SAML or JWT
+row at the port is not evidence that the port stopped serving plaintext.
+
+A finding that a scan could not recheck is carried forward as `not_observed` and judged on the
+next scan by every probe that reported its port, in the scan that detected it and in the scan in
+between.
+
+In a test of eight plaintext hosts with one moved to HTTPS, the next scan read 7 open and 1
+closed for that item, and when all eight were fixed it read 8 closed.
+
+TLS findings close only on deep TLS scans. A fast-mode scan does not produce the evidence needed
+to show a TLS finding is gone, so it leaves the finding open (tracked in HORIZON 999.138).
+
+A probe family that is healthy elsewhere in the scan is not enough for one host. A finding closes
+only when a live row at its own host:port carries that family's evidence. For a TLS finding that
+means the deep TLS enumeration of that host succeeded; if it failed there and the scanner fell
+back to a basic handshake, the finding stays `not_observed` even though TLS is healthy on other
+hosts. For a plaintext HTTP finding that is still answered by an HTTP row, the row must carry the
+service identification. The HTTP-moved-to-TLS or SSH rule above needs no such evidence.
+
+Two cases are deliberate under-claims, listed here side by side so the reason is not a surprise:
+
+- A port that serves both HTTP and SAML closes only when both probes recheck it.
+- An errored or timed-out row from any probe at a port blocks every finding there.
+- A port whose HTTP probe returned nothing while only SAML or JWT answered stays `not_observed`.
+- A finding at a host:port where a probe with no recheck signal also reported, in the prior scan
+  or the current one, such as the REST fuzzer, OpenAPI, Vault, AD CS, Kubernetes or cloud
+  connectors, does not close, because that probe cannot be shown to have rechecked the port. This also covers a host:port that reported
+  HTTP together with the REST fuzzer.
+
+The same plaintext HTTP finding can count under two remediation items (`plaintext-http-exposure`
+and `high-impact-findings`), and the burndown places plaintext HTTP in the `unmapped` bucket,
+because plain HTTP carries no algorithm. Do not add the item rows together.
 
 **Absence alone never closes an item.** A host that stops appearing in a scan — because it was
 decommissioned, because the target list shrank, because a segment of the network was unreachable —
 is not evidence anything was fixed. Closure requires the current scan to have positively rechecked
 that specific host:port and found the finding gone, not merely to have not seen it.
 
+#### Known limitations
+
+These cases can leave a fixed finding reading `not_observed` when it could have closed. None of
+them can mark a finding closed that is not fixed.
+
+- **Cached fingerprint results.** A scan that reused cached fingerprint results did not recheck
+  the port, so a plaintext HTTP finding whose port moved to TLS in that scan stays `not_observed`.
+  If a scan could not recheck a plaintext HTTP finding because the HTTP probe timed out, and the
+  next scan finds the port on TLS, the finding closes: it is judged by the scan that detected it.
+- **A scan whose closure was refused as a whole.** If closure is not computed for a scan, for
+  example because its scope differs from the prior scan or its remediation record failed to
+  write, that scan carries no pending findings forward. Findings it did not detect, including
+  ones that were `not_observed` before it, drop out of later scans' burndowns and can no longer
+  close.
+- **Findings carried from scans recorded before this release.** A finding whose only record is a
+  `not_observed` row from a scan stored before this release has no record of which probe raised
+  it, so it can never close on its own. It stays `not_observed`, whatever later scans see at its
+  host:port, until a scan detects it again and writes a real `open` row. From then on the normal
+  closure rules apply. A different service answering there, such as SAML or JWT, never closes it.
+- **An endpoint that leaves service.** A finding at a host:port that stops answering is carried
+  as `not_observed` on every later scan. There is no action to retire it yet.
+
 #### Why an item reads `not_observed` — troubleshooting
 
 If a client or colleague asks "why does this say `not_observed` instead of `closed`?", the answer
 is one of:
 
-- **The current scan found it again.** A detected finding is recorded as `not_observed` (see "The
-  four states" above). Check the scan's findings list first: if the finding is there, it is still
-  present.
+- **The scan predates this release.** Scans stored before this release keep their detected
+  findings as `not_observed` and are not rewritten. Rescan to get `open` and `closed` states.
 - **No comparable prior scan exists.** This is the first scan of this estate, or no prior scan's
   scope signature matches closely enough to compare against.
 - **The scope signature is missing or mismatched.** Port scope, `--profile`, enabled optional
@@ -6892,17 +7144,26 @@ is one of:
   one probe family silently produced no usable evidence — probe health is asserted positively per
   family, never inferred from a clean exit.
 - **No endpoint was rechecked at that host:port.** The current scan simply did not touch that
-  address this run.
+  address this run, every row there was a timeout, refusal, placeholder or error, or one of the
+  rows there is a service the scan could not identify (`UNKNOWN`).
+- **It is one of the known limitations above.** For example, the port changed service while the
+  finding was waiting to be rechecked, or a scan in between had its closure refused as a whole.
+- **The scan reused cached fingerprint results.** A cached run does not count as a recheck.
+- **The host's own probe returned no evidence.** For a TLS finding, the deep TLS enumeration of
+  that host failed and only a basic handshake row was recorded.
+- **It is a TLS finding and the scan ran in fast mode.** Only deep TLS scans can close TLS
+  findings (HORIZON 999.138).
 
-Treat `not_observed` as **"not verified closed"**, never as **"nothing was found."** Telling a
-client "12 items came back clean" when the true state is "12 items were not verified closed" is
-the exact misreading this state exists to prevent. Because detected findings share the state, do
-not tell a client "we did not check" those 12 either until the findings list confirms it.
+Treat `not_observed` as **"not verified"**, never as **"nothing was found."** Telling a client
+"12 items came back clean" when the true state is "12 items were not verified" is the exact
+misreading this state exists to prevent. A finding that is still `open` was detected and is still
+there.
 
 #### Troubleshooting — "the burndown block is empty / says not computed"
 
 This is the same comparability gap as the `not_observed` troubleshooting list above, surfaced at
-the whole-scan level instead of the per-item level. Check, in order:
+the whole-scan level instead of the per-item level. A fully fixed estate is not an
+empty block: it shows closed rows on the scan that observed the fixes. Check, in order:
 
 - **No comparable prior scan exists** — this is the first scan of this estate, or nothing prior
   matches closely enough.
@@ -6987,8 +7248,9 @@ Three things burndown and closure will never do, by design:
 
 > **Client Conversation — Closure:**
 > "This report's `not_observed` count is not 'nothing found' — it means none of those items was
-> verified closed this run: either we found them again, or we could not recheck them because this
-> scan's scope differed from the prior one or a probe family came back unhealthy. Nothing here can
+> verified, either because the scan predates this release or because we could not recheck them:
+> this scan's scope differed from the prior one or a probe family came back unhealthy. Items we
+> found again are shown as open, not as clean. Nothing here can
 > be marked closed by a flag; a finding only closes when we
 > positively recheck it and it's gone. And a `resurfaced` item means something we believed fixed
 > came back — that's reported separately from ordinary open items so it isn't lost in the count."
@@ -7047,10 +7309,9 @@ If you still see `Report generation halted` on a current QU.I.R.K. version, that
 whose evidence was assembled without its findings list attached to the scoring call — verify you
 are running a version that includes Phase 184.4 (5.19.0 or later) and, if the error persists,
 capture the full evidence/findings payload for the scan and file it, since the report writers and
-the dashboard's scan views pass their findings to the scorer. Two surfaces show a band computed
-without findings: `quirk sensor merge` prints `Score: N (BAND)`, and the Slack drift notification's
-`Score Band:` header is mapped from the trend score. Both bands ignore open CRITICAL and HIGH
-findings (no severity floor and no consequence ceiling). Do not quote either.
+the dashboard's scan views pass their findings to the scorer. Since Phase 228,
+`quirk sensor merge`'s `Score: N (BAND)` and the Slack drift notification's `Score Band:` header
+apply the CRITICAL and HIGH consequence ceilings, like the headline score.
 
 ### 18. SPKI Fingerprint Capture and Key Reuse (Phase 191, SPKI-01/SPKI-02)
 
@@ -7207,7 +7468,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk compliance cmvp` | Inspect the CMVP attestation cache (actions `status` and `refresh`; use only `status`) | `status`, `refresh` | CLI only |
 | `quirk compliance cmvp status` | Print CMVP cache freshness (read-only) | `--format` (`text` or `json`) | CLI only |
 | `quirk compliance cmvp refresh` | Refresh CMVP cache from NIST. **Do not run it**: see the warning below the table | `--dry-run` | CLI only |
-| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries, compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (arguments are ignored) | CLI only |
+| `quirk doctor` | Pre-engagement health check: Python, nmap, syft and semgrep binaries (informational), compliance freshness, QRAMM module, database, configuration, DNS and dashboard reachability | none (`-h`/`--help` only; extra arguments exit 2) | CLI only |
 | `quirk schedule` | Manage scheduled scans | `add`, `list`, `enable`, `disable`, `remove` | Schedules page (list, enable, disable, delete); the page cannot create a schedule |
 | `quirk schedule add` | Add a new scheduled scan | `--name`, `--cron`, `--target`, `--check-in` | `POST /api/schedules` also creates one, but no page calls it: the Schedules page's Add Schedule sheet only prints this command |
 | `quirk schedule list` | List all scheduled scans | `--config` | Schedules page: `GET /api/schedules` |
@@ -7216,10 +7477,10 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk schedule remove` | Remove a scheduled scan | `name`, `--config` | Schedules page delete: `DELETE /api/schedules/{schedule_id}` |
 | `quirk scheduler` | Run the scheduled-scan dispatcher (action `run`) | `run` | CLI only |
 | `quirk scheduler run` | Start the scheduler dispatch loop | `--config`, `--scan-config`, `--once` | CLI only |
-| `quirk qramm` | Dispatcher for `quirk qramm status`; it has no help of its own | `status` | CLI only |
-| `quirk qramm status` | Print the QRAMM model version, last_verified date, days remaining and freshness status | none | CLI only |
-| `quirk cve` | Dispatcher for `quirk cve status`; it has no help of its own | `status` | CLI only |
-| `quirk cve status` | Print the firmware CVE catalog source, last_verified date, days remaining and freshness status | `--format json` | CLI only |
+| `quirk qramm` | QRAMM model utilities (action `status`); `quirk qramm --help` lists actions, an unknown or missing action exits 2 | `status` | CLI only |
+| `quirk qramm status` | Print the QRAMM model version, last_verified date, days remaining and freshness status | none (`--help`) | CLI only |
+| `quirk cve` | Firmware CVE catalog utilities (action `status`); `quirk cve --help` lists actions, an unknown or missing action exits 2 | `status` | CLI only |
+| `quirk cve status` | Print the firmware CVE catalog source, last_verified date, days remaining and freshness status | `--format` (`text` or `json`) | CLI only |
 | `quirk analyze-token` | Decode and classify a bearer/JWT token; passive: no signature verification, no network requests, no DB writes | `--json`, `TOKEN`, `@FILE` or `-` (stdin) | CLI only |
 | `quirk token` | Dashboard API token management (actions `generate`, `rotate`, `show`) | `generate`, `rotate`, `show` | CLI only |
 | `quirk token generate` | Generate and persist a new dashboard API token | `--config` | CLI only |
@@ -7245,7 +7506,7 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 | `quirk db` | Database maintenance subcommands (action `migrate`) | `migrate` | CLI only |
 | `quirk db migrate` | Idempotent, additive-only schema migration of an existing quirk.db; see the warning below the table | `--db`, `--config`, `--dry-run` | CLI only |
 
-**Three commands do not print help.** `quirk doctor --help` ignores its arguments and runs the health check (exit status 1 when a check fails); `quirk qramm --help` and `quirk cve --help` print the scan CLI usage instead, and `quirk qramm status --help` and `quirk cve status --help` run the status report; `quirk cve status` takes `--format json` through hand-written argument handling, so no usage text lists it.
+**`doctor`, `qramm` and `cve` parse their arguments (Phase 231, QRAMM-20).** All three now parse arguments like the other subcommands. `--help` works at both levels (`quirk qramm --help`, `quirk qramm status --help`, `quirk cve status --help`) and prints usage without running anything. An unknown action or an extra argument is a usage error with exit status 2. `quirk cve status --format=json` now emits JSON (before Phase 231 it printed the text table), and an invalid `--format` value exits 2. Scripts that passed extra arguments to `quirk doctor` now fail with exit status 2; no script in this repository did.
 
 **Never run `quirk compliance cmvp refresh`.** It rewrites the CMVP attestation cache from NIST, and an earlier version of it silently emptied algorithm lists it could not parse (RVW-022, fixed in commit `a7cf302`); re-verify the cache by hand against its source URL instead, and use `quirk compliance cmvp status` for the read-only check.
 
@@ -7254,6 +7515,47 @@ This table was enumerated from the argv dispatch in `run_scan.py` and from each 
 **`quirk db migrate` needs an explicit `--db`.** Without `--db` or `--config` it falls back to `./quirk.db`, not the dashboard's `./quirk-output/quirk.db`, and creates an empty database there; pass `--db quirk-output/quirk.db`. `--dry-run` can stop with `NoSuchTableError` on a database created by an older release (see the upgrade guide).
 
 **Flag and path gotchas.** `quirk export` and `quirk ticket create` search `./output` for the latest `findings-*.json` unless `--input` or `--output-dir` is given; `quirk sensor enroll` needs the `--sensor-id` that `quirk console enroll` printed; `quirk sensor merge` has no `--output-dir` option.
+
+---
+
+### 22. QRAMM Assessment Tabs: Compliance Map and Scorecard (Phase 231, QRAMM-17/18/19)
+
+The dashboard's QRAMM Assessment page (`/qramm/assessment`; **QRAMM Assessment** in the sidebar opens the organization profile at `/qramm`, and starting or continuing an assessment there opens this page) has one tab per dimension (CVI, SGRM, DPE, ITR), then **Scorecard** and **Compliance Map**. Both of the last two tabs mark how each dimension was assessed, using the same states:
+
+| State | Meaning |
+|-------|---------|
+| **Scanner-measured** | CVI with at least one answered question. Scored with QUIRK scanner evidence, capped by the scanner coverage ceiling. |
+| **Self-assessed** | SGRM, DPE or ITR with at least one answered question. Scored from the answers entered by hand, at full weight (static weight x dimension score / 4) with no scanner ceiling. No scanner evidence backs these scores. |
+| **Not assessed** | Any dimension, CVI included, with no answered question. The tabs show no score and no maturity level for it, instead of a 0.0 that reads as level 1. |
+| **Stale — recalculate** | An answered dimension whose answered-question count has changed since the score was saved (Phase 234). Its saved score no longer describes its answers, so it shows no score, is never shown as Self-assessed and never counts toward a maturity level. It clears when you run **Calculate Score** again. |
+
+A dimension counts as assessed as soon as one of its questions is answered. A score of 0.0 does not make it Not assessed, and a partly answered dimension is assessed. Since Phase 234 the overall QRAMM score averages the assessed dimensions only: a Not assessed dimension is left out instead of counting as 0, and the overall states how many dimensions it rests on, "N of 4 dimensions assessed". With no dimension assessed the overall is pending ("Indeterminate"), never 0.
+
+#### Compliance Map tab
+
+- **Calculate Score refreshes the table.** Until the session is scored, the tab shows a banner with a **Calculate Score** button. After a successful Calculate Score the table refetches in place and screen readers hear "Compliance map updated." A failed Calculate Score shows the error line under the button and leaves the table as it was.
+- **Assessment column.** Each practice-area row carries a text badge, Scanner-measured, Self-assessed, Not assessed or Stale — recalculate, so the state never depends on colour alone. Scanner-measured and Self-assessed rows show their framework scores. Not assessed rows show "—".
+- **Coverage Tiers legend** lists the three badges with a one-line description of each.
+- **Footnote.** The table ends with the same sentence the print/PDF page uses:
+
+> CVI rows are measured from QUIRK scanner evidence; SGRM, DPE and ITR rows show self-assessed answers; any dimension with no answered question reads "Not assessed".
+
+#### Scorecard tab
+
+- A dimension with no answered question shows a **Not assessed** badge in the Maturity Level column of the Dimension Summary table, and "—" for its Raw and Weighted Score. The stored 0.0 is a placeholder, not a measurement.
+- Not assessed dimensions are left out of the Maturity Distribution buckets, and a line under the buckets reads "1 dimension not assessed" or "N dimensions not assessed".
+- The Dimension Radar still plots an unanswered dimension at 0. That is unchanged in Phase 231.
+- An **Overall Maturity** card, shown once the session has a score, reads the overall score, the maturity level and "N of 4 dimensions assessed" (for example 0.67, Below Basic, "3 of 4 dimensions assessed"). With no dimension assessed it reads "—" and "Indeterminate". The level follows the QRAMM maturity levels (Basic from 1.0, Developing from 1.5, Established from 2.5, Advanced from 3.5, Optimizing from 3.95); an overall below 1.0 reads **Below Basic**, because it is under Basic's own floor. Partly answered dimensions often score 0.0, because a dimension's score is its weakest practice area and an unanswered practice scores 0, so a 0.x overall is common early in an assessment.
+- A dimension whose answers changed after the score was saved shows a **Stale — recalculate** badge, "—" for its Raw and Weighted Score, and is left out of the Maturity Distribution. The card's overall itself reads "Stale — recalculate", with no number, maturity level or "N of 4 dimensions assessed", because the saved overall no longer describes the answers either, and the card adds the line "Stale — recalculate: answers changed after this score was saved". Staleness is detected by comparing answered-question **counts**: changing the value of a question that was already answered does not mark the dimension stale, so run **Calculate Score** after any change to the answers.
+- A score saved before Phase 234 carries no answer counts, and its stored overall still averaged a Not assessed dimension in as 0. Its overall reads "Recalculate to apply the updated overall" instead of a maturity level, and every answered dimension reads "Stale — recalculate", because newer answers cannot be ruled out. Both clear when you run **Calculate Score**. Today you see this state on the print/PDF page, which reads the saved score; the Scorecard tab shows a score only after a fresh Calculate Score.
+
+#### Answering after scoring
+
+The state comes from the live answers and the scores from the last Calculate Score. If you answer a question after scoring, including a dimension's first question, the tabs read that dimension as **Stale — recalculate** until you run **Calculate Score** again, because its saved score no longer matches its answers. Re-run Calculate Score after answering more questions.
+
+#### Print / PDF
+
+The dashboard's Export PDF (the `/print` page) uses the same states in its QRAMM section: an Assessment column on the Dimension Scorecard, an "Overall maturity" line that ends with "N of 4 dimensions assessed" (or reads "Stale — recalculate" when answers changed after the score was saved, and "Recalculate to apply the updated overall" for a score saved before Phase 234), per-framework counts in place of the old coverage tier, and a chip on every practice-area row. See `docs/report-interpretation.md` §9. Before Phase 231, a print export of a scored session failed to load its QRAMM data. It now reads the persisted score from `GET /api/qramm/sessions/{id}`.
 
 
 ---

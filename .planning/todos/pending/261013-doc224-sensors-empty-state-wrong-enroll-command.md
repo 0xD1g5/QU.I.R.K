@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/pages/sensors.tsx (empty state), src/dashboard/src/pages/__tests__/sensors-loading.test.tsx
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # Sensors page empty state tells users to run an enroll command that fails

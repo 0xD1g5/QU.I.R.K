@@ -6,6 +6,7 @@ priority: low
 area: quirk/build_stamp.py
 status: pending
 resolves_phase: null
+owner: "999.129"
 ---
 
 # Scanner build stamp reports the commit of an unrelated parent git checkout

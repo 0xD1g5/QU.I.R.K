@@ -59,7 +59,7 @@ PROFILE_ARGS="--profile identity" ./lab.sh up
 | pki | mtls-stepca-gateway | 17443 | [Expected Findings](expected_results_v4.md#profile-pki) | v4.0; depends on `identity` profile |
 | jwt | jwt-rs256, jwt-hs256, jwt-rsa1024, jwt-algnone | 20001, 20002, 20003, 20004 | [Expected Findings](expected_results_v4.md#profile-jwt) | v4.1 |
 | registry | registry, registry-seed | 20005 | [Expected Findings](expected_results_v4.md#profile-registry) | v4.1 |
-| source | gitea, gitea-seed | 20006 | [Expected Findings](expected_results_v4.md#profile-source) | v4.1 |
+| source | gitea, gitea-seed | 20006 | [Expected Findings](expected_results_v4.md#profile-source) | v4.1; scanning the seeded repos currently yields a "ruleset unavailable" ERROR row and zero SOURCE findings (known defect in 5.28.0) |
 | ssh-weak | ssh-weak | 20022 | [Expected Findings](expected_results_v4.md#profile-ssh-weak) | v4.1 |
 | ldaps | ldaps, ldaps-codesign-seed | 636 | [Expected Findings](expected_results_v4.md#profile-ldaps) | v4.1; bitnamilegacy/openldap:2.6.10-debian-12-r4 (macOS-compat 2026-05-15). v5.1 Phase 95 (LAB-01): code-signing fixture added — `ldaps-codesign-seed` sidecar seeds `uid=codesign-weak` (RSA-1024/SHA-1 + CodeSigning EKU) under `dc=chaos,dc=local`. Idempotent sidecar (`ldapadd -c`, swallows exit 68). Use `--inventory-code-signing` flag to scan. |
 | dnssec | bind9-dnssec | 15353/udp, 15353/tcp | [Expected Findings](expected_results_v4.md#profile-dnssec) | v4.2 |

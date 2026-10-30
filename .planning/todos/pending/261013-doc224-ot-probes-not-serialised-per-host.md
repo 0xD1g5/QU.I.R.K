@@ -6,6 +6,7 @@ priority: medium
 area: quirk/scanner/hardware_scanner.py (fingerprint_hardware / fingerprint_one Steps 4-5)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # OT/ICS probes are per endpoint, not per host: a multi-SSH-port host gets duplicate, overlapping Modbus/BACnet probes

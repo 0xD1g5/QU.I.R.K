@@ -650,7 +650,7 @@ def probe_snmp_target(
     """
     if not _PYSNMP_AVAILABLE:
         _LOG.warning(
-            "SNMP probe skipped: install quirk-scanner[hw] to enable "
+            "SNMP probe skipped: run pip install 'quirk-scanner[hw]' to enable "
             "hardware SNMP fingerprinting (pysnmp not found)"
         )
         return dict(_NULL_RESULT)

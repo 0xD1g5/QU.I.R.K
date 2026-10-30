@@ -1,8 +1,20 @@
+---
+type: todo
+created: 2026-10-12
+source: Phase 224 plan 06 (docs/chaos-lab.md audit)
+priority: medium
+area: quantum-chaos-enterprise-lab/lab.sh (ensure_profile_certs), labs/{postgres-tls,redis-tls,kafka-tls}/
+status: pending
+resolves_phase: null
+owner: "999.119"
+---
+
 # `lab.sh` does not generate the postgres-tls, redis-tls and kafka-tls certificates
 
 **Filed:** 2026-10-12 (Phase 224 plan 06, docs/chaos-lab.md audit)
 **Priority:** P2 — first `up` of three profiles silently mounts a directory where a certificate file is expected
 **Status:** open
+Frontmatter added by Phase 227 (D-02): priority derived from the body Priority line (P2 → medium).
 
 ## What happens
 

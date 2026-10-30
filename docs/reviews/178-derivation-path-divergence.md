@@ -92,6 +92,13 @@ quantum-vulnerable-RSA detection to the dashboard path) is out of scope for this
 here as D-178-B so it is not lost, and so it is never mistaken for a wording divergence when a
 future phase triages this document.
 
+### D-178-C: near-expiry wording (added Phase 228)
+
+Report title `TLS certificate expiring within 30 days` vs dashboard title
+`Certificate expiring in N day(s)`. Severity now agrees (MEDIUM, Phase 228 D-01); the title is
+deliberately unchanged (D-02) so ticket fingerprints do not re-key. The dashboard title embeds a
+day count, so the test allowlists it by prefix (`_is_known_divergence`), not as an exact pair.
+
 ## Enforcement
 
 `tests/test_finding_engine_parity.py::TestIdentityParity` enforces this document machine-readably:

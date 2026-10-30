@@ -69,7 +69,9 @@ class IntelligenceRoadmapTests(unittest.TestCase):
         self.assertIn("Remove plaintext HTTP exposure", titles)
         self.assertIn("Classify unknown open services", titles)
         self.assertIn("Standardize mTLS lifecycle operations", titles)
-        self.assertIn("Plan ECDSA adoption", titles)
+        # Phase 234 O-4: the classical-key item now recommends PQC/hybrid
+        # certificates (RSA-only estate here, so it fires).
+        self.assertIn("Plan post-quantum (PQC/hybrid) certificate adoption", titles)
         self.assertIn("Driver:", titles["Remove plaintext HTTP exposure"]["why"])
 
     def test_zero_endpoints_generates_minimum_roadmap(self) -> None:
@@ -79,6 +81,69 @@ class IntelligenceRoadmapTests(unittest.TestCase):
         self.assertIn("NOW", phases)
         self.assertIn("NEXT", phases)
         self.assertIn("LATER", phases)
+
+
+_PQC_CERT_TITLE = "Plan post-quantum (PQC/hybrid) certificate adoption"
+
+
+class PqcCertificateItemTests(unittest.TestCase):
+    """Phase 234 O-4: the retargeted certificate-key item fires exactly when the
+    scoring-4.0 key-type penalty fires: any classical key (RSA/ECDSA/EdDSA), or
+    certificates observed with no PQC key."""
+
+    @staticmethod
+    def _titles(cert_keys: dict, certs_observed: int) -> dict:
+        evidence = _evidence()
+        evidence["cert_key_type_counts"] = cert_keys
+        evidence["certificate_observations"]["certs_observed"] = certs_observed
+        return {item["title"]: item for item in build_phased_roadmap(evidence, _scoring())["items"]}
+
+    def test_pqc_certificate_item_fires_for_ecdsa_only_estate(self) -> None:
+        titles = self._titles({"RSA": 0, "ECDSA": 4, "PQC": 0}, 4)
+        self.assertIn(_PQC_CERT_TITLE, titles)
+
+    def test_pqc_certificate_item_fires_when_key_types_undetermined(self) -> None:
+        titles = self._titles({"RSA": 0, "ECDSA": 0, "PQC": 0}, 4)
+        self.assertIn(_PQC_CERT_TITLE, titles)
+
+    def test_pqc_certificate_item_absent_when_all_cert_keys_pqc(self) -> None:
+        titles = self._titles({"RSA": 0, "ECDSA": 0, "PQC": 4}, 4)
+        self.assertNotIn(_PQC_CERT_TITLE, titles)
+
+    def test_pqc_certificate_item_fires_for_undetermined_keys_beside_one_pqc_cert(self) -> None:
+        # Phase 234 review D-29 (WR-02): 39 undetermined + 1 PQC certificate
+        # still takes the undetermined -8, so the item that resolves it must
+        # fire too; one PQC certificate no longer hides the other 39.
+        titles = self._titles({"RSA": 0, "ECDSA": 0, "PQC": 1}, 40)
+        self.assertIn(_PQC_CERT_TITLE, titles)
+
+    def test_pqc_certificate_item_driver_hint_matches_scoring_4_label(self) -> None:
+        # 234-03 handoff (Pitfall 7): the hint keywords must match the live
+        # scoring-4.0 driver label, or the "Driver:" clause is silently empty.
+        from quirk.intelligence.scoring import compute_readiness_score
+
+        evidence = _evidence()
+        scoring = compute_readiness_score(evidence)
+        reasons = [d.get("reason", "") for d in scoring.get("drivers", [])]
+        self.assertIn("Quantum-vulnerable certificate keys (RSA/ECDSA/EdDSA)", reasons)
+        items = {i["title"]: i for i in build_phased_roadmap(evidence, scoring)["items"]}
+        self.assertIn(
+            "Driver: Quantum-vulnerable certificate keys (RSA/ECDSA/EdDSA).",
+            items[_PQC_CERT_TITLE]["why"],
+        )
+
+    def test_pqc_certificate_item_driver_hint_matches_undetermined_label(self) -> None:
+        from quirk.intelligence.scoring import compute_readiness_score
+
+        evidence = _evidence()
+        evidence["cert_key_type_counts"] = {"RSA": 0, "ECDSA": 0, "PQC": 0}
+        evidence["certificate_observations"]["certs_observed"] = 4
+        scoring = compute_readiness_score(evidence)
+        items = {i["title"]: i for i in build_phased_roadmap(evidence, scoring)["items"]}
+        self.assertIn(
+            "Driver: Certificate key types undetermined.",
+            items[_PQC_CERT_TITLE]["why"],
+        )
 
 
 class WhyDoublePeriodTests(unittest.TestCase):

@@ -32,6 +32,7 @@ import jwt
 import jwt.exceptions
 
 from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
+from quirk.util.jwt_alg import is_unsigned_jwt_alg
 from quirk.util.safe_exc import safe_str
 
 
@@ -94,9 +95,9 @@ def _decode_token(raw: str) -> dict[str, Any]:
         claims = {}
 
     # T-94-01: case-insensitive alg:none check on the decoded header dict value
-    is_alg_none = alg.lower() == "none"
+    is_alg_none = bool(alg) and is_unsigned_jwt_alg(alg)
     # WR-05: a JWT with NO alg header is as forgeable as alg:none — treat as critical.
-    is_alg_missing = not alg
+    is_alg_missing = is_unsigned_jwt_alg(alg) and not alg
 
     # Expiry
     exp = claims.get("exp")

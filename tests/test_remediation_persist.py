@@ -125,8 +125,9 @@ def test_no_written_row_has_closed_state(tmp_path) -> None:
 def test_evidence_only_item_has_zero_join_rows(tmp_path) -> None:
     db_path = str(tmp_path / "quirk.db")
     init_db(db_path)
-    # scan_error.rate >= 0.2 triggers "Increase scan coverage"
-    # (slug=scan-reliability, constituency=evidence_only) in build_phased_roadmap.
+    # scan_error.count > 0 triggers "Increase scan coverage" (Phase 234 review
+    # D-31; it was rate >= 0.2) (slug=scan-reliability,
+    # constituency=evidence_only) in build_phased_roadmap.
     endpoints = [_endpoint(f"host{i}.example.com", 443, protocol="TLS") for i in range(5)]
     for i, ep in enumerate(endpoints):
         if i < 2:
@@ -396,3 +397,148 @@ def test_slug_priority_key_set_matches_kind_slugs() -> None:
         f"_SLUG_PRIORITY entry(ies) with no matching REMEDIATION_KIND_SLUGS "
         f"slug: {sorted(extra_priority)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 229 Plan 01 (FIND-11, D-01/D-23): detected rows are written `open`.
+# DETECTED_ITEM_STATE is imported inside each test so a missing constant fails
+# only these tests, not collection of the whole file.
+# ---------------------------------------------------------------------------
+
+
+def test_detected_and_default_state_constants() -> None:
+    from quirk.intelligence.remediation import DEFAULT_ITEM_STATE, DETECTED_ITEM_STATE
+
+    assert DETECTED_ITEM_STATE == "open"
+    assert DEFAULT_ITEM_STATE == "not_observed"
+
+
+def test_detected_fingerprint_rows_and_item_are_written_open(tmp_path) -> None:
+    from quirk.intelligence.remediation import DETECTED_ITEM_STATE
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints, findings = _eight_plaintext_endpoints_and_findings()
+
+    persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+
+    with get_session(db_path) as session:
+        fp_rows = session.query(RemediationItemFingerprint).all()
+        assert len(fp_rows) >= 8
+        assert {fp.state for fp in fp_rows} == {DETECTED_ITEM_STATE}
+        item = (
+            session.query(RemediationItem)
+            .filter(
+                RemediationItem.slug == "plaintext-http-exposure",
+                RemediationItem.scan_run_id == SCAN_RUN_ID,
+            )
+            .one()
+        )
+        assert item.state == DETECTED_ITEM_STATE
+
+
+def test_counter_only_fingerprint_item_stays_not_observed(tmp_path, monkeypatch) -> None:
+    """D-23: gate on constituents, not kind. A fingerprint-kind roadmap item
+    with no matching finding is written not_observed."""
+    import quirk.intelligence.remediation_persist as mod
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    monkeypatch.setattr(
+        mod,
+        "build_phased_roadmap",
+        lambda evidence, weights: {
+            "items": [
+                {"title": "Remove plaintext HTTP exposure", "phase": "NOW"}
+            ]
+        },
+    )
+
+    persist_remediation_snapshot(db_path, SCAN_RUN_ID, [], [])
+
+    with get_session(db_path) as session:
+        item = (
+            session.query(RemediationItem)
+            .filter(
+                RemediationItem.slug == "plaintext-http-exposure",
+                RemediationItem.scan_run_id == SCAN_RUN_ID,
+            )
+            .one()
+        )
+        assert item.constituency == "fingerprint"
+        assert item.state == "not_observed"
+        assert session.query(RemediationItemFingerprint).count() == 0
+
+
+def test_rerun_does_not_reset_resurfaced_state(tmp_path) -> None:
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints, findings = _eight_plaintext_endpoints_and_findings()
+
+    persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+    with get_session(db_path) as session:
+        item = (
+            session.query(RemediationItem)
+            .filter(
+                RemediationItem.slug == "plaintext-http-exposure",
+                RemediationItem.scan_run_id == SCAN_RUN_ID,
+            )
+            .one()
+        )
+        item.state = "resurfaced"
+
+    persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+
+    with get_session(db_path) as session:
+        item = (
+            session.query(RemediationItem)
+            .filter(
+                RemediationItem.slug == "plaintext-http-exposure",
+                RemediationItem.scan_run_id == SCAN_RUN_ID,
+            )
+            .one()
+        )
+        assert item.state == "resurfaced"
+
+
+# ---------------------------------------------------------------------------
+# 229-REVIEW CR-02: a failed snapshot is distinguishable from a clean scan,
+# and run_scan.py gates closure on it.
+# ---------------------------------------------------------------------------
+
+
+def test_persist_failure_reports_failed_flag(tmp_path, monkeypatch) -> None:
+    import quirk.intelligence.remediation_persist as mod
+
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints, findings = _eight_plaintext_endpoints_and_findings()
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("simulated snapshot failure")
+
+    monkeypatch.setattr(mod, "build_phased_roadmap", _boom)
+    counters = persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+    assert counters.get("failed") == 1
+    with get_session(db_path) as session:
+        assert session.query(RemediationItem).count() == 0
+
+
+def test_clean_persist_has_no_failed_flag(tmp_path) -> None:
+    db_path = str(tmp_path / "quirk.db")
+    init_db(db_path)
+    endpoints, findings = _eight_plaintext_endpoints_and_findings()
+    counters = persist_remediation_snapshot(db_path, SCAN_RUN_ID, endpoints, findings)
+    assert "failed" not in counters
+
+
+def test_run_scan_skips_closure_when_snapshot_failed() -> None:
+    """The closure_verify block must consult the persist failure flag BEFORE it
+    calls compute_closure."""
+    import run_scan
+
+    source = inspect.getsource(run_scan.main)
+    closure_idx = source.index('"closure_verify"')
+    gate_idx = source.index('_remediation_counters.get("failed")', closure_idx)
+    call_idx = source.index("compute_closure(cfg.output.db_path", closure_idx)
+    assert closure_idx < gate_idx < call_idx

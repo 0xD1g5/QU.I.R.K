@@ -1,7 +1,7 @@
 """quirk.merge.scan — Cross-sensor merge pipeline (Phase 110 MERGE-01/02/04/05).
 
-merge_scan() assembles the union of latest-push-per-sensor CryptoEndpoint rows
-plus NULL-sensor local rows, runs the canonical engine chain (build_evidence_summary →
+merge_scan() assembles the union of every CryptoEndpoint row of each sensor's
+latest push (FIND-13, Phase 229) plus NULL-sensor local rows, runs the canonical engine chain (build_evidence_summary →
 compute_readiness_score → build_cbom) exactly ONCE over the full union (Option A),
 computes a coverage_warning from Sensor push recency, and persists the merged
 result as a MergeRun row — without rewriting the source endpoints' scanned_at.
@@ -12,7 +12,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -24,7 +24,16 @@ from quirk.cbom.writer import write_cbom_files
 logger = logging.getLogger(__name__)
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
-from quirk.models import CryptoEndpoint, MergeRun, Sensor
+from quirk.models import CryptoEndpoint, MergeRun, Sensor, SensorPush
+
+FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
+
+
+def _default_report_deriver(endpoints: Sequence[Any]) -> List[Mapping[str, Any]]:
+    """Report-composer default deriver (lazy import avoids an import cycle)."""
+    from quirk.engine.findings_evaluator import derive_report_findings
+
+    return derive_report_findings(endpoints)
 
 # Redefined locally to avoid importing from the dashboard layer (D-06 seam).
 # Phase 210 / D-11: this is DELIBERATELY no longer the same contract as
@@ -99,38 +108,84 @@ def _assemble_union(
     db: Session,
 ) -> List[CryptoEndpoint]:
     """Assemble the union of:
-    1. Latest-push-per-sensor rows (func.max(scanned_at) per non-null sensor_id).
-    2. NULL-sensor local rows within SESSION_BRACKET of the latest local scanned_at.
+    1. Every row of each sensor's latest push (FIND-13, D-13): the SensorPush
+       with max received_at (tie: max id) names a payload_id, and rows are
+       selected on sensor_id AND push_payload_id. A sensor with no tagged rows
+       (legacy, pre-Phase-229 ingest) falls back to rows within _SESSION_BRACKET
+       of its max scanned_at. A latest push with zero endpoints yields zero rows.
+       "Latest" is the last-ingested push, so an out-of-order air-gap import
+       counts as latest (documented limitation).
+    2. NULL-sensor local rows within _SESSION_BRACKET of the latest local scanned_at.
 
-    Source rows are returned read-only — scanned_at is never mutated (MERGE-05).
+    Order is deterministic: sensors sorted, rows by CryptoEndpoint.id, local rows
+    after (CD-05). Source rows are returned read-only (MERGE-05).
     """
     union: List[CryptoEndpoint] = []
 
     # --- Part 1: Latest push per enrolled sensor ----------------------------
-    # Subquery: (sensor_id, max(scanned_at), max(id)) for rows with a non-null sensor_id.
-    # MAX(id) is a secondary tiebreak: when two rows share the same scanned_at,
-    # only the highest-id row is selected — guarantees exactly one row per sensor.
-    sub = (
-        db.query(
-            CryptoEndpoint.sensor_id,
-            func.max(CryptoEndpoint.scanned_at).label("max_ts"),
-            func.max(CryptoEndpoint.id).label("max_id"),
+    latest: Dict[str, str] = {}
+    for sid, pid in (
+        db.query(SensorPush.sensor_id, SensorPush.payload_id)
+        .order_by(SensorPush.sensor_id, SensorPush.received_at, SensorPush.id)
+        .all()
+    ):
+        latest[sid] = pid  # last wins
+
+    tagged_sensors = {
+        r[0]
+        for r in db.query(CryptoEndpoint.sensor_id)
+        .filter(
+            CryptoEndpoint.sensor_id.isnot(None),
+            CryptoEndpoint.push_payload_id.isnot(None),
         )
+        .distinct()
+        .all()
+    }
+    all_sensors = sorted(
+        r[0]
+        for r in db.query(CryptoEndpoint.sensor_id)
         .filter(CryptoEndpoint.sensor_id.isnot(None))
-        .group_by(CryptoEndpoint.sensor_id)
-        .subquery()
-    )
-    sensor_eps: List[CryptoEndpoint] = (
-        db.query(CryptoEndpoint)
-        .join(
-            sub,
-            (CryptoEndpoint.sensor_id == sub.c.sensor_id)
-            & (CryptoEndpoint.scanned_at == sub.c.max_ts)
-            & (CryptoEndpoint.id == sub.c.max_id),
-        )
+        .distinct()
         .all()
     )
-    union.extend(sensor_eps)
+    for sid in all_sensors:
+        if sid in tagged_sensors:
+            pid = latest.get(sid)
+            if pid is None:
+                continue
+            rows = (
+                db.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.sensor_id == sid,
+                    CryptoEndpoint.push_payload_id == pid,
+                )
+                .order_by(CryptoEndpoint.id)
+                .all()
+            )
+        else:
+            max_ts = (
+                db.query(func.max(CryptoEndpoint.scanned_at))
+                .filter(CryptoEndpoint.sensor_id == sid)
+                .scalar()
+            )
+            if max_ts is None:
+                # 229-REVIEW WR-01: every row of this legacy sensor has a NULL
+                # scanned_at (nullable column; _parse_dt yields None for a
+                # missing/invalid stamp). No bracket can be built, and the old
+                # max-scanned_at join contributed nothing either - skip it
+                # rather than raise TypeError (a 500 on /api/merge/latest).
+                continue
+            rows = (
+                db.query(CryptoEndpoint)
+                .filter(
+                    CryptoEndpoint.sensor_id == sid,
+                    CryptoEndpoint.scanned_at >= max_ts - _SESSION_BRACKET,
+                    CryptoEndpoint.scanned_at <= max_ts,
+                )
+                .order_by(CryptoEndpoint.id)
+                .all()
+            )
+        union.extend(rows)
 
     # --- Part 2: NULL-sensor local rows (SESSION_BRACKET window) ------------
     latest_local_ts = (
@@ -146,6 +201,7 @@ def _assemble_union(
                 CryptoEndpoint.scanned_at >= latest_local_ts - _SESSION_BRACKET,
                 CryptoEndpoint.scanned_at <= latest_local_ts,
             )
+            .order_by(CryptoEndpoint.id)
             .all()
         )
         union.extend(local_eps)
@@ -161,6 +217,7 @@ def merge_scan(
     profile: str = "balanced",
     weights: Optional[Dict[str, float]] = None,
     output_dir: Optional[str] = None,
+    findings_deriver: Optional[FindingsDeriver] = None,
 ) -> Dict[str, Any]:
     """Run the cross-sensor merge pipeline and return a result dict.
 
@@ -184,6 +241,8 @@ def merge_scan(
         output_dir: Directory for CBOM artifact output.  When None, CBOM artifacts
             are not written and cbom_json_path / cbom_xml_path will be None in the
             result dict.
+        findings_deriver: Optional callable mapping the union rows to findings
+            for scoring; defaults to the report composer (Phase 228 D-09/D-10).
 
     Returns:
         Dict with keys: scan_id, score, rating, subscores, drivers, coverage_warning,
@@ -232,18 +291,13 @@ def merge_scan(
         }
 
     # 4. Option A: ONE call over the FULL UNION (MERGE-02 — never average per-segment)
-    # D-07 (184.4): intentionally findings-less — this scores the merged union for
-    # the numeric `score`/`subscores`/`drivers` persisted on MergeRun.score and
-    # returned to callers (quirk/cli/sensor_cmd.py, dashboard sensor.py). The
-    # `rating` this call produces is passed through the return dict but has no
-    # DB column (MergeRun has no rating field) and no schema consumer ever reads
-    # it — MergeLatestData (dashboard/api/schemas.py) exposes only `score` and
-    # `per_segment_scores`. No band is ever rendered from this call.
+    # Phase 228 (XSURF-07, D-10/D-11): findings are derived over the union, not per sensor; the rating is printed by `quirk sensor merge`, so a findings-less score was never safe.
     # Phase 199 / TRIAGE-10: this WRITE path still persists scoring.py's int
     # into MergeRun.score (unchanged, correct) — only the READ transport
     # (MergeLatestData.score/per_segment_scores) was widened to
     # Optional[float]; no code here changed.
-    evidence = build_evidence_summary(union, findings=None)
+    derive = findings_deriver or _default_report_deriver
+    evidence = build_evidence_summary(union, derive(union))
     score_result = compute_readiness_score(evidence, profile=profile, weights=weights)
 
     # 5. Build CBOM over the full union and write artifacts (CR-01)

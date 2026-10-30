@@ -357,7 +357,7 @@ def render_docx_report(
     except ImportError:
         print(
             "DOCX export skipped: python-docx is not installed. "
-            "Install with: pip install quirk-scanner[docx]",
+            "Install with: pip install 'quirk-scanner[docx]'",
             file=sys.stderr,
         )
         return False

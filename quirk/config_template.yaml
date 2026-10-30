@@ -101,9 +101,10 @@ connectors:
   enable_source: true  # on: requires-targets - armed but inert until source_targets is populated below; the scan short-circuits on an empty target list
   # source_targets: []
   # -- Identity connectors (optional, requires: pip install 'quirk-scanner[identity]') --
-  enable_kerberos: false  # off: requires-extra-install - quirk[identity] (impacket) is not installed by quirk[all]; it downgrades cryptography and breaks the TLS scanner
+  enable_kerberos: false  # off: requires-extra-install - 'quirk-scanner[identity]' (impacket) is not installed by 'quirk-scanner[all]'; it downgrades cryptography and breaks the TLS scanner
   # kerberos_targets:
   #   - "kdc.example.com"       # KDC hostname or IP (port 88, TCP with UDP fallback)
+  # kerberos_probe_principal: "Administrator"  # client principal for the etype probe; exists by default on AD and Samba AD DC; an AS-REQ without pre-auth is not a failed logon
   enable_saml: true  # on: requires-targets - armed but inert until saml_targets is populated below; the scan short-circuits on an empty target list
   # saml_targets:
   #   - "https://idp.example.com/metadata.xml"  # SAML IdP metadata URL
@@ -111,12 +112,12 @@ connectors:
   # dnssec_targets:
   #   - "example.com"           # Domain name for DNSKEY / DS record queries
   # -- S/MIME LDAP discovery scanner (optional, requires: pip install 'quirk-scanner[adcs]') --
-  enable_smime: false  # off: requires-extra-install - target-guarded like the identity connectors above, but shipped off because quirk[adcs] (ldap3) is not installed by default
+  enable_smime: false  # off: requires-extra-install - target-guarded like the identity connectors above, but shipped off because 'quirk-scanner[adcs]' (ldap3) is not installed by default
   # smime_targets: []
   # smime_search_base: null
   # smime_timeout: 10
   # -- AD CS LDAP scanner (optional, requires: pip install 'quirk-scanner[adcs]') --
-  enable_adcs: false  # off: requires-extra-install - ldap3 via quirk[adcs]; the same pre-gate shape as the S/MIME connector directly above
+  enable_adcs: false  # off: requires-extra-install - ldap3 via 'quirk-scanner[adcs]'; the same pre-gate shape as the S/MIME connector directly above
   # adcs_targets: []
   # adcs_search_base: null
   # adcs_user: null
@@ -128,7 +129,7 @@ connectors:
   # codesign_search_base: null
   # codesign_timeout: 10
   # -- GCP connector (optional, requires: pip install 'quirk-scanner[cloud]') --
-  enable_gcp: false  # off: requires-credentials - needs a GCP project id plus application default credentials, and quirk[cloud]
+  enable_gcp: false  # off: requires-credentials - needs a GCP project id plus application default credentials, and 'quirk-scanner[cloud]'
   # gcp_project_id: "my-gcp-project"
   # -- Database connector (optional, requires: pip install 'quirk-scanner[db]') --
   enable_db: false  # off: requires-credentials - needs a scanner DB user and password; the default TLS port list already probes 5432 and 3306 at the TLS layer
@@ -141,11 +142,11 @@ connectors:
   # mysql_scanner_user: "quirk_scanner"
   # mysql_scanner_password: ""
   # -- Object storage connectors (optional, requires: pip install 'quirk-scanner[cloud]') --
-  enable_s3: false  # off: requires-credentials - needs AWS credentials; requires quirk[cloud]
+  enable_s3: false  # off: requires-credentials - needs AWS credentials; requires 'quirk-scanner[cloud]'
   # aws_endpoint_url: null            # override for MinIO/LocalStack testing
-  enable_blob: false  # off: requires-credentials - needs Azure storage credentials; requires quirk[cloud]
+  enable_blob: false  # off: requires-credentials - needs Azure storage credentials; requires 'quirk-scanner[cloud]'
   # -- Kubernetes secrets inspection (optional, requires: pip install 'quirk-scanner[cloud]') --
-  enable_k8s: false  # off: requires-credentials - needs kubeconfig or in-cluster credentials; requires quirk[cloud]
+  enable_k8s: false  # off: requires-credentials - needs kubeconfig or in-cluster credentials; requires 'quirk-scanner[cloud]'
   # k8s_provider: ""              # "eks" | "gke" | "aks"
   # k8s_cluster_name: ""          # name of the managed cluster (single)
   # k8s_namespace: "default"      # namespace for secret type enumeration (K8S-02)
@@ -177,7 +178,7 @@ connectors:
   # -- Authenticated scanning mode (driven by credential CLI flags) --
   enable_authenticated_mode: false  # off: not-a-connector - driven by the credential CLI flags; the scheduler refuses to start when its --scan-config enables this, and strips it from each recurring run
   # -- SNMP hardware fingerprinting (Phase 133 / 139, optional, requires: pip install 'quirk-scanner[hw]') --
-  enable_snmp: false  # off: requires-extra-install - needs quirk[hw] (pysnmp) plus a community string or v3 USM credentials configured below
+  enable_snmp: false  # off: requires-extra-install - needs 'quirk-scanner[hw]' (pysnmp) plus a community string or v3 USM credentials configured below
   # snmp_community: "public"    # v1/v2c community string
   # Phase 139 SNMPV3-01 / D-01/D-02: per-host SNMPv3 USM credentials.
   # Keyed by BARE HOST (not host:port). auth_key_env/priv_key_env are the NAMES of

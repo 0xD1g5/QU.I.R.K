@@ -6,6 +6,7 @@ priority: low
 area: quirk/intelligence/trends.py (_SEVERITY_BUCKET comment, compute_trend_report docstring, _sample_findings)
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # Trend report puts INFO-severity rows in the samples and totals while its comments say INFO is excluded

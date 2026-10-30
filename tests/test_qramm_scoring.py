@@ -12,6 +12,11 @@ import pathlib
 import pytest
 
 from quirk.qramm import scoring
+
+# Phase 234 D-14: ``assessed`` is a required keyword. The pre-234 tests below
+# score all four dimensions as answered, so they pass all four (re-pin: same
+# property, the overall over a fully-assessed estate is unchanged).
+_ALL_DIMS = ["CVI", "SGRM", "DPE", "ITR"]
 from quirk.qramm.scoring import (
     compute_dimension_score,
     compute_overall_score,
@@ -46,6 +51,7 @@ def test_profile_multiplier():
     result = compute_overall_score(
         {"CVI": 1.5, "SGRM": 1.5, "DPE": 1.5, "ITR": 1.5},
         multiplier=1.2,
+        assessed=_ALL_DIMS,
     )
     assert result["dimensions"]["CVI"] == pytest.approx(1.8)
     assert result["dimensions"]["SGRM"] == pytest.approx(1.8)
@@ -58,6 +64,7 @@ def test_overall_score_csnp_example():
     result = compute_overall_score(
         {"CVI": 2.8, "SGRM": 3.1, "DPE": 2.5, "ITR": 2.9},
         multiplier=1.0,
+        assessed=_ALL_DIMS,
     )
     assert result["overall"] == pytest.approx(2.825)
     assert result["maturity"] == "Established"
@@ -66,7 +73,9 @@ def test_overall_score_csnp_example():
 
 def test_overall_score_default_multiplier():
     """Default multiplier is 1.0 (neutral) when not specified."""
-    result = compute_overall_score({"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0})
+    result = compute_overall_score(
+        {"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0}, assessed=_ALL_DIMS
+    )
     assert result["profile_multiplier"] == 1.0
     assert result["overall"] == pytest.approx(2.0)
 
@@ -85,7 +94,11 @@ def test_maturity_label_thresholds():
         (4.0, "Optimizing"),
     ]
     for score, expected in cases:
-        result = compute_overall_score({"CVI": score, "SGRM": score, "DPE": score, "ITR": score}, 1.0)
+        result = compute_overall_score(
+            {"CVI": score, "SGRM": score, "DPE": score, "ITR": score},
+            1.0,
+            assessed=_ALL_DIMS,
+        )
         assert result["maturity"] == expected, f"score={score}: expected {expected}, got {result['maturity']}"
 
 
@@ -106,15 +119,22 @@ def test_d09_isolation_no_forbidden_imports():
 @pytest.mark.parametrize("raw_score", [i * 0.5 for i in range(0, 9)])
 def test_maturity_label_no_gaps_no_overlaps(raw_score):
     """SCORE-04: every score in [0.0, 4.0] at 0.5-step increments maps to
-    exactly one of the five canonical QRAMM maturity labels — no gaps, no
-    fall-throughs, no None returns.
+    exactly one overall maturity label — no gaps, no fall-throughs, no None
+    returns.
+
+    The labels are the five canonical CSNP levels plus "Below Basic" for a
+    mean under Basic's 1.0 floor (Phase 234 review D-31, WR-05: 0.0 and 0.5
+    used to fall through to "Basic").
 
     Steps: 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 (9 values)
     Per CONTEXT.md D-09.
     """
     from quirk.qramm.scoring import _maturity_label
 
-    VALID_LABELS = {"Basic", "Developing", "Established", "Advanced", "Optimizing"}
+    VALID_LABELS = {
+        "Below Basic", "Basic", "Developing", "Established", "Advanced",
+        "Optimizing",
+    }
     label = _maturity_label(raw_score)
     assert label is not None, f"_maturity_label({raw_score}) returned None"
     assert label in VALID_LABELS, (
@@ -123,14 +143,114 @@ def test_maturity_label_no_gaps_no_overlaps(raw_score):
 
 
 def test_maturity_label_covers_all_five_levels():
-    """Sanity check: the 9-step sweep produces all five canonical labels at
-    least once, confirming full coverage of the maturity band."""
+    """Sanity check: the 9-step sweep produces all five canonical CSNP labels
+    at least once, confirming full coverage of the maturity band. Since the
+    Phase 234 review (D-31, WR-05) the sweep's 0.0 and 0.5 read "Below Basic",
+    the one label outside the five, so it is the only other label seen."""
     from quirk.qramm.scoring import _maturity_label
 
     scores = [i * 0.5 for i in range(0, 9)]
     labels_seen = {_maturity_label(s) for s in scores}
     expected = {"Basic", "Developing", "Established", "Advanced", "Optimizing"}
-    assert labels_seen == expected, (
-        f"Not all labels covered. Missing: {expected - labels_seen}, "
+    assert expected <= labels_seen, (
+        f"Not all labels covered. Missing: {expected - labels_seen}"
+    )
+    assert labels_seen - expected == {"Below Basic"}, (
         f"Unexpected: {labels_seen - expected}"
     )
+
+
+# ---------- Phase 234 SCORE-10 (D-14 / D-25) ----------
+
+
+def test_overall_mean_over_assessed_dimensions_only():
+    """D-14: a Not-assessed dimension is excluded, never averaged in as 0.
+
+    Same dimension scores as the shared contract fixture's scenario:
+    (0.0 + 2.0 + 0.0) / 3 = 0.6667 (ITR excluded), not (0+2+0+0)/4 = 0.5.
+    """
+    result = compute_overall_score(
+        {"CVI": 0.0, "SGRM": 2.0, "DPE": 0.0, "ITR": 0.0},
+        multiplier=1.0,
+        assessed={"CVI", "SGRM", "DPE"},
+    )
+    assert result["overall"] == pytest.approx(0.6667, abs=1e-4)
+    # Phase 234 review D-31 (WR-05): below Basic's 1.0 floor.
+    assert result["maturity"] == "Below Basic"
+    assert result["assessed_dimensions"] == ["CVI", "SGRM", "DPE"]
+    assert result["dimensions_assessed"] == 3
+    assert result["dimensions_total"] == 4
+    # The weighted per-dimension block still reports all four dimensions.
+    assert set(result["dimensions"]) == {"CVI", "SGRM", "DPE", "ITR"}
+
+
+def test_overall_is_none_when_no_dimension_assessed():
+    """D-14: zero assessed dimensions -> overall pending (None), not 0."""
+    result = compute_overall_score(
+        {"CVI": 0.0, "SGRM": 0.0, "DPE": 0.0, "ITR": 0.0},
+        multiplier=1.0,
+        assessed=[],
+    )
+    assert result["overall"] is None
+    assert result["maturity"] == "Indeterminate"
+    assert result["assessed_dimensions"] == []
+    assert result["dimensions_assessed"] == 0
+    assert result["dimensions_total"] == 4
+
+
+def test_assessed_is_required_keyword():
+    """D-14 / T-234-02c: ``assessed`` has no default, so omitting it can
+    never silently restore the all-four-dimensions average."""
+    with pytest.raises(TypeError):
+        compute_overall_score({"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0})
+    with pytest.raises(TypeError):
+        # Keyword-only: a third positional argument is rejected too.
+        compute_overall_score(
+            {"CVI": 2.0, "SGRM": 2.0, "DPE": 2.0, "ITR": 2.0},
+            1.0,
+            ["CVI", "SGRM", "DPE", "ITR"],
+        )
+    params = inspect.signature(compute_overall_score).parameters
+    assert params["assessed"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert params["assessed"].default is inspect.Parameter.empty
+
+
+def test_overall_state_is_recalculate_without_answered_counts():
+    """D-25: a score_json saved before Phase 234 (no answered_by_dimension)
+    still averaged Not-assessed dimensions as 0, so its overall reads
+    'recalculate'; a score carrying its counts reads 'current'."""
+    from quirk.qramm.assessment_state import overall_state
+
+    legacy = {"overall": 0.5, "maturity": "Basic", "dimensions": {}}
+    assert overall_state(legacy) == "recalculate"
+    # A non-dict value is not a count map: still legacy.
+    assert overall_state(dict(legacy, answered_by_dimension=None)) == (
+        "recalculate"
+    )
+    current = dict(
+        legacy,
+        overall=0.6667,
+        answered_by_dimension={"CVI": 3, "SGRM": 30, "DPE": 5, "ITR": 0},
+    )
+    assert overall_state(current) == "current"
+    assert overall_state(None) is None
+
+
+def test_overall_state_is_stale_when_answers_changed_after_the_score():
+    """Phase 234 review D-27 (CR-01): a current-format score whose answers
+    changed after it was saved reads 'stale', never 'current', so no surface
+    shows its overall as a maturity level. A legacy score stays
+    'recalculate' (D-25 wins: it cannot even rule out the newer answers)."""
+    from quirk.qramm.assessment_state import overall_state
+
+    current = {
+        "overall": 0.6667,
+        "maturity": "Below Basic",
+        "dimensions": {},
+        "answered_by_dimension": {"CVI": 3, "SGRM": 30, "DPE": 5, "ITR": 0},
+    }
+    assert overall_state(current, stale=True) == "stale"
+    assert overall_state(current, stale=False) == "current"
+    legacy = {"overall": 0.5, "maturity": "Basic", "dimensions": {}}
+    assert overall_state(legacy, stale=True) == "recalculate"
+    assert overall_state(None, stale=True) is None

@@ -6,6 +6,7 @@ priority: medium
 area: quirk/cli/scheduler_cmd.py (_materialize_scan_config suppression log), run_scan.py (no logging configuration)
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # The OT/ICS suppression log line is never shown to an operator running `quirk scheduler run`

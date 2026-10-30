@@ -1,0 +1,977 @@
+"""FIND-11 / D-07: end-to-end proof of the closure state model on PRODUCTION writers.
+
+Every row below is written in pipeline order by the real code:
+``derive_report_findings`` -> ``persist_remediation_snapshot`` ->
+``assess_probe_health`` -> ``ScanScopeSignature`` -> ``compute_closure``.
+Nothing is hand-seeded as "open" or "closed" (a broken helper would fail the
+positive cases as well as the negatives).
+
+Phase 224 probe shape: scan 1 raises the issue on 8 hosts, scan 2 on 7.
+
+Pitfall 3: a plaintext-HTTP finding is HIGH, so it lands in BOTH
+``plaintext-http-exposure`` and ``high-impact-findings``; assertions are per slug.
+Pitfall 4: the closed row's burndown bucket follows the CURRENT endpoint, so
+buckets are asserted one by one and never summed.
+
+Observed burndown (HTTP fast mode, h7 moved to TLS on scan 2), per bucket
+{open, closed, not_observed}, ``_BURNDOWN_PIN`` below holds the exact dicts:
+    scan 1 before scan 2 ran: {"unmapped": open 16, closed 0, not_observed 0}
+    scan 1 after scan 2's closure: unmapped open 14, closed 2 (closure also
+        flips the PRIOR scan's h7 rows, one per slug)
+    scan 2: unmapped open 14, closed 2
+    scan 3: unmapped open 14, closed 0
+    The 16/14/2 are two slugs (plaintext-http-exposure AND high-impact-findings,
+    Pitfall 3) x 8/7/1 hosts. Plaintext HTTP has no algorithm, so every row sits
+    in the single "unmapped" bucket; the plan's predicted bucket movement
+    (Pitfall 4) does not arise for this shape. The plan's "scan 1 closed == 0"
+    holds for scan 1 as recorded before scan 2's closure, not after.
+"""
+from __future__ import annotations
+
+import json
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+
+import pytest
+
+from quirk.cbom.builder import _make_vex_entry
+from quirk.db import get_session, init_db
+from quirk.engine.findings_evaluator import derive_report_findings
+from quirk.intelligence.burndown import compute_burndown
+from quirk.intelligence.closure import compute_closure
+from quirk.intelligence.remediation import item_progress
+from quirk.intelligence.remediation_persist import persist_remediation_snapshot
+from quirk.intelligence.scope_signature import SCOPE_SIGNATURE_VERSION, assess_probe_health
+from quirk.models import (
+    CryptoEndpoint,
+    RemediationClosureEvent,
+    RemediationItem,
+    RemediationItemFingerprint,
+    ScanScopeSignature,
+)
+from quirk.reports.writer import _load_remediation_items
+
+S1, S2, S3 = "scan-e2e-1", "scan-e2e-2", "scan-e2e-3"
+HTTP_SLUG = "plaintext-http-exposure"
+TLS_SLUG = "legacy-tls-versions"
+N = 8
+FAST_TIMINGS = {"fingerprinting": 1.0, "tls_scanning": 1.0, "ssh_scanning": 1.0}
+_T0 = datetime(2026, 10, 1, tzinfo=timezone.utc)
+
+
+# ---------------------------------------------------------------------------
+# endpoint factories
+# ---------------------------------------------------------------------------
+def http_ep(i, sid=None):
+    return CryptoEndpoint(
+        host=f"h{i}", port=80, protocol="HTTP", service_detail="HTTP/1.1 200 OK",
+        tls_version="HTTP/1.1 200 OK", scan_run_id=sid,
+    )
+
+
+def tls_ep(i, sid=None, *, port=80, legacy=False, caps=True, scan_error=None):
+    return CryptoEndpoint(
+        host=f"h{i}", port=port, protocol="TLS",
+        tls_version="TLSv1" if legacy else "TLSv1.3",
+        tls_supported_versions="TLSv1,TLSv1.2" if legacy else "TLSv1.2,TLSv1.3",
+        tls_capabilities_json=json.dumps({"ok": True}) if caps else None,
+        scan_error=scan_error, scan_run_id=sid,
+    )
+
+
+def closed_ep(i, detail, sid=None, port=80):
+    return CryptoEndpoint(host=f"h{i}", port=port, protocol="CLOSED", service_detail=detail, scan_run_id=sid)
+
+
+def advisory_ep(i, sid=None, port=80):
+    return CryptoEndpoint(
+        host=f"h{i}", port=port, protocol="ADVISORY", scan_error="x",
+        scan_error_category="missing_extra", scan_run_id=sid,
+    )
+
+
+def unknown_ep(i, sid=None, port=80, detail="OPEN_NOT_TLS"):
+    """What run_scan.py writes when ``_http_probe_plain`` (or an SSH banner read)
+    times out: ``fingerprint_service`` returns ``(True, "UNKNOWN", "OPEN_NOT_TLS")``
+    and the row carries no ``scan_error`` (229-REVIEW CR-01)."""
+    return CryptoEndpoint(host=f"h{i}", port=port, protocol="UNKNOWN", service_detail=detail, scan_run_id=sid)
+
+
+def rest_fuzz_ep(i, sid=None, port=80):
+    return CryptoEndpoint(host=f"h{i}", port=port, protocol="REST_FUZZ", scan_run_id=sid)
+
+
+def openapi_ep(i, sid=None, port=443):
+    return CryptoEndpoint(host=f"h{i}", port=port, protocol="OPENAPI", scan_run_id=sid)
+
+
+def saml_ep(i, sid=None, port=80):
+    """A SAML metadata fetch over ``http://`` lands on port 80
+    (``saml_scanner.py``), beside the HTTP row at the same host:port."""
+    return CryptoEndpoint(
+        host=f"h{i}", port=port, protocol="SAML", cert_pubkey_alg="RSA",
+        cert_pubkey_size=2048, saml_scan_json=json.dumps({"signing_certs": [1]}),
+        scan_run_id=sid,
+    )
+
+
+def jwt_ep(i, sid=None, port=80):
+    return CryptoEndpoint(
+        host=f"h{i}", port=port, protocol="JWT", jwt_scan_json=json.dumps({"alg": "RS256"}),
+        scan_run_id=sid,
+    )
+
+
+def _cfg(tls_mode, connectors=None):
+    return SimpleNamespace(
+        scan=SimpleNamespace(tls_enum_mode=tls_mode, tls_designated_ports=[]),
+        connectors=SimpleNamespace(**(connectors or {})),
+    )
+
+
+# ---------------------------------------------------------------------------
+# the pipeline-order helper
+# ---------------------------------------------------------------------------
+def _run_scan(db_path, sid, order, endpoints, *, tls_mode="fast", timings=None,
+              connectors=None):
+    """One scan in pipeline order. ``endpoints`` is a list of unsaved rows."""
+    timings = FAST_TIMINGS if timings is None else timings
+    with get_session(db_path) as s:
+        for ep in endpoints:
+            ep.scan_run_id = sid
+            s.add(ep)
+        s.commit()
+        for ep in endpoints:
+            s.refresh(ep)
+        s.expunge_all()
+    findings = derive_report_findings(endpoints)
+    persist_remediation_snapshot(db_path, sid, endpoints, findings)
+    health = assess_probe_health(
+        _cfg(tls_mode, connectors), endpoints, {"timings_sec": timings})
+    with get_session(db_path) as s:
+        s.add(ScanScopeSignature(
+            scan_run_id=sid, signature_version=SCOPE_SIGNATURE_VERSION, digest="same",
+            target_set_digest="tsd", probe_health_json=json.dumps(health),
+            created_at=_T0 + timedelta(days=order),
+        ))
+        s.commit()
+    return compute_closure(db_path, sid)
+
+
+@pytest.fixture
+def db(tmp_path):
+    path = str(tmp_path / "q.db")
+    init_db(path)
+    return path
+
+
+def _fp_states(db_path, sid, slug, host=None):
+    with get_session(db_path) as s:
+        q = s.query(RemediationItemFingerprint).filter_by(scan_run_id=sid, slug=slug)
+        if host:
+            q = q.filter_by(host=host)
+        return sorted(r.state for r in q.all())
+
+
+def _count(db_path, model):
+    with get_session(db_path) as s:
+        return s.query(model).count()
+
+
+def _vex_for(db_path, sid, slug):
+    items = [i for i in _load_remediation_items(db_path, sid) if i["slug"] == slug]
+    assert items, f"no item for {slug} on {sid}"
+    return _make_vex_entry(items[0]).analysis.state.name
+
+
+def _burn(db_path, sid):
+    with get_session(db_path) as s:
+        b = compute_burndown(s, scan_run_id=sid)
+    return {k: {x: v[x] for x in ("open", "closed", "not_observed")} for k, v in b.items()
+            if v["fingerprints"]}
+
+
+def _http_scan1(db_path):
+    return _run_scan(db_path, S1, 0, [http_ep(i) for i in range(N)])
+
+
+def _http_scan2(db_path, moved=(7,), **kw):
+    eps = [tls_ep(i) if i in moved else http_ep(i) for i in range(N)]
+    return _run_scan(db_path, S2, 1, eps, **kw)
+
+
+_BURNDOWN_PIN = {
+    "S1_before": {"unmapped": {"open": 16, "closed": 0, "not_observed": 0}},
+    "S1_after": {"unmapped": {"open": 14, "closed": 2, "not_observed": 0}},
+    "S2": {"unmapped": {"open": 14, "closed": 2, "not_observed": 0}},
+    "S3": {"unmapped": {"open": 14, "closed": 0, "not_observed": 0}},
+}
+
+
+# ---------------------------------------------------------------------------
+# Task 1
+# ---------------------------------------------------------------------------
+def test_scan1_detected_rows_are_open_and_vex_exploitable(db):
+    _http_scan1(db)
+    assert _fp_states(db, S1, HTTP_SLUG) == ["open"] * N
+    with get_session(db) as s:
+        item = s.query(RemediationItem).filter_by(scan_run_id=S1, slug=HTTP_SLUG).one()
+        assert item.state == "open"
+    assert _vex_for(db, S1, HTTP_SLUG) == "EXPLOITABLE"
+
+
+def test_http_fast_mode_one_fixed_closes_on_scan2(db):
+    _http_scan1(db)
+    s1_before = _burn(db, S1)  # scan 1 as recorded by its own pipeline run
+    counters = _http_scan2(db)
+    assert counters["closed"] >= 1
+    assert _fp_states(db, S2, HTTP_SLUG) == ["closed"] + ["open"] * 7
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["closed"]
+    with get_session(db) as s:
+        assert item_progress(s, scan_run_id=S2, slug=HTTP_SLUG) == (1, 8)
+        events = s.query(RemediationClosureEvent).filter_by(
+            scan_run_id=S2, slug=HTTP_SLUG, event_type="closed").all()
+        assert len(events) == 1
+        b2 = compute_burndown(s, scan_run_id=S2)
+    assert all(v["closed"] == 0 for v in s1_before.values())
+    assert any(v["closed"] >= 1 for v in b2.values())
+    assert s1_before == _BURNDOWN_PIN["S1_before"]
+    assert _burn(db, S1) == _BURNDOWN_PIN["S1_after"]
+    assert _burn(db, S2) == _BURNDOWN_PIN["S2"]
+
+
+def test_http_all_fixed_closes_every_host(db):
+    _http_scan1(db)
+    counters = _http_scan2(db, moved=tuple(range(N)))
+    assert counters["closed"] >= N
+    assert _fp_states(db, S2, HTTP_SLUG) == ["closed"] * N
+    with get_session(db) as s:
+        item = s.query(RemediationItem).filter_by(scan_run_id=S2, slug=HTTP_SLUG).one()
+        assert item.state == "closed"
+        # IN-02: the closed rows inserted beside the closed item point at it.
+        links = {r.remediation_item_id for r in s.query(RemediationItemFingerprint)
+                 .filter_by(scan_run_id=S2, slug=HTTP_SLUG).all()}
+        assert links == {item.id}
+    assert _vex_for(db, S2, HTTP_SLUG) == "RESOLVED"
+
+
+def test_rerun_is_idempotent_in_rows_and_events(db):
+    _http_scan1(db)
+    _http_scan2(db)
+    before = tuple(_count(db, m) for m in (RemediationItemFingerprint, RemediationItem, RemediationClosureEvent))
+    compute_closure(db, S2)
+    after = tuple(_count(db, m) for m in (RemediationItemFingerprint, RemediationItem, RemediationClosureEvent))
+    assert before == after
+
+
+# ---------------------------------------------------------------------------
+# Task 2: TLS deep / fast (D-06)
+# ---------------------------------------------------------------------------
+def _tls_scans(db, tls_mode):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode=tls_mode)
+    return _run_scan(
+        db, S2, 1,
+        [tls_ep(i, port=443, legacy=(i != 7)) for i in range(N)], tls_mode=tls_mode,
+    )
+
+
+def test_tls_deep_mode_closes_fixed_host(db):
+    counters = _tls_scans(db, "deep")
+    assert counters["closed"] >= 1
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, TLS_SLUG) == ["closed"] + ["open"] * 7
+
+
+def test_tls_fast_mode_refuses_fixed_host(db):
+    """D-06 pin: fast-mode TLS closure is deferred to HORIZON, not a defect."""
+    counters = _tls_scans(db, "fast")
+    assert counters["refused_probe"] >= 1
+    assert counters["closed"] == 0
+    assert "closed" not in _fp_states(db, S2, TLS_SLUG)
+
+
+# ---------------------------------------------------------------------------
+# Task 2: guardrail negatives built from real probe health (D-20, D-22)
+# ---------------------------------------------------------------------------
+_NEGATIVES = {
+    "closed-timeout": dict(h7=lambda: closed_ep(7, "TIMEOUT")),
+    "closed-unreachable": dict(h7=lambda: closed_ep(7, "UNREACHABLE")),
+    "advisory-only": dict(h7=lambda: advisory_ep(7)),
+    "tls-scan-error": dict(h7=lambda: tls_ep(7, scan_error="handshake failed")),
+    # CR-01: an HTTP-probe timeout row, while http is healthy on h0..h6.
+    "unknown-open-not-tls": dict(h7=lambda: unknown_ep(7)),
+    "no-fingerprinting-timing": dict(
+        h7=lambda: tls_ep(7), timings={"tls_scanning": 1.0, "ssh_scanning": 1.0}),
+}
+
+
+@pytest.mark.parametrize("case", sorted(_NEGATIVES))
+def test_guardrail_negatives_refuse_and_write_no_closed_row(db, case):
+    """A refusal writes no closed row anywhere, and (229-REVIEW WR-03) carries
+    the unverified finding onto scan 2 as ``not_observed``. This test used to pin
+    ``h7 == []`` on scan 2, which asserted the defect: the finding left scan 2's
+    burndown (7 per slug, not 8) and could never close on a later scan."""
+    spec = _NEGATIVES[case]
+    _http_scan1(db)
+    eps = [http_ep(i) for i in range(7)] + [spec["h7"]()]
+    counters = _run_scan(db, S2, 1, eps, timings=spec.get("timings"))
+    assert counters["refused_probe"] >= 1, counters
+    assert counters["closed"] == 0
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _fp_states(db, S2, HTTP_SLUG) == ["not_observed"] + ["open"] * 7
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+    # 8 findings per slug x 2 slugs (Pitfall 3): h7 is not_observed in each, so
+    # it stays in scan 2's burndown. (The UNKNOWN case adds h7's own finding as
+    # one more open row, so `open` is not pinned across cases.)
+    burn = _burn(db, S2)["unmapped"]
+    assert (burn["closed"], burn["not_observed"]) == (0, 2)
+    if case != "unknown-open-not-tls":
+        assert burn["open"] == 14
+
+
+def test_refused_on_scan2_still_closes_on_scan3(db):
+    """WR-03: scan 2's probe of h7 times out (refused, carried as not_observed);
+    scan 3 rechecks h7 healthily and finds it fixed (TLS) -> it closes on scan 3,
+    and the carried scan-2 row is the one flipped (the idempotency key)."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    counters = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)])
+    assert counters["closed"] == 2, counters  # h7 in both slugs
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S3, HTTP_SLUG) == ["closed"] + ["open"] * 7
+    with get_session(db) as s:
+        events = s.query(RemediationClosureEvent).filter_by(
+            scan_run_id=S3, slug=HTTP_SLUG, event_type="closed").all()
+        assert [(e.from_state, e.prior_scan_run_id) for e in events] == [("not_observed", S2)]
+    # A re-run of scan 3's closure writes nothing new.
+    before = tuple(_count(db, m) for m in (RemediationItemFingerprint, RemediationClosureEvent))
+    compute_closure(db, S3)
+    assert tuple(_count(db, m) for m in (RemediationItemFingerprint, RemediationClosureEvent)) == before
+
+
+def test_absent_endpoint_refusal_is_carried_forward(db):
+    """WR-03, the refused_absent_endpoint path: h7 does not answer at all on
+    scan 2, so it is carried as not_observed rather than dropped."""
+    _http_scan1(db)
+    counters = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)])
+    assert counters["refused_absent_endpoint"] >= 1, counters
+    assert counters["closed"] == 0
+    assert _fp_states(db, S2, HTTP_SLUG) == ["not_observed"] + ["open"] * 7
+
+
+def test_carried_not_observed_row_is_not_resurfaced_when_detected_again(db):
+    """WR-03 x CLOSE-02: a carried ``not_observed`` row is not a closure, so a
+    finding detected again on scan 3 is plain ``open``, never ``resurfaced``."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    counters = _run_scan(db, S3, 2, [http_ep(i) for i in range(N)])
+    assert counters["resurfaced"] == 0
+    assert _fp_states(db, S3, HTTP_SLUG) == ["open"] * N
+
+
+def _probe_status(db_path, sid, family):
+    with get_session(db_path) as s:
+        sig = s.query(ScanScopeSignature).filter_by(scan_run_id=sid).one()
+        return json.loads(sig.probe_health_json)[family]["status"]
+
+
+def test_unknown_row_refused_when_http_has_no_targets(db):
+    """CR-01: h0..h6 move to TLS (so http reports ``no_targets``, which D-21 accepts
+    as a recheck) and h7's probe times out to an UNKNOWN row. The seven rechecked
+    hosts close; h7 must not close on a timeout."""
+    _http_scan1(db)
+    eps = [tls_ep(i) for i in range(7)] + [unknown_ep(7)]
+    counters = _run_scan(db, S2, 1, eps)
+    assert _probe_status(db, S2, "http") == "no_targets"
+    assert counters["closed"] == 14, counters  # 7 hosts x 2 slugs (Pitfall 3)
+    assert counters["refused_probe"] >= 1, counters
+    assert "closed" not in _fp_states(db, S2, HTTP_SLUG, host="h7")
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+
+
+def test_tls_finding_on_unknown_row_refused_in_deep_mode(db):
+    """CR-01, another family: a legacy-TLS finding whose host:port now answers as
+    UNKNOWN (a handshake/banner timeout) must not close because ``tls`` is healthy
+    on the other seven hosts."""
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    eps = [tls_ep(i, port=443, legacy=True) for i in range(7)] + [unknown_ep(7, port=443)]
+    counters = _run_scan(db, S2, 1, eps, tls_mode="deep")
+    assert _probe_status(db, S2, "tls") == "healthy"
+    assert counters["closed"] == 0, counters
+    assert counters["refused_probe"] >= 1, counters
+    assert _fp_states(db, S1, TLS_SLUG, host="h7") == ["open"]
+
+
+_CORESIDENT = {
+    "saml": dict(ep=saml_ep, connectors={"enable_saml": True},
+                 timing={"saml_scanning": 1.0}),
+    "jwt": dict(ep=jwt_ep, connectors={"enable_jwt": True},
+                timing={"jwt_scanning": 1.0}),
+}
+
+
+@pytest.mark.parametrize("family", sorted(_CORESIDENT))
+def test_unknown_row_beside_classified_row_refuses(db, family):
+    """229-REVIEW iteration-2 CR-01: h7:80 carries HTTP plus a classified SAML/JWT
+    row on scan 1. On scan 2 the HTTP probe times out (UNKNOWN) while the
+    co-resident probe succeeds. The classified row used to satisfy the live-row
+    guard, so the plaintext-HTTP finding closed and VEX read RESOLVED for a
+    service that is still plaintext. An unclassified row at the host:port means
+    a probe there failed to classify it: the whole host:port is not rechecked."""
+    spec = _CORESIDENT[family]
+    timings = dict(FAST_TIMINGS, **spec["timing"])
+    kw = dict(timings=timings, connectors=spec["connectors"])
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [spec["ep"](7)], **kw)
+    eps = [http_ep(i) for i in range(7)] + [unknown_ep(7), spec["ep"](7)]
+    counters = _run_scan(db, S2, 1, eps, **kw)
+    # Not vacuous: both families really are healthy on scan 2.
+    assert _probe_status(db, S2, "http") == "healthy"
+    assert _probe_status(db, S2, family) == "healthy"
+    assert counters["closed"] == 0, counters
+    assert counters["refused_probe"] >= 1, counters
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+    assert _count_closed(db) == 0
+    assert _vex_for(db, S2, HTTP_SLUG) != "RESOLVED"
+
+
+def _items(db_path, sid, slug):
+    with get_session(db_path) as s:
+        return [i.state for i in s.query(RemediationItem).filter_by(scan_run_id=sid, slug=slug)]
+
+
+@pytest.mark.parametrize("slug", [HTTP_SLUG, "high-impact-findings"])
+def test_carried_closure_matches_direct_path_and_resolves_vex(db, slug):
+    """229-REVIEW iteration-2 WR-03: scan 2 fixes h0..h6 and times out on h7
+    (refused, carried as not_observed), so scan 2 writes no item for the slug.
+    Scan 3 finds h7 fixed. The carried closure must leave history as the direct
+    path does: the detecting scan-1 row and (all constituents now closed) the
+    scan-1 item flip to closed, and scan 3 gets a closed item so VEX reads
+    RESOLVED. Before the fix scan 3 had no item and scan 1 stayed open."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [tls_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    assert _items(db, S2, slug) == []
+    assert _fp_states(db, S2, slug, host="h7") == ["not_observed"]
+    counters = _run_scan(db, S3, 2, [tls_ep(i) for i in range(N)])
+    assert counters["closed"] == 2, counters
+    assert _fp_states(db, S3, slug) == ["closed"]
+    assert _fp_states(db, S2, slug, host="h7") == ["closed"]
+    assert _fp_states(db, S1, slug) == ["closed"] * N
+    assert _items(db, S1, slug) == ["closed"]
+    assert _items(db, S3, slug) == ["closed"]
+    assert _vex_for(db, S3, slug) == "RESOLVED"
+    with get_session(db) as s:
+        item = s.query(RemediationItem).filter_by(scan_run_id=S3, slug=slug).one()
+        rows = s.query(RemediationItemFingerprint).filter_by(scan_run_id=S3, slug=slug).all()
+        assert [r.remediation_item_id for r in rows] == [item.id]
+    # Idempotent: a re-run writes no new row, item or event.
+    models = (RemediationItemFingerprint, RemediationItem, RemediationClosureEvent)
+    before = tuple(_count(db, m) for m in models)
+    compute_closure(db, S3)
+    assert tuple(_count(db, m) for m in models) == before
+
+
+def test_carried_closure_flips_detecting_row_when_slug_still_open(db):
+    """WR-03, the shape where scan 3 already has an item (h0..h6 still HTTP):
+    the scan-1 detecting row for h7 flips to closed as on the direct path, and
+    the scan-1 item stays open because h0..h6 are still open there."""
+    _http_scan1(db)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)])
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S1, HTTP_SLUG) == ["closed"] + ["open"] * 7
+    assert _items(db, S1, HTTP_SLUG) == ["open"]
+    assert _items(db, S3, HTTP_SLUG) == ["open"]
+
+
+def test_resurfaced_then_carried_then_closed_emits_reclosed(db):
+    """229-REVIEW iteration-2 WR-04 (D-30): closed on scan 2, resurfaced on scan 3,
+    refused on scan 4 (carried as not_observed), fixed on scan 5. The event must
+    be ``reclosed``, so the earlier regression stays legible, not ``closed``."""
+    base = [http_ep(i) for i in range(7)]
+    _http_scan1(db)
+    _run_scan(db, S2, 1, base + [tls_ep(7)])
+    _run_scan(db, S3, 2, [http_ep(i) for i in range(N)])
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["resurfaced"]
+    _run_scan(db, "scan-e2e-4", 3, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT")])
+    assert _fp_states(db, "scan-e2e-4", HTTP_SLUG, host="h7") == ["not_observed"]
+    counters = _run_scan(db, "scan-e2e-5", 4, [http_ep(i) for i in range(7)] + [tls_ep(7)])
+    assert counters["reclosed"] == 2, counters
+    assert counters["closed"] == 0, counters
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+    with get_session(db) as s:
+        events = s.query(RemediationClosureEvent).filter_by(slug=HTTP_SLUG).order_by(
+            RemediationClosureEvent.id).all()
+        assert [e.event_type for e in events] == ["closed", "resurfaced", "reclosed"]
+
+
+def test_failed_snapshot_never_reads_as_every_finding_gone(db, monkeypatch):
+    """CR-02: scan 2's remediation snapshot fails (the writer swallows the error),
+    so scan 2 has no fingerprint rows at all. Without a guard, clause (e) holds for
+    every prior fingerprint and all 8 hosts close although nothing was fixed."""
+    import quirk.intelligence.remediation_persist as persist_mod
+
+    _http_scan1(db)
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("simulated snapshot failure")
+
+    monkeypatch.setattr(persist_mod, "build_phased_roadmap", _boom)
+    counters = _run_scan(db, S2, 1, [http_ep(i) for i in range(N)])
+    assert counters["closed"] == 0, counters
+    assert counters["refused_missing_snapshot"] == 1, counters
+    assert _fp_states(db, S1, HTTP_SLUG) == ["open"] * N
+    assert _fp_states(db, S2, HTTP_SLUG) == []
+    assert _count(db, RemediationClosureEvent) == 0
+
+
+def test_unmapped_protocol_http_restfuzz_refused(db):
+    """D-20: prior {HTTP, REST_FUZZ} at h7:80 has an unmapped protocol -> refuse."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [rest_fuzz_ep(7)])
+    eps = [http_ep(i) for i in range(7)] + [tls_ep(7)]
+    counters = _run_scan(db, S2, 1, eps)
+    assert counters["refused_probe"] >= 1
+    assert counters["closed"] == 0
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]  # WR-03 carry
+
+
+def test_unmapped_protocol_tls_openapi_refused_in_deep_mode(db):
+    """D-20: prior {TLS, OPENAPI} at h7:443, tls healthy in deep mode -> refuse."""
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)] + [openapi_ep(7)],
+              tls_mode="deep")
+    eps = [tls_ep(i, port=443, legacy=(i != 7)) for i in range(N)]
+    counters = _run_scan(db, S2, 1, eps, tls_mode="deep")
+    assert counters["refused_probe"] >= 1
+    assert counters["closed"] == 0
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]  # WR-03 carry
+
+
+# ---------------------------------------------------------------------------
+# Task 2: third scan
+# ---------------------------------------------------------------------------
+def test_third_scan_does_not_recount_closure(db):
+    """Scan 3 repeats scan 2's endpoints. Observed scan-3 state:
+    plaintext-http-exposure is 7 open / 0 closed on scan 3's own rows (the
+    closure was recorded on scan 2, the scan that observed it, and is not
+    re-counted); burndown scan 3 = unmapped open 14 (7 hosts x 2 slugs),
+    closed 0. No new closure events or closed rows are written."""
+    _http_scan1(db)
+    _http_scan2(db)
+    before = tuple(_count(db, m) for m in (RemediationClosureEvent,))
+    closed_before = _count_closed(db)
+    eps = [tls_ep(7) if i == 7 else http_ep(i) for i in range(N)]
+    counters = _run_scan(db, S3, 2, eps)
+    assert counters["closed"] == 0
+    assert tuple(_count(db, m) for m in (RemediationClosureEvent,)) == before
+    assert _count_closed(db, exclude=S3) == closed_before
+    assert _fp_states(db, S3, HTTP_SLUG) == ["open"] * 7
+    assert "closed" not in _fp_states(db, S3, HTTP_SLUG)
+    assert _burn(db, S3) == _BURNDOWN_PIN["S3"]
+
+
+def _count_closed(db_path, exclude=None):
+    with get_session(db_path) as s:
+        q = s.query(RemediationItemFingerprint).filter_by(state="closed")
+        if exclude:
+            q = q.filter(RemediationItemFingerprint.scan_run_id != exclude)
+        return q.count()
+
+
+# ---------------------------------------------------------------------------
+# Plan 229-12: per-host:port recheck (229-VERIFICATION gap 1)
+# ---------------------------------------------------------------------------
+_GAP_KW = dict(
+    timings=dict(FAST_TIMINGS, saml_scanning=1.0, jwt_scanning=1.0),
+    connectors={"enable_saml": True, "enable_jwt": True},
+)
+_CO_EP = {"saml": saml_ep, "jwt": jwt_ep}
+
+
+@pytest.mark.parametrize("h7", ["scan_error", "closed_timeout", "absent"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_finding_probe_failed_beside_live_coresident_refuses_tls_deep(db, co, h7):
+    """229-VERIFICATION gap 1 (D-20): h7:443 carries a legacy-TLS finding beside a
+    live SAML/JWT row. On scan 2 the TLS probe at h7 errored, timed out or left no
+    row, while the co-resident probe answered and tls is healthy elsewhere. The
+    live co-resident row used to satisfy the guard and the finding closed, a false
+    closure: the finding's own probe never rechecked that host:port."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)] + [ep(7, port=443)],
+              tls_mode="deep", **_GAP_KW)
+    eps = [tls_ep(i, port=443, legacy=True) for i in range(7)] + [ep(7, port=443)]
+    if h7 == "scan_error":
+        eps.append(tls_ep(7, port=443, legacy=True, scan_error="handshake failed"))
+    elif h7 == "closed_timeout":
+        eps.append(closed_ep(7, "TIMEOUT", port=443))
+    c = _run_scan(db, S2, 1, eps, tls_mode="deep", **_GAP_KW)
+    assert c["closed"] == 0 and c["reclosed"] == 0 and c["refused_probe"] >= 1, c
+    assert _probe_status(db, S2, "tls") == "healthy"
+    assert _probe_status(db, S2, co) == "healthy"
+    assert _fp_states(db, S1, TLS_SLUG, host="h7") == ["open"]
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+    assert _count(db, RemediationClosureEvent) == 0
+    assert _vex_for(db, S2, TLS_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("h7", ["closed_timeout", "absent"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_finding_probe_failed_beside_live_coresident_refuses_http(db, co, h7):
+    """229-VERIFICATION gap 1 (D-20): h7:80 carries a plaintext-HTTP finding beside a
+    live SAML/JWT row. On scan 2 the HTTP probe at h7 timed out or left no row while
+    the co-resident probe answered. A SAML/JWT row is not evidence the port stopped
+    serving plaintext, so closing is a false closure."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [ep(7)], **_GAP_KW)
+    eps = [http_ep(i) for i in range(7)] + [ep(7)]
+    if h7 == "closed_timeout":
+        eps.append(closed_ep(7, "TIMEOUT"))
+    c = _run_scan(db, S2, 1, eps, **_GAP_KW)
+    assert c["closed"] == 0 and c["refused_probe"] >= 1, c
+    assert _probe_status(db, S2, "http") == "healthy"
+    assert _probe_status(db, S2, co) == "healthy"
+    for slug in (HTTP_SLUG, "high-impact-findings"):
+        assert _fp_states(db, S1, slug, host="h7") == ["open"]
+        assert _fp_states(db, S2, slug, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+    assert _count(db, RemediationClosureEvent) == 0
+    assert _vex_for(db, S2, HTTP_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_carried_finding_with_coresident_only_refuses(db, co):
+    """229-VERIFICATION gap 1 x WR-03 (D-20): scan 2 refuses h7 (HTTP timed out) and
+    carries it. Scan 3 has only the co-resident SAML/JWT row at h7:80, HTTP absent.
+    The carried path must judge the finding by the families of the detecting scan
+    too, so the lost HTTP family cannot be forgotten and the finding must not close."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [ep(7)], **_GAP_KW)
+    c2 = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT"), ep(7)],
+                   **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["open"]
+    assert _count_closed(db) == 0
+    assert _count(db, RemediationClosureEvent) == 0
+
+
+def test_coresident_negatives_advisory_and_carried_without_saml_refuse(db):
+    """Adversarial shapes (229-12 checker). (1) h7:80 has SAML plus an ADVISORY
+    placeholder and no HTTP row: a placeholder is not recheck evidence. (2) A carried
+    HTTP finding whose port later answers TLS with the SAML row gone: the saml family
+    that reported the port in the detecting scan is not live, so no closure."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    c = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [saml_ep(7), advisory_ep(7)],
+                  **_GAP_KW)
+    assert c["closed"] == 0, c
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+    # Second shape, on its own database: carried, then TLS without SAML.
+    # (S2 above already carried h7; S3 answers TLS with SAML gone.)
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _count_closed(db) == 0
+
+
+def test_carried_then_tls_without_saml_refuses_after_timeout(db):
+    """Negative C shape then TLS with SAML gone (HTTP timed out on scan 2)."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT"), saml_ep(7)],
+              **_GAP_KW)
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _count_closed(db) == 0
+
+
+def test_moved_to_tls_beside_coresident_closes(db):
+    """Positive controls P1/P2 (genuine closure, 229-12). P1: h7:80 moved from
+    HTTP to TLS and SAML still answers there, so the fingerprint stage re-identified
+    the port. P2: a legacy-TLS finding fixed in deep mode beside a live SAML row."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    c = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
+    assert c["closed"] == 2, c
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+
+
+def test_tls_deep_fixed_beside_coresident_closes(db):
+    """Positive control P2 (229-12): TLS deep fixed host beside live SAML closes."""
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)] + [saml_ep(7, port=443)],
+              tls_mode="deep", **_GAP_KW)
+    c = _run_scan(db, S2, 1,
+                  [tls_ep(i, port=443, legacy=True) for i in range(7)]
+                  + [tls_ep(7, port=443), saml_ep(7, port=443)],
+                  tls_mode="deep", **_GAP_KW)
+    assert c["closed"] >= 1, c
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["closed"]
+
+
+def test_carried_moved_to_tls_beside_coresident_closes(db):
+    """P3 (229-12, fail-first): carried HTTP finding, then the port answers TLS beside
+    SAML on scan 3. Genuine closure. RED at HEAD 00446a92 because scan 2 already
+    false-closed h7 (HTTP timed out beside SAML), leaving scan 3 nothing to close."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    c2 = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [closed_ep(7, "TIMEOUT"), saml_ep(7)],
+                   **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
+    assert c3["closed"] == 2, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S1, HTTP_SLUG, host="h7") == ["closed"]
+
+
+def test_mid_migration_tls_error_then_live_tls_closes(db):
+    """P4 (W1): HTTP on scan 1, TLS with scan_error on scan 2 (refused, carried),
+    live deep TLS on scan 3. A genuine migration. The reclassification baseline is
+    the DETECTING scan's live families, so the errored TLS row on scan 2 does not make
+    TLS 'not new' and the finding closes on scan 3."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)])
+    c2 = _run_scan(db, S2, 1,
+                   [http_ep(i) for i in range(7)] + [tls_ep(7, scan_error="handshake failed")],
+                   tls_mode="deep")
+    assert c2["closed"] == 0, c2
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["not_observed"]
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7)], tls_mode="deep")
+    assert c3["closed"] == 2, c3
+    for sid in (S3, S2, S1):
+        assert _fp_states(db, sid, HTTP_SLUG, host="h7") == ["closed"], sid
+
+
+@pytest.mark.parametrize("s2_h7", ["absent", "closed_timeout"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_legacy_origin_carried_chain_refuses_on_empty_probe_basis(db, co, s2_h7):
+    """229-VERIFICATION residual gap (FIND-11, fail-first): the chain starts at a
+    pre-release scan whose rows read not_observed (D-04), so no open/resurfaced
+    detecting row exists. Scan 2 saw nothing live at h7:80 and scan 3 only a live
+    SAML/JWT row. The finding's own (HTTP) probe never answered, so there is no
+    probe-identified basis and the finding must stay not_observed, never close."""
+    ep = _CO_EP[co]
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [ep(7)], **_GAP_KW)
+    with get_session(db) as s:
+        for r in s.query(RemediationItemFingerprint).filter_by(scan_run_id=S1).all():
+            r.state = "not_observed"
+        s.commit()
+    s2 = [http_ep(i) for i in range(7)]
+    if s2_h7 == "closed_timeout":
+        s2.append(closed_ep(7, "TIMEOUT"))
+    c2 = _run_scan(db, S2, 1, s2, **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [ep(7)], **_GAP_KW)
+    assert c3["closed"] == 0, c3
+    assert _count_closed(db) == 0
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _vex_for(db, S3, HTTP_SLUG) != "RESOLVED"
+
+
+S4 = "scan-e2e-4"
+
+
+def _legacy_s1(db, co):
+    """Scan 1 with HTTP at h7:80 plus a co-resident row, then rewritten to the
+    pre-release ``not_observed`` state (D-04): no open/resurfaced detecting row."""
+    _run_scan(db, S1, 0, [http_ep(i) for i in range(N)] + [_CO_EP[co](7)], **_GAP_KW)
+    with get_session(db) as s:
+        for r in s.query(RemediationItemFingerprint).filter_by(scan_run_id=S1).all():
+            r.state = "not_observed"
+        s.commit()
+
+
+def _assert_legacy_still_carried(db, last):
+    assert _count_closed(db) == 0
+    assert _fp_states(db, last, HTTP_SLUG, host="h7") == ["not_observed"]
+    assert _vex_for(db, last, HTTP_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_legacy_coresident_only_twice_refuses(db, co):
+    """FIND-11 (fail-first, iteration 2): a legacy chain whose scan 2 AND scan 3 saw
+    only a co-resident row at h7:80 takes a {SAML}/{JWT} basis from scan 2, never
+    HTTP. A carried row with no detecting open/resurfaced row must not close."""
+    _legacy_s1(db, co)
+    def sc():
+        return [http_ep(i) for i in range(7)] + [_CO_EP[co](7)]
+
+    c2 = _run_scan(db, S2, 1, sc(), **_GAP_KW)
+    c3 = _run_scan(db, S3, 2, sc(), **_GAP_KW)
+    assert c2["closed"] == 0 and c3["closed"] == 0, (c2, c3)
+    _assert_legacy_still_carried(db, S3)
+
+
+@pytest.mark.parametrize("s2_h7", ["absent", "closed_timeout"])
+@pytest.mark.parametrize("co", ["saml", "jwt"])
+def test_legacy_carried_chain_fourth_scan_refuses(db, co, s2_h7):
+    """FIND-11 (fail-first, iteration 2): scan 3 then scan 4 co-resident only. By scan
+    4 the adjacent prior scan has an asset row, so the basis is non-empty but still
+    not the HTTP probe that raised the finding."""
+    _legacy_s1(db, co)
+    s2 = [http_ep(i) for i in range(7)]
+    if s2_h7 == "closed_timeout":
+        s2.append(closed_ep(7, "TIMEOUT"))
+    def sc():
+        return [http_ep(i) for i in range(7)] + [_CO_EP[co](7)]
+
+    c2 = _run_scan(db, S2, 1, s2, **_GAP_KW)
+    c3 = _run_scan(db, S3, 2, sc(), **_GAP_KW)
+    c4 = _run_scan(db, S4, 3, sc(), **_GAP_KW)
+    assert c2["closed"] == 0 and c3["closed"] == 0 and c4["closed"] == 0, (c2, c3, c4)
+    _assert_legacy_still_carried(db, S4)
+
+
+def test_legacy_chain_redetected_then_fixed_closes(db):
+    """Positive control: a legacy finding that is RE-DETECTED (scan 2 writes a real
+    open row) and then genuinely fixed (HTTP -> live TLS at the same port) closes."""
+    _legacy_s1(db, "saml")
+    c2 = _run_scan(db, S2, 1, [http_ep(i) for i in range(N)] + [saml_ep(7)], **_GAP_KW)
+    assert c2["closed"] == 0, c2
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["open"]
+    c3 = _run_scan(db, S3, 2, [http_ep(i) for i in range(7)] + [tls_ep(7), saml_ep(7)], **_GAP_KW)
+    assert c3["closed"] >= 1, c3
+    assert _fp_states(db, S3, HTTP_SLUG, host="h7") == ["closed"]
+
+
+# ---------------------------------------------------------------------------
+# 229-12 (FIND-11): a family is rechecked at a host:port only with THAT row's
+# evidence. Family health is estate-wide; a sslyze-fallback TLS row (live,
+# error-free, no tls_capabilities_json) must not close a legacy-TLS finding.
+# ---------------------------------------------------------------------------
+def _fallback_tls_ep(i, *, versions=True):
+    ep = tls_ep(i, port=443, legacy=False, caps=False)
+    if not versions:
+        ep.tls_supported_versions = None
+    return ep
+
+
+def _assert_no_false_tls_closure(db, sid, counters, host="h7"):
+    assert counters["closed"] == 0, counters
+    assert counters["refused_probe"] >= 1, counters
+    assert "closed" not in _fp_states(db, sid, TLS_SLUG, host=host)
+    assert _probe_status(db, sid, "tls") == "healthy"
+    assert _vex_for(db, sid, TLS_SLUG) != "RESOLVED"
+
+
+@pytest.mark.parametrize("versions", [True, False])
+def test_evidence_direct_deep_tls_fallback_row_refuses(db, versions):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    eps = [tls_ep(i, port=443, legacy=True) for i in range(7)] + [
+        _fallback_tls_ep(7, versions=versions)]
+    c = _run_scan(db, S2, 1, eps, tls_mode="deep")
+    _assert_no_false_tls_closure(db, S2, c)
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]
+
+
+def test_evidence_carried_deep_tls_fallback_row_refuses(db):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    _run_scan(db, S2, 1, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+              + [closed_ep(7, "TIMEOUT", port=443)], tls_mode="deep")
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["not_observed"]
+    c = _run_scan(db, S3, 2, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+                  + [_fallback_tls_ep(7)], tls_mode="deep")
+    _assert_no_false_tls_closure(db, S3, c)
+    assert _fp_states(db, S3, TLS_SLUG, host="h7") == ["not_observed"]
+
+
+def test_evidence_deep_tls_full_evidence_still_closes_on_carried_path(db):
+    _run_scan(db, S1, 0, [tls_ep(i, port=443, legacy=True) for i in range(N)], tls_mode="deep")
+    _run_scan(db, S2, 1, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+              + [closed_ep(7, "TIMEOUT", port=443)], tls_mode="deep")
+    c = _run_scan(db, S3, 2, [tls_ep(i, port=443, legacy=True) for i in range(7)]
+                  + [tls_ep(7, port=443, legacy=False)], tls_mode="deep")
+    assert c["closed"] >= 1, c
+    assert _fp_states(db, S3, TLS_SLUG, host="h7") == ["closed"]
+
+
+def test_evidence_http_row_without_service_detail_refuses(db):
+    """The finding's own HTTP row still answers at h7 but carries no
+    service_detail evidence: not a recheck, even though http is healthy."""
+    _http_scan1(db)
+    bare = CryptoEndpoint(host="h7", port=80, protocol="HTTP")
+    c = _run_scan(db, S2, 1, [http_ep(i) for i in range(7)] + [bare])
+    assert c["closed"] == 0, c
+    assert "closed" not in _fp_states(db, S2, HTTP_SLUG, host="h7")
+
+
+def test_evidence_http_reclassified_to_tls_without_caps_still_closes(db):
+    """The reclassification rule is untouched: a live TLS row from a fast-mode
+    reclassification closes the plaintext-HTTP finding with no TLS evidence."""
+    _http_scan1(db)
+    c = _http_scan2(db)
+    assert c["closed"] >= 1, c
+    assert _fp_states(db, S2, HTTP_SLUG, host="h7") == ["closed"]
+
+
+# ---------------------------------------------------------------------------
+# 229-12 email follow-up (FIND-11): a blocked mail port is a failed recheck.
+# email_scanner keeps the protocol label and sets only tls_blocker_reason on a
+# timed-out / refused port (no CLOSED protocol, no scan_error), and the host-level
+# email_scan_json rides the lowest-port row whatever its outcome.
+# ---------------------------------------------------------------------------
+EMAIL_KW = dict(timings=dict(FAST_TIMINGS, email_scanning=1.0),
+                connectors={"enable_email": True})
+
+
+def _smtp_ep(i, *, healthy=True, reason=None):
+    ep = CryptoEndpoint(host=f"m{i}", port=25, protocol="SMTP-STARTTLS",
+                        service_detail="SMTP-STARTTLS:25")
+    if reason:
+        ep.tls_blocker_reason = reason
+        ep.email_scan_json = json.dumps(
+            {"host": f"m{i}", "ports": [{"port": 25, "tls_blocker_reason": reason}]})
+        return ep
+    ep.email_scan_json = json.dumps({"host": f"m{i}", "ports": [{"port": 25}]})
+    if healthy:
+        ep.tls_version = "TLSv1.2"
+        ep.cipher_suite = "TLS_RSA_WITH_AES_128_CBC_SHA"
+        ep.tls_pfs_supported = False
+    else:  # fixed: modern TLS, PFS
+        ep.tls_version = "TLSv1.3"
+        ep.cipher_suite = "TLS_AES_256_GCM_SHA384"
+        ep.tls_pfs_supported = True
+    return ep
+
+
+def _m7_states(db, sid):
+    with get_session(db) as s:
+        return sorted((r.slug, r.state) for r in
+                      s.query(RemediationItemFingerprint).filter_by(scan_run_id=sid, host="m7"))
+
+
+def _assert_email_refused(db, sid, c):
+    assert c["closed"] == 0, c
+    states = _m7_states(db, sid)
+    assert states and all(st != "closed" for _, st in states), states
+    for slug in {slug for slug, _ in states}:
+        assert _vex_for(db, sid, slug) != "RESOLVED", slug
+
+
+@pytest.mark.parametrize("reason", ["TIMEOUT", "CONNECTION_REFUSED"])
+def test_email_blocked_port_direct_refuses(db, reason):
+    _run_scan(db, S1, 0, [_smtp_ep(i) for i in range(N)], **EMAIL_KW)
+    assert _m7_states(db, S1), "vacuous: no fingerprint rows for m7"
+    c = _run_scan(db, S2, 1, [_smtp_ep(i) for i in range(7)]
+                  + [_smtp_ep(7, reason=reason)], **EMAIL_KW)
+    _assert_email_refused(db, S2, c)
+
+
+@pytest.mark.parametrize("reason", ["TIMEOUT", "CONNECTION_REFUSED"])
+def test_email_blocked_port_carried_refuses(db, reason):
+    _run_scan(db, S1, 0, [_smtp_ep(i) for i in range(N)], **EMAIL_KW)
+    _run_scan(db, S2, 1, [_smtp_ep(i) for i in range(7)]
+              + [CryptoEndpoint(host="m7", port=25, protocol="CLOSED", scan_error="TIMEOUT")],
+              **EMAIL_KW)
+    c = _run_scan(db, S3, 2, [_smtp_ep(i) for i in range(7)]
+                  + [_smtp_ep(7, reason=reason)], **EMAIL_KW)
+    _assert_email_refused(db, S3, c)
+
+
+def test_email_genuinely_rechecked_port_closes(db):
+    _run_scan(db, S1, 0, [_smtp_ep(i) for i in range(N)], **EMAIL_KW)
+    c = _run_scan(db, S2, 1, [_smtp_ep(i) for i in range(7)]
+                  + [_smtp_ep(7, healthy=False)], **EMAIL_KW)
+    assert c["closed"] >= 1, c
+    assert "closed" in [st for _, st in _m7_states(db, S2)]

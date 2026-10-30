@@ -56,11 +56,13 @@ Two `protocol="S3"` CryptoEndpoint rows are produced:
 Evidence summary additions:
 - `dar_storage_unencrypted_count`: 1
 - `dar_storage_aws_managed_count`: 0
-- `dar_storage_unencrypted_ratio`: depends on total endpoints (1 / total)
+- `dar_storage_unencrypted_ratio`: 1 / total endpoints (still emitted as evidence; scoring 4.0 does not read it)
 
-Readiness score (with these two endpoints alone, balanced profile):
-- data_at_rest subscore reflects the unencrypted bucket via the
-  `dar_storage_unencrypted_ratio` × 12.0 weight per D-10
+Readiness score (with these two endpoints alone, balanced profile, scoring 4.0, Phase 234):
+- data_at_rest subscore reflects the unencrypted bucket via the count curve
+  `12.0 x min(1, count / 40) ** 0.5` with count = `dar_storage_unencrypted_count` (weight key
+  `dar_storage_unencrypted_ratio`, 12.0 per D-10; `N_REF` = 40): 1 bucket costs
+  `12.0 x sqrt(1 / 40)` = 1.90 points, whatever the total endpoint count
 - drivers list contains `Object storage unencrypted`
 
 ## Expected CBOM Output

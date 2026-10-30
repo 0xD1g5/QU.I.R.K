@@ -50,7 +50,7 @@ ERROR_REGISTRY: dict[str, ErrorEntry] = {
     "INSTALL-005": ErrorEntry(
         code="INSTALL-005",
         cause="Python interpreter version is below the minimum supported.",
-        fix="Install Python 3.11 or newer; re-run `quirk doctor`.",
+        fix="Install Python 3.10 to 3.14; re-run `quirk doctor`.",
     ),
     "INSTALL-006": ErrorEntry(
         code="INSTALL-006",

@@ -801,10 +801,19 @@ def test_narrowing_is_not_vacuous_on_the_real_corpus():
 #   - an `**Owner...:**` line citing `999.N` with no HORIZON.md table row, or
 #     whose row's status cell says CLOSED / RESOLVED / DRAINED.
 #
-# Deliberately NOT enforced: that every todo HAS an owner. ~30 older todos carry
-# no owner field at all; an `**Owner:** unassigned` line is an honest record,
-# not a dangling one. This leg polices pointers that rot at a close, which is
-# the BACK-A11Y-01 / INT-01 loss mode -- not the size of the backlog.
+# Ownership is NOT enforced here for non-doc224 todos: ~30 older todos carry no
+# owner field at all, and an `**Owner:** unassigned` line is an honest record, not
+# a dangling one (extending ownership to every pending todo is a deferred
+# follow-up). `*doc224*` todos ARE enforced, by the Phase 227 leg at the end of
+# this module (frontmatter `owner:`, with the D-04/D-05 liveness rules). This leg
+# polices pointers that rot at a close, which is the BACK-A11Y-01 / INT-01 loss
+# mode -- not the size of the backlog.
+#
+# Known limitation of THIS leg: `_HORIZON_ROW_RE` reads only cell 2 as the status,
+# so a row whose terminal word sits in cell 3, or whose status is SHIPPED /
+# OBSOLETE / SUPERSEDED (not in `_TERMINAL_STATUS_RE`), reads as live here. The
+# doc224 leg does not share it: `_open_owner_rows` requires OPEN in cell 2 and no
+# terminal word in cells 2-3 of any row for the ID (227-REVIEW CR-01).
 #
 # Runs in CI: `.planning/todos/`, ROADMAP.md, HORIZON.md and the recent
 # archived roadmaps are git-tracked. A phase whose roadmap is not visible on
@@ -813,6 +822,7 @@ def test_narrowing_is_not_vacuous_on_the_real_corpus():
 # ---------------------------------------------------------------------------
 
 TODOS_PENDING_DIR = REPO_ROOT / ".planning" / "todos" / "pending"
+TODOS_COMPLETED_DIR = REPO_ROOT / ".planning" / "todos" / "completed"
 ROADMAP_PATH = REPO_ROOT / ".planning" / "ROADMAP.md"
 
 _CLOSED_PHASE_RE = re.compile(r"^\s*-\s*\[[xX]\]\s*\*\*Phase\s+(\d+(?:\.\d+)*)\b", re.M)
@@ -906,3 +916,216 @@ def test_dangling_pointer_detection_each_shape(tmp_path):
     offenders = _dangling_pointers(sorted(tmp_path.glob("*.md")), {"215", "220"}, rows)
     flagged = {o.split(":")[0] for o in offenders}
     assert flagged == {n for n, (_, bad) in cases.items() if bad}, offenders
+
+
+# ---------------------------------------------------------------------------
+# doc224 todo -> live-owner leg (Phase 227, OWN-01)
+# ---------------------------------------------------------------------------
+
+REQUIREMENTS_PATH = REPO_ROOT / ".planning" / "REQUIREMENTS.md"
+DOC224_GLOB = "*doc224*.md"
+
+# Frontmatter: a leading `---` line to the next `---` line. `owner:` is read from this block
+# ONLY (a body line `owner: ...` must never count) and by regex, never yaml.safe_load: YAML
+# parses an unquoted `owner: 999.130` as the float 999.13 and would resolve to the wrong row.
+_FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
+_OWNER_KEY_RE = re.compile(r"^owner:[ \t]*(.*?)[ \t]*$", re.M)
+# A 999.N owner must be quoted (an unquoted one is what any YAML reader turns into a float);
+# a requirement ID may be bare or quoted.
+_OWNER_VALUE_RE = re.compile(
+    r"""^(?:(?P<q>['"])(?P<qid>999\.\d+|[A-Z][A-Z0-9]*-\d+)(?P=q)|(?P<id>[A-Z][A-Z0-9]*-\d+))$"""
+)
+# Owner liveness reads whole HORIZON rows, not `_horizon_rows`' cell 2: the ledger closes a row
+# as `| **999.N** | **P1** | **CLOSED <date>** ...` (terminal word in cell 3), and the BACK
+# mapping table maps `| 999.13 | BACK-17 | SHIPPED ... |`. A row is a live owner only if cell 2
+# says OPEN and no row for that ID carries a terminal word in cell 2 or 3.
+_OWNER_ROW_RE = re.compile(r"^\|\s*\**(999\.\d+)\**\s*\|([^|]*)\|([^|]*)\|", re.M)
+_OWNER_TERMINAL_RE = re.compile(r"\b(CLOSED|RESOLVED|DRAINED|SHIPPED|OBSOLETE|SUPERSEDED)\b")
+_REQ_LINE_RE = re.compile(r"^- \[( |[xX])\] \*\*([A-Z][A-Z0-9]*-\d+)\*\*", re.M)
+_TRACE_ROW_RE = re.compile(r"^\|\s*([A-Z][A-Z0-9]*-\d+)\s*\|\s*Phase\s+(\d+(?:\.\d+)*)\s*\|", re.M)
+
+
+def _requirement_states(text: str) -> dict[str, bool]:
+    """requirement ID -> checked, from `- [ ] **ID**` / `- [x] **ID**` lines only."""
+    return {m.group(2): m.group(1) != " " for m in _REQ_LINE_RE.finditer(text)}
+
+
+def _open_owner_rows(text: str) -> dict[str, bool]:
+    """999.N -> live, over every HORIZON table row for that ID (see _OWNER_ROW_RE)."""
+    live: dict[str, bool] = {}
+    for m in _OWNER_ROW_RE.finditer(text):
+        rid, cell2, cell3 = m.groups()
+        terminal = bool(_OWNER_TERMINAL_RE.search(cell2) or _OWNER_TERMINAL_RE.search(cell3))
+        is_open = "OPEN" in cell2 and not terminal
+        live[rid] = (live.get(rid, True) and not terminal) and (is_open or live.get(rid, False))
+    return live
+
+
+def _frontmatter(text: str) -> str | None:
+    """The leading frontmatter block, or None. A block holding a markdown heading means the
+    closing `---` was missing and a body horizontal rule was matched instead."""
+    fm = _FRONTMATTER_RE.match(text)
+    if not fm or re.search(r"^#", fm.group(1), re.M):
+        return None
+    return fm.group(1)
+
+
+def _owner_of(text: str) -> tuple[str | None, str | None]:
+    """(owner id, problem) from a todo's frontmatter. Exactly one of the two is None."""
+    fm = _frontmatter(text)
+    if fm is None:
+        return None, "has no frontmatter, so no owner: key"
+    values = _OWNER_KEY_RE.findall(fm)
+    if not values:
+        return None, "has no owner: key in its frontmatter"
+    if len(values) > 1:
+        return None, f"has {len(values)} owner: lines (exactly one allowed)"
+    vm = _OWNER_VALUE_RE.match(values[0])
+    if not vm:
+        return None, f"owner value {values[0]!r} is not exactly one requirement ID or quoted \"999.N\""
+    return vm.group("qid") or vm.group("id"), None
+
+
+def _owner_offenders(todo_paths: list[Path], req_states: dict[str, bool], rows: dict[str, bool]) -> list[str]:
+    offenders = []
+    for path in todo_paths:
+        owner, problem = _owner_of(path.read_text(encoding="utf-8", errors="replace"))
+        if problem:
+            offenders.append(f"{path.name}: {problem}")
+        elif owner.startswith("999."):
+            if owner not in rows:
+                offenders.append(f"{path.name}: owner {owner} has no HORIZON.md table row")
+            elif not rows[owner]:
+                offenders.append(f"{path.name}: owner {owner}'s HORIZON.md row is not OPEN (closed, shipped or a mapping row)")
+        elif owner not in req_states:
+            offenders.append(
+                f"{path.name}: owner {owner} is not in .planning/REQUIREMENTS.md (milestone archived?): "
+                "re-home it to a live requirement or an open HORIZON 999.* row"
+            )
+        elif req_states[owner]:
+            offenders.append(
+                f"{path.name}: owner {owner} is checked [x] in REQUIREMENTS.md: move the todo to "
+                ".planning/todos/completed/ with a ## Resolution citing the closing commit"
+            )
+    return offenders
+
+
+def test_requirement_states_parses_checkbox_lines_only():
+    text = (
+        "- [ ] **XSURF-05**: x\n"
+        "- [x] **FIND-11**: y\n"
+        "see **OWN-01** in text\n"
+    )
+    assert _requirement_states(text) == {"XSURF-05": False, "FIND-11": True}
+
+
+def test_doc224_owner_detection_each_shape(tmp_path):
+    """Each ownerless / dangling / malformed shape is caught; each live shape and every
+    non-doc224 file is not."""
+
+    def fm(*lines: str) -> str:
+        return "---\ntype: todo\n" + "".join(f"{ln}\n" for ln in lines) + "---\n\n# body\n"
+
+    files = {
+        "a-doc224-nofm.md": "# no frontmatter\n",
+        "b-doc224-noowner.md": fm("status: pending"),
+        "c-doc224-reqlive.md": fm("owner: XSURF-05"),
+        "d-doc224-reqchecked.md": fm("owner: FIND-11"),
+        "e-doc224-reqabsent.md": fm("owner: DETECT-99"),
+        "f-doc224-rowlive.md": fm('owner: "999.119"'),
+        "g-doc224-rowclosed.md": fm('owner: "999.117"'),
+        "h-doc224-norow.md": fm('owner: "999.200"'),
+        "i-doc224-floattrap.md": fm("owner: 999.130"),
+        "j-doc224-malformed.md": fm("owner: 999.126 (cloud)"),
+        "k-doc224-dup.md": fm('owner: "999.119"', "owner: XSURF-05"),
+        "l-doc224-bodyonly.md": fm("status: pending") + 'owner: "999.119"\n',
+        "m-doc224-unquotedlive.md": fm("owner: 999.119"),
+        "n-doc224-closedcell3.md": fm('owner: "999.113"'),
+        "o-doc224-shippedmapping.md": fm('owner: "999.13"'),
+        "p-doc224-unterminated.md": "---\nstatus: pending\n\n# body\n\n---\n\nowner: \"999.119\"\n",
+        "z-plain.md": fm("status: pending"),
+        "y-plain.md": fm("owner: v5.28"),
+    }
+    for name, body in files.items():
+        (tmp_path / name).write_text(body, encoding="utf-8")
+    req_states = {"XSURF-05": False, "FIND-11": True}
+    rows = _open_owner_rows(
+        "| **999.119** | **P2 — OPEN** | live |\n"
+        "| **999.117** | P2 — DRAINED | gone |\n"
+        "| **999.113** | **P1** | **CLOSED 2026-09-13** fixed |\n"
+        "| 999.13 | BACK-17 | SHIPPED — x.py |\n"
+    )
+
+    offenders = _owner_offenders(sorted(tmp_path.glob(DOC224_GLOB)), req_states, rows)
+    flagged = {o.split(":")[0] for o in offenders}
+    assert flagged == {
+        "a-doc224-nofm.md",
+        "b-doc224-noowner.md",
+        "d-doc224-reqchecked.md",
+        "e-doc224-reqabsent.md",
+        "g-doc224-rowclosed.md",
+        "h-doc224-norow.md",
+        "i-doc224-floattrap.md",
+        "j-doc224-malformed.md",
+        "k-doc224-dup.md",
+        "l-doc224-bodyonly.md",
+        "m-doc224-unquotedlive.md",
+        "n-doc224-closedcell3.md",
+        "o-doc224-shippedmapping.md",
+        "p-doc224-unterminated.md",
+    }, offenders
+    by_name = {o.split(":")[0]: o for o in offenders}
+    assert "[x]" in by_name["d-doc224-reqchecked.md"] and "completed" in by_name["d-doc224-reqchecked.md"]
+    assert "REQUIREMENTS.md" in by_name["e-doc224-reqabsent.md"]
+    assert "quoted" in by_name["i-doc224-floattrap.md"]
+    assert "no HORIZON.md table row" in by_name["h-doc224-norow.md"]
+    for name in ("g-doc224-rowclosed.md", "n-doc224-closedcell3.md", "o-doc224-shippedmapping.md"):
+        assert "not OPEN" in by_name[name], by_name[name]
+    assert rows == {"999.119": True, "999.117": False, "999.113": False, "999.13": False}
+
+
+def test_every_doc224_todo_has_a_live_owner():
+    todo_paths = sorted(TODOS_PENDING_DIR.glob(DOC224_GLOB))
+    req_text = REQUIREMENTS_PATH.read_text(encoding="utf-8", errors="replace")
+    req_states = _requirement_states(req_text)
+    rows = _open_owner_rows(HORIZON_PATH.read_text(encoding="utf-8", errors="replace"))
+
+    owners = [_owner_of(p.read_text(encoding="utf-8", errors="replace"))[0] for p in todo_paths]
+    n_backlog = sum(1 for o in owners if o and o.startswith("999."))
+    # Phase 231: QRAMM-20 closed the last requirement-owned pending doc224 todo; liveness_owners
+    # proves requirement-owner parsing on completed/ todos; offender checks stay pending-only.
+    liveness_owners = [
+        _owner_of(p.read_text(encoding="utf-8", errors="replace"))[0]
+        for p in sorted(TODOS_PENDING_DIR.glob(DOC224_GLOB)) + sorted(TODOS_COMPLETED_DIR.glob(DOC224_GLOB))
+    ]
+    n_req = sum(1 for o in liveness_owners if o and not o.startswith("999."))
+    assert todo_paths and req_states and rows and n_req >= 1 and n_backlog >= 1, (
+        f"vacuous: {len(todo_paths)} doc224 todos, {len(req_states)} requirement states, "
+        f"{len(rows)} HORIZON 999.* rows, {n_req} requirement owners, {n_backlog} 999.* owners "
+        "-- a parser has stopped matching; fix the parser, do not delete this assertion"
+    )
+
+    offenders = _owner_offenders(todo_paths, req_states, rows)
+    if offenders:
+        detail = "\n".join(f"  - {o}" for o in offenders)
+        pytest.fail(
+            f"{len(offenders)} pending doc224 todo(s) lack a live owner:\n{detail}\n\n"
+            "Fix: add a single owner: line (a live v5.28 requirement ID or a quoted open HORIZON "
+            '"999.N") to the todo\'s frontmatter, or move a resolved todo to '
+            ".planning/todos/completed/ with a ## Resolution citing live evidence. Do not delete "
+            "the owner line, the todo, or this assertion to make this pass."
+        )
+
+    # Traceability cross-check: a requirement-owned todo that names resolves_phase must agree
+    # with the Traceability table's phase for that requirement.
+    trace = {m.group(1): m.group(2) for m in _TRACE_ROW_RE.finditer(req_text)}
+    mismatches = []
+    for path, owner in zip(todo_paths, owners):
+        if not owner or owner.startswith("999."):
+            continue
+        rp = _RESOLVES_PHASE_RE.search(_frontmatter(path.read_text(encoding="utf-8", errors="replace")) or "")
+        if not rp:
+            mismatches.append(f"{path.name}: owner {owner} is a requirement but the frontmatter has no resolves_phase")
+        elif trace.get(owner) != rp.group(1):
+            mismatches.append(f"{path.name}: owner {owner} traces to Phase {trace.get(owner)}, resolves_phase {rp.group(1)}")
+    assert not mismatches, "resolves_phase disagrees with REQUIREMENTS.md Traceability:\n" + "\n".join(mismatches)

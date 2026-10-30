@@ -6,12 +6,13 @@ Degrades gracefully if httpx is not installed (HTTPX_AVAILABLE = False).
 Phase 93 / AUTH-01: optional CredentialContext support.
   - cred_ctx.as_headers() injects Authorization/X-Api-Key headers.
   - cred_ctx.query_param() appends the key to the fetch URL (D-03: never in headers).
-  - event_hooks strip auth headers + redact query key before any log handler (D-10).
+  - credentials are sent intact; key query params are redacted only in log records (D-09/D-10a).
   - D-12: auth is attached to the EXISTING JWKS/endpoint fetch only; no new probe targets.
 """
 import base64
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
@@ -30,34 +31,134 @@ from quirk.util.url_allowlist import validate_external_url
 logger = logging.getLogger(__name__)
 
 # Phase 93 / IN-01: single source of truth for query-param key names. Referenced by
-# the D-10 log-redaction hook below; CredentialContext.query_param() defaults to "api_key".
+# the log-redaction filter below; CredentialContext.query_param() defaults to "api_key".
 _KEY_PARAM_NAMES = frozenset({
     "api_key", "apikey", "key", "token", "auth_token", "access_token",
 })
 
 
-def _strip_auth_from_log(request) -> None:
-    """Phase 93 / D-10: event_hooks request filter — remove auth headers and redact
-    the query-param key from request.url before any log handler sees them.
+_QUERY_KEY_RE = re.compile(
+    r"([?&](?:"
+    + "|".join(sorted((re.escape(n) for n in _KEY_PARAM_NAMES), key=len, reverse=True))
+    + r")=)[^&\s\"']+",
+    re.IGNORECASE,
+)
 
-    Pops Authorization, X-Api-Key, X-Auth-Token from request.headers.
-    Redacts any query parameter whose name matches a known key param name (CR-01).
+
+class _RedactKeyQueryFilter(logging.Filter):
+    """Phase 230 / D-09, D-10a: redact key query params at the logging boundary.
+
+    httpx logs ``HTTP Request: GET <url>`` at INFO with the full query string,
+    so an ``api_key_query`` credential would otherwise reach log handlers. The
+    outgoing request is never touched; only the rendered log record is rewritten.
     """
-    # Strip auth headers
-    request.headers.pop("Authorization", None)
-    request.headers.pop("X-Api-Key", None)
-    request.headers.pop("X-Auth-Token", None)
 
-    # CR-01: redact query-param secret in request.url before any log handler /
-    # redirect sees it. The api_key_query scheme carries the secret in the URL,
-    # so popping headers alone leaves it intact. httpx event hooks run after the
-    # request is sent, so this protects post-send logging/redirects, not the wire.
-    redacted = request.url
-    for name in request.url.params:
-        if name.lower() in _KEY_PARAM_NAMES:
-            redacted = redacted.copy_set_param(name, "REDACTED")
-    if redacted is not request.url:
-        request.url = redacted
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            message = record.getMessage()
+        except Exception:
+            return True
+        redacted = _QUERY_KEY_RE.sub(r"\1REDACTED", message)
+        if redacted != message:
+            record.msg = redacted
+            record.args = None
+        return True
+
+
+# 230-REVIEW WR-02: the httpcore child loggers known to emit records (httpcore
+# 1.0.x; `_sync`/`_async` modules call logging.getLogger with these names).
+# Baseline for environments where the package source cannot be read (frozen
+# builds ship bytecode only); _httpcore_logger_names() adds whatever the
+# installed source actually names.
+_HTTPCORE_LOGGER_BASELINE = (
+    "httpcore.connection",
+    "httpcore.http11",
+    "httpcore.http2",
+    "httpcore.proxy",
+    "httpcore.socks",
+)
+
+_GETLOGGER_NAME_RE = re.compile(r"""getLogger\(\s*["'](httpcore(?:\.[\w.]+)?)["']\s*\)""")
+
+
+def _httpcore_logger_names() -> set:
+    """Every httpcore logger name: baseline + installed source + live loggers.
+
+    ``Logger.addFilter`` filters only records created on that exact logger;
+    records do not pass through an ancestor logger's filters as they
+    propagate. So the filter has to sit on each emitting child logger, and
+    those names are enumerated from the installed httpcore source at run time
+    (never a hand-maintained list alone).
+    """
+    names = set(_HTTPCORE_LOGGER_BASELINE)
+    try:
+        import pathlib
+
+        import httpcore  # noqa: F401 - only its location is used
+
+        root = pathlib.Path(httpcore.__file__).parent
+        for py in root.rglob("*.py"):
+            try:
+                names.update(_GETLOGGER_NAME_RE.findall(py.read_text(encoding="utf-8")))
+            except (OSError, UnicodeDecodeError):
+                continue
+    except Exception:  # noqa: BLE001 - enumeration must never break import
+        pass
+    for existing in list(logging.root.manager.loggerDict):
+        if existing == "httpcore" or existing.startswith("httpcore."):
+            names.add(existing)
+    return names
+
+
+def _install_redact_filter() -> None:
+    """Attach one redaction filter to every logger that can render a fetch URL.
+
+    Covered: ``httpx`` (its INFO ``HTTP Request: GET <url>`` line), each
+    httpcore logger named by ``_httpcore_logger_names()`` (``httpcore`` itself
+    plus its emitting children such as ``httpcore.http11`` and
+    ``httpcore.connection``), and this module's logger. Not covered: records
+    created on any other logger, and handler-level output. The filter only
+    rewrites log records; the outgoing request is never touched.
+
+    Idempotent across module reloads: a reload creates a new class object, so
+    stale instances are detected by class name and replaced.
+    """
+    flt = _RedactKeyQueryFilter()
+    for name in sorted({"httpx", __name__} | _httpcore_logger_names()):
+        lg = logging.getLogger(name)
+        for old in [f for f in lg.filters if type(f).__name__ == "_RedactKeyQueryFilter"]:
+            lg.removeFilter(old)
+        lg.addFilter(flt)
+
+
+_install_redact_filter()
+
+
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _norm_origin(url: str) -> tuple:
+    """(scheme, host, port) with the scheme's default port filled in.
+
+    230-REVIEW CR-01: credentials are attached only when a request URL has the
+    same origin as the operator-supplied base URL. ``https://h`` and
+    ``https://h:443`` are the same origin; the host is compared lowercased.
+    """
+    p = urlparse(url)
+    scheme = (p.scheme or "").lower()
+    try:
+        port = p.port
+    except ValueError:
+        port = None
+    if port is None:
+        port = _DEFAULT_PORTS.get(scheme)
+    return (scheme, (p.hostname or "").lower(), port)
+
+
+def _origin_label(url: str) -> str:
+    """Render an origin as ``scheme://host:port`` (never path, query or userinfo)."""
+    scheme, host, port = _norm_origin(url)
+    return f"{scheme}://{host}:{port}"
 
 
 def _append_query_param(url: str, param_name: str, param_value: str) -> str:
@@ -142,27 +243,53 @@ def _fetch_jwks(
     Phase 93 / AUTH-01:
       auth_headers: dict of headers to pass (e.g. {"Authorization": "Bearer ..."}).
       auth_query: (param_name, secret) tuple to append to the fetch URL (D-03).
-      When either is set, requests are made via a short-lived httpx.Client with
-      event_hooks that strip auth headers and redact the query key before logging (D-10).
+      When either is set, requests are made via a short-lived httpx.Client; the
+      credential is sent intact and only logged URLs are redacted (logging.Filter).
       D-12: auth is attached to this existing fetch only — no new probe targets.
+
+    230-REVIEW CR-01: credentials (headers AND the query-param key) are attached
+    only to URLs with the same origin (scheme, host, port) as ``base_url``. A
+    discovery document's ``jwks_uri`` on another origin is fetched without
+    credentials, and one WARNING (origins only, no secret) records the mismatch.
+    230-REVIEW WR-03: credentials sent to an ``http://`` origin are not blocked,
+    but one WARNING (origin only, no secret) records that they went in cleartext.
     """
     base_url = base_url.rstrip("/")
     fetched_urls: list[str] = []
     _hdrs = auth_headers or {}
-    _use_client = bool(_hdrs) or auth_query is not None
+    _has_creds = bool(_hdrs) or auth_query is not None
+    _base_origin = _norm_origin(base_url)
+    _warned: set = set()
 
     def _get(url: str) -> "httpx.Response":
-        """Make a GET with optional auth; uses event_hooks when auth is present (D-10)."""
+        """Make a GET; credentials are sent intact, but only to the base origin."""
+        same_origin = _norm_origin(url) == _base_origin
+        if _has_creds and not same_origin and "cross-origin" not in _warned:
+            _warned.add("cross-origin")
+            logger.warning(
+                "JWKS URL is on a different origin (%s) than the scan target (%s); "
+                "fetching it without credentials",
+                _origin_label(url), _origin_label(base_url),
+            )
+        _use_client = _has_creds and same_origin
+        if _use_client and _base_origin[0] == "http" and "cleartext" not in _warned:
+            # 230-REVIEW WR-03: not blocked (the operator chose the target),
+            # but say once that the credential travels without TLS.
+            _warned.add("cleartext")
+            logger.warning(
+                "Sending --auth-* credential to a non-TLS (http://) origin %s; "
+                "it is readable on the network path",
+                _origin_label(url),
+            )
         # Append query-param key to URL if present (D-03: never in headers)
         fetch_url = url
-        if auth_query is not None:
+        if auth_query is not None and same_origin:
             fetch_url = _append_query_param(url, auth_query[0], auth_query[1])
         if _use_client:
             with httpx.Client(
                 timeout=timeout,
                 follow_redirects=False,
                 verify=verify_tls,
-                event_hooks={"request": [_strip_auth_from_log]},
             ) as _client:
                 return fetch_validated(
                     fetch_url,
@@ -252,7 +379,8 @@ def scan_jwt_endpoint(
 
     Phase 93 / AUTH-01: optional CredentialContext.
       cred_ctx.as_headers() injects auth headers; cred_ctx.query_param() appends
-      the API key to the fetch URL (D-03). auth-strip event_hooks applied (D-10).
+      the API key to the fetch URL (D-03). Credentials are sent intact; log redaction
+      is a logging.Filter (D-09).
       D-12: consumer is EXISTING JWKS/endpoint fetch only; no new probe targets.
     """
     if not HTTPX_AVAILABLE:

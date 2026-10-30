@@ -241,3 +241,60 @@ def test_sample_arrays_capped_at_5(db):
 
     assert len(report.new_findings_sample) == 5
     assert report.new_high == 7  # count is exact, sample is capped
+
+
+# ---------------------------------------------------------------------------
+# Phase 228 (XSURF-07): trend score derives findings (consequence ceilings)
+# ---------------------------------------------------------------------------
+
+# Scoring 4.0 (Phase 234): 27 -> 31, still capped <= 34 by the CRITICAL ceiling.
+PINNED_CEILING_SCORE = 31
+
+
+def _seed_expired_session(db, ts):
+    """4 TLS rows, one with an expired certificate (CRITICAL)."""
+    eps = []
+    for i in range(4):
+        ep = CryptoEndpoint(
+            host=f"h{i}.example", port=443, protocol="TLS",
+            tls_version="TLSv1.2",
+            cipher_suite="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+            cert_sig_alg="sha256WithRSAEncryption",
+            cert_subject=f"CN=h{i}.example", cert_issuer="CN=Example CA",
+            cert_not_after=datetime(2020, 1, 1) if i == 0 else None,
+            segment="local", scanned_at=ts,
+        )
+        db.add(ep)
+        eps.append(ep)
+    db.commit()
+    return eps
+
+
+def test_trend_score_applies_critical_ceiling(db):
+    from quirk.engine.findings_evaluator import derive_report_findings
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+
+    eps = _seed_expired_session(db, CURR_TS)
+    report = compute_trend_report(CURR_TS, None, db)
+    expected = compute_readiness_score(
+        build_evidence_summary(eps, derive_report_findings(eps))
+    )["score"]
+    assert report.current_score == expected
+    assert report.current_score <= 34
+    assert report.current_score == PINNED_CEILING_SCORE
+
+
+def test_trend_report_uses_supplied_deriver(db):
+    eps = _seed_expired_session(db, CURR_TS)
+    base = compute_trend_report(CURR_TS, None, db, findings_deriver=lambda e: []).current_score
+    assert base > 34
+    crit = compute_trend_report(
+        CURR_TS, None, db,
+        findings_deriver=lambda e: [{
+            "severity": "CRITICAL", "title": "TLS certificate expired",
+            "host": "h0.example", "port": 443,
+        }],
+    ).current_score
+    assert crit < base

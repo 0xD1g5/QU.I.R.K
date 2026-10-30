@@ -341,13 +341,25 @@ def test_adcs_only_identity_evidence_marks_identity_assessed():  # 188 review WR
     SMIME/ADCS were absent from _PROTOCOL_KEYS/_IDENTITY_PROTOCOL_KEYS, so the
     computed adcs_* penalties were silently discarded and the headline
     rescaled UPWARD over the remaining domains (false-negative assessed
-    determination -> overstated score)."""
-    endpoints = [
-        CryptoEndpoint(
-            host="ca.example.com", port=389, protocol="ADCS",
+    determination -> overstated score).
+
+    Phase 234 (scoring 4.0, O-3 small-estate lenience): the ADCS terms weigh 2
+    points each on the absolute-count curve, so n rows cost 2 x sqrt(n / 40),
+    which is under 0.5 for n <= 2 and rounds away. The domain is assessed at
+    one row (asserted first, below); the penalty lands at n >= 3, so the
+    fixture carries three ESC1 rows for the "< 25" assertion."""
+    def _esc1_row(i: int) -> CryptoEndpoint:
+        return CryptoEndpoint(
+            host=f"ca{i}.example.com", port=389, protocol="ADCS",
             service_detail="esc1-enrollee-supplies-subject|template=WebServer",
-        ),
-    ]
+        )
+
+    one_row = compute_readiness_score(build_evidence_summary([_esc1_row(0)], []))
+    assert one_row["subscores"]["identity_trust"] is not None, (
+        "WR-01 REGRESSION: a single ADCS row no longer marks identity_trust assessed."
+    )
+
+    endpoints = [_esc1_row(i) for i in range(3)]
     evidence = build_evidence_summary(endpoints, [])
     assert evidence["protocol_counts"].get("ADCS", 0) > 0, (
         "Fixture precondition failed: ADCS rows must register in protocol_counts."
@@ -364,8 +376,51 @@ def test_adcs_only_identity_evidence_marks_identity_assessed():  # 188 review WR
         "scan — its computed adcs_* penalties are being discarded and the "
         "headline rescaled upward."
     )
-    # The penalty must actually land: identity subscore below the clean 25.
+    # The penalty must actually land: identity subscore below the clean 25
+    # (three rows: 2 x sqrt(3 / 40) = 0.55 rounds to a 1-point drop).
     assert result["subscores"]["identity_trust"] < 25
+
+
+def test_kerberos_scan_error_row_does_not_make_identity_assessed():
+    """Phase 234 review D-30 (WR-01): a Kerberos row that carries a
+    scan_error is not identity evidence.
+
+    WR-01 reproduction: 40 legacy-TLS rows (no certificate) plus the
+    scanner's own ``_not_probed_row`` (an invalid target: no Kerberos traffic
+    was sent). D-11 subtracted only scan_error-free placeholder rows, so this
+    row still made identity_trust assessed at a clean 25/25 and raised the
+    headline 68 -> 71 on zero evidence.
+    """
+    from datetime import datetime
+
+    from quirk.scanner.kerberos_scanner import _not_probed_row
+
+    now = datetime(2026, 10, 1, 12, 0, 0)
+    tls = [
+        CryptoEndpoint(host=f"t{i}.d30.example", port=443, protocol="TLS",
+                       tls_version="TLSv1.1",
+                       tls_supported_versions="TLSv1.1,TLSv1.2",
+                       scanned_at=now)
+        for i in range(40)
+    ]
+    kdc = _not_probed_row("bad name!", "D30.EXAMPLE", now, "invalid target")
+    assert kdc.protocol == "KERBEROS" and kdc.scan_error
+
+    without = compute_readiness_score(build_evidence_summary(tls, [], reference_utc=now))
+    ev = build_evidence_summary(tls + [kdc], [], reference_utc=now)
+    # Non-vacuity: the row reached protocol_counts, and no certificate exists.
+    assert ev["protocol_counts"]["KERBEROS"] == 1
+    assert ev["certificate_observations"]["certs_observed"] == 0
+    with_kdc = compute_readiness_score(ev)
+    assert with_kdc["subscores"]["identity_trust"] is None, (
+        f"a scan-error Kerberos row made identity assessed: "
+        f"{with_kdc['subscores']['identity_trust']}"
+    )
+    assert with_kdc["domains_assessed"] == without["domains_assessed"]
+    assert with_kdc["score"] <= without["score"], (
+        f"a never-probed KDC raised the score {without['score']} -> "
+        f"{with_kdc['score']}"
+    )
 
 
 def test_smime_only_identity_evidence_marks_identity_assessed():  # 188 review WR-01

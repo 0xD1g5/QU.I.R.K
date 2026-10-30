@@ -39,7 +39,7 @@ Each scan writes `intelligence-<timestamp>.json` in the configured output direct
 
 ## TrendReport (Phase 31)
 
-`compute_trend_report()` in `quirk/intelligence/trends.py` produces a session-over-session comparison between the two most recent distinct scan sessions. For `GET /api/trends`, a session is one scan run: rows are grouped by their `scan_run_id`, and each session is represented by its earliest `scanned_at` (`_list_session_timestamps` in `quirk/dashboard/api/routes/trends.py`). Older rows that carry no `scan_run_id` are grouped by `scanned_at` truncated to the millisecond, so two such scans started within the same second remain distinct sessions. The endpoint `GET /api/trends` returns this schema.
+`compute_trend_report()` in `quirk/intelligence/trends.py` produces a session-over-session comparison between the two most recent distinct scan sessions. For `GET /api/trends`, a session is one scan run: rows are grouped by their `scan_run_id`, and each session is represented by its earliest `scanned_at` (`list_session_timestamps` in `quirk/intelligence/trends.py`, which the drift notifier also uses). Older rows that carry no `scan_run_id` are grouped by `scanned_at` truncated to the millisecond, so two such scans started within the same second remain distinct sessions. The endpoint `GET /api/trends` returns this schema.
 
 ### Wire format
 
@@ -153,6 +153,6 @@ Sample arrays are capped at 5 entries. Sort order is severity descending (CRITIC
 
 ## Trends Timeline (TREND-01)
 
-A second endpoint `GET /api/trends/timeline` returns a multi-point sequence (not just a two-session diff), newest first, up to `n` points (default 30). Unlike `/api/trends`, it groups rows by `scanned_at` truncated to the millisecond (SQLite `strftime('%Y-%m-%d %H:%M:%f')`) and does not group by `scan_run_id`, so a scan whose stages stamped their rows at different times appears as several points, each carrying that whole scan's score. Lives at `quirk/dashboard/api/routes/trends.py:get_trends_timeline`; response model is `TrendTimelineResponse` in `quirk/dashboard/api/schemas.py`.
+A second endpoint `GET /api/trends/timeline` returns a multi-point sequence (not just a two-session diff), newest first, up to `n` points (default 30). It groups exactly like `/api/trends` (via `list_session_timestamps`): one point per scan run, so a scan whose stages stamped their rows at different times is still one point. Lives at `quirk/dashboard/api/routes/trends.py:get_trends_timeline`; response model is `TrendTimelineResponse` in `quirk/dashboard/api/schemas.py`.
 
 `/timeline` is a separate endpoint and does not change the `/api/trends` response described above.

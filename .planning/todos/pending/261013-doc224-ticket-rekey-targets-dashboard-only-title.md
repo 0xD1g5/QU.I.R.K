@@ -6,6 +6,7 @@ priority: low
 area: quirk/ticketing/base.py (compute_fingerprint docstring), quirk/compliance/__init__.py (FINGERPRINT_TITLE_ALIASES), tests/test_ticketing_fingerprint_stability.py
 status: pending
 resolves_phase: null
+owner: "999.135"
 ---
 
 # Phase 178's ticket re-key fixed a title the ticket path never sees, and re-keyed five it does

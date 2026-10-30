@@ -6,6 +6,7 @@ priority: low
 area: quirk/dashboard/api/schemas.py (HardwareFinding), src/dashboard/src/pages/hardware.tsx
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # Dashboard /hardware device table cannot mark check-in-sourced rows

@@ -6,6 +6,7 @@ priority: low
 area: quirk/scanner/db_connector.py (MySQL branch)
 status: pending
 resolves_phase: null
+owner: "999.126"
 ---
 
 # MySQL connector claims a defaults-file fallback that pymysql never performs

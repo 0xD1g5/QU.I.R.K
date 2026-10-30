@@ -6,6 +6,7 @@ priority: medium
 area: quirk/reports/content_model.py (_classify_finding)
 status: pending
 resolves_phase: null
+owner: "999.132"
 ---
 
 # Report narrative matcher gives "HTTP on TLS-designated port" the DES narrative (substring match on "designated")

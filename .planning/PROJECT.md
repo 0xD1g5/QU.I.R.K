@@ -1,6 +1,50 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
+## Current Milestone: v5.28 Score & Finding Truth (opened 2026-10-15, Phases 227+)
+
+**Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
+The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
+scoring surfaces work.
+
+**Target features:**
+- **P2b scan-depth dilution (`999.120`, the anchor):** build a third measurement instrument first,
+  then choose the fix by measurement, re-measure the five-rung calibration ladder, and turn the
+  `xfail(strict=True)` P2b property test into a pass.
+- **Cross-surface score parity:** near-expiry certificate severity, dashboard-only findings,
+  consequence ceilings in trend and merge scores, and closed mail ports counted as plaintext.
+- **Finding and state correctness:** closure states, drift notifications that compare two real scan
+  runs, and `sensor merge` keeping each sensor's latest push.
+- **Findings that never fire:** the code-signing TLS-EKU path, Kerberos etype enumeration against
+  pre-auth KDCs, and `999.125` (JWKS credentials, `--auth-basic` encoding, `alg: none`).
+- **QRAMM fixes:** the compliance map refetches after Calculate Score, the scorecard gets a "Not
+  assessed" state, `quirk qramm` / `doctor` / `cve --help` work properly, and whether self-assessed
+  dimensions appear in the compliance map (Cause A) is decided in the phase discuss.
+- **Post-launch visible fixes:** serve the bundled `/fonts` (W15), unquoted install hints (`261015`),
+  the old-blue report wordmark (`261003`), and README links on PyPI (`261014`).
+- **Todo ownership:** every remaining `doc224` todo gets an owner so the todo -> owner gate polices it.
+
+**Operator scoping decisions (2026-10-15 kickoff):** the PM review recommended "Score & Finding Truth"
+(P2b anchor + the high-priority scoring/finding `doc224` defects + `999.125` + post-launch fixes +
+todo ownership), and the operator accepted it and added the QRAMM fixes. QRAMM Cause A is deferred to
+the phase discuss. Research was skipped because every item is a source-confirmed defect. Four
+high-priority `doc224` todos stay out of scope and get owners rather than fixes (Azure Key Vault keys,
+the Semgrep `p/cryptography` 404, the CMVP-refresh error hints, the Windows `install.ps1` sensor
+identity). `999.124` and `999.121` stay on the backlog. This milestone has no release phase: P2b
+rescales every ladder rung and must not share a phase with a tag (212 §8).
+
 ## Current State (updated 2026-10-15)
+
+**v5.28 Phase 227 (Todo Ownership Gate) complete 2026-10-15 — OWN-01 validated.** All 118 pending `doc224`
+todos name a live owner (13 v5.28 requirements; 105 open HORIZON rows: 999.119, 999.121 and new
+999.126-999.137), with zero closures from the live D-13 triage. `tests/test_backlog_reconciliation_gate.py`
+now fails on an ownerless, unquoted-`999.N`, closed-row or checked-requirement owner for any `*doc224*` todo.
+Next: Phase 228 (Cross-Surface Score Parity).
+
+**v5.28 Phase 228 (Cross-Surface Score Parity) complete 2026-10-15 — XSURF-05..08 validated.** Near-expiry
+certificates are MEDIUM on both surfaces, certificate/TLS checks run only on TLS rows, trend, timeline, merge,
+per-segment and compare scores apply consequence ceilings, and refused or timed-out mail ports are not scored.
+The dashboard and report pipelines still diverge on Kerberos/DNSSEC, legacy TLS and weak-cipher classes
+(999.132); the phase does not claim they always agree. Next: Phase 229 (Finding & State Correctness).
 
 **v5.27 Launch Readiness CLOSED and ARCHIVED 2026-10-15, and it SHIPPED as `v5.27.0`.** All 7
 phases complete (222–226, with 222.1 and 225.1 inserted), 75 plans, **20 of 20 requirements
@@ -31,7 +75,7 @@ and STATE (REL-07).
   were published.
 
 **What to carry forward.** DOC-04's 4.0% residual in deep reference docs is owned by `999.123`.
-The bundled JetBrains Mono is never served (W15, effort S). 118 `doc224` product-defect todos exist,
+The bundled JetBrains Mono was never served (W15); fixed in Phase 232 (`1197e608`), which mounts `/fonts`. 118 `doc224` product-defect todos exist,
 14 of them high priority and 117 with no owner field, so no gate polices them. The next milestone's
 PM review owes them an owner. `999.120` (P2b, P1, operator-reserved) is the v5.28 anchor.
 
@@ -1796,7 +1840,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Brand palette B (Ink-violet accent on the current grounds), picked after viewing sketches rather than descriptions (2026-10-02) | Variant C, picked from a description, would have re-themed the grounds and reopened the 216–219 contrast ratchets | ✓ Good — no ratchet pair regressed; the lesson is to sketch before deciding on a visual |
 
 ---
-*Last updated: 2026-10-15 after the v5.27 Launch Readiness milestone*
+*Last updated: 2026-10-15 after Phase 228 (Cross-Surface Score Parity)*
 
 ## Evolution
 

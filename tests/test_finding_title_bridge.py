@@ -9,15 +9,19 @@ records five prior instances in this repo of a hand-maintained list silently goi
 here follows the in-repo precedent at
 `tests/test_gsd_state_patch.py::test_bold_field_regex_class_is_fully_dispositioned`.
 
-Three groups of tests:
+Four groups of tests:
   1. Extraction correctness + vacuous-pass guards (minimum site counts).
   2. The bridge/ledger completeness gate (every dashboard site dispositioned; every bridge value
      present in the CLI vocabulary; no site in both/neither ledger).
   3. The constituency reachability census (Task 3, D-08/D-09) -- recomputed from
      REMEDIATION_CONSTITUENCY + dashboard severities, not asserted against hand-written strings.
+  4. The severity-parity gate (Phase 228 D-03/D-22) -- reads the LITERAL severity at every
+     title-emission site of both generators with `ast` and requires every mismatch to be
+     dispositioned in SEVERITY_DIVERGENCES with a reason and an existing pending todo.
 """
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -27,6 +31,7 @@ import pytest
 from quirk.dashboard.api.finding_title_bridge import (
     BRIDGE_REACHABILITY,
     DASHBOARD_TITLE_BRIDGE,
+    SEVERITY_DIVERGENCES,
     UNBRIDGED_DASHBOARD_TITLES,
     canonical_cli_title,
 )
@@ -388,3 +393,168 @@ def test_reachability_census_is_not_vacuous_all_three_classes_present() -> None:
         "of specific/catchall-only/unreachable must be represented or this "
         "test proves nothing about the untested branches"
     )
+
+
+# ---------------------------------------------------------------------------
+# Group 4: severity parity (Phase 228 D-03 / D-22)
+#
+# The headline ceiling counts raw severities, so a bridged pair whose two
+# generators disagree on severity moves the headline between surfaces even
+# though the titles match. Everything below is regenerated from source with
+# `ast` on every run; SEVERITY_DIVERGENCES is only the disposition.
+# ---------------------------------------------------------------------------
+_TODOS_PENDING = _REPO_ROOT / ".planning" / "todos" / "pending"
+
+
+def _title_prefix_of(node: ast.expr) -> Optional[str]:
+    """Literal title (Constant) or the leading literal text of an f-string."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        prefix = ""
+        for part in node.values:
+            if isinstance(part, ast.Constant) and isinstance(part.value, str):
+                prefix += part.value
+            else:
+                break
+        return prefix
+    return None
+
+
+def _ast_title_severity_sites(
+    path: Path, func_name: Optional[str] = None, source: Optional[str] = None
+) -> List[Tuple[int, str, str]]:
+    """(line, title_prefix, severity) for every Call that passes a literal
+    ``title=`` and a literal-string ``severity=``. Calls whose severity is a
+    variable are skipped on purpose (they have no literal to compare).
+    ``func_name`` limits the walk to that top-level function; ``source``
+    overrides the file text (used by the synthetic must-fail test)."""
+    tree = ast.parse(source if source is not None else path.read_text())
+    roots: List[ast.AST] = [tree]
+    if func_name is not None:
+        roots = [
+            n for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == func_name
+        ]
+        assert roots, f"`def {func_name}` not found in {path}"
+    sites: List[Tuple[int, str, str]] = []
+    for root in roots:
+        for node in ast.walk(root):
+            if not isinstance(node, ast.Call):
+                continue
+            kw = {k.arg: k.value for k in node.keywords if k.arg}
+            if "title" not in kw or "severity" not in kw:
+                continue
+            sev = kw["severity"]
+            if not (isinstance(sev, ast.Constant) and isinstance(sev.value, str)):
+                continue
+            title = _title_prefix_of(kw["title"])
+            if title is None:
+                continue
+            sites.append((node.lineno, title, sev.value.upper()))
+    return sites
+
+
+def _effective_report_severity(cli_title: str, severity: str) -> str:
+    """The severity a report finding carries AFTER _normalize_finding."""
+    from quirk.engine.findings_evaluator import _normalize_finding
+
+    return _normalize_finding({"title": cli_title, "severity": severity})["severity"]
+
+
+def _severity_divergence_keys(
+    dashboard_sites: Optional[List[Tuple[int, str, str]]] = None,
+    report_sites: Optional[List[Tuple[int, str, str]]] = None,
+) -> Dict[str, str]:
+    """Regenerate the divergence set: {dashboard key -> description}.
+
+    Bridged keys diverge when the dashboard's literal severities differ from
+    the report's post-normalisation severities for the mapped CLI title.
+    Unbridged keys diverge when a dashboard severity is HIGH or CRITICAL
+    (the ceiling counts it and the report has no counterpart, D-22)."""
+    if dashboard_sites is None:
+        dashboard_sites = _ast_title_severity_sites(_SCAN_PY, "findings_for_endpoint")
+    if report_sites is None:
+        report_sites = _ast_title_severity_sites(_EVALUATOR_PY)
+    found: Dict[str, str] = {}
+    for key, cli_title in DASHBOARD_TITLE_BRIDGE.items():
+        dash = {sev for _, t, sev in dashboard_sites if t == key}
+        rep = {
+            _effective_report_severity(cli_title, sev)
+            for _, t, sev in report_sites
+            if t == cli_title
+        }
+        if dash != rep:
+            found[key] = f"bridged: dashboard {sorted(dash)} vs report {sorted(rep)}"
+    for key in UNBRIDGED_DASHBOARD_TITLES:
+        dash = {sev for _, t, sev in dashboard_sites if t == key}
+        if dash & {"HIGH", "CRITICAL"}:
+            found[key] = f"unbridged: dashboard {sorted(dash)}, no report counterpart"
+    return found
+
+
+def _undispositioned_severity_divergences(ledger: Dict[str, Dict[str, str]]) -> Dict[str, str]:
+    """Regenerated divergences that ``ledger`` does not disposition."""
+    return {k: v for k, v in _severity_divergence_keys().items() if k not in ledger}
+
+
+def test_severity_parity_extractor_is_not_vacuous() -> None:
+    dash = _ast_title_severity_sites(_SCAN_PY, "findings_for_endpoint")
+    rep = _ast_title_severity_sites(_EVALUATOR_PY)
+    assert len(dash) >= 9, f"AST extractor found only {len(dash)} dashboard sites: {dash}"
+    assert len(rep) >= 30, f"AST extractor found only {len(rep)} report sites"
+    for key, cli_title in DASHBOARD_TITLE_BRIDGE.items():
+        assert any(t == key for _, t, _ in dash), f"no dashboard severity resolved for {key!r}"
+        assert any(t == cli_title for _, t, _ in rep), f"no report severity resolved for {cli_title!r}"
+
+
+def test_bridged_pair_severities_match_or_are_dispositioned() -> None:
+    found = {k for k, v in _severity_divergence_keys().items() if v.startswith("bridged")}
+    ledger = {k for k in SEVERITY_DIVERGENCES if k in DASHBOARD_TITLE_BRIDGE}
+    detail = _severity_divergence_keys()
+    assert found == ledger, (
+        f"undispositioned bridged severity divergences: "
+        f"{ {k: detail[k] for k in sorted(found - ledger)} }; "
+        f"stale SEVERITY_DIVERGENCES entries: {sorted(ledger - found)}. "
+        "Fix the severity, or file a todo and add a SEVERITY_DIVERGENCES entry."
+    )
+
+
+def test_unbridged_high_critical_severity_dashboard_titles_are_dispositioned() -> None:
+    detail = _severity_divergence_keys()
+    found = {k for k, v in detail.items() if v.startswith("unbridged")}
+    ledger = {k for k in SEVERITY_DIVERGENCES if k in UNBRIDGED_DASHBOARD_TITLES}
+    assert found == ledger, (
+        f"undispositioned unbridged HIGH/CRITICAL dashboard titles: "
+        f"{ {k: detail[k] for k in sorted(found - ledger)} }; "
+        f"stale SEVERITY_DIVERGENCES entries: {sorted(ledger - found)}."
+    )
+
+
+def test_severity_divergence_keys_are_all_dispositioned_dashboard_titles() -> None:
+    stray = set(SEVERITY_DIVERGENCES) - set(DASHBOARD_TITLE_BRIDGE) - set(UNBRIDGED_DASHBOARD_TITLES)
+    assert not stray, f"SEVERITY_DIVERGENCES keys that are in neither ledger: {sorted(stray)}"
+
+
+def test_severity_divergence_entries_cite_a_pending_todo() -> None:
+    assert _TODOS_PENDING.is_dir(), f"{_TODOS_PENDING} missing; todos are tracked and must exist in CI"
+    for key, entry in SEVERITY_DIVERGENCES.items():
+        assert entry.get("reason", "").strip(), f"{key!r} has no reason"
+        todo = entry.get("todo", "")
+        assert todo.endswith(".md") and (_TODOS_PENDING / todo).is_file(), (
+            f"{key!r} cites todo {todo!r}, which is not a file in .planning/todos/pending/"
+        )
+
+
+def test_severity_gate_flags_a_synthetic_undispositioned_divergence() -> None:
+    # With an empty ledger the live gate must name every regenerated divergence.
+    live = _severity_divergence_keys()
+    assert live, "no severity divergence found at all; the gate would be vacuous"
+    assert set(_undispositioned_severity_divergences({})) == set(live)
+    # Synthetic source: report says LOW for the bridged title, dashboard says HIGH.
+    dash = [(1, "Certificate expired", "HIGH")]
+    rep = [(1, "TLS certificate expired", "LOW")]
+    assert "Certificate expired" in _severity_divergence_keys(dash, rep)
+    # And the synthetic dashboard source is read through the same AST path.
+    src = 'f(title="Certificate expired", severity="HIGH")\n'
+    assert _ast_title_severity_sites(_SCAN_PY, source=src) == [(1, "Certificate expired", "HIGH")]

@@ -18,6 +18,7 @@ wizard starts (parser rejection, missing --targets-file) or supplies
 """
 from __future__ import annotations
 
+import ast
 import inspect
 
 from tests.cli_helpers import run_cli
@@ -49,21 +50,44 @@ def test_targets_flag_rejection_precedes_wizard_and_banner():
 
 
 def test_all_parsers_disable_abbrev():
-    """All 10 ArgumentParser/add_parser sites in run_scan.py set allow_abbrev=False.
+    """Every ArgumentParser/add_parser call in run_scan.py sets allow_abbrev=False.
 
-    Corrected site inventory (CONTEXT.md's D-02 said six; direct inspection
-    found ten): 5 literal ArgumentParser(...) constructors (init, serve,
-    compliance, db, main) + 5 add_parser(...) sub-parser calls (compliance
-    status, compliance cmvp, cmvp refresh, cmvp status, db migrate).
+    The call sites are enumerated from the parsed source, so a new parser
+    without the keyword fails by line number. The inventory floor guards the
+    enumeration itself: 15 sites as of Phase 231 (CONTEXT.md's D-02 said six;
+    Phase 164 found ten; Phase 231 QRAMM-20 added doctor, qramm, qramm
+    status, cve and cve status). 8 literal ArgumentParser(...) constructors
+    (init, serve, compliance, doctor, qramm, cve, db, main) + 7 add_parser(...)
+    sub-parser calls (compliance status, compliance cmvp, cmvp refresh, cmvp
+    status, qramm status, cve status, db migrate).
     """
     import run_scan
 
-    src = inspect.getsource(run_scan)
-    count = src.count("allow_abbrev=False")
-    assert count == 10, (
-        f"Expected 10 allow_abbrev=False sites (5 ArgumentParser() + "
-        f"5 add_parser()), found {count}. If you added a new parser "
-        f"construction, give it allow_abbrev=False too (D-02)."
+    tree = ast.parse(inspect.getsource(run_scan))
+    sites = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr in ("ArgumentParser", "add_parser")
+    ]
+    assert len(sites) >= 15, (
+        f"Found only {len(sites)} ArgumentParser/add_parser calls in "
+        f"run_scan.py; expected at least 15. The enumeration is broken."
+    )
+    missing = [
+        f"line {node.lineno}: {node.func.attr}"
+        for node in sites
+        if not any(
+            kw.arg == "allow_abbrev"
+            and isinstance(kw.value, ast.Constant)
+            and kw.value.value is False
+            for kw in node.keywords
+        )
+    ]
+    assert not missing, (
+        f"Parser constructions without allow_abbrev=False: {missing}. "
+        f"Give every new parser construction allow_abbrev=False (D-02)."
     )
 
 

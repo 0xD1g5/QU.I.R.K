@@ -148,7 +148,7 @@ def probe_modbus_target(host: str, timeout: int = 2) -> Dict[str, Optional[str]]
     """
     if not _PYMODBUS_AVAILABLE:
         _LOG.warning(
-            "Modbus probe skipped: install quirk-scanner[hw] to enable "
+            "Modbus probe skipped: run pip install 'quirk-scanner[hw]' to enable "
             "OT/ICS Modbus fingerprinting (pymodbus not found)"
         )
         return dict(_NULL_RESULT)

@@ -6,6 +6,7 @@ priority: low
 area: quirk/dashboard/api/routes/scan.py (list_scans), quirk/dashboard/api/routes/trends.py (get_trends_timeline)
 status: pending
 resolves_phase: null
+owner: "999.134"
 ---
 
 # A scoring exception fails the whole scan-history or trend-timeline request instead of showing an em-dash

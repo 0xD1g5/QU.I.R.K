@@ -6,6 +6,7 @@ priority: low
 area: quirk/cbom/builder.py (Pass 4 hardware)
 status: pending
 resolves_phase: null
+owner: "999.130"
 ---
 
 # CBOM names an unidentified device "Unknown None": str(None) for a missing model

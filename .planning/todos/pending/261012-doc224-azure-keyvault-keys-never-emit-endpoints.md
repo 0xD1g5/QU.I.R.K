@@ -6,6 +6,7 @@ priority: high
 area: quirk/scanner/azure_connector.py
 status: pending
 resolves_phase: null
+owner: "999.126"
 ---
 
 # Azure Key Vault key scanning emits zero endpoints against the real SDK

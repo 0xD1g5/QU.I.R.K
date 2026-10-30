@@ -70,13 +70,11 @@ finding lists separately, so where a result shows up depends on the surface:
   DNSSEC, S/MIME, AD CS, database, S3 and Vault rows have no evaluator there. The one CLI finding such a row
   can produce is an INFO `Informational protocol observation` when it records a scan error.
 - **Dashboard Findings page.** The certificate and TLS checks (legacy TLS version, weak ciphers, expiry,
-  undersized RSA key, self-signed, untrusted CA, quantum-vulnerable key algorithm) run on every row except
-  Kerberos, SAML and DNSSEC rows, and fire whenever a row carries the fields they test. An S/MIME user
-  certificate or an AD CS CA certificate with an RSA-1024 key is therefore listed as HIGH `TLS certificate
-  uses undersized RSA key` (the `smime` profile seeds two such users), and a Vault ECDSA key as MEDIUM
-  `Quantum-vulnerable algorithm: ECDSA`. AD CS template and coverage-gap rows, and the database and S3 rows,
-  carry none of those fields, so the checks list nothing for them. Kerberos, SAML and DNSSEC findings are
-  added to this page from the identity derivation.
+  undersized RSA key, self-signed, untrusted CA, quantum-vulnerable key algorithm) run only on `TLS` rows,
+  as in the CLI. S/MIME, AD CS, Vault, cloud, JWT and OpenAPI rows therefore list nothing from those checks,
+  even when they carry a certificate or key (surfacing them on both surfaces is tracked as 999.132). Email,
+  broker and code-signing rows get the same findings the CLI lists, and Kerberos, SAML and DNSSEC findings
+  are added to this page from the identity derivation.
 - **Dashboard Identity, Motion and Data at Rest pages.** Kerberos, SAML and DNSSEC findings are on Identity,
   email and broker findings on Motion, and database, S3 and Vault posture on Data at Rest.
 
@@ -283,7 +281,7 @@ connectors:
 
 ### 3.8 source Profile (Phase 4 — LAB-03)
 
-| Port  | Service | Seeded Repos                     | Expected Finding                                      |
+| Port  | Service | Seeded Repos                     | Seeded weakness (scanner output: see Expected result below)  |
 |-------|---------|----------------------------------|-------------------------------------------------------|
 | 20006 | Gitea   | crypto-antipatterns-python       | Weak algorithm (hashlib.md5), hardcoded key, weak random |
 | 20006 | Gitea   | crypto-antipatterns-go           | Weak algorithms (md5.New, SHA-1, DES, RC4), math/rand |
@@ -317,6 +315,8 @@ connectors:
     - "./crypto-antipatterns-go"
     - "./crypto-antipatterns-java"
 ```
+
+**Expected result (5.28.0, known defect):** the Semgrep `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so this scan produces an ERROR row for the source phase (`ruleset unavailable`), Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`, there are zero SOURCE findings and the readiness score is lower than a scan without `source_targets`. The weaknesses listed above are what the repositories contain, not what the scanner currently reports.
 
 ---
 
@@ -369,8 +369,8 @@ entry carries a `userCertificate;binary` attribute containing an RSA-1024 / SHA-
 with the Code Signing EKU (OID `1.3.6.1.5.5.7.3.3`). Running with `--inventory-code-signing`
 against this profile will produce exactly **one HIGH finding in the CLI findings list, `Code-signing certificate uses weak algorithm: <subject>`** (the oracle labels it `CODE-SIGN/weak-algorithm`), with two
 weak-algorithm reasons: `weak-rsa-key` (RSA < 2048-bit) and `weak-signing-alg` (SHA-1). The dashboard's
-Findings page does not use that title: its certificate checks list the same row as HIGH `TLS certificate
-uses undersized RSA key`.
+Findings page lists the same HIGH `Code-signing certificate uses weak algorithm: <subject>` (both surfaces use
+the shared code-signing evaluator), not `TLS certificate uses undersized RSA key`.
 
 **Start:**
 
@@ -479,11 +479,11 @@ See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-saml`
 
 ### 3.14 kerberos Profile (first released in 4.10.0)
 
-The `kerberos` profile runs a Samba Active Directory Domain Controller configured to advertise weak Kerberos encryption types (`rc4-hmac`, `aes128-cts-hmac-sha1-96`), giving QU.I.R.K.'s Kerberos etype enumeration scanner a realistic target. The scanner rates both HIGH: `rc4-hmac` because RC4 is a weak cipher, and `aes128-cts-hmac-sha1-96` because AES-128's post-quantum (Grover) security margin is only about 64 bits.
+The `kerberos` profile runs a Samba Active Directory Domain Controller (realm `QUIRK.LAB`), giving QU.I.R.K.'s Kerberos etype enumeration scanner a realistic target. Re-measured 2026-10-23 against the real KDC: probed as the default principal `Administrator` it answers with the etype list [18], `aes256-cts-hmac-sha1-96` only, which the scanner rates SAFE, so the profile as provisioned yields no weak-etype finding. (The scanner would rate `rc4-hmac` and `aes128-cts-hmac-sha1-96` HIGH if a KDC offered them; this lab does not.)
 
 | Port | Service  | Protocol  | Finding Tag                              |
 |------|----------|-----------|------------------------------------------|
-| 88   | samba-dc | Kerberos  | weak etype: rc4-hmac HIGH; weak etype: aes128-cts-hmac-sha1-96 HIGH |
+| 88   | samba-dc | Kerberos  | `etype:18:aes256-cts-hmac-sha1-96` SAFE, no finding (measured) |
 | 389  | samba-dc | LDAP      | no LDAP-exposure finding (no scanner code emits one); 389 is not in the default TLS port list |
 
 > **Port collision warning:** Ports 88 and 389 are not remapped to a non-standard range. If the lab host is a domain member or has a local Kerberos/LDAP daemon (e.g. `krb5kdc`, Active Directory agent, or system OpenLDAP on port 389), there will be a conflict. Verify with `lsof -i:88 -i:389` before starting this profile.
@@ -496,8 +496,9 @@ PROFILE_ARGS="--profile kerberos" ./lab.sh up
 
 **Expected scanner findings:**
 
-- `weak etype: rc4-hmac` advertised by KDC — HIGH
-- `weak etype: aes128-cts-hmac-sha1-96` advertised by KDC — HIGH
+- One `etype:18:aes256-cts-hmac-sha1-96` KERBEROS endpoint, SAFE, no finding (measured 2026-10-23)
+- Kerberos targets must be an FQDN (for example `dc.quirk.lab`, with a hosts entry you add); a bare IP such as `127.0.0.1` is used as the realm and the KDC answers principal-unknown, so the scan yields `kerberos-etypes-unavailable-principal-unknown`
+- Known issues: the Samba KDC closes about half of its TCP connections with no reply (42 of 90 direct probes across two runs on 2026-10-23); the scanner retries once over TCP, then falls back to UDP, and the UDP answer is checked exactly like a TCP answer, so a UDP failure gives `kerberos-unreachable` and never a false `kerberos-no-preauth` (65 live scans on 2026-10-23: 0 such rows; 17 of them used UDP); the `samba-dc` healthcheck uses `smbclient`, which the image lacks, so the container never reports healthy; and host port 88 conflicts with macOS's own KDC
 
 See: `quantum-chaos-enterprise-lab/expected_results_v4.md#profile-kerberos`
 
@@ -1061,8 +1062,8 @@ connectors:
 ```
 
 **Expected scanner findings:** 2 endpoint rows rated HIGH (alice, bob); no row for carol. Both rows carry
-an RSA-1024 key, so the dashboard Findings page lists each as HIGH `TLS certificate uses undersized RSA key`.
-The CLI findings list has no S/MIME evaluator and does not list them (see the note at the top of §3). S/MIME
+an RSA-1024 key, but neither the dashboard Findings page nor the CLI findings list shows them as findings
+(see the note at the top of §3; surfacing them is tracked as 999.132). S/MIME
 endpoints count toward the Identity scoring domain, and their key algorithm (RSA) is recorded in the CBOM as
 an algorithm component. No IMAP traffic, no mailbox access (privacy invariant, enforced
 by the SMIME-08 AST gate). Idempotent — the seed sidecar uses `ldapadd -c` and swallows exit code
@@ -1112,10 +1113,8 @@ The no-write and AST-gate guarantees are also exercised by `tests/test_adcs_no_w
 of §3): 1 HIGH weak-signing (QuirkLabCA), 1 HIGH ESC1 (BadTemplate-ESC1), 0 from
 SafeTemplate, and exactly 4 LOW ADCS-COVERAGE-GAP findings (one per non-LDAP-observable ESC
 class: ESC4, ESC5, ESC7, ESC8). The endpoints (`protocol="ADCS"`) count toward the Identity scoring domain.
-Only the CA row carries a key, so only the CA's key algorithm (RSA) reaches the CBOM, and only the CA row is
-listed on the dashboard Findings page (HIGH `TLS certificate uses undersized RSA key`, for its RSA-1024 key).
-The ESC1 and coverage-gap rows are not in the CBOM or on that page, and the CLI findings list has no AD CS
-evaluator. No certificate enrollment, no CSR generation, no LDAP modify/add/delete
+Only the CA row carries a key, so only the CA's key algorithm (RSA) reaches the CBOM. No AD CS row is listed
+as a finding on the dashboard Findings page or in the CLI findings list (tracked as 999.132). No certificate enrollment, no CSR generation, no LDAP modify/add/delete
 operations (privacy invariant, enforced by ADCS-09). Idempotent — the seed sidecar uses
 `ldapadd -c` and swallows exit code 68.
 
@@ -1383,6 +1382,9 @@ Three caveats worth knowing before relying on these:
   (`scan_kerberos_targets`). The compose file records an observation from 2026-09-17 that the UDP
   AS-REQ probe timed out against this container and fell back to TCP, which is the reverse of that
   source order and which this guide has not reproduced, so do not rely on UDP-path enctype enumeration here.
+  A UDP timeout no longer reads as `kerberos-no-preauth`: it gives `kerberos-unreachable`, and
+  `kerberos-no-preauth` appears only for an AS-REP that answers the probe. `mh-kdc` itself was not
+  re-measured; the same Samba image was, through the `kerberos` profile, on 2026-10-23.
 - **Email and broker need `sslyze`.** It became a core dependency on 2026-09-17 (commit `15e49e96`);
   prober images built before that lack it, and `run_scan.py` skips the email phase entirely when it
   is missing.
@@ -1630,7 +1632,7 @@ Every host port a compose service publishes (80 port/protocol pairs across all p
 | 20003     | jwt-rsa1024                | jwt              | JWT WEAK_KEY_SIZE + quantum-vulnerable                                                        |
 | 20004     | jwt-algnone                | jwt              | JWT CRITICAL_NO_SIGNATURE                                                                     |
 | 20005     | registry                   | registry         | OUTDATED_CRYPTO_LIB                                                                           |
-| 20006     | gitea                      | source           | semgrep p/cryptography findings (weak algorithms, weak random, hardcoded keys)                |
+| 20006     | gitea                      | source           | ERROR row, ruleset unavailable (known defect), zero SOURCE findings, source domain Not assessed   |
 | 20022     | ssh-weak                   | ssh-weak         | SSH_WEAK_ALGORITHMS                                                                           |
 | 20100     | fuzz-target                | fuzz-target      | hsts_missing HIGH / alg_confusion CRITICAL                                                    |
 | 20221     | hwcompat-ssh               | hwcompat         | vendor=Unknown (SSH banner)                                                                   |

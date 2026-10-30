@@ -229,5 +229,136 @@ def test_email_broker_parity_token_set():
         )
 
 
+# ---- Phase 234 O-4 / D-11: PQC certificate-key bucket, Kerberos placeholder ----
+
+_CERT_NOT_AFTER = datetime(2030, 1, 1, 0, 0, 0)
+
+
+def _cert_key_counts(*algs: str) -> dict:
+    """Key-type buckets for TLS rows that each carry a certificate."""
+    rows = [
+        _Ep(host=f"h{i}", port=443, protocol="TLS", cert_pubkey_alg=alg,
+            cert_not_after=_CERT_NOT_AFTER)
+        for i, alg in enumerate(algs)
+    ]
+    return build_evidence_summary(rows)["cert_key_type_counts"]
+
+
+def test_pqc_cert_key_bucket_counts_ml_dsa_and_slh_dsa():
+    """O-4: ML-DSA and SLH-DSA certificate keys count in the PQC bucket,
+    whichever separator the scanner reports, and never as RSA or ECDSA."""
+    counts = _cert_key_counts("ML-DSA-65", "ML_DSA_44", "SLH-DSA-SHA2-128s")
+    assert counts["PQC"] == 3
+    assert counts["RSA"] == 0
+    assert counts["ECDSA"] == 0
+
+
+def test_pqc_composite_name_counts_pqc_not_ecdsa():
+    """O-4: a composite (PQC + classical) certificate key counts as PQC.
+
+    Composite names carry the classical half too, and some put it first
+    (oqs-provider's ``rsa3072_mldsa44``; a classical-first ECDSA composite).
+    The PQC check must run BEFORE the RSA/EC prefix checks, or those names
+    land in the classical buckets. The classical-first names are what make
+    this test bite on that ordering (234 VALIDATION mutation "PQC check moved
+    after the EC prefix"); the classical-last name alone would not.
+    """
+    counts = _cert_key_counts(
+        "MLDSA65-ECDSA-P256", "ECDSA-P256-MLDSA65", "rsa3072_mldsa44",
+    )
+    assert counts["PQC"] == 3
+    assert counts["ECDSA"] == 0
+    assert counts["RSA"] == 0
+
+
+def test_pqc_bucket_requires_a_certificate():
+    """O-4 / T-234-03: an ML-DSA key on a row that carries no certificate
+    (a KMS key, a JWT signing key, a DNSSEC key) earns no certificate credit."""
+    ev = build_evidence_summary([
+        _Ep(host="kms", port=443, protocol="TLS", cert_pubkey_alg="ML-DSA-65"),
+    ])
+    assert ev["cert_key_type_counts"]["PQC"] == 0
+
+
+def test_kerberos_placeholder_rows_counted_not_assessed():
+    """D-11: a Kerberos row with no etype data and no scan_error is a
+    placeholder. It stays an assessable endpoint (the KDC answered) but is not
+    assessed crypto. A real etype row is unaffected."""
+    placeholder = build_evidence_summary([
+        _Ep(host="kdc", port=88, protocol="KERBEROS",
+            service_detail="kerberos-etypes-unavailable-principal-unknown"),
+    ])
+    assert placeholder["kerberos_placeholder_count"] == 1
+    assert placeholder["assessed_crypto_count"] == 0
+    assert placeholder["assessable_endpoint_count"] == 1
+
+    real = build_evidence_summary([
+        _Ep(host="kdc", port=88, protocol="KERBEROS",
+            service_detail="etype:18:aes256-cts-hmac-sha1-96:SAFE"),
+    ])
+    assert real["kerberos_placeholder_count"] == 0
+    assert real["assessed_crypto_count"] == 1
+    assert real["assessable_endpoint_count"] == 1
+
+
+def test_pqc_bucket_counts_legacy_and_other_pqc_signature_names():
+    """Phase 234 review D-31 (IN-05): pre-FIPS and other PQC signature names
+    reach the PQC bucket too: Dilithium (oqs names before ML-DSA), Falcon /
+    FN-DSA, and SPHINCS+ (the pre-FIPS SLH-DSA name), whichever separator
+    or case the scanner reports. They used to read as undetermined (-8, no
+    credit)."""
+    counts = _cert_key_counts(
+        "dilithium3", "Dilithium2_AES", "falcon512", "FALCON-1024",
+        "FN-DSA-512", "fndsa1024", "sphincssha2128fsimple", "SPHINCS+-SHAKE",
+        "p256_dilithium2",
+    )
+    assert counts == {"RSA": 0, "ECDSA": 0, "PQC": 9}
+
+
+def test_composite_name_on_a_certless_row_lands_in_no_bucket():
+    """Phase 234 review D-31 (IN-06): a composite key name (classical + PQC)
+    on a row with no certificate (a KMS key, a JWT signing key) is not a
+    certificate key, so it earns no PQC credit (O-4, T-234-03) and must not
+    fall through to the classical prefix checks either. "RSA3072_MLDSA44"
+    used to count as an RSA certificate key: the -8 and the PQC-certificate
+    roadmap item for a key that is not a certificate. A plain classical name
+    on a certless row keeps its old bucket (KMS RSA keys still count)."""
+    ev = build_evidence_summary([
+        _Ep(host="kms1", port=443, protocol="TLS", cert_pubkey_alg="RSA3072_MLDSA44"),
+        _Ep(host="kms2", port=443, protocol="TLS", cert_pubkey_alg="ECDSA-P256-MLDSA65"),
+    ])
+    assert ev["cert_key_type_counts"] == {"RSA": 0, "ECDSA": 0, "PQC": 0}
+    plain = build_evidence_summary([
+        _Ep(host="kms3", port=443, protocol="TLS", cert_pubkey_alg="RSA"),
+    ])
+    assert plain["cert_key_type_counts"]["RSA"] == 1
+
+
+def test_kerberos_scan_error_rows_counted_for_the_identity_gate():
+    """Phase 234 review D-30 (WR-01): a Kerberos row that carries a
+    scan_error (an unreachable KDC, a never-probed invalid target, an
+    unrecognised reply or a KRB-ERROR) has no etype data, so evidence counts it
+    in kerberos_scan_error_count for the identity gate to subtract. It is not a
+    placeholder (D-11 placeholders carry no scan_error) and it stays outside
+    assessed crypto, as before. A real etype row is unaffected."""
+    errors = build_evidence_summary([
+        _Ep(host="kdc1", port=88, protocol="KERBEROS",
+            service_detail="kerberos-unreachable", scan_error="timed out"),
+        _Ep(host="kdc2", port=88, protocol="KERBEROS",
+            service_detail="kerberos-etypes-unavailable-krb-error",
+            scan_error="KDC_ERR_S_PRINCIPAL_UNKNOWN"),
+    ])
+    assert errors["kerberos_scan_error_count"] == 2
+    assert errors["kerberos_placeholder_count"] == 0
+    assert errors["assessed_crypto_count"] == 0
+    assert errors["protocol_counts"]["KERBEROS"] == 2
+
+    real = build_evidence_summary([
+        _Ep(host="kdc", port=88, protocol="KERBEROS",
+            service_detail="etype:18:aes256-cts-hmac-sha1-96:SAFE"),
+    ])
+    assert real["kerberos_scan_error_count"] == 0
+
+
 if __name__ == "__main__":
     unittest.main()

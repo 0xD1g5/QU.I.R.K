@@ -39,7 +39,9 @@ REMEDIATION_KIND_SLUGS: Dict[str, str] = {
     "Migrate self-signed certificates to managed PKI": "self-signed-certificates",           # NEXT   70
     "Disable legacy TLS versions": "legacy-tls-versions",                                   # NEXT   80
     "Increase TLS enumeration coverage": "tls-enum-coverage",                               # NEXT   90
-    "Plan ECDSA adoption": "ecdsa-adoption-planning",                                       # LATER  100
+    # Phase 234 O-4: retargeted from the ECDSA-adoption title to PQC/hybrid certificate
+    # adoption; the slug is identity, not description (D-01), so history is not re-keyed.
+    "Plan post-quantum (PQC/hybrid) certificate adoption": "ecdsa-adoption-planning",       # LATER  100
     "Standardize mTLS lifecycle operations": "mtls-lifecycle-operations",                   # LATER  110
     "Assign remediation owners and SLAs": "assign-owners-and-slas",                         # NOW    900
     "Automate evidence refresh cadence": "automate-evidence-refresh",                       # NEXT   910
@@ -125,7 +127,8 @@ REMEDIATION_CONSTITUENCY: Dict[str, Tuple[str, Tuple[str, ...]]] = {
 # signal that remediation regressed, which is precisely the fact a client
 # attestation needs. A scope-signature mismatch can never produce
 # `resurfaced` either — the same hard refusal that governs closure:
-# comparing incomparable scans yields `not_observed` in both directions.
+# incomparability refuses the closure/resurface TRANSITION only (D-02); the
+# current scan's detected rows stay `open`.
 #
 # The transition itself (deciding an item is newly `closed`, newly
 # `resurfaced`, or `reclosed` after a resurface) is NEVER decided here — that
@@ -134,6 +137,10 @@ REMEDIATION_CONSTITUENCY: Dict[str, Tuple[str, Tuple[str, ...]]] = {
 # ---------------------------------------------------------------------------
 ITEM_STATES: Tuple[str, ...] = ("open", "closed", "not_observed", "resurfaced")
 DEFAULT_ITEM_STATE = "not_observed"
+# D-01/D-23: written only for rows backed by a detected constituent finding.
+# DEFAULT_ITEM_STATE remains the undetected default (counter-driven roadmap
+# items with zero constituents, and every evidence_only item).
+DETECTED_ITEM_STATE = "open"
 RESURFACED_STATE = "resurfaced"
 
 # D-21: a named constant, not an inline `in ("open", "resurfaced")` at each

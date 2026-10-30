@@ -6,6 +6,7 @@ priority: low
 area: src/dashboard/src/components/EffectiveConfigPanel.tsx, src/dashboard/src/components/AdvancedPanel.tsx, quirk/dashboard/api/connector_availability.py
 status: pending
 resolves_phase: null
+owner: "999.137"
 ---
 
 # New Scan panels: three UI strings say something the code does not do

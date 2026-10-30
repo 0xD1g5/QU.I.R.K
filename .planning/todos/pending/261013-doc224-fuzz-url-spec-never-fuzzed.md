@@ -6,6 +6,7 @@ priority: medium
 area: run_scan.py (fuzz phase), quirk/scanner/openapi_scanner.py
 status: pending
 resolves_phase: null
+owner: "999.136"
 ---
 
 # `--fuzz` never fuzzes a URL OpenAPI spec

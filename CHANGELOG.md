@@ -8,6 +8,122 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
+## [5.28.0] - 2026-10-29
+
+This release carries the **v5.28 Score & Finding Truth** milestone. It moves the readiness score
+to a new model (scoring 4.0), makes the dashboard and the report agree on much more of what a scan
+found, fixes four detection paths that never fired in a real scan, makes the QRAMM surfaces say
+what was actually assessed, and brings the README, doctor and install guidance in line with what
+the tool really does. It also lists, below, the defects we know about and have not fixed.
+
+**Upgrade notes:** **Scores change on upgrade, and most estates score lower.** `SCORING_VERSION` is
+now 4.0, and 4.0 scores are not comparable with scores from earlier versions.
+
+- Classical certificate keys (RSA, ECDSA and EdDSA) no longer count toward readiness. All three
+  are treated as quantum-vulnerable and cost the agility penalty; the old credit for ECDSA is gone.
+  Only a post-quantum key exchange, or an ML-DSA, SLH-DSA or composite certificate key, earns
+  agility credit, and it earns it once. A live TLS scan does not yet read an ML-DSA certificate (that
+  endpoint is recorded as a scan error, not as a key), so that certificate-key credit is not
+  reachable from a TLS scan today.
+- Penalty counts use an absolute curve anchored at `N_REF=40`: a weakness costs points according
+  to how many endpoints or certificates carry it, saturating at 40, not according to its share of
+  the scan. Observing more healthy classical endpoints therefore no longer raises a score, and a
+  deeper or wider scan cannot dilute a problem away. The reference calibration estates keep their
+  scores, small estates score somewhat higher, and estates whose score was propped up by many
+  healthy endpoints score lower.
+- A post-quantum certificate-key bucket now exists (certificate key names such as Dilithium,
+  Falcon, FN-DSA and SPHINCS are recognised as post-quantum), and the mutual-TLS credit is earned
+  once, when the first mTLS-enforcing endpoint is seen, instead of growing with the count.
+- The QRAMM overall score is the mean of the assessed dimensions only, instead of counting an
+  unassessed dimension as 0, and shows how many of the four were assessed. A dimension answered
+  after the score was saved, or a score saved before this upgrade, shows "Stale - recalculate"
+  until Calculate Score is run again.
+- The dashboard rescores past scans with 4.0; saved reports and intelligence files keep the
+  version they were written with.
+
+See [docs/report-interpretation.md](docs/report-interpretation.md) ("What scoring v4 changed") for
+the model and worked examples. `quirk doctor` and `quirk qramm` also change behaviour; see below.
+
+**Known defects in 5.28.0:**
+
+- Source code scanning records a "ruleset unavailable" scan error and reads Not assessed, because
+  the upstream Semgrep `p/cryptography` ruleset this scanner used is no longer available. The error
+  is counted, so a scan that sets `source_targets` scores lower than it did before.
+- Azure Key Vault key scanning has a known defect and currently records no keys.
+- The dashboard and the report can still differ in the score they give one scan, because they
+  derive findings separately. Known cases that move the score: the legacy TLS version finding
+  (the dashboard rates the negotiated version HIGH, the report rates the offered versions LOW);
+  weak cipher suites (HIGH on the dashboard with no report counterpart); undersized ECDSA
+  certificate keys (HIGH in the report, MEDIUM on the dashboard); end-of-life crypto libraries in
+  container images (only the report lists them, so only the report's ceiling sees them);
+  Kerberos weak-encryption and DNSSEC findings, and some other report-only high or critical
+  findings;
+  TLS-designated ports configured with `scan.tls_designated_ports`, which merge and notification
+  scores do not apply; and the drift notification's score, which can disagree with the Trends page.
+  Other findings may also differ in ways not listed here.
+- The Windows sensor installer script written for this release does not write a sensor identity or
+  scan configuration, so pushes are rejected until the sensor is enrolled by hand; see the admin
+  guide.
+
+### Added
+
+- **`quirk doctor` tells required from optional.** A missing optional external tool (nmap, syft,
+  semgrep) is shown as informational and no longer fails the check, and a database that does not
+  exist yet on a first run is informational rather than a failure.
+- **Python 3.10 to 3.14 are supported** (3.15 is not yet supported). The README now states the
+  range and the `playwright install chromium` step that PDF reports need.
+- **QRAMM self-assessed scores.** Answered SGRM, DPE and ITR practice areas, which used to show no
+  score, now show their scores with a "Self-assessed" marker on the dashboard and in the PDF; the
+  PDF counts Scanner-measured, Self-assessed and Not assessed practice areas.
+
+### Changed
+
+- **The readiness score follows scoring 4.0** (see the upgrade notes). The "Plan ECDSA adoption"
+  roadmap item is now "Plan post-quantum (PQC/hybrid) certificate adoption", and "Increase scan
+  coverage" appears whenever a scan has scan errors, with a projected score lift.
+- **Dashboard and report agree on more.** Certificate-expiry findings (now MEDIUM within 30 days)
+  and refused or timed-out mail ports feed both scores: those ports are no longer counted as
+  plaintext, and Data in Motion is unassessed when no mail server answered. Trend, timeline,
+  multi-sensor merge, per-segment and Compare scores, the printed band of `quirk sensor merge`
+  and the Slack drift band now apply the CRITICAL and HIGH consequence ceilings, and derive their
+  findings as the headline does. API-level tests pin this on covered fixtures. Merge-run scores
+  stored before this release are not recomputed.
+- **Finding state follows what scans observed.** Detected findings are open and read as
+  exploitable in VEX; a finding a later scan rechecks and finds fixed is closed and reads as
+  RESOLVED. Fast-mode TLS findings still cannot close, and scans recorded earlier still read Not
+  Verified. Burndown counts follow the same state.
+- **Report cover and header brand.** The HTML and PDF report header shows the brand wordmark, and
+  the cover title and borders use the Ink-violet brand accent.
+- **`quirk doctor`, `quirk qramm` and `quirk cve`** print their own help at every level without
+  running anything, and reject an unknown action or extra argument with exit status 2.
+  `quirk cve status --format=json` now emits JSON. Scripts that passed extra arguments to
+  `quirk doctor` must drop them.
+- **README links** resolve when followed from the PyPI project page.
+
+### Fixed
+
+- **Drift notifications fire again**, because the notifier now compares the two most recent scan
+  runs instead of a scan with itself; the trend timeline shows one point per scan run.
+  `quirk sensor merge` keeps every endpoint of each sensor's latest push.
+- **Detection paths that never fired now do.** `--inventory-code-signing` finds the code-signing
+  certificates the TLS scan sees. Kerberos etype enumeration works against KDCs that require
+  pre-authentication: the probe names a configurable principal
+  (`connectors.kerberos_probe_principal`, default `Administrator`), and a KDC that does not know
+  it produces an explicit "etypes unavailable" row. Kerberos targets must be listed by FQDN.
+  `--auth-*` credentials reach the JWKS endpoint, and an unsigned bearer token (`alg:none` or no
+  `alg`) now produces a CRITICAL finding. `--auth-basic` takes `user:password`; a pre-encoded or
+  colon-less value is rejected, so operators who passed `base64(user:password)` must switch.
+- **QRAMM surfaces tell the truth.** A dimension with no answered question reads "Not assessed"
+  instead of level 1 or 0.0; the Compliance Map tab refreshes after Calculate Score; the
+  print/PDF QRAMM page loads for a scored session instead of timing out. An overall mean below 1.0
+  reads "Below Basic".
+- **A Kerberos result that recorded no encryption types**, or only a scan error, no longer counts
+  the identity domain as assessed.
+- **The bundled JetBrains Mono font is served** by `quirk serve`, so the dashboard renders in it.
+- **Install hints paste safely into zsh**: every printed `quirk-scanner[extra]` hint is quoted.
+- **The README no longer promises what the tool does not do**: claims about source scanning,
+  Key Vault coverage and the Windows installer were narrowed or removed.
+
 ## [5.27.0] - 2026-10-15
 
 This is the first release since 5.25.0. It carries the untagged **v5.26 Accessibility & Instrument
