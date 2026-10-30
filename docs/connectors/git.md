@@ -10,7 +10,9 @@ clone repositories.
 > exits 7. With semgrep installed, a scan records a "ruleset unavailable" scan error
 > (`SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7`), Scan Coverage shows the
 > source phase as `skipped: failed (...)`, and the source domain reads Not assessed. It
-> produces no source findings. Because the scan error counts against the hygiene and TLS
+> produces no source findings. With semgrep not installed and `source_targets` set, the phase is
+> instead wrongly recorded as ran with no findings, so Scan Coverage shows Source code as
+> assessed and clean and `quirk doctor` still exits 0. Because the scan error counts against the hygiene and TLS
 > error-rate readiness inputs, a scan with `source_targets` configured scores lower than one
 > without. Disable `connectors.enable_source` until the ruleset is replaced.
 

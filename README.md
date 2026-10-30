@@ -101,7 +101,7 @@ The dashboard has no login by default and is meant for local use. To require one
 | **Code signing** | Code-signing certificates from LDAP `userCertificate` and from the Code Signing EKU on leaf certificates the TLS phase captured | `--inventory-code-signing` |
 | **DNSSEC** | DNSKEY / DS algorithms | `enable_dnssec` |
 | **Container images** | Crypto libraries found in the image SBOM | `enable_container`, `syft` |
-| **Source code** | Known defect in 5.28.0: the Semgrep `p/cryptography` ruleset is unavailable, so the source domain reads Not assessed | `enable_source`, `semgrep` |
+| **Source code** | Known defect in 5.28.0: the Semgrep `p/cryptography` ruleset is unavailable, so with Semgrep installed the source domain reads Not assessed; without Semgrep it is wrongly shown as assessed and clean (see Known defects) | `enable_source`, `semgrep` |
 | **Databases** | PostgreSQL / MySQL TLS enforcement | `enable_db` |
 | **AWS** | ACM, KMS, CloudFront, ELB listeners, RDS and S3 encryption (EKS is under Kubernetes) | `enable_aws` / `enable_s3` |
 | **Azure** | Application Gateway TLS policy and Blob encryption. Key Vault key scanning has a known defect and currently records no keys | `enable_azure` / `enable_blob` |
@@ -152,7 +152,8 @@ Four sample CBOMs live in [`examples/cbom/`](https://github.com/0xD1g5/QU.I.R.K/
 - **Finding state follows what scans observed.** Closure states, drift and sensor merge reflect what each scan saw.
 - **Findings that never fired now do:** code-signing certificates, Kerberos encryption types, JWKS authentication, `--auth-basic` and unsigned (`alg:none`) tokens.
 - **QRAMM shows "Not assessed"** for a dimension with no answered question, instead of a made-up level.
-- **Known defects.** Source code scanning reports "ruleset unavailable" because the upstream Semgrep ruleset it used is gone, and a scan that sets `source_targets` scores lower.
+- **Known defects.** With Semgrep installed, source code scanning reports "ruleset unavailable" because the upstream Semgrep ruleset it used is gone, and a scan that sets `source_targets` scores lower. Without Semgrep, see the next item.
+- **Known defects, Semgrep not installed.** Semgrep is not installed with QU.I.R.K. If it is missing and `source_targets` is set, the source phase is recorded as ran with no findings, so Scan Coverage shows Source code as assessed and clean, and `quirk doctor` still exits 0. Run `semgrep --version` before trusting a clean source result.
 - **Known defects, Azure.** Key Vault key scanning has a known defect and currently records no keys.
 - **Known defects, scores.** The dashboard and the report can still differ in the score they give one scan; known cases are the legacy TLS version finding, weak cipher suites, undersized ECDSA certificate keys, end-of-life crypto libraries in container images, Kerberos weak-encryption and DNSSEC findings, TLS-designated ports, and the drift notification, and other findings may also differ.
 - **Known defects, Windows sensor.** The installer does not yet write a sensor identity.

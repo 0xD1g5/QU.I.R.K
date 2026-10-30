@@ -128,7 +128,7 @@ tag. Phases 228–232 have no hard ordering among themselves beyond the dependen
 - [x] **Phase 232: Post-Launch Visible Fixes** - The bundled font is served, install hints paste safely, the report header follows the brand, and README links resolve on PyPI
 - [x] **Phase 233: P2b Measurement Instrument** - A third, independent instrument measures scan-depth dilution on the calibration ladder and its result is recorded before any fix is chosen
 - [x] **Phase 234: P2b Scan-Depth Fix & Ladder Re-measurement** - Observing more healthy endpoints no longer raises the score, and all five ladder rungs are re-measured
-- [ ] **Phase 235: Release & Launch Gate** - `v5.28.0` is on PyPI, a clean install works end to end as the README says, and the operator signs a go/no-go for the public announcement
+- [x] **Phase 235: Release & Launch Gate** - `v5.28.0` is on PyPI, a clean install works end to end as the README says, and the operator signs a go/no-go for the public announcement
 
 ### Phase Details
 
@@ -338,14 +338,14 @@ Plans:
 - [x] 235-08-PLAN.md — Re-verify every live README claim (by section) and the PyPI metadata against 5.28.0 (wave 8)
 - [x] 235-09-PLAN.md — CHANGELOG [5.28.0] with the scoring 4.0 upgrade notes and known defects (D-12) (wave 9)
 - [x] 235-10-PLAN.md — Version bump to 5.28.0 with README pins, What's New v5.28 (ledgered, re-checked), UAT-SERIES rows + Series 235, UAT-232-08 relabel (D-14, D-22) (wave 10)
-- [ ] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness); D-30 dashboard-vs-report pre-measurement; rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
-- [ ] 235-12-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, contributor leg, open the release PR (wave 12)
-- [ ] 235-13-PLAN.md — Operator merges (merge commit); merge tree == rehearsed tree; main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 13)
-- [ ] 235-14-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 14)
-- [ ] 235-15-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 15)
-- [ ] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed; D-30 GO preconditions (umbrella divergence todo Feasibility & Effort, score-divergence follow-up scheduled as a v5.29 candidate phase) (wave 16)
-- [ ] 235-17-PLAN.md — Private go/no-go record (SC3 by the D-30 attributed-gap rule, GO preconditions cited), claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20, D-30) (wave 17)
-- [ ] 235-18-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 18)
+- [x] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness); D-30 dashboard-vs-report pre-measurement; rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
+- [x] 235-12-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, contributor leg, open the release PR (wave 12)
+- [x] 235-13-PLAN.md — Operator merges (merge commit); merge tree == rehearsed tree; main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 13)
+- [x] 235-14-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 14)
+- [x] 235-15-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 15)
+- [x] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed; D-30 GO preconditions (umbrella divergence todo Feasibility & Effort, score-divergence follow-up scheduled as a v5.29 candidate phase) (wave 16)
+- [x] 235-17-PLAN.md — Private go/no-go record (SC3 by the D-30 attributed-gap rule, GO preconditions cited), claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20, D-30) (wave 17)
+- [x] 235-18-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 18)
 
 ### Progress
 
@@ -359,7 +359,36 @@ Plans:
 | 232. Post-Launch Visible Fixes | 6/6 | Complete (verified passed 5/5 at e28d45dd; criterion 4's live PyPI leg handed to Phase 235 per D-13; review 0 blockers, WR-03/IN-02 fixed, WR-01 owned by 999.127; CI green, Python CI 40525739851 + Dashboard Quality 40525744864) | 2026-10-27 |
 | 233. P2b Measurement Instrument | 6/6 | Complete (verified passed 4/4 at 0a7ab944; verdict: none of 212's three candidates supported, no ceiling shape can work, data point to absolute-count penalties at 35 ratio sites + a key-type rule, effort L; review CR-01 time bomb + WR-01..05 fixed fail-first; CI green, Python CI 40550728476 + Dashboard Quality 40550732544) | 2026-10-27 |
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Complete (verified 5/5 at b2ef2634, status human_needed for 2 optional visual checks in 234-HUMAN-UAT.md; scoring 4.0: classical ≠ ready, count curve N_REF=40, PQC bucket, mTLS presence credit (D-28); P2b xfail now passes, instrument 100/100 agree, 0 rising; R5 18/71 → 18/74, R1–R4 unchanged; SCORE-10 overall over assessed dimensions; review D-27..D-31 fixed; UAT-7-29 drag assertion made layout-independent (b2ef2634); CI green, Python CI 40604747341 + Dashboard Quality 40604750364) | 2026-10-27 |
-| 235. Release & Launch Gate | 0/TBD | Not started | - |
+| 235. Release & Launch Gate | 18/18 | Complete (verified passed 5/5 at eca5a960, 1 operator override on SC4: frozen PyPI 5.28.0 description until 5.28.1; v5.28.0 tag 7df48cb6 -> efc0bb56, release run 41059104944, PyPI 5.28.0; launch gate GO; post-GO review CR-01/CR-02 filed for 5.28.1) | 2026-10-30 |
+
+## Next Milestone Candidates (v5.29)
+
+Phase numbers below are provisional. `/gsd-new-milestone` must carry each entry into the v5.29 roadmap by hand; archived roadmaps have
+swallowed backlog items before, so this section is the pointer that keeps it visible.
+
+### Phase 236 (v5.29 candidate, early): Dashboard/Report Score Divergence Closure
+
+**Goal**: for the same scan, the dashboard and the report give the same readiness score for the four score-affecting divergences below, so the 5.28.0 known-defect disclosure for them can be withdrawn.
+
+**Depends on**: Phase 235 (v5.28.0 shipped with the divergence disclosed, D-30).
+
+**Scope**: owner 999.132. The four score-affecting todos, in `.planning/todos/pending/`:
+- `261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md` (legacy-TLS severity)
+- `261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md` (weak-cipher suites)
+- `261015-xsurf-undersized-ecdsa-report-high-dashboard-medium.md` (undersized ECDSA)
+- `261015-xsurf-container-library-eol-findings-are-report-only.md` (container-library EOL)
+
+The gate and Slack/Trends parts (WR-01, WR-02) are sized in the "Feasibility & Effort" section of
+`261015-xsurf-dashboard-and-report-pipelines-still-diverge-gate-blind.md`.
+
+**Requirements**: TBD at /gsd-new-milestone.
+
+**Success Criteria**:
+1. Each of the four no longer appears as an ATTRIBUTED item when `scripts/score_attribution.py` runs against a core-lab scan.
+2. Their keys leave `SEVERITY_DIVERGENCES` / `UNBRIDGED_DASHBOARD_TITLES`, or the remaining entry is documented as not score-moving.
+3. The CHANGELOG and README known-defect phrases for them are removed in the release that ships the fix.
+
+**Plans**: TBD.
 
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
 

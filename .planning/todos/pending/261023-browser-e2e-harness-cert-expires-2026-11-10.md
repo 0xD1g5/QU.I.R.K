@@ -7,7 +7,7 @@ area: tests/browser_e2e_harness.py (:47, :256), tests/test_cross_surface_parity.
 status: pending
 resolves_phase: null
 owner: "999.134"
-due: 2026-11-10
+due: 2026-11-04
 ---
 
 # The browser E2E harness's seeded certificate expires on 2026-11-10, and other fixtures mix fixed and wall-clock dates
@@ -33,7 +33,7 @@ cases of the same class:
   `tests/test_evidence_finding_vocabulary_parity.py:79` (pins `_EXPECTED_MODERN_TLS_SUBSCORE = 18`) and
   `tests/test_finding_engine_parity.py:46`. They gain a MEDIUM from 2029-12-02 and a CRITICAL from 2030-01-01.
 
-- [ ] Make `tests/browser_e2e_harness.py`'s seeded certificate date relative to the wall clock, or far-future, and
+- [x] Make `tests/browser_e2e_harness.py`'s seeded certificate date relative to the wall clock, or far-future, and
       re-check any baseline captured from it. Do this before 2026-11-10.
 - [ ] Put the mixed-clock fixtures above on one clock: `scanned_at` = wall clock, as in `d5b66337`.
 - [ ] Optional guard: a test that fails when a fixture combines a fixed `scanned_at` with a `datetime.now()`-relative
@@ -41,6 +41,18 @@ cases of the same class:
 
 The product-side root cause is evidence measuring against `scanned_at` while the finding generators measure against
 the wall clock. That stays with `261015-xsurf-history-rescored-against-wall-clock-cert-expiry` (same owner).
+
+## Narrowed (2026-10-30, Phase 235 plan 16)
+
+The time-sensitive item is **done and shipped in v5.28.0**: `670219f1` (test(235-03)) seeds the browser-E2E harness on one clock
+(`scanned_at` = wall clock minus 1 hour), so the seeded certificate no longer crosses 2026-11-10 and the seeded dashboard no
+longer gains an "expired" CRITICAL. `tests/test_browser_e2e_harness_clock.py` pins it with a forward-clock test. This closes the first checkbox only.
+
+Still open, owner **999.134**, nothing else touched by Phase 235: the mixed-clock fixtures in
+`tests/test_finding_engine_parity.py:38/:69` and `tests/test_dashboard_scoring_findings.py:27/:116`, the far-off 2030 fixtures, and the
+optional guard test. `due` moved from 2026-11-10 to 2026-11-04, the earliest remaining crossing named above
+(`tests/test_dashboard_scoring_findings.py`, evidence crossing 2026-11-04 12:00 UTC, currently unaffected because it compares
+only HIGH/CRITICAL).
 
 ## Feasibility & Effort
 

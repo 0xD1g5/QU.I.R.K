@@ -78,7 +78,7 @@ The scanner and connector phases, grouped by family, are listed below. Each is a
 | `run_scan.py:2866` (`"pqc_probe"`) | `quirk/scanner/pqc_probe.py` | Hybrid ML-KEM TLS probe |
 | `run_scan.py:3170` (`"jwt_scanning"`) | `quirk/scanner/jwt_scanner.py` | JWT / API token algorithm inventory |
 | `run_scan.py:3189` (`"container_scanning"`) | `quirk/scanner/container_scanner.py` | Crypto-library inventory of container images: runs syft, keeps only packages on its crypto-library allowlist (one `CONTAINER` endpoint each), and discards the rest of syft's package list (no SBOM is written) |
-| `run_scan.py:3208` (`"source_scanning"`) | `quirk/scanner/source_scanner.py` | semgrep-driven source-code crypto detection (known defect in 5.28.0: ruleset unavailable, domain reads Not assessed) |
+| `run_scan.py:3208` (`"source_scanning"`) | `quirk/scanner/source_scanner.py` | semgrep-driven source-code crypto detection (known defect in 5.28.0: with Semgrep installed the ruleset is unavailable and the domain reads Not assessed; with Semgrep missing the phase is wrongly recorded as ran with no findings and shown as assessed and clean) |
 | `run_scan.py:3234` / `:3287` (`"openapi_scanning"`, `"fuzz_scanning"`) | `quirk/scanner/openapi_scanner.py`, `rest_fuzzer.py` | OpenAPI spec crypto inventory; opt-in REST fuzzing |
 | `run_scan.py:3634` (`"dnssec_scanning"`) | `quirk/scanner/dnssec_scanner.py` | DNSSEC algorithm chain inspection |
 | `run_scan.py:3679` (`"kerberos_scanning"`) | `quirk/scanner/kerberos_scanner.py` | KDC enctype inventory |
