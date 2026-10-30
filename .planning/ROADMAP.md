@@ -361,6 +361,35 @@ Plans:
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Complete (verified 5/5 at b2ef2634, status human_needed for 2 optional visual checks in 234-HUMAN-UAT.md; scoring 4.0: classical ≠ ready, count curve N_REF=40, PQC bucket, mTLS presence credit (D-28); P2b xfail now passes, instrument 100/100 agree, 0 rising; R5 18/71 → 18/74, R1–R4 unchanged; SCORE-10 overall over assessed dimensions; review D-27..D-31 fixed; UAT-7-29 drag assertion made layout-independent (b2ef2634); CI green, Python CI 40604747341 + Dashboard Quality 40604750364) | 2026-10-27 |
 | 235. Release & Launch Gate | 0/TBD | Not started | - |
 
+## Next Milestone Candidates (v5.29)
+
+Phase numbers below are provisional. `/gsd-new-milestone` must carry each entry into the v5.29 roadmap by hand; archived roadmaps have
+swallowed backlog items before, so this section is the pointer that keeps it visible.
+
+### Phase 236 (v5.29 candidate, early): Dashboard/Report Score Divergence Closure
+
+**Goal**: for the same scan, the dashboard and the report give the same readiness score for the four score-affecting divergences below, so the 5.28.0 known-defect disclosure for them can be withdrawn.
+
+**Depends on**: Phase 235 (v5.28.0 shipped with the divergence disclosed, D-30).
+
+**Scope**: owner 999.132. The four score-affecting todos, in `.planning/todos/pending/`:
+- `261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md` (legacy-TLS severity)
+- `261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md` (weak-cipher suites)
+- `261015-xsurf-undersized-ecdsa-report-high-dashboard-medium.md` (undersized ECDSA)
+- `261015-xsurf-container-library-eol-findings-are-report-only.md` (container-library EOL)
+
+The gate and Slack/Trends parts (WR-01, WR-02) are sized in the "Feasibility & Effort" section of
+`261015-xsurf-dashboard-and-report-pipelines-still-diverge-gate-blind.md`.
+
+**Requirements**: TBD at /gsd-new-milestone.
+
+**Success Criteria**:
+1. Each of the four no longer appears as an ATTRIBUTED item when `scripts/score_attribution.py` runs against a core-lab scan.
+2. Their keys leave `SEVERITY_DIVERGENCES` / `UNBRIDGED_DASHBOARD_TITLES`, or the remaining entry is documented as not score-moving.
+3. The CHANGELOG and README known-defect phrases for them are removed in the release that ships the fix.
+
+**Plans**: TBD.
+
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`)
 
 **7 phases (222–226, with 222.1 and 225.1 inserted), 75 plans, 20/20 requirements satisfied.** Audit
