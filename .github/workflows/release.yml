@@ -28,8 +28,8 @@
 # Downstream verification of Sigstore attestations (consumers):
 #   pypi-attestations verify pypi --repository https://github.com/0xD1g5/QU.I.R.K pypi:<wheel-filename>
 # (gh attestation verify cannot see PyPI-stored PEP 740 attestations.)
-# or via cosign:
-#   cosign verify-blob --bundle <attestation.sigstore.json> <artifact>
+# (No Sigstore bundle is attached to the GitHub release, so there is no
+# cosign verify-blob flow; see docs/release-process.md.)
 #
 # Security note: this workflow takes no untrusted user input. The only event is
 # `push.tags` with a `v[0-9]*` filter; no issue/PR/comment bodies are
