@@ -36,3 +36,8 @@ imported but never used, so Key Vault certificates are not scanned although the 
 **CONFIRMED** (reproduction above; attribute list from `dir(KeyProperties)` in the project venv). Effort **M**: one
 extra SDK call per key, new fixtures, and a decision on certificates. Unknown: a vault with thousands of keys makes
 `get_key` per key slow; consider batching. **No spike needed** beyond a live vault check, which needs credentials.
+
+## Phase 235 note (2026-10-30)
+
+v5.28.0 ships the **disclosure**, not the fix: the README (`README.md:107`, `:156`) and the CHANGELOG state that Key Vault key scanning
+has a known defect and currently records no keys (D-02). The defect and the fix list above stay open with owner **999.126**.

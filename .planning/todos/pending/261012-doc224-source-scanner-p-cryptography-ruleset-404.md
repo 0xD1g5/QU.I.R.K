@@ -63,3 +63,10 @@ directory should ship in the wheel. **Spike recommended** (one hour: install sem
 
 **Remove the claim for v5.28.0 (LAUNCH-02).** No replacement ruleset in 235. The silent-clean defect above means
 removal must also stop the connector from reporting an empty result as a clean scan.
+
+## Phase 235 note (2026-10-30)
+
+v5.28.0 ships the **claim removal and an honest error**, not a ruleset: the README and docs no longer present Semgrep source
+scanning as working (`5a2a3ac2`, gated by a new test from `255fca7e`), and a source scan whose ruleset cannot be fetched now fails
+with `SourceRulesetUnavailable` instead of reporting a clean empty result (`ad4ec74e`, 235-01; D-09). Bundled rules and the
+ruleset itself stay open with owner **999.127**.
