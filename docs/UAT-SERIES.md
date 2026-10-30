@@ -10761,13 +10761,13 @@ Covers Phase 84 surfaces: PyPI distribution name + version single-source-of-trut
 2. `grep -qi 'anti-feature' docs/release-process.md`
 3. `grep -q 'Sigstore' docs/release-process.md`
 4. `grep -q 'pip install quirk-scanner' docs/release-process.md`
-5. `grep -q 'brew install' docs/release-process.md`
-6. `grep -q 'docker run' docs/release-process.md`
+5. `grep -q 'Homebrew' docs/release-process.md`
+6. `grep -q 'public container image' docs/release-process.md`
 7. `grep -qi 'permanent' docs/release-process.md`
 
-**Pass criteria:** All seven checks exit 0.
+**Pass criteria:** All seven checks exit 0. Steps 5 and 6 were `brew install` and `docker run` until 2026-10-30; the doc now states that no Homebrew formula or public container image is offered, so they check that statement.
 
-**Result:** - [x] PASS (2026-08-27 ran: all 7 grep checks against docs/release-process.md - all 7 patterns found including curl bash Non-Decision, anti-feature, Sigstore, pip/brew/docker install commands, and permanent framing)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-10-30 Phase 235 re-ran all 7 grep checks against docs/release-process.md as revised - all 7 patterns found including curl bash Non-Decision, anti-feature, Sigstore, the pip install command, the not-distributed-via-Homebrew-or-container statement, and permanent framing)  - [ ] FAIL  - [ ] SKIP
 **Date:** _____________  **Tester:** _____________
 
 ---
