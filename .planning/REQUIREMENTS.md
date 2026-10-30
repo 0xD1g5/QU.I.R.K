@@ -140,18 +140,23 @@ HORIZON prose:
 
 Added 2026-10-16 at the operator's request: the public social-media announcement waits on this gate.
 
-- [ ] **LAUNCH-01**: `v5.28.0` is merged to `main` with required CI green at the merge commit,
+- [x] **LAUNCH-01**: `v5.28.0` is merged to `main` with required CI green at the merge commit,
       tagged, published to PyPI by `release.yml`, and its GitHub release notes describe v5.28.
-- [ ] **LAUNCH-02**: The Azure Key Vault zero-endpoint defect (`999.126`) and the Semgrep
+      Evidence: tag v5.28.0 (7df48cb6 -> merge commit efc0bb56), release.yml run 41059104944 success, PyPI 5.28.0 live, main CI green at the merge commit.
+- [x] **LAUNCH-02**: The Azure Key Vault zero-endpoint defect (`999.126`) and the Semgrep
       `p/cryptography` 404 (`999.127`) are each fixed with a real-SDK/registry test, or every public
       claim of that capability is removed. Operator decision per defect.
-- [ ] **LAUNCH-03**: A fresh `pip install quirk-scanner==5.28.0` on clean macOS and Linux passes an
+      Evidence: operator decisions D-01 disclose Key Vault, D-02 remove Semgrep claims; gate tests/test_no_semgrep_working_claim.py.
+- [x] **LAUNCH-03**: A fresh `pip install quirk-scanner==5.28.0` on clean macOS and Linux passes an
       end-to-end smoke test (doctor, chaos-lab scan, dashboard, HTML/PDF report, matching scores), and
       every README command works as written.
-- [ ] **LAUNCH-04**: Every README link resolves from PyPI and every README/PyPI-description claim is
+      Evidence: five PyPI smoke legs RESULT: PASS (235-evidence/smoke-pypi/), 23 README commands run as written.
+- [x] **LAUNCH-04**: Every README link resolves from PyPI and every README/PyPI-description claim is
       true for `v5.28.0`; no open high-priority todo contradicts a public claim.
-- [ ] **LAUNCH-05**: A recorded go/no-go lists every LAUNCH criterion with evidence and the operator's
+      Evidence: 235-evidence/readme-claim-reverify.md and pypi-links.json (31 of 31 links ok from the PyPI description).
+- [x] **LAUNCH-05**: A recorded go/no-go lists every LAUNCH criterion with evidence and the operator's
       sign-off; nothing is announced publicly before a recorded "go".
+      Evidence: 235-LAUNCH-GATE.md records Launch gate: GO, operator sign-off 2026-10-30.
 
 ### Todo ownership (OWN)
 
@@ -212,8 +217,8 @@ Deferred from this milestone with an owner:
 | POLISH-03 | Phase 232 | Complete |
 | POLISH-04 | Phase 232 | Complete |
 | OWN-01 | Phase 227 | Complete |
-| LAUNCH-01 | Phase 235 | Pending |
-| LAUNCH-02 | Phase 235 | Pending |
-| LAUNCH-03 | Phase 235 | Pending |
-| LAUNCH-04 | Phase 235 | Pending |
-| LAUNCH-05 | Phase 235 | Pending |
+| LAUNCH-01 | Phase 235 | Complete |
+| LAUNCH-02 | Phase 235 | Complete |
+| LAUNCH-03 | Phase 235 | Complete |
+| LAUNCH-04 | Phase 235 | Complete |
+| LAUNCH-05 | Phase 235 | Complete |

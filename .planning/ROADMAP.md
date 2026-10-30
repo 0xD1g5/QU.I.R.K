@@ -338,14 +338,14 @@ Plans:
 - [x] 235-08-PLAN.md — Re-verify every live README claim (by section) and the PyPI metadata against 5.28.0 (wave 8)
 - [x] 235-09-PLAN.md — CHANGELOG [5.28.0] with the scoring 4.0 upgrade notes and known defects (D-12) (wave 9)
 - [x] 235-10-PLAN.md — Version bump to 5.28.0 with README pins, What's New v5.28 (ledgered, re-checked), UAT-SERIES rows + Series 235, UAT-232-08 relabel (D-14, D-22) (wave 10)
-- [ ] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness); D-30 dashboard-vs-report pre-measurement; rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
-- [ ] 235-12-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, contributor leg, open the release PR (wave 12)
-- [ ] 235-13-PLAN.md — Operator merges (merge commit); merge tree == rehearsed tree; main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 13)
-- [ ] 235-14-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 14)
-- [ ] 235-15-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 15)
-- [ ] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed; D-30 GO preconditions (umbrella divergence todo Feasibility & Effort, score-divergence follow-up scheduled as a v5.29 candidate phase) (wave 16)
-- [ ] 235-17-PLAN.md — Private go/no-go record (SC3 by the D-30 attributed-gap rule, GO preconditions cited), claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20, D-30) (wave 17)
-- [ ] 235-18-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 18)
+- [x] 235-11-PLAN.md — D-27/D-29 ratification; local proof (full suite, 3.11 container, staleness); D-30 dashboard-vs-report pre-measurement; rehearsal of every smoke leg against a locally built wheel (D-09-pre, D-08b, D-26) (wave 11)
+- [x] 235-12-PLAN.md — Push, branch CI at the rehearsed HEAD, release.yml dry-run, contributor leg, open the release PR (wave 12)
+- [x] 235-13-PLAN.md — Operator merges (merge commit); merge tree == rehearsed tree; main CI green at M; main dry-run; pre-tag evidence (D-11) (wave 13)
+- [x] 235-14-PLAN.md — Operator-approved tag v5.28.0 on M; publish watched; release notes re-checked (D-13) (wave 14)
+- [x] 235-15-PLAN.md — Post-publish smoke from PyPI on every leg, attestation verification, live PyPI link check; D-10 decision (wave 15)
+- [x] 235-16-PLAN.md — Post-release branch: UAT re-executions, debug-session close, todos closed or narrowed; D-30 GO preconditions (umbrella divergence todo Feasibility & Effort, score-divergence follow-up scheduled as a v5.29 candidate phase) (wave 16)
+- [x] 235-17-PLAN.md — Private go/no-go record (SC3 by the D-30 attributed-gap rule, GO preconditions cited), claim-checked announcement draft, user-led walkthrough, operator GO/NO-GO (D-17, D-18, D-20, D-30) (wave 17)
+- [x] 235-18-PLAN.md — ROADMAP/REQUIREMENTS/STATE records, vault sync, post-release PR, CI observation at final HEAD (wave 18)
 
 ### Progress
 
@@ -359,7 +359,7 @@ Plans:
 | 232. Post-Launch Visible Fixes | 6/6 | Complete (verified passed 5/5 at e28d45dd; criterion 4's live PyPI leg handed to Phase 235 per D-13; review 0 blockers, WR-03/IN-02 fixed, WR-01 owned by 999.127; CI green, Python CI 40525739851 + Dashboard Quality 40525744864) | 2026-10-27 |
 | 233. P2b Measurement Instrument | 6/6 | Complete (verified passed 4/4 at 0a7ab944; verdict: none of 212's three candidates supported, no ceiling shape can work, data point to absolute-count penalties at 35 ratio sites + a key-type rule, effort L; review CR-01 time bomb + WR-01..05 fixed fail-first; CI green, Python CI 40550728476 + Dashboard Quality 40550732544) | 2026-10-27 |
 | 234. P2b Scan-Depth Fix & Ladder Re-measurement | 9/9 | Complete (verified 5/5 at b2ef2634, status human_needed for 2 optional visual checks in 234-HUMAN-UAT.md; scoring 4.0: classical ≠ ready, count curve N_REF=40, PQC bucket, mTLS presence credit (D-28); P2b xfail now passes, instrument 100/100 agree, 0 rising; R5 18/71 → 18/74, R1–R4 unchanged; SCORE-10 overall over assessed dimensions; review D-27..D-31 fixed; UAT-7-29 drag assertion made layout-independent (b2ef2634); CI green, Python CI 40604747341 + Dashboard Quality 40604750364) | 2026-10-27 |
-| 235. Release & Launch Gate | 0/TBD | Not started | - |
+| 235. Release & Launch Gate | 18/18 | In verification (tag 7df48cb6 -> efc0bb56, release run 41059104944, launch gate GO) | - |
 
 ## Next Milestone Candidates (v5.29)
 
