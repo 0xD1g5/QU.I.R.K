@@ -1,3 +1,13 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (WR-03, IN-02), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: medium
+area: quirk/cli/doctor_cmd.py (_check_db)
+status: pending
+resolves_phase: null
+owner: "999.128"
+---
 # `quirk doctor` exits 0 when the database can never be created
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, group (e): WR-03, with IN-02)

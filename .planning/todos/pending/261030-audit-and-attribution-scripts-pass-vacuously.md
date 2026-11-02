@@ -1,3 +1,13 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (WR-04, WR-05), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: medium
+area: release-gate evidence scripts (audit, score_attribution)
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
 # `readme_audit.py links` and `score_attribution.py` pass vacuously
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, group (b): WR-04, WR-05)

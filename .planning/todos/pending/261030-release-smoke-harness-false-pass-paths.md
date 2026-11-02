@@ -1,3 +1,13 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (CR-03, WR-09, WR-10, IN-05), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: medium
+area: scripts/release_smoke*.sh
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
 # Release smoke harness can report PASS for a run that did not execute (stale transcript, port 8512, no timeout)
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, group (a): CR-03, WR-09, WR-10, plus IN-05)

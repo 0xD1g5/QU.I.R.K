@@ -1,3 +1,14 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (CR-02), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: high
+area: quirk/scanner/source_scanner.py, run_scan.py (_run_source_phase), quirk/cli/doctor_cmd.py, CHANGELOG.md
+status: pending
+resolves_phase: null
+owner: "999.127"
+target_release: "5.28.1"
+---
 # Missing semgrep with `source_targets` set is recorded as a source scan that ran clean
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, finding CR-02; operator decision Q1 "Keep GO, file for 5.28.1 (Recommended)")

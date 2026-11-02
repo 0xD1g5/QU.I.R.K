@@ -1,3 +1,13 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (WR-01, WR-02, IN-03, IN-04), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: medium
+area: quirk/scanner/source_scanner.py
+status: pending
+resolves_phase: null
+owner: "999.127"
+---
 # source_scanner loses partial results and leaks paths; error handling is loose
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, group (d): WR-01, with WR-02, IN-03, IN-04 which live in the same file)

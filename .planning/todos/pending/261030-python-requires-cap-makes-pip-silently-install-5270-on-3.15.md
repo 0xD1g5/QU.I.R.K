@@ -1,3 +1,14 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (CR-01, IN-01), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: high
+area: pyproject.toml, quirk/cli/doctor_cmd.py, scripts/release_smoke_inner.sh
+status: pending
+resolves_phase: null
+owner: "999.129"
+target_release: "5.28.1"
+---
 # `requires-python = "<3.15"` makes pip on Python 3.15 silently install 5.27.0
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, finding CR-01; operator decision Q1 "Keep GO, file for 5.28.1 (Recommended)")

@@ -1,3 +1,13 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (WR-06), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: low
+area: semgrep doc-claim guard test
+status: pending
+resolves_phase: null
+owner: "999.127"
+---
 # The Semgrep-claim guard accepts any nearby "known defect" and misses claims worded differently
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, group (c): WR-06)

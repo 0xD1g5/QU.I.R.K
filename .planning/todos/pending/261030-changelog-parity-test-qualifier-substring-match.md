@@ -1,3 +1,13 @@
+---
+type: todo
+created: 2026-10-30
+source: Phase 235 post-GO code review (IN-06), .planning/phases/235-release-launch-gate/235-REVIEW.md
+priority: low
+area: tests/test_changelog_5280_section.py
+status: pending
+resolves_phase: null
+owner: "999.129"
+---
 # CHANGELOG parity qualifier list matches substrings (remaining review Infos)
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, group (f): IN-06 and the Infos not placed elsewhere)
