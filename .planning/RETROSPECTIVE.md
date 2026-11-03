@@ -1415,6 +1415,69 @@ whose containment guard never joins client input into a path at all.
 ### Cost Observations
 - Not measured for this milestone (no per-model session data was recorded).
 
+## Milestone: v5.28 — Score & Finding Truth
+
+**Shipped:** 2026-10-30. Tag `v5.28.0`, on PyPI and GitHub Releases. Launch gate GO. Closed
+2026-11-03.
+**Phases:** 9 (227–235) | **Plans:** 88
+**Audit:** `tech_debt`. 29/29 requirements, integration 24/28, flows 9/12, Nyquist 9/9.
+**Scale:** 355 commits, 391 files, +32,533 / −2,649, 19 days
+
+### What Was Built
+- **Scoring 4.0.** The score no longer rises when a scan observes more healthy endpoints. The model
+  was chosen by a third independent instrument, not by the candidate list it started from.
+- **Dashboard/report parity** on near-expiry certificates, TLS-only certificate checks, ceilings in
+  every derived score, and closed mail ports.
+- **Correct closure, drift and merge state.**
+- **Five detection paths that now fire in real scans:** code-signing EKU, Kerberos etype, JWKS
+  credentials, `--auth-basic` and `alg: none`.
+- **QRAMM surfaces that say what was assessed.**
+- **Four post-launch visible fixes.**
+- **A todo → owner gate for `doc224` todos.**
+- **`v5.28.0`,** with a clean-install smoke from PyPI on every leg and an operator GO for the public
+  announcement.
+
+### What Worked
+- **Measure before choosing a fix.** Phase 233 was measure-only, and its verdict ruled out every
+  shape that had been planned. A fix chosen beforehand would have been fitted to a falsified
+  hypothesis.
+- **Ordering score-moving work before the re-measurement and the tag.** The ladder re-measured in
+  Phase 234 is the model that shipped.
+- **Disclosing known defects in the CHANGELOG and README.** The launch went ahead without
+  overclaiming. The D-30 attributed-gap rule made "GO with known divergences" a decision on the
+  record, not a hidden one.
+
+### What Was Inefficient
+- **CR-01 and CR-02 were found by the post-GO review, after the tag.** Both are install-time or
+  doctor-time truth defects, and the pre-tag smoke did not exercise either. CR-01 needs Python 3.15
+  with an unpinned install. CR-02 needs semgrep absent while `source_targets` is set. Both now
+  need 5.28.1.
+- **The SC4 override exists because PyPI descriptions are immutable.** A claim corrected in the
+  README after publish cannot be corrected on PyPI until the next release.
+- **The Kerberos path took review rounds R8–R22** in Phase 230 before it reached 0 blockers.
+- **"PR checks passed" hid an unobserved required workflow on a `.planning`-only PR.** Dashboard
+  Quality is path-filtered. `branch_ci_state.py` caught it; the PR page did not.
+
+### Patterns Established
+- A measurement-only phase ahead of any scoring change, with its verdict recorded as a decision
+  file (`.planning/decisions/233-*.md`, `234-*.md`).
+- `target_release` as a separate todo key, so the owner gate stays strict while the release scope
+  remains machine-findable.
+- Known-defect sections in the CHANGELOG, pinned by a test (`tests/test_changelog_5280_section.py`).
+
+### Key Lessons
+- Counts drift inside the close again. The handoff carried 2 open debug sessions, and both read
+  `resolved`. A drafted debt count of "about 20 in 8 groups" was really 22 in 9. `audit-open` said
+  5 todos, and there are 195. All three were caught by recounting from disk.
+- An ownership gate scoped to one filename pattern (`*doc224*`) leaves the rest of the pool
+  unpoliced. 45 of 195 pending todos have no owner.
+- Substring anchors in planning files are unsafe. `status: executing` and `## Deferred Items` each
+  appear more than once in STATE.md. Anchored, single-occurrence-asserted edits caught both before
+  they could write the wrong place. That is the same defect class as the GSD verb bugs.
+
+### Cost Observations
+- Not measured for this milestone (no per-model session data was recorded).
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

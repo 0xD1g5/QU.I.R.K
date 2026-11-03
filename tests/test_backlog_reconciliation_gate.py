@@ -923,7 +923,10 @@ def test_dangling_pointer_detection_each_shape(tmp_path):
 # ---------------------------------------------------------------------------
 
 REQUIREMENTS_PATH = REPO_ROOT / ".planning" / "REQUIREMENTS.md"
+STATE_PATH = REPO_ROOT / ".planning" / "STATE.md"
 DOC224_GLOB = "*doc224*.md"
+_STATE_STATUS_RE = re.compile(r"^status:\s*(\S+)\s*$", re.M)
+_STATE_MILESTONE_RE = re.compile(r"^milestone:\s*(\S+)\s*$", re.M)
 
 # Frontmatter: a leading `---` line to the next `---` line. `owner:` is read from this block
 # ONLY (a body line `owner: ...` must never count) and by regex, never yaml.safe_load: YAML
@@ -1010,6 +1013,31 @@ def _owner_offenders(todo_paths: list[Path], req_states: dict[str, bool], rows: 
     return offenders
 
 
+def _live_requirements_text() -> str:
+    """The live REQUIREMENTS.md, or "" between milestones (no requirement is live then).
+
+    A milestone close removes `.planning/REQUIREMENTS.md` on purpose (added at the v5.28 close,
+    2026-11-03; same shape as test_paused_phase_resume_gate's `_between_milestones`). Its absence
+    is accepted only when STATE.md says milestone_complete, and the requirement parser is then
+    proven on the archive the close just wrote instead of passing vacuously.
+    """
+    if REQUIREMENTS_PATH.is_file():
+        return REQUIREMENTS_PATH.read_text(encoding="utf-8", errors="replace")
+    fm = _frontmatter(STATE_PATH.read_text(encoding="utf-8", errors="replace")) or ""
+    status = _STATE_STATUS_RE.search(fm)
+    milestone = _STATE_MILESTONE_RE.search(fm)
+    assert status and status.group(1) == "milestone_complete" and milestone, (
+        f"{REQUIREMENTS_PATH} is missing but STATE.md is not milestone_complete: "
+        "a live milestone must keep its REQUIREMENTS.md"
+    )
+    archive = MILESTONES_DIR / f"{milestone.group(1)}-REQUIREMENTS.md"
+    assert archive.is_file() and _requirement_states(archive.read_text(encoding="utf-8", errors="replace")), (
+        f"STATE.md says milestone_complete, but {archive} is missing or parses zero requirement "
+        "lines: the archive was never written, or _REQ_LINE_RE stopped matching"
+    )
+    return ""
+
+
 def test_requirement_states_parses_checkbox_lines_only():
     text = (
         "- [ ] **XSURF-05**: x\n"
@@ -1086,7 +1114,8 @@ def test_doc224_owner_detection_each_shape(tmp_path):
 
 def test_every_doc224_todo_has_a_live_owner():
     todo_paths = sorted(TODOS_PENDING_DIR.glob(DOC224_GLOB))
-    req_text = REQUIREMENTS_PATH.read_text(encoding="utf-8", errors="replace")
+    req_text = _live_requirements_text()
+    between_milestones = not req_text
     req_states = _requirement_states(req_text)
     rows = _open_owner_rows(HORIZON_PATH.read_text(encoding="utf-8", errors="replace"))
 
@@ -1099,7 +1128,7 @@ def test_every_doc224_todo_has_a_live_owner():
         for p in sorted(TODOS_PENDING_DIR.glob(DOC224_GLOB)) + sorted(TODOS_COMPLETED_DIR.glob(DOC224_GLOB))
     ]
     n_req = sum(1 for o in liveness_owners if o and not o.startswith("999."))
-    assert todo_paths and req_states and rows and n_req >= 1 and n_backlog >= 1, (
+    assert todo_paths and (req_states or between_milestones) and rows and n_req >= 1 and n_backlog >= 1, (
         f"vacuous: {len(todo_paths)} doc224 todos, {len(req_states)} requirement states, "
         f"{len(rows)} HORIZON 999.* rows, {n_req} requirement owners, {n_backlog} 999.* owners "
         "-- a parser has stopped matching; fix the parser, do not delete this assertion"
