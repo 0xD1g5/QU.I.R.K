@@ -165,7 +165,7 @@ PROFILE_ARGS="--profile jwt" ./lab.sh up
 | 20003 | jwt-rsa1024 | RS256 (RSA) | WEAK_KEY_SIZE + WEAK_QUANTUM | 1024-bit | RSA-1024 is classically weak and quantum-vulnerable; scanner flags key size |
 | 20004 | jwt-algnone | none | CRITICAL_NO_SIGNATURE | 0 | alg:none = no signature verification; scanner classifies as UNKNOWN/critical |
 
-**Manual semgrep validation command (currently fails with HTTP 404, exit 7: known defect, ruleset unavailable):**
+**Scanner validation command:**
 ```
 printf '%s\n' http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004 > targets.txt
 quirk --targets-file targets.txt
@@ -239,7 +239,7 @@ PROFILE_ARGS="--profile source" ./lab.sh up
 | crypto-antipatterns-go | main.go | Weak algorithm (MD5/DES/RC4) | go.crypto.security.* | crypto/md5, crypto/des, crypto/rc4, math/rand |
 | crypto-antipatterns-java | src/CryptoAntiPatterns.java | Weak algorithm + hardcoded | java.security.* | MessageDigest MD5, DES cipher, hardcoded key |
 
-**Scanner validation command:**
+**Manual semgrep validation command (currently fails with HTTP 404, exit 7: known defect, ruleset unavailable):**
 ```
 git clone http://localhost:20006/labadmin/crypto-antipatterns-python && cd crypto-antipatterns-python && semgrep --config p/cryptography .
 ```

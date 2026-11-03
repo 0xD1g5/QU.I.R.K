@@ -316,7 +316,7 @@ connectors:
     - "./crypto-antipatterns-java"
 ```
 
-**Expected result (5.28.0, known defect):** the Semgrep `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so this scan produces an ERROR row for the source phase (`ruleset unavailable`), Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`, there are zero SOURCE findings and the readiness score is lower than a scan without `source_targets`. The weaknesses listed above are what the repositories contain, not what the scanner currently reports.
+**Expected result (5.28.0, known defect):** the Semgrep `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so this scan produces an ERROR row for the source phase (`ruleset unavailable`), Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`, there are zero SOURCE findings and the readiness score is lower than a scan without `source_targets`. This describes a scan with Semgrep installed; without Semgrep the source phase is wrongly recorded as ran with no findings and shown as assessed and clean. The weaknesses listed above are what the repositories contain, not what the scanner currently reports.
 
 ---
 
@@ -1632,7 +1632,7 @@ Every host port a compose service publishes (80 port/protocol pairs across all p
 | 20003     | jwt-rsa1024                | jwt              | JWT WEAK_KEY_SIZE + quantum-vulnerable                                                        |
 | 20004     | jwt-algnone                | jwt              | JWT CRITICAL_NO_SIGNATURE                                                                     |
 | 20005     | registry                   | registry         | OUTDATED_CRYPTO_LIB                                                                           |
-| 20006     | gitea                      | source           | ERROR row, ruleset unavailable (known defect), zero SOURCE findings, source domain Not assessed   |
+| 20006     | gitea                      | source           | ERROR row, ruleset unavailable (known defect, Semgrep installed), zero SOURCE findings, domain Not assessed |
 | 20022     | ssh-weak                   | ssh-weak         | SSH_WEAK_ALGORITHMS                                                                           |
 | 20100     | fuzz-target                | fuzz-target      | hsts_missing HIGH / alg_confusion CRITICAL                                                    |
 | 20221     | hwcompat-ssh               | hwcompat         | vendor=Unknown (SSH banner)                                                                   |

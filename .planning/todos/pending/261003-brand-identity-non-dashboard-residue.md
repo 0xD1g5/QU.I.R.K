@@ -18,9 +18,9 @@ Left over from 261001 when the dashboard work closed in Phase 223. Each item is 
       lens-as-Q in `quirk/cli/banner.py` (terminal UI colours; CLI rebrand deferred at the v5.27 kickoff).
 - [ ] Report palette `--accent #3b9dff` in `quirk/reports/templates/report.html.j2` and the `<summary>` colour
       in `quirk/reports/html_renderer.py` (~:431).
-      Includes the PDF cover title `QU.I.R.K. Cryptographic Readiness Report` (`.cover-title`, `var(--accent)`
-      #3b9dff, 36 px/900); Phase 232 left it as the report title per D-10 (RESEARCH Open Question 1). The
-      report header's bottom border also still uses `var(--accent)` (D-10).
+      The PDF cover title and the report header's bottom border moved to the brand accent `#af89f5` in Phase 235
+      (`77f041f9`, fix(235-03)), shipped in v5.28.0. What remains here is the report's link/h1 colour `--accent #3b9dff`
+      and the `<summary>` colour (`quirk/reports/html_renderer.py:444`), which Phase 235 did not change.
 - [x] **HTML report header wordmark** — `quirk/reports/templates/report.html.j2:325` still renders a typed
       `<span class="wordmark">QU.I.R.K.</span>` styled (lines ~46-51) in `var(--accent)` (`#3b9dff`) monospace,
       i.e. the old electric-blue wordmark, not the brand logo. Found by the Phase 223 verifier (2026-10-12);
