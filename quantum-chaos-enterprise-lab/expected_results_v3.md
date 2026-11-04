@@ -166,6 +166,8 @@ git clone http://localhost:20006/admin/crypto-antipatterns-python && cd crypto-a
 ```
 **Expected (5.28.0, known defect):** the `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so a QU.I.R.K. scan with `enable_source` and these clones in `source_targets` does **not** produce source findings. The `source_scanner` phase records an ERROR row whose scan error starts `ruleset unavailable` (phase detail `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`); Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`; there are zero SOURCE findings; and the readiness score is lower than the same scan without `source_targets`, because scan errors feed the hygiene and modern-TLS error-rate inputs. The seeded anti-pattern table above describes the lab's seeded repositories, not current scanner output.
 
+**Semgrep not installed (5.28.1):** a scan with `enable_source` and these clones in `source_targets` records the `source_scanner` phase as `skipped: missing-binary` (Scan Coverage reads `Not assessed`), emits one ADVISORY `missing_binary` row counted as a scan error, prints `QRK-INSTALL-008` on stderr, and produces zero SOURCE findings.
+
 
 
 ## Phase 4 — Storage Profile (profile: storage)

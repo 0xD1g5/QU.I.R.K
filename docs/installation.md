@@ -226,11 +226,11 @@ playwright install chromium
 playwright install-deps chromium   # no sudo prefix: it asks for sudo itself
 ```
 
-**Optional external tools** (`quirk doctor` flags each one that is missing and exits `1` while any of them is missing, but each is opt-in):
+**Optional external tools** (`quirk doctor` reports each one that is missing as informational (exit status stays `0`), and warns "configured but missing" when its scanner is enabled with targets in `config.yaml`, but each is opt-in):
 
 ```bash
 sudo apt install -y nmap     # richer host discovery (--discovery nmap)
-pip install semgrep          # source scanning: known defect in 5.28.0, ruleset unavailable
+pip install semgrep          # source scanning: known defect in 5.28.0, ruleset unavailable (without it, a configured source scan is skipped: missing-binary)
 # syft (container scanning): https://github.com/anchore/syft#installation
 ```
 
