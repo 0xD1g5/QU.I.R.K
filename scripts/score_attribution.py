@@ -31,6 +31,33 @@ PREFIXES, matched with ``startswith`` longest-first against the ORIGINAL
 dashboard title. The other half is an optional ``--divergence-set`` JSON file:
 ``{"patterns": [{"match": "<substring>", "phrase": "<user-term phrase>"}]}``.
 
+Missing dashboard score. A dashboard score that is absent or non-numeric is a
+hard ``SCORE-PARITY: FAIL dashboard score missing``; it is never read as equal.
+
+GAP-BOUND. Attribution alone proved nothing about magnitude (an 81-point gap
+was "attributed" to one severity difference). After attribution succeeds the
+gap ``abs(dashboard - report)`` must not exceed the sum of per-item bounds, and
+``GAP-BOUND: gap=G bound=B items=N`` is always printed. Per item::
+
+    B_item = abs(top(sev_dash) - top(sev_rep)) + curve_step
+
+``top(sev)`` is the highest headline score the consequence ceiling allows with
+one open finding of that severity (``_consequence_ceiling``): CRITICAL 34
+(``_top_of_band("POOR")``), HIGH 69 (``_top_of_band("MODERATE")``), anything
+else or an absent finding 100. ``curve_step`` is the most one extra finding can
+move the uncapped score: N_REF=40, ``_count_curve(1)`` = 0.158, times
+``max(SCORE_WEIGHTS)`` = 18.0 is 2.846 subscore points, and
+``ceil(100 * 2.846 / 25)`` = 12 headline points. Worked bounds: CRITICAL vs none
+66+12 = 78; HIGH vs none 31+12 = 43; CRITICAL vs HIGH 35+12 = 47; MEDIUM vs LOW
+0+12 = 12. This is an upper bound, not an exact recompute.
+
+The constants are injected into ``evaluate()`` exactly like ``bridge``: real
+runs pass ``load_constants()`` (live from ``quirk.intelligence.scoring``, via a
+function-local import), ``--self-test`` passes the embedded ``_STUB_CONSTANTS``
+so it stays stdlib-only (the host python3 runs it with no ``quirk``).
+``constants=None`` fails closed (``SCORE-PARITY: FAIL bound unavailable``).
+tests/test_score_attribution.py pins ``_STUB_CONSTANTS`` to ``load_constants()``.
+
 Exit 0 only when SCORE-STRICT passes and SCORE-PARITY is equal or attributed.
 Stdlib only.
 """
@@ -42,7 +69,7 @@ import io
 import json
 import sys
 from contextlib import redirect_stdout
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 DASHBOARD_ARRAYS = (
     "findings", "identity_findings", "motion_findings", "dar_findings",
@@ -77,6 +104,46 @@ def load_bridge() -> Optional[Bridge]:
                   b.canonical_cli_title)
 
 
+class Constants(NamedTuple):
+    """Scoring constants the GAP-BOUND derivation needs (real or stubbed)."""
+
+    top: Dict[str, int]      # severity -> max headline score; other -> 100
+    curve_step: int
+
+
+# Pinned to load_constants() by tests/test_score_attribution.py (parity test).
+_STUB_CONSTANTS = Constants({"CRITICAL": 34, "HIGH": 69}, 12)
+
+
+def load_constants() -> Optional[Constants]:
+    """Derive the bound constants from the live scoring module, else None.
+
+    CRITICAL/HIGH tops come from ``_consequence_ceiling`` called with a
+    synthetic count of one finding of that severity.
+    """
+    try:
+        import math
+        from quirk.intelligence import scoring as sc
+        crit = sc._consequence_ceiling(1, 0)[0]
+        high = sc._consequence_ceiling(0, 1)[0]
+        step = math.ceil(
+            100 * sc._count_curve(1) * max(sc.SCORE_WEIGHTS.values()) / 25)
+    except (ImportError, AttributeError, TypeError, ValueError):
+        return None
+    if crit is None or high is None:
+        return None
+    return Constants({"CRITICAL": int(crit), "HIGH": int(high)}, int(step))
+
+
+def _top(sev: str, constants: Constants) -> int:
+    return constants.top.get(str(sev).upper(), 100)
+
+
+def _item_bound(sev_dash: str, sev_rep: str, constants: Constants) -> int:
+    return abs(_top(sev_dash, constants) - _top(sev_rep, constants)) \
+        + constants.curve_step
+
+
 def _num(value):
     try:
         return float(value)
@@ -104,14 +171,19 @@ def dashboard_items(dash: dict, bridge: Optional[Bridge]) -> List[Tuple[str, str
 
 
 def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
-             patterns) -> Tuple[List[str], bool]:
+             patterns, constants: Optional[Constants] = None
+             ) -> Tuple[List[str], bool]:
     """Return (output lines, ok). ``report_items`` is [(title, severity)]."""
     out = ["SCORES: intel=%s html=%s dashboard=%s"
            % (_fmt(intel), _fmt(html), _fmt(dash_score))]
     strict_ok = _num(intel) is not None and _num(intel) == _num(html)
     out.append("SCORE-STRICT: intel==html " + ("PASS" if strict_ok else "FAIL"))
 
-    if _num(dash_score) is not None and _num(dash_score) == _num(html):
+    if _num(dash_score) is None:
+        out.append("SCORE-PARITY: FAIL dashboard score missing")
+        return out, False
+
+    if _num(dash_score) == _num(html):
         out.append("SCORE-PARITY: equal dashboard=%s report=%s"
                    % (_fmt(dash_score), _fmt(html)))
         return out, strict_ok
@@ -119,6 +191,10 @@ def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
     d, h = _fmt(dash_score), _fmt(html)
     if bridge is None:
         out.append("SCORE-PARITY: FAIL attribution unavailable "
+                   "dashboard=%s report=%s" % (d, h))
+        return out, False
+    if constants is None:
+        out.append("SCORE-PARITY: FAIL bound unavailable "
                    "dashboard=%s report=%s" % (d, h))
         return out, False
 
@@ -145,6 +221,7 @@ def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
         return None
 
     lines, unattributed = [], []
+    bound_pairs: List[Tuple[str, str]] = []
     counterpart: Dict[str, str] = {}
     other_sev: Dict[str, str] = {}
     for (canon, sev), _o in rep_only:
@@ -157,6 +234,7 @@ def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
         why = bridge.prefix_key(orig) or pattern_for(orig, canon)
         if why:
             counterpart[canon] = why
+            bound_pairs.append((sev, other_sev.get(canon, "absent")))
             lines.append(
                 "ATTRIBUTED: dashboard=%s report=%s | %s | %s | "
                 "dashboard-severity=%s report-severity=%s"
@@ -168,6 +246,8 @@ def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
     for (title, sev), _o in rep_only:
         why = counterpart.get(title) or pattern_for(title)
         if why:
+            if title not in dash_sev_by_canon:
+                bound_pairs.append(("absent", sev))
             lines.append(
                 "ATTRIBUTED: dashboard=%s report=%s | %s | %s | "
                 "dashboard-severity=%s report-severity=%s"
@@ -186,6 +266,14 @@ def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
                    % (d, h))
         return out, False
     out += lines
+    gap = abs(_num(dash_score) - _num(html))
+    bound = sum(_item_bound(a, b, constants) for a, b in bound_pairs)
+    out.append("GAP-BOUND: gap=%s bound=%s items=%d"
+               % (_fmt(gap), _fmt(bound), len(bound_pairs)))
+    if gap > bound:
+        out.append("SCORE-PARITY: FAIL gap exceeds attributed bound "
+                   "dashboard=%s report=%s" % (d, h))
+        return out, False
     out.append("SCORE-PARITY: attributed dashboard=%s report=%s items=%d"
                % (d, h, len(lines)))
     return out, strict_ok
@@ -212,7 +300,7 @@ def run(args, bridge) -> int:
         patterns = _load(args.divergence_set).get("patterns", [])
     lines, ok = evaluate(intel, args.html_score, dash_score,
                          dashboard_items(dash, bridge), report_items, bridge,
-                         patterns)
+                         patterns, load_constants())
     print("\n".join(lines))
     return 0 if ok else 1
 
@@ -240,7 +328,7 @@ def self_test() -> int:
     def case(name, expect_ok, must, must_not, **kw):
         buf = io.StringIO()
         with redirect_stdout(buf):
-            lines, ok = evaluate(**kw)
+            lines, ok = evaluate(constants=_STUB_CONSTANTS, **kw)
             print("\n".join(lines))
         text = buf.getvalue()
         good = (ok == expect_ok and all(m in text for m in must)
