@@ -483,3 +483,40 @@ def test_in07_empty_repo_path_does_not_replace_cwd():
     cwd = os.getcwd()
     out = _redact(f"working in {cwd} ok", "")
     assert "<repo>" not in out
+
+
+# --------------------------------------------------------------------------
+# 235.1 review WR-05: semgrep error text is credential-scrubbed
+# --------------------------------------------------------------------------
+
+_CRED_MSG = 'Syntax error at line 3: password = "postgres://u:hunter2@db/prod"'
+
+
+def test_wr05_partial_result_error_row_is_credential_scrubbed(fake_semgrep_repos):
+    body = dict(SAMPLE_SEMGREP_OUTPUT)
+    body["results"] = body["results"][:1]
+    body["errors"] = [_err_entry(2, _CRED_MSG)]
+    (repo,) = fake_semgrep_repos({"a": (json.dumps(body), 1)})
+    eps = scan_source_targets([repo])
+    (row,) = [e for e in eps if e.scan_error]
+    assert "hunter2" not in row.scan_error
+    assert "postgres://" not in row.scan_error
+    assert row.scan_error.startswith("source scan incomplete")
+
+
+def test_wr05_raising_path_message_is_credential_scrubbed(fake_semgrep_repos):
+    (repo,) = fake_semgrep_repos(
+        {"a": (json.dumps({"results": [], "errors": [_err_entry(2, _CRED_MSG)]}), 2)}
+    )
+    with pytest.raises(SourceScanError) as ei:
+        scan_source_repo(repo)
+    assert "hunter2" not in str(ei.value)
+
+
+def test_wr05_benign_error_text_is_still_shown(fake_semgrep_repos):
+    body = dict(SAMPLE_SEMGREP_OUTPUT)
+    body["results"] = body["results"][:1]
+    body["errors"] = [_err_entry(2, "Syntax error at line 3")]
+    (repo,) = fake_semgrep_repos({"a": (json.dumps(body), 1)})
+    (row,) = [e for e in scan_source_targets([repo]) if e.scan_error]
+    assert "Syntax error at line 3" in row.scan_error

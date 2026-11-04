@@ -98,6 +98,14 @@ def _redact(message: str, repo_path: str) -> str:
     return msg[:_MAX_DETAIL]
 
 
+def _scrub_credentials(message: str) -> str:
+    """WR-05: semgrep parse errors quote offending source text. Withhold any
+    message the shared credential filter (safe_str's patterns) flags."""
+    if safe_str(Exception(message)) == "Exception":
+        return "<message withheld: credential-shaped text>"
+    return message
+
+
 def _repo_label(repo_path: str) -> str:
     """Redacted host label for an error row: the final path component only."""
     base = os.path.basename(str(repo_path).rstrip("/\\"))
@@ -192,7 +200,9 @@ def scan_source_repo(
         if isinstance(e, dict) and e.get("level") == "error"
     ]
     first = _redact(
-        str(error_entries[0].get("message", "")) if error_entries else "",
+        _scrub_credentials(
+            str(error_entries[0].get("message", "")) if error_entries else ""
+        ),
         repo_path,
     )
     # IN-03: semgrep exit 7 / error code 7 = invalid or missing configuration.
