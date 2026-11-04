@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (WR-03, IN-02), .planning/phases/235-relea
 priority: medium
 area: quirk/cli/doctor_cmd.py (_check_db)
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.128"
 ---
 # `quirk doctor` exits 0 when the database can never be created

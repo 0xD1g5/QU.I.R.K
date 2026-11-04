@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (WR-06), .planning/phases/235-release-laun
 priority: low
 area: semgrep doc-claim guard test
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.127"
 ---
 # The Semgrep-claim guard accepts any nearby "known defect" and misses claims worded differently

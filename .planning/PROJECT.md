@@ -2,6 +2,9 @@
 
 ## Current State (updated 2026-11-03)
 
+**Now open: v5.28.1 Install & Source-Scan Truth** (patch release, Phases 235.1–235.2; see Current
+Milestone below). Ship by 2026-11-23.
+
 **v5.28 Score & Finding Truth CLOSED and ARCHIVED 2026-11-03, and it SHIPPED as `v5.28.0`
 (2026-10-30).** All 9 phases complete (227–235), 88 plans, **29 of 29 requirements satisfied**.
 `quirk-scanner` 5.28.0 is on PyPI and GitHub Releases (tag `7df48cb6` on `efc0bb56`, the PR #63
@@ -446,6 +449,35 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 </details>
 
 </details>
+
+## Current Milestone: v5.28.1 Install & Source-Scan Truth (patch release, opened 2026-11-03, Phases 235.1–235.2)
+
+**Goal:** Ship a 5.28.1 patch that fixes the two Critical findings in the published 5.28.0 package
+and the release-evidence and doctor defects from the same post-GO review. Then re-check the
+announcement against 5.28.1, so the social launch is posted on a release whose known-issues list
+contains no false-clean result.
+
+**Target features:**
+- **CR-01 (`999.129`):** drop the `requires-python <3.15` cap, so an unpinned install on 3.15 stops
+  backtracking to 5.27.0. Enforce 3.10–3.14 in `quirk doctor`, and guard the 3.10 `tomllib` import.
+- **CR-02 (`999.127`):** a missing `semgrep` (and `syft`) reads as skipped / Not assessed, never as a
+  clean scan. `doctor` warns when the tool is configured but missing, and the source scanner keeps
+  partial results.
+- **Doctor DB check:** an unusable DB path fails instead of reading OK.
+- **Release-evidence gates:** the smoke harness, audit and attribution scripts, and the
+  Semgrep-claim and CHANGELOG-parity tests can no longer pass falsely.
+- **Dependabot:** the four critical alerts are closed. Three are dev-only `vitest`/`tinypool`, and
+  one is `grpc` in a chaos-lab fixture.
+- **Release:** CHANGELOG `[5.28.1]` plus corrected `[5.28.0]` wording, tag and publish `v5.28.1` by
+  **2026-11-23** (CMVP goes red on 2026-11-24), a clean PyPI smoke on every leg, the README hero
+  recaptured, and the announcement re-checked with an operator go/no-go.
+
+**Operator scoping decisions (2026-11-03 kickoff):**
+- The core scope and all four optional post-GO extras were accepted.
+- Dependabot is limited to the criticals.
+- Research was skipped, because every item is a reproduced or code-read defect.
+- Phases are numbered 235.1 and 235.2 so Phase 236 stays the v5.29 score-divergence candidate.
+- Precedent: v4.10.1.
 
 ## Previous Milestone: v5.28 Score & Finding Truth — SHIPPED 2026-10-30 (tag `v5.28.0`; opened 2026-10-15, Phases 227–235)
 
@@ -1920,7 +1952,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Give 261030 todos open HORIZON clusters as owners and carry the release target in a separate `target_release` key (v5.28 audit, 2026-11-02) | The OWN-01 gate accepts only a quoted `999.N` with an OPEN HORIZON row, or a requirement ID; "5.28.1" is neither | ✓ Good — the gate stays strict and the 5.28.1 scope is still machine-findable |
 
 ---
-*Last updated: 2026-11-03 after the v5.28 milestone close (Score & Finding Truth, shipped as v5.28.0)*
+*Last updated: 2026-11-03 at the v5.28.1 milestone open (Install & Source-Scan Truth, patch release); previously after the v5.28 milestone close*
 
 ## Evolution
 

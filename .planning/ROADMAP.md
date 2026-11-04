@@ -43,6 +43,7 @@
 - ✅ **v5.26 Accessibility & Instrument Truth** — Phases 215–221 (221 a gap-closure insert), 44 plans (development complete 2026-10-02; untagged; re-audit `tech_debt`, 15/15 requirements, integration 9/10 seams + 0 broken, Nyquist 7/7; merged to main via 11 PRs, #38–#50) → `.planning/milestones/v5.26-ROADMAP.md`
 - ✅ **v5.27 Launch Readiness** — Phases 222–226 incl. the inserts 222.1 and 225.1, 75 plans (**SHIPPED 2026-10-15 — tag `v5.27.0`, published to PyPI + GitHub Releases**, carrying the untagged v5.26 work; audit `tech_debt`, 20/20 requirements with DOC-04 accepted as scoped, integration 13/15, flows 3/3, Nyquist 7/7; launch gate satisfied; merged to main via PRs #46, #52–#61) → `.planning/milestones/v5.27-ROADMAP.md`
 - ✅ **v5.28 Score & Finding Truth** — Phases 227–235, 88 plans (**SHIPPED 2026-10-30 — tag `v5.28.0`, published to PyPI + GitHub Releases**; scoring 4.0; audit `tech_debt`, 29/29 requirements, phases 9/9, integration 24/28, flows 9/12, Nyquist 9/9; launch gate GO; merged to main via PRs #63–#64) → `.planning/milestones/v5.28-ROADMAP.md`
+- 🚧 **v5.28.1 Install & Source-Scan Truth** — Phases 235.1–235.2, patch release (opened 2026-11-03; ship by 2026-11-23) → Current Milestone below
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -98,6 +99,40 @@ broadened to `v[0-9]*` so a malformed tag can no longer silently no-op — this
 is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
+
+## Current Milestone: v5.28.1 Install & Source-Scan Truth (patch release, opened 2026-11-03)
+
+**Goal:** fix the two Critical findings in the published 5.28.0 package (CR-01, CR-02) and the
+release-evidence and doctor defects found by the same post-GO review. Ship `v5.28.1` by
+**2026-11-23** (CMVP goes red 2026-11-24), then re-check the announcement against it. Precedent:
+v4.10.1. Phases are numbered 235.1 and 235.2, inserted after Phase 235, so Phase 236 stays the v5.29
+candidate below. Requirements are in `.planning/REQUIREMENTS.md` (15).
+
+- [ ] **Phase 235.1: Install & Source-Scan Truth Fixes** - An unpinned 3.15 install no longer backtracks to 5.27.0, a missing semgrep or syft reads as not assessed, doctor tells the truth, and the release-evidence scripts cannot pass falsely
+- [ ] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
+
+### Phase 235.1: Install & Source-Scan Truth Fixes (INSERTED)
+**Goal**: The fixes 5.28.1 exists for are on `v5281-open` with tests: pip on Python 3.15 no longer silently installs an older release, a scan whose source or container tool is missing never reads as a clean scan, `quirk doctor` reports Python range, missing scanners and unusable DB paths truthfully, the release smoke and audit scripts cannot report a false pass, and the four critical Dependabot alerts are closed.
+**Depends on**: Phase 235 (v5.28.0 shipped; post-GO review CR-01/CR-02 filed)
+**Requirements**: INSTALL-05, INSTALL-06, SRCSCAN-01, SRCSCAN-02, SRCSCAN-03, DOCTOR-01, HARNESS-04, HARNESS-05, HARNESS-06, DEP-03, REL-08
+**Success Criteria** (what must be TRUE):
+  1. `pyproject.toml` has no `requires-python` upper cap. A `pip install --dry-run` of the built 5.28.1 wheel on Python 3.15 does not resolve an older release, and `quirk doctor` on 3.15 reports the Python version as unsupported. A bare clone on 3.10 imports `quirk`.
+  2. A scan with `source_targets` set and `semgrep` absent from `PATH` shows Source Code as skipped or Not assessed in Scan Coverage, the HTML report and `/api/scan/latest`, never as ran with zero findings. The same test with `syft` absent covers container scanning. `quirk doctor` warns in both cases. When one source target fails, the others' results are kept and the error is reported.
+  3. `quirk doctor` fails its DB check for an unusable path, including one set through the environment variable. The release smoke harness, the audit script and the score-attribution script each have a test where a failed, empty or out-of-range step turns them red. The Semgrep-claim and CHANGELOG-parity gates have a fixture for each blind spot the review named, and each fixture goes red.
+  4. Dependabot alerts #3, #31, #83 and #84 are closed, or dismissed with a written reachability reason. The dashboard bundle gate and the `grpc-tls` lab build stay green.
+  5. CHANGELOG `[5.28.1]` describes the fixes and the `[5.28.0]` Semgrep wording names both cases. The README CR-02 known-defect line matches the fixed behaviour, and the doc-claim ledger gate is green. `branch_ci_state.py --branch v5281-open` exits 0 at the phase-close HEAD.
+**Plans**: TBD
+
+### Phase 235.2: Release 5.28.1 & Announcement Re-check (INSERTED)
+**Goal**: The version a new user installs from the announcement is 5.28.1, it works as the README says on every supported leg, and the operator has a re-checked announcement and a recorded go/no-go before anything is posted.
+**Depends on**: Phase 235.1
+**Requirements**: REL-09, REL-10, LAUNCH-08, LAUNCH-09
+**Success Criteria** (what must be TRUE):
+  1. The version reads 5.28.1 in `pyproject.toml`, `README.md` and `docs/UAT-SERIES.md` (UAT-1-02 and header). `v5281-open` is merged to `main` through a PR, `branch_ci_state.py --branch main` exits 0 at the merge commit, and `v5.28.1` is tagged on it. `release.yml` publishes it, and PyPI lists 5.28.1, all on or before 2026-11-23 (or after a hand re-verification of CMVP against its `source_url`).
+  2. A clean PyPI install of 5.28.1 passes the release smoke test on macOS, Linux 3.10, Linux 3.11 and the contributor leg. The 3.15 leg's unpinned resolution check passes. Attestations verify, and the PyPI-rendered description's links all resolve.
+  3. `docs/images/dashboard-hero.png` is recaptured from a 5.28.1 scan against a snapshot DB, its caption describes that image, and the operator has accepted it visually.
+  4. The announcement draft is re-checked sentence by sentence against 5.28.1, with no leak-grep or false-capability-grep hits, and the operator's go/no-go is recorded. No agent posts anything.
+**Plans**: TBD
 
 ## Next Milestone Candidates (v5.29)
 

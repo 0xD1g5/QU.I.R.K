@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (WR-04, WR-05), .planning/phases/235-relea
 priority: medium
 area: release-gate evidence scripts (audit, score_attribution)
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.129"
 ---
 # `readme_audit.py links` and `score_attribution.py` pass vacuously

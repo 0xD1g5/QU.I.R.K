@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (IN-06), .planning/phases/235-release-laun
 priority: low
 area: tests/test_changelog_5280_section.py
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.129"
 ---
 # CHANGELOG parity qualifier list matches substrings (remaining review Infos)

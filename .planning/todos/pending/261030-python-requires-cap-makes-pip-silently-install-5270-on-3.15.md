@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (CR-01, IN-01), .planning/phases/235-relea
 priority: high
 area: pyproject.toml, quirk/cli/doctor_cmd.py, scripts/release_smoke_inner.sh
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.129"
 target_release: "5.28.1"
 ---

@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (CR-03, WR-09, WR-10, IN-05), .planning/ph
 priority: medium
 area: scripts/release_smoke*.sh
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.129"
 ---
 # Release smoke harness can report PASS for a run that did not execute (stale transcript, port 8512, no timeout)

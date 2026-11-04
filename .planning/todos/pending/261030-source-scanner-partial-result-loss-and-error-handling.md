@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (WR-01, WR-02, IN-03, IN-04), .planning/ph
 priority: medium
 area: quirk/scanner/source_scanner.py
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.127"
 ---
 # source_scanner loses partial results and leaks paths; error handling is loose

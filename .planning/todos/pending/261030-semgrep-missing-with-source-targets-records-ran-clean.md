@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (CR-02), .planning/phases/235-release-laun
 priority: high
 area: quirk/scanner/source_scanner.py, run_scan.py (_run_source_phase), quirk/cli/doctor_cmd.py, CHANGELOG.md
 status: pending
-resolves_phase: null
+resolves_phase: "235.1"
 owner: "999.127"
 target_release: "5.28.1"
 ---
