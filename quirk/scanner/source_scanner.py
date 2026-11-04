@@ -7,16 +7,22 @@ Known defect (5.28.0): the p/cryptography ruleset is unavailable (the Semgrep
 registry returns HTTP 404), so a run with semgrep present exits 7 with valid
 JSON and ``results: []``. That is reported as "ruleset unavailable" and the
 source domain reads Not assessed, never a clean repo. An absent semgrep binary
-is still a graceful skip (empty list).
+returns an empty list at the scanner level; the engine gate in run_scan.py
+records the missing-binary skip (235.1-01). Per-target failures are in-band
+SOURCE error rows (235.1-03): one failing repo never discards the others, and
+``scan_source_targets`` raises only when every target failed.
 """
 import json
 import logging
+import os
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.util.safe_exc import safe_str
 from quirk.util.subprocess_input import validate_repo_path
 
 _LOG = logging.getLogger(__name__)
@@ -28,10 +34,55 @@ class SourceScanError(Exception):
     """A semgrep run failed. Messages are persisted and API-served, so they
     must not contain raw semgrep stdout or the repo path."""
 
+    category = "exception"
+
+
+class SourceScanTimeout(SourceScanError):
+    """A semgrep run exceeded its per-target timeout."""
+
+    category = "timeout"
+
 
 class SourceRulesetUnavailable(SourceScanError):
     """The semgrep ruleset could not be loaded (404 / invalid configuration).
     Messages are persisted and API-served: no raw stdout, no repo path."""
+
+
+_POSIX_PATH = re.compile(r"(?<![\w<])/[^\s'\"):,;]*")
+_WIN_PATH = re.compile(r"[A-Za-z]:\\[^\s'\"):,;]*")
+
+
+def _redact(message: str, repo_path: str) -> str:
+    """Strip the repo path and any absolute-path shape, then truncate (WR-02)."""
+    msg = str(message)
+    candidates = {repo_path}
+    try:
+        candidates.add(os.path.realpath(repo_path))
+    except (OSError, ValueError):
+        pass
+    for cand in sorted((c for c in candidates if c), key=len, reverse=True):
+        msg = msg.replace(cand, "<repo>")
+    msg = _WIN_PATH.sub("<path>", msg)
+    msg = _POSIX_PATH.sub("<path>", msg)
+    return msg[:_MAX_DETAIL]
+
+
+def _repo_label(repo_path: str) -> str:
+    """Redacted host label for an error row: the final path component only."""
+    base = os.path.basename(str(repo_path).rstrip("/\\"))
+    base = "".join(ch for ch in base if ch.isprintable())[:32]
+    return base or "<repo>"
+
+
+def _error_row(repo_path: str, message: str, category: str) -> CryptoEndpoint:
+    return CryptoEndpoint(
+        host=_repo_label(repo_path),
+        port=0,
+        protocol="SOURCE",
+        scan_error=_redact(message, repo_path),
+        scan_error_category=category,
+        scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
 
 def scan_source_repo(
@@ -47,8 +98,10 @@ def scan_source_repo(
     - service_detail = "file:line"
     - source_scan_json = full finding JSON
 
-    Returns empty list if semgrep is absent. Raises SourceScanError (or
-    SourceRulesetUnavailable) if semgrep runs but fails or its output is invalid.
+    Returns empty list if semgrep is absent (the engine records missing-binary).
+    Raises SourceScanError (or SourceRulesetUnavailable) if semgrep runs but
+    fails or its output is invalid. When semgrep exits 0/1 with results AND
+    level:error entries, the results are kept and one SOURCE error row is added.
     Rejected inputs (argv injection, path traversal, etc.) return a single
     CryptoEndpoint with scan_error_category="invalid_input" and no subprocess call.
     """
@@ -85,7 +138,7 @@ def scan_source_repo(
         data = json.loads(proc.stdout)
     except subprocess.TimeoutExpired as e:
         _LOG.warning("semgrep timed out in scan_source_repo for %r", repo_path)
-        raise SourceScanError(
+        raise SourceScanTimeout(
             f"source scan failed: TimeoutExpired: timed out after {timeout} s"
         ) from e
     except (
@@ -107,32 +160,38 @@ def scan_source_repo(
         e for e in (data.get("errors") or [])
         if isinstance(e, dict) and e.get("level") == "error"
     ]
-    if proc.returncode not in (0, 1) or error_entries:
-        first = str(error_entries[0].get("message", "")) if error_entries else ""
-        first = first[:_MAX_DETAIL]
-        _LOG.warning(
-            "semgrep failed in scan_source_repo (exit %s): %s",
-            proc.returncode, first,
+    first = _redact(
+        str(error_entries[0].get("message", "")) if error_entries else "",
+        repo_path,
+    )
+    # IN-03: semgrep exit 7 / error code 7 = invalid or missing configuration.
+    is_ruleset = proc.returncode == 7 or any(
+        e.get("code") == 7 for e in error_entries
+    )
+    if is_ruleset:
+        _LOG.warning("semgrep ruleset unavailable (exit %s)", proc.returncode)
+        raise SourceRulesetUnavailable(
+            f"ruleset unavailable: semgrep exited {proc.returncode}: {first}"
         )
-        is_ruleset = proc.returncode == 7 or any(
-            "configuration" in str(e.get("message", "")).lower()
-            for e in error_entries
-        )
-        if is_ruleset:
-            raise SourceRulesetUnavailable(
-                f"ruleset unavailable: semgrep exited {proc.returncode}: {first}"
-            )
+    if proc.returncode not in (0, 1):
+        _LOG.warning("semgrep failed in scan_source_repo (exit %s)", proc.returncode)
         raise SourceScanError(
             f"source scan failed: semgrep exited {proc.returncode}: {first}"
         )
 
-    endpoints: List[CryptoEndpoint] = []
     results = data.get("results", [])
+    if not isinstance(results, list):
+        raise SourceScanError("source scan failed: unexpected semgrep results")
+    if any(not isinstance(r, dict) for r in results):
+        raise SourceScanError("source scan failed: malformed semgrep result entry")
+
+    endpoints: List[CryptoEndpoint] = []
 
     for result in results:
         check_id = result.get("check_id", "")
         path = result.get("path", "")
-        line = result.get("start", {}).get("line", 0)
+        start = result.get("start", {})
+        line = start.get("line", 0) if isinstance(start, dict) else 0
         service_detail = f"{path}:{line}"
 
         ep = CryptoEndpoint(
@@ -149,6 +208,16 @@ def scan_source_repo(
         if logger:
             logger.v(f"SOURCE {repo_path} {check_id} at {service_detail}")
 
+    if error_entries:
+        # WR-01: partial results are kept; the error is one visible row.
+        _LOG.warning("semgrep reported %d error entries", len(error_entries))
+        endpoints.append(_error_row(
+            repo_path,
+            f"source scan incomplete: semgrep reported "
+            f"{len(error_entries)} error(s): {first}",
+            "exception",
+        ))
+
     return endpoints
 
 
@@ -157,15 +226,30 @@ def scan_source_targets(
     timeout: int = 300,
     logger=None,
 ) -> List[CryptoEndpoint]:
-    """Scan a list of repository paths and return all CryptoEndpoints found."""
+    """Scan repository paths; return findings plus in-band SOURCE error rows.
+
+    A failing target becomes one error row and never discards the other
+    targets' results (WR-01). Raises only when EVERY target failed:
+    SourceRulesetUnavailable if all failures were ruleset-unavailable, else
+    SourceScanError with a redacted summary.
+    """
     results: List[CryptoEndpoint] = []
+    failures: List[BaseException] = []
     for repo_path in targets:
         try:
             eps = scan_source_repo(repo_path, timeout=timeout, logger=logger)
             results.extend(eps)
-        except SourceScanError:
-            raise
-        except Exception as exc:
-            if logger:
-                logger.v(f"Source scan error for {repo_path}: {exc}")
+        except SourceScanError as exc:
+            failures.append(exc)
+            results.append(_error_row(repo_path, safe_str(exc), exc.category))
+        except Exception as exc:  # unexpected: surfaced as a row, never swallowed
+            failures.append(exc)
+            results.append(_error_row(repo_path, safe_str(exc), "exception"))
+    if targets and len(failures) == len(targets):
+        if all(isinstance(f, SourceRulesetUnavailable) for f in failures):
+            raise failures[0]
+        summary = _redact(
+            "; ".join(sorted({safe_str(f) for f in failures})), ""
+        )
+        raise SourceScanError(f"source scan failed for all targets: {summary}")
     return results

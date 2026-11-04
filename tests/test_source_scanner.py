@@ -211,3 +211,167 @@ def test_semgrep_not_installed_still_returns_empty(tmp_path):
     (tmp_path / "repo").mkdir()
     with patch("shutil.which", return_value=None):
         assert scan_source_repo(str(tmp_path / "repo")) == []
+
+
+# --------------------------------------------------------------------------
+# 235.1-03 (SRCSCAN-03, D-09): per-target isolation, redaction, classification
+# --------------------------------------------------------------------------
+
+@pytest.fixture
+def fake_semgrep_repos(tmp_path, monkeypatch):
+    """Fake ``semgrep`` that behaves differently per repo directory name.
+
+    ``_install({"a": (stdout, rc), "b": ("TIMEOUT", 0)})`` returns the repo
+    paths in dict order. A body of "TIMEOUT" sleeps past the caller's timeout.
+    """
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    real_run = subprocess.run
+
+    def _fork_safe_run(*args, **kwargs):
+        kwargs.setdefault("close_fds", False)
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", _fork_safe_run)
+
+    def _install(spec: dict) -> list:
+        repos = []
+        table = {}
+        for name, (stdout, code) in spec.items():
+            repo = tmp_path / name
+            repo.mkdir()
+            repos.append(str(repo))
+            table[name] = [stdout, code]
+        exe = bindir / "semgrep"
+        exe.write_text(
+            f"#!{sys.executable}\n"
+            "import os, sys, time\n"
+            f"TABLE = {table!r}\n"
+            "name = os.path.basename(sys.argv[-1])\n"
+            "out, code = TABLE[name]\n"
+            "if out == 'TIMEOUT':\n"
+            "    time.sleep(30)\n"
+            "sys.stdout.write(out)\n"
+            "sys.exit(code)\n"
+        )
+        os.chmod(exe, 0o755)
+        monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ['PATH']}")
+        return repos
+
+    return _install
+
+
+def _err_entry(code, message, level="error"):
+    return {"code": code, "level": level, "type": "SemgrepError", "message": message}
+
+
+def test_targets_one_timeout_keeps_other_results(fake_semgrep_repos):
+    a, b = fake_semgrep_repos({
+        "a": (json.dumps(SAMPLE_SEMGREP_OUTPUT), 0),
+        "b": ("TIMEOUT", 0),
+    })
+    eps = scan_source_targets([a, b], timeout=1)
+    findings = [e for e in eps if not e.scan_error]
+    errors = [e for e in eps if e.scan_error]
+    assert len(findings) == 2
+    assert len(errors) == 1
+    assert errors[0].protocol == "SOURCE"
+    assert errors[0].scan_error_category == "timeout"
+    assert a not in errors[0].scan_error and b not in errors[0].scan_error
+
+
+def test_single_repo_rc1_results_plus_error_entry(fake_semgrep_repos):
+    body = dict(SAMPLE_SEMGREP_OUTPUT)
+    body["results"] = body["results"][:1]
+    body["errors"] = [_err_entry(2, "boom while parsing")]
+    (repo,) = fake_semgrep_repos({"a": (json.dumps(body), 1)})
+    eps = scan_source_targets([repo])
+    assert len([e for e in eps if not e.scan_error]) == 1
+    errs = [e for e in eps if e.scan_error]
+    assert len(errs) == 1 and errs[0].protocol == "SOURCE"
+
+
+def test_targets_all_ruleset_unavailable_raises(fake_semgrep_repos):
+    repos = fake_semgrep_repos({
+        "a": (EXIT7_FIXTURE.read_text(), 7),
+        "b": (EXIT7_FIXTURE.read_text(), 7),
+    })
+    with pytest.raises(SourceRulesetUnavailable):
+        scan_source_targets(repos)
+
+
+def test_targets_one_ruleset_unavailable_one_ok_does_not_raise(fake_semgrep_repos):
+    a, b = fake_semgrep_repos({
+        "a": (EXIT7_FIXTURE.read_text(), 7),
+        "b": (json.dumps(SAMPLE_SEMGREP_OUTPUT), 0),
+    })
+    eps = scan_source_targets([a, b])
+    assert len([e for e in eps if not e.scan_error]) == 2
+    errs = [e for e in eps if e.scan_error]
+    assert len(errs) == 1
+    assert "ruleset unavailable" in errs[0].scan_error
+
+
+def test_targets_all_fail_non_ruleset_raises_scan_error(fake_semgrep_repos):
+    repos = fake_semgrep_repos({"a": ("invalid json", 1), "b": ("invalid json", 1)})
+    with pytest.raises(SourceScanError) as ei:
+        scan_source_targets(repos)
+    assert not isinstance(ei.value, SourceRulesetUnavailable)
+
+
+def test_scan_error_text_never_contains_repo_path(fake_semgrep_repos, tmp_path):
+    import re as _re
+
+    (repo,) = fake_semgrep_repos({"a": ("x", 0)})
+    msg = f"cannot read {repo}/src/x.py and C:\\Users\\bob\\x.py and /etc/passwd"
+    body = {"results": [], "errors": [_err_entry(2, msg)]}
+    (repo,) = [repo]
+    # Re-install with the path-bearing message (the repo dir already exists).
+    exe = tmp_path / "bin" / "semgrep"
+    exe.write_text(
+        f"#!{sys.executable}\nimport sys\nsys.stdout.write({json.dumps(body)!r})\nsys.exit(1)\n"
+    )
+    eps = scan_source_targets([repo])
+    (row,) = [e for e in eps if e.scan_error]
+    assert repo not in row.scan_error
+    assert str(tmp_path) not in row.scan_error
+    assert not _re.search(r"(^|\s)/\w", row.scan_error)
+    assert not _re.search(r"[A-Za-z]:\\", row.scan_error)
+    assert str(tmp_path) not in row.host
+    # Also on the raising path.
+    exe.write_text(
+        f"#!{sys.executable}\nimport sys\nsys.stdout.write({json.dumps(body)!r})\nsys.exit(2)\n"
+    )
+    with pytest.raises(SourceScanError) as ei:
+        scan_source_repo(repo)
+    assert str(tmp_path) not in str(ei.value)
+    assert not _re.search(r"[A-Za-z]:\\", str(ei.value))
+
+
+def test_configuration_in_filename_is_not_ruleset_unavailable(fake_semgrep):
+    body = {"results": [], "errors": [_err_entry(2, "failed to read /x/configuration.yaml")]}
+    repo = fake_semgrep(json.dumps(body), 2)
+    with pytest.raises(SourceScanError) as ei:
+        scan_source_repo(repo)
+    assert not isinstance(ei.value, SourceRulesetUnavailable)
+
+
+def test_error_code_7_at_rc0_is_ruleset_unavailable(fake_semgrep):
+    body = {"results": [], "errors": [_err_entry(7, "invalid configuration file")]}
+    repo = fake_semgrep(json.dumps(body), 0)
+    with pytest.raises(SourceRulesetUnavailable):
+        scan_source_repo(repo)
+
+
+@pytest.mark.parametrize("results", [None, "oops", [1, "x"]])
+def test_null_or_garbage_results_is_error_not_clean(fake_semgrep_repos, results):
+    bad, good = fake_semgrep_repos({
+        "a": (json.dumps({"results": results, "errors": []}), 0),
+        "b": (json.dumps(SAMPLE_SEMGREP_OUTPUT), 0),
+    })
+    with pytest.raises(SourceScanError):
+        scan_source_repo(bad)
+    # Next to a good target it is a visible row, never a silent clean.
+    eps = scan_source_targets([bad, good])
+    assert len([e for e in eps if e.scan_error]) == 1
+    assert len([e for e in eps if not e.scan_error]) == 2
