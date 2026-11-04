@@ -8,6 +8,10 @@ internal ids and without claiming the two score surfaces always agree.
 
 The test reads CHANGELOG.md and README.md from disk and never touches
 ``.planning/`` (gitignored, absent in CI).
+
+This file pins the 5.28.0 notes forever (``_PINNED_VERSION``): it does not read
+pyproject's version, so the 5.28.1 bump cannot redirect it at another section.
+5.28.1 assertions live in tests/test_changelog_5281_section.py (plan 12).
 """
 from __future__ import annotations
 
@@ -15,14 +19,11 @@ import re
 import shutil
 from pathlib import Path
 
-import pytest
-
 from quirk.dashboard.api.finding_title_bridge import (
     SEVERITY_DIVERGENCES,
     UNBRIDGED_DASHBOARD_TITLES,
 )
 from tests.cli_helpers import run_fork_safe
-from tests.pyproject_helpers import pyproject_version
 
 _ROOT = Path(__file__).resolve().parent.parent
 _CHANGELOG = _ROOT / "CHANGELOG.md"
@@ -66,19 +67,19 @@ _PARITY = re.compile(
     r"|(same|identical)\b.{0,40}\b(score|headline|ceiling|subscore)",
     re.IGNORECASE,
 )
-_QUALIFIERS = ("known defect", "can still differ", "still differ", "except")
+# Word-boundary regexes: a bare substring "except" matched "exceptional".
+_QUALIFIERS = (
+    re.compile(r"\bknown defects?\b"),
+    re.compile(r"\bcan still differ\b"),
+    re.compile(r"\bstill differ\b"),
+    re.compile(r"\bexcept\b"),
+)
+
+_PINNED_VERSION = "5.28.0"
 
 
 def _target_version() -> str:
-    v = pyproject_version()
-    if v.startswith("5.28."):
-        return v
-    if v == "5.27.0":
-        return "5.28.0"  # 235-10 bumps pyproject after this plan
-    pytest.fail(
-        f"pyproject says {v}: this test pins the 5.28.x release notes; "
-        "retire or update it for the new release"
-    )
+    return _PINNED_VERSION
 
 
 def _text() -> str:
@@ -121,7 +122,8 @@ def _parity_violations(text: str) -> list[str]:
             j += 1
         if j < len(lines):
             near.append(lines[j])
-        if not any(q in " ".join(near).lower() for q in _QUALIFIERS):
+        joined = " ".join(near).lower()
+        if not any(q.search(joined) for q in _QUALIFIERS):
             out.append(line)
     return out
 
@@ -226,3 +228,21 @@ def test_fragments_consumed():
     res = run_fork_safe([shutil.which("git") or "/usr/bin/git", "-C", str(_ROOT), "ls-files", "changelog.d"])
     files = [f for f in res.stdout.split() if f]
     assert files == ["changelog.d/README.md"], files
+
+
+def test_parity_detector_rejects_exceptional_as_qualifier():
+    bad = "Both surfaces compute the same headline score."
+    assert _parity_violations(bad + "\nThis is exceptional.") == [bad]
+
+
+def test_parity_detector_accepts_real_except_qualifier():
+    ok = "Both surfaces compute the same headline score, except where noted."
+    assert _parity_violations(ok) == []
+
+
+def test_pinned_version_ignores_pyproject(monkeypatch):
+    import tests.pyproject_helpers as ph
+
+    monkeypatch.setattr(ph, "pyproject_version", lambda *a, **k: "5.28.1")
+    assert _target_version() == "5.28.0"
+    assert "**Known defects in" in _section()
