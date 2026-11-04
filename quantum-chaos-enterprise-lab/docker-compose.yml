@@ -1293,7 +1293,7 @@ services:
   # Minimal Go gRPC server (grpc-go auto-sets ALPN h2 via TLS credentials).
   # Self-signed RSA-2048 cert → quantum-vulnerable MEDIUM finding expected.
   # Scanner probe: sslyze direct TLS on port 39443 (CERTIFICATE_INFO + ciphers).
-  # CHAOS-05: build-only service; Dockerfile FROM golang:1.23-alpine satisfies pin gate.
+  # CHAOS-05: build-only service; Dockerfile FROM golang:1.26-alpine satisfies pin gate.
   grpc-tls:
     build:
       context: ../labs/grpc-tls

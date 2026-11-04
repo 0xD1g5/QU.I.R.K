@@ -1266,8 +1266,9 @@ TLS probe.
 
 | Port  | Service   | Image                                | Expected Finding                                                       | Severity |
 |-------|-----------|----------------------------------------|----------------------------------------------------------------------------|----------|
-| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.23-alpine) | `TLS certificate uses quantum-vulnerable RSA key` (RSA-2048, `CN=grpc-tls.chaos.local`) | MEDIUM |
-| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.23-alpine) | TLS 1.2/1.3 ciphers — Go defaults (ECDHE-RSA, forward secrecy)          | Informational |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.26-alpine) | `TLS certificate uses quantum-vulnerable RSA key` (RSA-2048, `CN=grpc-tls.chaos.local`) | MEDIUM |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.26-alpine) | TLS 1.2/1.3 ciphers — Go defaults (ECDHE-RSA, forward secrecy)          | Informational |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.26-alpine) | TLS 1.3 key exchange negotiates `X25519MLKEM768` (hybrid ML-KEM, Go >= 1.24 default); QUIRK records `pqc-hybrid-detected` and `pqc_hybrid_endpoint_count = 1` | Informational |
 
 **Start:**
 
