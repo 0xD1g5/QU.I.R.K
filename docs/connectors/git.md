@@ -54,8 +54,8 @@ patterns run; see the known defect above.
 
 ## How the Scan Works
 
-QU.I.R.K. calls (the `p/cryptography` pack named here is the unavailable ruleset; this is the
-known defect described above):
+QU.I.R.K. calls (the `p/cryptography` pack named here is the known defect described above:
+its ruleset is unavailable):
 
 ```
 semgrep --json --config p/cryptography -- <repo_path>

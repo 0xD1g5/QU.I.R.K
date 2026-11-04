@@ -7,10 +7,20 @@ scan error and the source domain reads Not assessed. What this checks:
 * **Scan set.** Git-TRACKED ``*.md`` under README.md, docs and
   quantum-chaos-enterprise-lab, via ``git ls-files`` (never a recursive glob,
   which reaches gitignored trees). Exclusions are listed in ``EXCLUDED``.
-* **Flagged line.** Contains ``p/cryptography``, or ``semgrep`` together with
-  ``source`` or ``cryptograph`` on the same line (case-insensitive).
-* **Accepted.** A line within +/-3 lines contains ``known defect`` or
-  ``ruleset unavailable`` (case-insensitive).
+* **Flagged line.** Contains ``p/cryptography``, or the word ``semgrep``
+  together with a word-bounded ``crypto*`` / ``repository|repositories`` /
+  ``source`` / ``scan|scans|scanning`` on the same line (case-insensitive).
+  Bare ``scanners`` or ``Repo`` do not trigger it (measured: they tripped 8
+  honest lines).
+* **Accepted (subject-bound, WR-06).** A line within +/-3 lines pairs a
+  disclosure word (``known defect``, ``unavailable``, ``not assessed``) with a
+  subject word (``semgrep``, ``source``, ``ruleset``) within 80 characters, in
+  either order. An unrelated nearby "Known defects, scores" line no longer
+  satisfies a Semgrep claim, and the old Key Vault carve-out is gone: a
+  combined "Semgrep ... unavailable; Key Vault ..." disclosure is accepted.
+* **Scan-set limits.** Tracked ``*.md`` only. Dashboard copy, CLI help text
+  and report templates are NOT scanned.
+* **Re-measurement (235.1-07).** See ``FILE_FLOOR`` / ``SITE_FLOOR`` comment.
 * **KV disclosure (D-01).** README keeps the Key Vault known-defect sentence.
 * **Floors.** A scan that sees nothing fails rather than passes.
 """
@@ -32,14 +42,22 @@ EXCLUDED = {
     "CHANGELOG.md": "history, and outside the roots",
 }
 
-FLAG_RE = re.compile(r"p/cryptography|(?=.*semgrep)(?=.*(?:source|cryptograph))", re.I)
-MARKER_RE = re.compile(r"known defect|ruleset unavailable", re.I)
+FLAG_RE = re.compile(
+    r"p/cryptography|(?=.*\bsemgrep\b)(?=.*\b(?:crypto\w*|repositor(?:y|ies)|source|scan(?:s|ning)?)\b)",
+    re.I,
+)
+_DISCLOSURE = r"(?:known defects?|unavailable|not assessed)"
+_SUBJECT = r"(?:semgrep|source|ruleset)"
+MARKER_RE = re.compile(
+    rf"{_SUBJECT}.{{0,80}}{_DISCLOSURE}|{_DISCLOSURE}.{{0,80}}{_SUBJECT}", re.I
+)
 WINDOW = 3
 
 KV_SENTENCE = "Key Vault key scanning has a known defect and currently records no keys"
 
 # Measured on git ls-files at the RED commit of 235-05 (a8b3d166 base): 61 tracked
-# *.md in the scan set, 32 flagged sites. Floors sit a little below.
+# *.md in the scan set, 32 flagged sites. Re-measured 235.1-07 with the refined
+# flag: 61 files, 40 flagged sites, 0 offenders. Floors sit a little below.
 FILE_FLOOR = 40
 SITE_FLOOR = 25
 
@@ -62,8 +80,7 @@ def flagged_unmarked(lines: list[str]) -> tuple[list[int], int]:
             continue
         total += 1
         lo, hi = max(0, i - WINDOW), min(len(lines), i + WINDOW + 1)
-        # The Key Vault known-defect sentence is about a different connector.
-        if not any(MARKER_RE.search(x) and "key vault" not in x.lower() for x in lines[lo:hi]):
+        if not any(MARKER_RE.search(x) for x in lines[lo:hi]):
             bad.append(i + 1)
     return bad, total
 
@@ -115,3 +132,30 @@ def test_detector_accepts_marked_claim(tmp_path):
     ]
     bad, total = flagged_unmarked(lines)
     assert bad == [] and total == 1
+
+
+def test_probe_unrelated_known_defects_does_not_satisfy_semgrep_claim():
+    lines = [
+        "Semgrep scans your source code for weak crypto.",
+        "**Known defects, scores.** unrelated heading text",
+    ]
+    assert flagged_unmarked(lines) == ([1], 1)
+
+
+def test_probe_reworded_semgrep_claim_is_flagged():
+    assert flagged_unmarked(["Semgrep finds weak crypto in your repositories."]) == ([1], 1)
+
+
+def test_probe_combined_disclosure_is_accepted():
+    lines = ["Known defect: Semgrep source scanning ruleset unavailable; Key Vault records no keys."]
+    assert flagged_unmarked(lines) == ([], 1)
+
+
+def test_probe_not_assessed_disclosure_is_accepted():
+    lines = ["Source Code reads Not assessed when semgrep is not installed. Semgrep scans source."]
+    assert flagged_unmarked(lines) == ([], 1)
+
+
+def test_probe_scanners_and_repo_alone_do_not_flag():
+    lines = ["Semgrep and other scanners are optional.", "Semgrep Repo link."]
+    assert flagged_unmarked(lines) == ([], 0)
