@@ -50,7 +50,7 @@ tell the truth. It changes no scoring model: `SCORING_VERSION` stays 4.0.
 - **`quirk doctor` is stricter and more specific.** It now fails (exit code 1) when run on a Python
   outside 3.10 to 3.14, warns when source or container scanning is configured with targets but
   semgrep or syft is missing, and its database check now fails for a path that cannot be used (a
-  directory, a path under a file, or an unwritable location), including a path set with
+  directory, a path under a file, an unwritable location, or an existing read-only database file), including a path set with
   `QUIRK_DB_PATH`. It never creates the database or its directory. A database that does not exist
   yet under a writable location is still informational on a first run.
 - **The release smoke test can no longer report a pass it did not earn.** It no longer reuses a

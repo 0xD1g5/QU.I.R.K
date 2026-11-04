@@ -540,6 +540,16 @@ ALLOWED_SKIPS = [
         "a local-environment gap only.",
     ),
     (
+        "test_doctor_cmd.py",
+        "test_check_db_existing_chmod_0444_file_fails",
+        "environment_capability",
+        "root or Windows in this environment -- both ignore the 0o444 "
+        "write-bit denial this test relies on, so there is nothing to assert "
+        "the not-writable verdict against. The mock-based sibling "
+        "test_check_db_existing_unwritable_file_fails_mocked runs everywhere; a "
+        "non-root POSIX CI runner exercises this one for real.",
+    ),
+    (
         "test_target_cli.py",
         "test_unreadable_targets_file_emits_target_003_exit_2",
         "environment_capability",

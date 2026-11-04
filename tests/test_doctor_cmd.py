@@ -389,3 +389,42 @@ def test_check_db_unreadable_existing_file_fails(monkeypatch, tmp_path):
     r = _check_db()
     assert r["ok"] is False
     assert "not readable" in r["detail"]
+
+
+# 235.1 review WR-06: an existing read-only DB must not read as healthy.
+
+def test_check_db_existing_unwritable_file_fails_mocked(monkeypatch, tmp_path):
+    import os
+    import sqlite3
+    from quirk.cli.doctor_cmd import _check_db
+    db = tmp_path / "quirk.db"
+    sqlite3.connect(str(db)).close()
+    _db_target(monkeypatch, db, "env")
+    real_access = os.access
+    monkeypatch.setattr(
+        "quirk.cli.doctor_cmd.os.access",
+        lambda p, m, *a, **k: False if (m == os.W_OK and str(p) == str(db)) else real_access(p, m, *a, **k),
+    )
+    r = _check_db()
+    assert r["ok"] is False
+    assert "not writable" in r["detail"]
+    assert r["remediation"]
+
+
+def test_check_db_existing_chmod_0444_file_fails(monkeypatch, tmp_path):
+    import os
+    import sqlite3
+    import stat
+    if os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0):
+        pytest.skip("root/Windows ignore the 0o444 write-bit denial this test relies on")
+    from quirk.cli.doctor_cmd import _check_db
+    db = tmp_path / "quirk.db"
+    sqlite3.connect(str(db)).close()
+    os.chmod(db, 0o444)
+    try:
+        _db_target(monkeypatch, db, "env")
+        r = _check_db()
+    finally:
+        os.chmod(db, stat.S_IRUSR | stat.S_IWUSR)
+    assert r["ok"] is False
+    assert "not writable" in r["detail"]

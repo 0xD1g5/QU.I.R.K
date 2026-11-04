@@ -147,7 +147,8 @@ def _check_db() -> dict:
     Resolves ``QUIRK_DB_PATH`` first, then ``_default_db_path()``, and applies the
     SAME rules to both (IN-02 symmetry):
 
-    * path exists: must be a regular file (a directory FAILs) and readable, then
+    * path exists: must be a regular file (a directory FAILs), readable and
+      writable (a read-only file FAILs, WR-06), then
       ``SELECT 1`` over a connection to that existing file.
     * path absent: the first existing ancestor must be a directory and writable
       (a regular file in an ancestor's place, or a read-only directory, FAILs);
@@ -186,6 +187,15 @@ def _check_db() -> dict:
             return {
                 "ok": False,
                 "detail": f"{resolved} is not readable",
+                "remediation": hint,
+            }
+        # WR-06: SELECT 1 succeeds on a read-only file, but every scan then
+        # fails with "attempt to write a readonly database". On Windows
+        # os.access(W_OK) only reflects the read-only attribute; same check.
+        if not os.access(resolved, os.W_OK):
+            return {
+                "ok": False,
+                "detail": f"{resolved} is not writable",
                 "remediation": hint,
             }
         try:
