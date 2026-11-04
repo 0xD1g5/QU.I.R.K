@@ -1,38 +1,76 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current Milestone: v5.28 Score & Finding Truth (opened 2026-10-15, Phases 227+)
+## Current State (updated 2026-11-03)
 
-**Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
-The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
-scoring surfaces work.
+**v5.28 Score & Finding Truth CLOSED and ARCHIVED 2026-11-03, and it SHIPPED as `v5.28.0`
+(2026-10-30).** All 9 phases complete (227–235), 88 plans, **29 of 29 requirements satisfied**.
+`quirk-scanner` 5.28.0 is on PyPI and GitHub Releases (tag `7df48cb6` on `efc0bb56`, the PR #63
+merge). The audit at `0b322026` returned `tech_debt`: phases 9/9, integration 24/28, flows 9/12,
+Nyquist 9/9, with no requirement, integration or flow gaps. `main` was re-observed green at
+`66e6a992` after PR #64 (`branch_ci_state.py` exit 0). Archived to `.planning/milestones/v5.28-*`,
+and `.planning/REQUIREMENTS.md` was removed on purpose.
 
-**Target features:**
-- **P2b scan-depth dilution (`999.120`, the anchor):** build a third measurement instrument first,
-  then choose the fix by measurement, re-measure the five-rung calibration ladder, and turn the
-  `xfail(strict=True)` P2b property test into a pass.
-- **Cross-surface score parity:** near-expiry certificate severity, dashboard-only findings,
-  consequence ceilings in trend and merge scores, and closed mail ports counted as plaintext.
-- **Finding and state correctness:** closure states, drift notifications that compare two real scan
-  runs, and `sensor merge` keeping each sensor's latest push.
-- **Findings that never fire:** the code-signing TLS-EKU path, Kerberos etype enumeration against
-  pre-auth KDCs, and `999.125` (JWKS credentials, `--auth-basic` encoding, `alg: none`).
-- **QRAMM fixes:** the compliance map refetches after Calculate Score, the scorecard gets a "Not
-  assessed" state, `quirk qramm` / `doctor` / `cve --help` work properly, and whether self-assessed
-  dimensions appear in the compliance map (Cause A) is decided in the phase discuss.
-- **Post-launch visible fixes:** serve the bundled `/fonts` (W15), unquoted install hints (`261015`),
-  the old-blue report wordmark (`261003`), and README links on PyPI (`261014`).
-- **Todo ownership:** every remaining `doc224` todo gets an owner so the todo -> owner gate polices it.
+**The announcement launch gate is GO** (operator, 2026-10-30, `235-LAUNCH-GATE.md`). It was decided
+by the D-30 attributed-gap rule: score-affecting dashboard/report divergences are disclosed as
+known defects in the CHANGELOG and README instead of being fixed first. The announcement draft is
+claim-checked, but as of this close nobody has posted it.
 
-**Operator scoping decisions (2026-10-15 kickoff):** the PM review recommended "Score & Finding Truth"
-(P2b anchor + the high-priority scoring/finding `doc224` defects + `999.125` + post-launch fixes +
-todo ownership), and the operator accepted it and added the QRAMM fixes. QRAMM Cause A is deferred to
-the phase discuss. Research was skipped because every item is a source-confirmed defect. Four
-high-priority `doc224` todos stay out of scope and get owners rather than fixes (Azure Key Vault keys,
-the Semgrep `p/cryptography` 404, the CMVP-refresh error hints, the Windows `install.ps1` sensor
-identity). `999.124` and `999.121` stay on the backlog. This milestone has no release phase: P2b
-rescales every ladder rung and must not share a phase with a tag (212 §8).
+**What shipped:**
+- **Scoring 4.0, chosen by measurement (P2b, `999.120` closed).** A third, independent instrument
+  (Phase 233) ruled out all three of 212's candidate fix shapes. Phase 234 applied what the
+  measurement pointed to:
+  - an absolute count curve anchored at `N_REF=40`;
+  - classical certificate keys (RSA, ECDSA, EdDSA) no longer count as ready;
+  - a PQC certificate-key bucket;
+  - an mTLS presence credit.
 
-## Current State (updated 2026-10-15)
+  Observing more healthy endpoints no longer raises a score. The P2b property test passes, and all
+  five ladder rungs were re-measured: R5 moved from 18/71 to 18/74, and R1–R4 are unchanged.
+- **Cross-surface parity (XSURF-05..08):**
+  - Near-expiry certificates are MEDIUM on both surfaces.
+  - Certificate checks run only on TLS rows.
+  - Trend, timeline, merge, per-segment and compare scores apply consequence ceilings.
+  - Refused or timed-out mail ports are not scored as plaintext.
+- **Finding and state truth (FIND-11..13):** closure states reflect what each scan observed, drift
+  notifications compare two real scan runs, and `sensor merge` keeps every endpoint of each sensor's
+  latest push.
+- **Findings that fire (DETECT-01..05):** code-signing EKU, Kerberos etype (decoded KRB_ERROR 25),
+  JWKS credentials on the wire, RFC 7617 `--auth-basic`, and `alg: none` as an ordinary CRITICAL.
+- **QRAMM surfaces (QRAMM-17..20, SCORE-10):**
+  - The compliance map refetches.
+  - The scorecard says "Not assessed", self-assessed dimensions score at full weight, and overall
+    is the mean of the assessed dimensions.
+  - Stale and legacy scores read "Stale - recalculate".
+  - `doctor`, `qramm` and `cve --help` work.
+- **Post-launch visible fixes (POLISH-01..04):** `/fonts` is served, every install hint is a
+  pasteable quoted `pip install 'quirk-scanner[...]'`, the report header carries the brand logo,
+  and the README links resolve on PyPI.
+- **Release (LAUNCH-01..05):** `v5.28.0` passed a clean-install smoke from PyPI on every leg, with
+  verified attestations. Source scanning fails honestly when the Semgrep ruleset is unavailable,
+  `doctor` separates required from optional tools, and Python 3.10–3.14 is the stated range.
+
+**What to carry forward:**
+- **5.28.1 comes before v5.29.**
+  - CR-01: the `<3.15` requires-python cap makes an unpinned install on Python 3.15 silently pick
+    5.27.0 (`999.129`).
+  - CR-02: a missing `semgrep` binary with `source_targets` set records the source phase as
+    "ran" with zero findings, and `doctor` exits 0 (`999.127`).
+  - The CHANGELOG `[5.28.0]` known-defect wording and the frozen PyPI long description also need
+    correcting. The Phase 235 SC4 operator override expires with that release.
+- **Phase 236 (v5.29 candidate):** close the four score-affecting xsurf divergences (`999.132`).
+- Calibration profile is ignored on trend/compare/merge/notify (`999.131`).
+- The QRAMM Scorecard legacy/stale branch is unreachable (`999.139`).
+- Sensor-push rows interleave in drift sessions (`999.135`).
+- Kerberos weak-etype findings are dashboard-only (DETECT-02, disclosed).
+- The README hero is still the 5.27.0 capture.
+- Human actions:
+  - re-verify CMVP by hand before 2026-11-24 (never `quirk compliance cmvp refresh`);
+  - post the announcement;
+  - triage the 80 Dependabot alerts on `main` (4 critical, 33 high).
+- 195 pending todos, 45 with no owner field. OWN-01's gate polices `doc224` todos only.
+
+<details>
+<summary>Current State during v5.28 (Phases 227–228, 2026-10-15) and at the v5.27 close — superseded</summary>
 
 **v5.28 Phase 227 (Todo Ownership Gate) complete 2026-10-15 — OWN-01 validated.** All 118 pending `doc224`
 todos name a live owner (13 v5.28 requirements; 105 open HORIZON rows: 999.119, 999.121 and new
@@ -406,6 +444,44 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 </details>
 
 </details>
+
+</details>
+
+## Previous Milestone: v5.28 Score & Finding Truth — SHIPPED 2026-10-30 (tag `v5.28.0`; opened 2026-10-15, Phases 227–235)
+
+**Goal:** Every number and finding QU.I.R.K. shows a client is correct and agrees across surfaces.
+The readiness score stops rewarding scan depth, findings that should fire do fire, and QRAMM's
+scoring surfaces work.
+
+**Target features:**
+- **P2b scan-depth dilution (`999.120`, the anchor):** build a third measurement instrument first,
+  then choose the fix by measurement, re-measure the five-rung calibration ladder, and turn the
+  `xfail(strict=True)` P2b property test into a pass.
+- **Cross-surface score parity:** near-expiry certificate severity, dashboard-only findings,
+  consequence ceilings in trend and merge scores, and closed mail ports counted as plaintext.
+- **Finding and state correctness:** closure states, drift notifications that compare two real scan
+  runs, and `sensor merge` keeping each sensor's latest push.
+- **Findings that never fire:** the code-signing TLS-EKU path, Kerberos etype enumeration against
+  pre-auth KDCs, and `999.125` (JWKS credentials, `--auth-basic` encoding, `alg: none`).
+- **QRAMM fixes:** the compliance map refetches after Calculate Score, the scorecard gets a "Not
+  assessed" state, `quirk qramm` / `doctor` / `cve --help` work properly, and whether self-assessed
+  dimensions appear in the compliance map (Cause A) is decided in the phase discuss.
+- **Post-launch visible fixes:** serve the bundled `/fonts` (W15), unquoted install hints (`261015`),
+  the old-blue report wordmark (`261003`), and README links on PyPI (`261014`).
+- **Todo ownership:** every remaining `doc224` todo gets an owner so the todo -> owner gate polices it.
+
+**Operator scoping decisions (2026-10-15 kickoff):** the PM review recommended "Score & Finding Truth"
+(P2b anchor + the high-priority scoring/finding `doc224` defects + `999.125` + post-launch fixes +
+todo ownership), and the operator accepted it and added the QRAMM fixes. QRAMM Cause A is deferred to
+the phase discuss. Research was skipped because every item is a source-confirmed defect. Four
+high-priority `doc224` todos stay out of scope and get owners rather than fixes (Azure Key Vault keys,
+the Semgrep `p/cryptography` 404, the CMVP-refresh error hints, the Windows `install.ps1` sensor
+identity). `999.124` and `999.121` stay on the backlog. This milestone has no release phase: P2b
+rescales every ladder rung and must not share a phase with a tag (212 §8).
+
+*Superseded 2026-10-16:* the operator added Phase 235 (Release & Launch Gate), run strictly after
+Phase 234 so the ladder was re-measured before the tag. That kept 212 §8 intact, and the milestone
+shipped as `v5.28.0`.
 
 ## Previous Milestone: v5.27 Launch Readiness — SHIPPED 2026-10-15 (tag `v5.27.0`; opened 2026-10-02, Phases 222–226)
 
@@ -1838,9 +1914,13 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Accept DOC-04 as scoped instead of reopening the review (operator override, 2026-10-13) | Deep reference docs measured 8/201 false claims after correction. Rewriting them by hand would be a new milestone; generating the "what" from source is the durable fix | — Pending — `999.123` (P2) owns it; UAT-224-10 stays an intentional FAIL until it lands |
 | Insert a security-hardening phase (225.1) before the release tag | A launch tag that ships known findings forces either a quick follow-up release or a silent one | ✓ Good — six advisories published with the release; one finding stays embargoed by design |
 | Brand palette B (Ink-violet accent on the current grounds), picked after viewing sketches rather than descriptions (2026-10-02) | Variant C, picked from a description, would have re-themed the grounds and reopened the 216–219 contrast ratchets | ✓ Good — no ratchet pair regressed; the lesson is to sketch before deciding on a visual |
+| Split P2b into a measure-only phase (233) and a fix phase (234), with no fix shape chosen before the measurement closed (v5.28) | 212 had three candidate shapes and two instruments that could not tell them apart; choosing first would have fitted the fix to the hypothesis | ✓ Good — the third instrument ruled out all three candidates and every ceiling shape; scoring 4.0 (absolute count curve, classical ≠ ready) made the P2b xfail pass with 100/100 instrument agreement |
+| GO the public announcement with score-affecting dashboard/report divergences disclosed rather than fixed (D-30 attributed-gap rule, operator 2026-10-30) | Closing every divergence before launch was a milestone of its own; an attributed, published defect list keeps the docs true | — Pending — Phase 236 (v5.29 candidate, `999.132`) owns the four score-affecting cases; the disclosure is withdrawn only when they close |
+| Accept Phase 235 SC4 by operator override while the PyPI 5.28.0 long description stays frozen (2026-10-30) | A published PyPI description cannot be edited; only a new release replaces it | — Pending — expires with 5.28.1, which also carries CR-01 and CR-02 |
+| Give 261030 todos open HORIZON clusters as owners and carry the release target in a separate `target_release` key (v5.28 audit, 2026-11-02) | The OWN-01 gate accepts only a quoted `999.N` with an OPEN HORIZON row, or a requirement ID; "5.28.1" is neither | ✓ Good — the gate stays strict and the 5.28.1 scope is still machine-findable |
 
 ---
-*Last updated: 2026-10-15 after Phase 228 (Cross-Surface Score Parity)*
+*Last updated: 2026-11-03 after the v5.28 milestone close (Score & Finding Truth, shipped as v5.28.0)*
 
 ## Evolution
 

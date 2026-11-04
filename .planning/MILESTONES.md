@@ -1,5 +1,81 @@
 # Milestones
 
+## v5.28 Score & Finding Truth (Shipped: 2026-10-30 — tag `v5.28.0`; closed 2026-11-03)
+
+**Phases completed:** 9 phases (227–235), 88 plans, 88 SUMMARY files
+**Requirements:** **29/29 satisfied**. Six of them (OWN-01, POLISH-02/04, SCORE-08/09/10) were
+confirmed by hand from VERIFICATION rows and tags, because their SUMMARY frontmatter has no
+requirements key.
+**Audit:** `tech_debt` (`.planning/milestones/v5.28-MILESTONE-AUDIT.md`, at `0b322026`).
+- Requirements 29/29.
+- Phases 9/9. Every VERIFICATION is `passed`, with CI observed green at each phase head.
+- Integration 24/28: 3 PARTIAL and 1 BROKEN, all known and owned.
+- Flows 9/12: 3 broken flows, all known and owned (CR-02, `999.139`, DETECT-02 disclosed).
+- Nyquist 9/9.
+- No requirement, integration or flow gaps.
+
+**Released:** `quirk-scanner` 5.28.0 on PyPI and GitHub Releases.
+- Tag `v5.28.0` (object `7df48cb6`) is on `efc0bb56`, the PR #63 merge.
+- Release run 41059104944.
+- The post-publish smoke from PyPI passed on every leg, with attestations verified.
+- The operator recorded **GO** for the public announcement on 2026-10-30 (`235-LAUNCH-GATE.md`,
+  D-30 attributed-gap rule).
+
+**Scale:** 355 commits (352 non-merge), 391 files, +32,533 / -2,649, 19 days (2026-10-15 ->
+2026-11-03). Merged to `main` through PRs #63 and #64; `main` was green at `66e6a992`.
+
+**What it was about:** every number and finding QU.I.R.K. shows a client should be correct and
+should agree across surfaces. The anchor was P2b (`999.120`): the readiness score rose as a scan
+observed more healthy endpoints.
+
+**Highlights:**
+- **Scoring 4.0, chosen by measurement.** Phase 233 built a third, independent instrument before any
+  fix was chosen. It found that none of 212's three candidates, and no ceiling shape, could work.
+  Phase 234 applied what the measurement pointed to:
+  - an absolute count curve, `N_REF=40`;
+  - classical certificate keys no longer count as ready;
+  - a PQC certificate-key bucket;
+  - an mTLS presence credit.
+
+  The P2b `xfail(strict=True)` test passes, the instrument agrees on 100/100 points with 0 rising,
+  and all five ladder rungs were re-measured.
+- **The surfaces agree on more.** Near-expiry certificates are MEDIUM on both surfaces, and
+  certificate checks run only on TLS rows. Consequence ceilings apply on trend, timeline, merge,
+  segment and compare. Refused or timed-out mail ports are no longer scored as plaintext. Closure
+  states, drift notifications and `sensor merge` reflect what each scan actually observed.
+- **Findings that fire.** Code-signing EKU, Kerberos etype (a live Samba AD DC re-measure, with
+  0/65 false no-preauth), JWKS credentials on the wire, RFC 7617 `--auth-basic`, and `alg: none` as
+  CRITICAL.
+- **QRAMM says what was assessed.** The scorecard shows "Not assessed" and "Self-assessed" at full
+  weight, and the overall score is the mean over assessed dimensions. Stale and legacy scores read
+  "Stale - recalculate". The compliance map refetches, and `doctor`, `qramm` and `cve --help` work.
+- **Post-launch polish and an honest release.**
+  - `/fonts` is served, and the install hints paste safely.
+  - The brand logo is in the report header, and the README links resolve on PyPI.
+  - Source scanning fails honestly when the Semgrep ruleset is gone.
+  - `doctor` separates required tools from optional ones.
+  - The CHANGELOG lists the known defects instead of hiding them.
+
+**Known deferred items at close: 14 categories** (see STATE.md Deferred Items, v5.28). Counted from
+disk, not from `gsd-sdk query audit-open`, which reported 5 todos.
+- 195 pending todos, 45 with no owner field.
+- 0 open debug sessions. Both files read `status: resolved`, although the handoff carried them as
+  open.
+- 22 audit tech-debt items in 9 groups.
+- **5.28.1 is owed before v5.29**:
+  - CR-01: the `<3.15` cap makes Python 3.15 resolve to 5.27.0.
+  - CR-02: a missing semgrep reads as clean.
+  - The CHANGELOG and PyPI wording, where the SC4 override expires.
+- Phase 236 (the four score-affecting xsurf divergences, `999.132`) is carried as the v5.29
+  candidate.
+
+**This close was hand-written under a pre-image + full-diff protocol.** No `phase.complete`,
+`milestone.complete`, or mutating `state.*` / `roadmap.*` verb was used.
+- `ROADMAP.md`'s `## Backlog` was diff-verified byte-identical.
+- Every line removed from `ROADMAP.md` was checked present in the archive. The one deliberate
+  rewrite is the index line.
+- No milestone tag was created. `v5.28.0` is the release tag.
+
 ## v5.27 Launch Readiness (Shipped: 2026-10-15 — tag `v5.27.0`)
 
 **Phases completed:** 7 phases (222–226, with 222.1 and 225.1 inserted), 75 plans, 75 numbered
