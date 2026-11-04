@@ -31,11 +31,11 @@ tell the truth. It changes no scoring model: `SCORING_VERSION` stays 4.0.
 - **A missing semgrep or syft no longer reads as a clean scan.** With `source_targets` set and
   semgrep not installed (or `container_targets` set and syft not installed), the domain was recorded
   as scanned with no findings. It now reads Not assessed (skipped: missing-binary), the run prints
-  the install hint, and the missing tool counts as a scan error. Such a scan scores about 1 to 2
-  points lower, about 1.7 points of subscore weight in our fixture: in a three-domain fixture the
-  hygiene and modern TLS subscores each moved from 25 to 24 and the headline score from 84 to 81;
-  with more domains assessed the effect is smaller. Scans without source or container targets are
-  unaffected.
+  the install hint, and the missing tool counts as a scan error. Before rounding, such a scan
+  scores about 1 to 2 points lower; the more domains a scan assesses, the smaller the effect.
+  Because subscores and the headline are whole numbers, the displayed change can be larger: in a
+  three-domain fixture the hygiene and modern TLS subscores each moved from 25 to 24 and the
+  headline score from 84 to 81. Scans without source or container targets are unaffected.
 - **Source scanning keeps the results of repositories that succeeded.** When one repository fails
   (a timeout, unreadable output, or another error), the other repositories' findings are now kept
   and each failed repository is recorded as its own scan error, with file paths redacted, instead of
