@@ -411,3 +411,75 @@ def test_wr02_invalid_plus_ok_target_still_returns_rows(fake_semgrep_repos):
     eps = scan_source_targets(["-bad", good])
     assert len([e for e in eps if not e.scan_error]) == 2
     assert [e.scan_error_category for e in eps if e.scan_error] == ["invalid_input"]
+
+
+# --------------------------------------------------------------------------
+# 235.1 review WR-03 / WR-04 / IN-07: _redact path coverage and safety
+# --------------------------------------------------------------------------
+
+def test_wr03_posix_path_with_spaces_fully_redacted():
+    from quirk.scanner.source_scanner import _redact
+
+    out = _redact("failed at /Users/j/Acme Corp/src/x.py", "/elsewhere/repo")
+    assert "Corp" not in out and "Acme" not in out and "/Users" not in out
+    assert out.startswith("failed at <path>")
+
+
+def test_wr03_windows_path_with_spaces_fully_redacted():
+    from quirk.scanner.source_scanner import _redact
+
+    out = _redact(r"C:\Users\John Doe\Acme Payments\x.py", "/elsewhere/repo")
+    for leak in ("Doe", "Payments", "John", "Acme"):
+        assert leak not in out
+
+
+def test_wr03_forward_slash_echo_of_windows_repo_path_redacted():
+    from quirk.scanner.source_scanner import _redact
+
+    repo = r"C:\Users\jdoe\Acme Payments\app"
+    out = _redact("error in C:/Users/jdoe/Acme Payments/app/x.py line 3", repo)
+    for leak in ("jdoe", "Payments", "Acme", "Users"):
+        assert leak not in out
+    assert "line 3" in out
+
+
+def test_wr03_unc_path_redacted():
+    from quirk.scanner.source_scanner import _redact
+
+    out = _redact(r"cannot open \\fileserver\clients\acme\x.py now", "/elsewhere/repo")
+    for leak in ("fileserver", "clients", "acme"):
+        assert leak not in out
+    assert out.endswith("now") or "now" in out
+
+
+def test_wr03_url_scheme_is_not_mistaken_for_a_drive_path():
+    from quirk.scanner.source_scanner import _redact
+
+    assert "http" in _redact("fetch http://x.example/rules failed", "/r")
+
+
+@pytest.mark.parametrize("repo", [".", "src", "app"])
+def test_wr04_short_repo_path_does_not_corrupt_message(repo):
+    from quirk.scanner.source_scanner import _redact
+
+    msg = "semgrep exited 2: Invalid rule config.yaml v1.2 in src and app code"
+    out = _redact(msg, repo)
+    assert out == msg
+
+
+def test_wr04_absolute_repo_replaced_only_as_whole_path(tmp_path):
+    from quirk.scanner.source_scanner import _redact
+
+    repo = str(tmp_path / "proj")
+    out = _redact(f"bad {repo}/a.py and {repo}2/b.py and {repo}", repo)
+    assert out.startswith("bad <repo>/a.py")
+    assert "<repo>2" not in out
+    assert repo not in out
+
+
+def test_in07_empty_repo_path_does_not_replace_cwd():
+    from quirk.scanner.source_scanner import _redact
+
+    cwd = os.getcwd()
+    out = _redact(f"working in {cwd} ok", "")
+    assert "<repo>" not in out

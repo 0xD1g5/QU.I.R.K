@@ -48,20 +48,51 @@ class SourceRulesetUnavailable(SourceScanError):
     Messages are persisted and API-served: no raw stdout, no repo path."""
 
 
-_POSIX_PATH = re.compile(r"(?<![\w<])/[^\s'\"):,;]*")
-_WIN_PATH = re.compile(r"[A-Za-z]:\\[^\s'\"):,;]*")
+# A path character, and a single space that continues a path (WR-03): the next
+# word holds a separator or starts uppercase/digit ("Acme Corp/src", "John Doe\\x").
+_PATH_CH = r"[^\s'\"):,;]"
+_PATH_BODY = rf"(?:{_PATH_CH}|[ ](?={_PATH_CH}*[\\/]|[A-Z0-9]))*"
+_POSIX_PATH = re.compile(rf"(?<![\w<>])/{_PATH_BODY}")
+_WIN_PATH = re.compile(rf"(?<![A-Za-z0-9])[A-Za-z]:[\\/]{_PATH_BODY}")
+_UNC_PATH = re.compile(rf"\\\\(?:{_PATH_CH}|[ ](?={_PATH_CH}*[\\/]|[A-Z0-9]))+")
+_PATH_END = r"""(?=$|[/\\\s'":),;]|\.(?:\s|$))"""
+
+
+def _repo_candidates(repo_path: str) -> list:
+    """Spellings of the configured repo path worth replacing (WR-03/04/07)."""
+    if not repo_path:  # IN-07: realpath("") is the CWD
+        return []
+    raw = {repo_path}
+    try:
+        raw.add(os.path.realpath(repo_path))
+    except (OSError, ValueError):
+        pass
+    out = set()
+    for c in raw:
+        for v in (c, c.replace("\\", "/"), c.replace("/", "\\")):
+            # WR-04: a bare relative token ("." / "src") is not a path to
+            # replace; its realpath (absolute) spelling covers the real use.
+            absolute = v.startswith(("/", "\\")) or re.match(r"[A-Za-z]:[\\/]", v)
+            if len(v) < 3 or not (absolute or "/" in v or "\\" in v):
+                continue
+            out.add(v)
+    return sorted(out, key=len, reverse=True)
 
 
 def _redact(message: str, repo_path: str) -> str:
-    """Strip the repo path and any absolute-path shape, then truncate (WR-02)."""
+    """Strip the repo path and any absolute-path shape, then truncate (WR-02).
+
+    The repo path is replaced only as a whole path (never inside a word), in
+    its slash-normalised spellings; remaining POSIX / Windows / UNC absolute
+    paths, including ones with spaces, collapse to ``<path>``.
+    """
     msg = str(message)
-    candidates = {repo_path}
-    try:
-        candidates.add(os.path.realpath(repo_path))
-    except (OSError, ValueError):
-        pass
-    for cand in sorted((c for c in candidates if c), key=len, reverse=True):
-        msg = msg.replace(cand, "<repo>")
+    for cand in _repo_candidates(repo_path):
+        flags = re.IGNORECASE if ("\\" in cand or re.match(r"[A-Za-z]:", cand)) else 0
+        msg = re.sub(
+            rf"(?<![\w.\-]){re.escape(cand)}{_PATH_END}", "<repo>", msg, flags=flags
+        )
+    msg = _UNC_PATH.sub("<path>", msg)
     msg = _WIN_PATH.sub("<path>", msg)
     msg = _POSIX_PATH.sub("<path>", msg)
     return msg[:_MAX_DETAIL]
