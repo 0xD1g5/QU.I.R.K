@@ -202,3 +202,99 @@ def test_python_range_matches_pyproject_requires_python():
     hi = re.search(r"<(\d+)\.(\d+)", spec)
     assert (int(lo.group(1)), int(lo.group(2))) == doctor_cmd._PYTHON_MIN
     assert (int(hi.group(1)), int(hi.group(2))) == doctor_cmd._PYTHON_MAX_EXCLUSIVE
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.1 D-08 — "configured but missing" scanner binary warning
+# ---------------------------------------------------------------------------
+
+def _run_doctor_with_config(monkeypatch, tmp_path, capsys, connectors, which):
+    """Run run_doctor in tmp_path with a config.yaml holding ``connectors``."""
+    import yaml
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("COLUMNS", "400")  # keep Rich from wrapping table cells
+    import sqlite3
+    sqlite3.connect(str(tmp_path / "quirk.db")).close()
+    monkeypatch.setenv("QUIRK_DB_PATH", str(tmp_path / "quirk.db"))
+    if connectors is not None:
+        (tmp_path / "config.yaml").write_text(
+            yaml.safe_dump({"connectors": connectors}), encoding="utf-8"
+        )
+    monkeypatch.setattr("quirk.cli.doctor_cmd.shutil.which", which)
+    _stub_common(monkeypatch)
+    with mock.patch("quirk.cli.doctor_cmd.urlopen", side_effect=_ok_dashboard), \
+         mock.patch("quirk.cli.doctor_cmd.socket.gethostbyname", return_value="93.184.216.34"):
+        with pytest.raises(SystemExit) as exc:
+            from quirk.cli.doctor_cmd import run_doctor
+            run_doctor()
+    return exc.value.code, capsys.readouterr().out
+
+
+def _row(out, binary):
+    return next(ln for ln in out.splitlines() if f"Binary: {binary}" in ln)
+
+
+def test_doctor_configured_semgrep_missing_warns(monkeypatch, tmp_path, capsys):
+    code, out = _run_doctor_with_config(
+        monkeypatch, tmp_path, capsys,
+        {"enable_source": True, "source_targets": ["/tmp/x"]}, lambda n: None,
+    )
+    assert code == 0
+    row = _row(out, "semgrep")
+    assert "configured but missing" in row
+    assert "INSTALL-008" in row
+    assert "Not assessed" in row
+
+
+def test_doctor_configured_syft_missing_warns(monkeypatch, tmp_path, capsys):
+    code, out = _run_doctor_with_config(
+        monkeypatch, tmp_path, capsys,
+        {"enable_container": True, "container_targets": ["alpine:3.20"]}, lambda n: None,
+    )
+    assert code == 0
+    row = _row(out, "syft")
+    assert "configured but missing" in row
+    assert "INSTALL-007" in row
+    assert "configured but missing" not in _row(out, "semgrep")
+
+
+def test_doctor_configured_template_empty_targets_is_informational(monkeypatch, tmp_path, capsys):
+    """quirk init template: enable_* true, targets absent -> no warning."""
+    code, out = _run_doctor_with_config(
+        monkeypatch, tmp_path, capsys,
+        {"enable_source": True, "enable_container": True, "source_targets": []},
+        lambda n: None,
+    )
+    assert code == 0
+    assert "configured but missing" not in out
+    assert "(informational)" in _row(out, "semgrep")
+    assert "(informational)" in _row(out, "syft")
+
+
+def test_doctor_configured_but_disabled_is_informational(monkeypatch, tmp_path, capsys):
+    code, out = _run_doctor_with_config(
+        monkeypatch, tmp_path, capsys,
+        {"enable_source": False, "source_targets": ["/tmp/x"]}, lambda n: None,
+    )
+    assert code == 0
+    assert "configured but missing" not in out
+
+
+def test_doctor_configured_no_config_file_is_informational(monkeypatch, tmp_path, capsys):
+    code, out = _run_doctor_with_config(monkeypatch, tmp_path, capsys, None, lambda n: None)
+    assert code == 0
+    assert "configured but missing" not in out
+    assert "(informational)" in _row(out, "semgrep")
+
+
+def test_doctor_configured_binary_present_is_green(monkeypatch, tmp_path, capsys):
+    code, out = _run_doctor_with_config(
+        monkeypatch, tmp_path, capsys,
+        {"enable_source": True, "source_targets": ["/tmp/x"]},
+        lambda n: "/opt/bin/" + n,
+    )
+    assert code == 0
+    row = _row(out, "semgrep")
+    assert "/opt/bin/semgrep" in row
+    assert "configured but missing" not in row

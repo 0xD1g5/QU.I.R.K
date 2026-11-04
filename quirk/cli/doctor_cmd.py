@@ -28,7 +28,7 @@ import shutil
 import socket
 import sqlite3
 import sys
-from typing import Tuple
+from typing import Any, Dict, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -37,13 +37,19 @@ from rich.table import Table
 
 from quirk.errors import format_error
 from quirk.util.safe_exc import safe_str
+from quirk.util.scanner_binaries import SCANNER_BINARIES
 
 # Supported interpreter range, mirrored by pyproject ``requires-python =
 # ">=3.10,<3.15"`` (parity-tested; Phase 235.1 D-01/D-03).
 _PYTHON_MIN = (3, 10)
 _PYTHON_MAX_EXCLUSIVE = (3, 15)
 
-_BINARY_TO_CODE = {"nmap": "INSTALL-006", "syft": "INSTALL-007", "semgrep": "INSTALL-008"}
+# One source for the INSTALL codes: SCANNER_BINARIES (syft/semgrep) plus nmap,
+# which is not a gated scan phase and so is deliberately absent from that table.
+_BINARY_TO_CODE = {
+    "nmap": "INSTALL-006",
+    **{name: sb.error_code for name, sb in SCANNER_BINARIES.items()},
+}
 _CONFIG_DEFAULT_PATH = "./config.yaml"
 _DASHBOARD_PORT = 8512
 _DASHBOARD_URL = f"http://127.0.0.1:{_DASHBOARD_PORT}/"
@@ -57,11 +63,40 @@ def _check_python_version() -> Tuple[bool, str]:
     return False, f"[red][✗] {format_error('INSTALL-005')}[/red]"
 
 
-def _check_binary(name: str) -> Tuple[bool, str]:
+def _load_connectors(config_path: str = _CONFIG_DEFAULT_PATH) -> Dict[str, Any]:
+    """Return the ``connectors`` mapping of ``config_path``, or ``{}``.
+
+    Any missing/unreadable/malformed file yields ``{}``; ``_check_config``
+    still reports parse errors on its own row.
+    """
+    try:
+        import yaml
+
+        with open(config_path, "r") as fh:
+            data = yaml.safe_load(fh)
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    connectors = data.get("connectors")
+    return connectors if isinstance(connectors, dict) else {}
+
+
+def _check_binary(name: str, connectors: Optional[Dict[str, Any]] = None) -> Tuple[bool, str]:
     path = shutil.which(name)
     if path:
         return True, f"[green][✓][/green] {path}"
     code = _BINARY_TO_CODE.get(name, "INSTALL-006")
+    sb = SCANNER_BINARIES.get(name)
+    if sb is not None and connectors:
+        targets = connectors.get(sb.targets_attr)
+        if connectors.get(sb.enable_attr) and isinstance(targets, list) and targets:
+            # Phase 235.1 D-08: a configured scan WILL be skipped. Still exit 0
+            # (warning level, Phase 235 D-24) but say so plainly.
+            return True, (
+                f"[yellow][!] {name} configured but missing — {sb.domain_label} "
+                f"will read Not assessed ({format_error(code)})[/yellow]"
+            )
     # Phase 235 D-24: optional scanner binaries are informational, never a failure.
     return True, f"[yellow][!] {format_error(code)} (informational)[/yellow]"
 
@@ -263,8 +298,9 @@ def run_doctor() -> None:
     table.add_row("Python environment", status)
 
     # 2. Scanner binaries (informational — Phase 235 D-24)
+    connectors = _load_connectors()
     for binary in ("nmap", "syft", "semgrep"):
-        _ok, status = _check_binary(binary)
+        _ok, status = _check_binary(binary, connectors)
         table.add_row(f"Binary: {binary}", status)
 
     # 3. Compliance framework freshness (non-informational)
