@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.28.1
 milestone_name: Install & Source-Scan Truth
-status: planning
-last_updated: "2026-11-03T23:30:00.000Z"
-last_activity: "2026-11-04 -- Phase 235.1 PLANNED: 15 plans in 6 waves, research HIGH confidence, plan checker passed at iteration 3 (0 blockers), 11/11 requirements and D-01..D-16 covered (decisions checked independently, because check.decision-coverage-plan skipped 0/0); 3 operator checkpoints (npm package check, Dependabot #83/#84 approval, start Docker). Prior: Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
+status: executing
+last_updated: "2026-11-04T12:00:00.000Z"
+last_activity: "2026-11-04 -- Phase 235.1 EXECUTING: wave 1 complete (plans 01-08, 8/15); operator approved vitest 3.2.7 and the tinypool #83/#84 tolerable_risk dismissal (both dismissed, #31/#3 still open until the 235.2 merge); next wave 2 (plan 09 needs Docker). Prior: Phase 235.1 PLANNED: 15 plans in 6 waves, research HIGH confidence, plan checker passed at iteration 3 (0 blockers), 11/11 requirements and D-01..D-16 covered (decisions checked independently, because check.decision-coverage-plan skipped 0/0); 3 operator checkpoints (npm package check, Dependabot #83/#84 approval, start Docker). Prior: Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 15
-  completed_plans: 0
-  percent: 0
+  completed_plans: 8
+  percent: 53
 ---
 
 # Project State
@@ -1504,8 +1504,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 235.1 (Install & Source-Scan Truth Fixes) — PLANNED 2026-11-04, 15 plans in 6 waves; next `/gsd-execute-phase 235.1`
-Plan: —
+Phase: 235.1 (Install & Source-Scan Truth Fixes) — EXECUTING since 2026-11-04, 15 plans in 6 waves (serial)
+Plan: 8 of 15 complete (wave 1 done; wave 2 next: 09 grpc lab bump [needs Docker], 10 doctor, 11 smoke harness)
 Status: Milestone v5.28.1 Install & Source-Scan Truth opened 2026-11-03 (patch release). 16 requirements (INSTALL-07 added at the 235.1 discuss),
 Phases 235.1–235.2, branch `v5281-open` cut from `main` at `f4564d2c` (PR #65 merge, `branch_ci_state`
 exit 0). Ship by 2026-11-23.
