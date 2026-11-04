@@ -38,7 +38,10 @@ from rich.table import Table
 from quirk.errors import format_error
 from quirk.util.safe_exc import safe_str
 
+# Supported interpreter range, mirrored by pyproject ``requires-python =
+# ">=3.10,<3.15"`` (parity-tested; Phase 235.1 D-01/D-03).
 _PYTHON_MIN = (3, 10)
+_PYTHON_MAX_EXCLUSIVE = (3, 15)
 
 _BINARY_TO_CODE = {"nmap": "INSTALL-006", "syft": "INSTALL-007", "semgrep": "INSTALL-008"}
 _CONFIG_DEFAULT_PATH = "./config.yaml"
@@ -48,7 +51,7 @@ _NETWORK_PROBE_HOST = "example.com"
 
 
 def _check_python_version() -> Tuple[bool, str]:
-    ok = sys.version_info >= _PYTHON_MIN
+    ok = _PYTHON_MIN <= tuple(sys.version_info[:2]) < _PYTHON_MAX_EXCLUSIVE
     if ok:
         return True, f"[green][✓][/green] Python {sys.version_info.major}.{sys.version_info.minor}"
     return False, f"[red][✗] {format_error('INSTALL-005')}[/red]"

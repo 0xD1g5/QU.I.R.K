@@ -136,3 +136,69 @@ def test_informational_checks_never_exit_1(monkeypatch):
     assert exc.value.code == 0, (
         f"informational probe failures must not trigger exit 1, got {exc.value.code}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.1 D-01/D-03 — supported Python range (3.10 <= v < 3.15)
+# ---------------------------------------------------------------------------
+
+def _fake_version_info(monkeypatch, major, minor, micro=0):
+    import collections
+    VI = collections.namedtuple("VI", "major minor micro releaselevel serial")
+    monkeypatch.setattr("sys.version_info", VI(major, minor, micro, "final", 0))
+
+
+@pytest.mark.parametrize("ver", [(3, 15, 0), (3, 9, 18), (4, 0, 0)])
+def test_python_range_rejects_outside(monkeypatch, ver):
+    from quirk.cli import doctor_cmd
+    _fake_version_info(monkeypatch, *ver)
+    ok, line = doctor_cmd._check_python_version()
+    assert ok is False
+    assert "INSTALL-005" in line
+    assert "3.10" in line and "3.14" in line
+
+
+@pytest.mark.parametrize("ver", [(3, 10, 0), (3, 14, 9), (3, 12, 1)])
+def test_python_range_accepts_inside(monkeypatch, ver):
+    from quirk.cli import doctor_cmd
+    _fake_version_info(monkeypatch, *ver)
+    ok, _line = doctor_cmd._check_python_version()
+    assert ok is True
+
+
+def test_python_cap_exits_1_when_max_exclusive_lowered(monkeypatch, tmp_path):
+    """The upper bound is enforced end to end: run_doctor exits 1 past the cap."""
+    import sys
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("QUIRK_DB_PATH", str(tmp_path / "quirk.db"))
+    monkeypatch.setattr("quirk.cli.doctor_cmd._PYTHON_MAX_EXCLUSIVE", (3, 10))
+    assert sys.version_info[:2] >= (3, 10)
+    monkeypatch.setattr("shutil.which", lambda x: "/usr/bin/" + x)
+    _stub_common(monkeypatch)
+    with mock.patch("quirk.cli.doctor_cmd.urlopen", side_effect=_ok_dashboard), \
+         mock.patch("quirk.cli.doctor_cmd.socket.gethostbyname", return_value="93.184.216.34"):
+        with pytest.raises(SystemExit) as exc:
+            from quirk.cli.doctor_cmd import run_doctor
+            run_doctor()
+    assert exc.value.code == 1
+
+
+def test_python_range_matches_pyproject_requires_python():
+    """D-01: requires-python is ">=3.10,<3.15" and equals the doctor's bounds."""
+    import re
+    from pathlib import Path
+    from quirk.cli import doctor_cmd
+
+    text = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    hdr = re.search(r"^\[project\]\s*$", text, re.M)
+    body = text[hdr.end():]
+    nxt = re.search(r"^\[", body, re.M)
+    table = body[: nxt.start()] if nxt else body
+    m = re.search(r'^requires-python\s*=\s*"([^"]+)"\s*$', table, re.M)
+    assert m, "pyproject [project] has no requires-python"
+    spec = m.group(1)
+    assert spec == ">=3.10,<3.15"
+    lo = re.search(r">=(\d+)\.(\d+)", spec)
+    hi = re.search(r"<(\d+)\.(\d+)", spec)
+    assert (int(lo.group(1)), int(lo.group(2))) == doctor_cmd._PYTHON_MIN
+    assert (int(hi.group(1)), int(hi.group(2))) == doctor_cmd._PYTHON_MAX_EXCLUSIVE
