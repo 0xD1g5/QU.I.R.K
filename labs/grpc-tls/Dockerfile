@@ -1,9 +1,9 @@
 # Phase 89 / LAB-05: Minimal gRPC TLS chaos-lab server.
-# CHAOS-05: FROM golang:1.23-alpine pinned (build-only stage satisfies the pin gate).
+# CHAOS-05: FROM golang:1.26-alpine pinned (build-only stage satisfies the pin gate). grpc v1.79.3 (Dependabot #3) needs go 1.24.0; 1.26 because 1.24 is out of upstream support.
 # Multi-stage build: builder compiles the binary; runtime stage uses minimal alpine.
 
 # ── Stage 1: build ────────────────────────────────────────────────────────────
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
