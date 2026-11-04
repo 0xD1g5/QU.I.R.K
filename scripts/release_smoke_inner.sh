@@ -13,6 +13,7 @@
 #   Q_COMMANDS_JSON     output of `readme_audit.py commands`
 #   Q_OUT               directory the transcript and artifacts are written to
 #   Q_SCORE_ATTR        path to score_attribution.py
+#   Q_PIP_VERDICT       path to pip_unpinned_verdict.py (linux-3.15-neg check N2; missing = FAIL)
 #   Q_DIVERGENCE_SET    optional path to a divergence-set JSON
 #   Q_START_DIR         optional starting directory (contributor clone parent)
 #   Q_PORT              dashboard port (default 8512, the README default)
@@ -97,6 +98,15 @@ if [ "${1:-}" = "--self-check" ]; then
   printf 'Requires-Python ... ResolutionImpossible\n' >"${d}/b"
   if neg_verdict "${d}/a"; then echo "  ok   neg_verdict accepts a Requires-Python refusal"; else echo "  FAIL neg_verdict (a)"; bad=1; fi
   if neg_verdict "${d}/b"; then echo "  FAIL neg_verdict accepted ResolutionImpossible"; bad=1; else echo "  ok   neg_verdict rejects ResolutionImpossible"; fi
+  PV="$(dirname "$0")/pip_unpinned_verdict.py"
+  printf '{"version":"1","install":[{"metadata":{"name":"quirk-scanner","version":"5.21.0"}}]}' >"${d}/u.json"
+  printf 'ERROR: ResolutionImpossible: for help visit\n' >"${d}/u.txt"
+  if python3 "${PV}" --report "${d}/u.json" --output "${d}/u.txt" --rc 0 --expected 5.28.1 >/dev/null; then
+    echo "  FAIL unpinned verdict accepted an older selected release"; bad=1
+  else echo "  ok   unpinned verdict rejects an older selected release"; fi
+  if python3 "${PV}" --report "${d}/none.json" --output "${d}/u.txt" --rc 1 --expected 5.28.1 >/dev/null; then
+    echo "  ok   unpinned verdict accepts ResolutionImpossible"
+  else echo "  FAIL unpinned verdict rejected ResolutionImpossible"; bad=1; fi
   rm -rf "${d}"
   [ "${bad}" -eq 0 ] && echo "inner self-check: ok" && exit 0
   echo "inner self-check: FAILED"; exit 1
@@ -334,6 +344,21 @@ while IFS=$'\t' read -r LN KIND BLOCK TEXT; do
         else
           fail "pip rc ${PIP_RC}; refusal not a clean Requires-Python message" \
                "a ResolutionImpossible or a successful install means python_requires is wrong"
+        fi
+        # N2 (235.1 D-02): an UNPINNED resolve must not fall back to an older release.
+        check "N2. unpinned resolve selects no older quirk-scanner"
+        set +u; python -m pip install --dry-run --quiet --report "${Q_OUT}/pip-unpinned.json" quirk-scanner \
+          >"${Q_OUT}/pip-unpinned.txt" 2>&1 </dev/null; PIP_U_RC=$?; set -u
+        printf '%s\n' "${PIP_U_RC}" >"${Q_OUT}/pip-unpinned.rc"
+        sed 's/^/    | /' "${Q_OUT}/pip-unpinned.txt" >>"${LOG}"
+        if [ -z "${Q_PIP_VERDICT:-}" ] || [ ! -f "${Q_PIP_VERDICT}" ]; then
+          fail "pip_unpinned_verdict.py not provided" "the harness must copy scripts/pip_unpinned_verdict.py and set Q_PIP_VERDICT"
+        else
+          PIP_U_LINE="$(python3 "${Q_PIP_VERDICT}" --report "${Q_OUT}/pip-unpinned.json" \
+            --output "${Q_OUT}/pip-unpinned.txt" --rc "${PIP_U_RC}" --expected "${Q_EXPECTED_VERSION:-}" 2>&1)"
+          PIP_U_VRC=$?
+          if [ "${PIP_U_VRC}" -eq 0 ]; then pass "${PIP_U_LINE}"
+          else fail "${PIP_U_LINE}" "an unpinned 3.15 install must refuse, not fall back to an older release (yank, 235.2)"; fi
         fi
         ABORT=1
       else

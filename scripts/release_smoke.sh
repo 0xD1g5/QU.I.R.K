@@ -236,6 +236,7 @@ run_linux() {
   docker exec "${cn}" mkdir -p /smoke/out
   docker cp "${SCRIPT_DIR}/release_smoke_inner.sh" "${cn}:/smoke/release_smoke_inner.sh"
   docker cp "${SCRIPT_DIR}/score_attribution.py" "${cn}:/smoke/score_attribution.py"
+  docker cp "${SCRIPT_DIR}/pip_unpinned_verdict.py" "${cn}:/smoke/pip_unpinned_verdict.py"
   docker cp "${CMDS_JSON}" "${cn}:/smoke/readme-commands.json"
   local srcval="${SRC_VALUE}" divarg=""
   if [ "${SRC_KIND}" = "wheel" ]; then
@@ -249,7 +250,7 @@ run_linux() {
     -e Q_LEG="${LEG}" -e Q_SOURCE_KIND="${SRC_KIND}" -e Q_SOURCE_VALUE="${srcval}" \
     -e Q_EXPECTED_VERSION="${EXPECTED}" -e Q_TARGETS="${TARGETS}" \
     -e Q_COMMANDS_JSON=/smoke/readme-commands.json -e Q_OUT=/smoke/out \
-    -e Q_SCORE_ATTR=/smoke/score_attribution.py -e Q_DIVERGENCE_SET="${divarg}" \
+    -e Q_SCORE_ATTR=/smoke/score_attribution.py -e Q_PIP_VERDICT=/smoke/pip_unpinned_verdict.py -e Q_DIVERGENCE_SET="${divarg}" \
     "${cn}" bash /smoke/release_smoke_inner.sh >"${OUT}/inner-stdout.txt" 2>&1
   local rc=$?
   mkdir -p "${OUT}/inner"
@@ -281,6 +282,7 @@ run_host() {
 
   cp "${SCRIPT_DIR}/release_smoke_inner.sh" "${smoke}/in/"
   cp "${SCRIPT_DIR}/score_attribution.py" "${smoke}/in/"
+  cp "${SCRIPT_DIR}/pip_unpinned_verdict.py" "${smoke}/in/"
   cp "${CMDS_JSON}" "${smoke}/in/readme-commands.json"
   local srcval="${SRC_VALUE}" divarg="" startdir=""
   if [ "${SRC_KIND}" = "wheel" ]; then
@@ -306,7 +308,7 @@ run_host() {
       Q_LEG="${LEG}" Q_SOURCE_KIND="${SRC_KIND}" Q_SOURCE_VALUE="${srcval}" \
       Q_EXPECTED_VERSION="${expected}" Q_TARGETS="${TARGETS}" \
       Q_COMMANDS_JSON="${smoke}/in/readme-commands.json" Q_OUT="${smoke}/out" \
-      Q_SCORE_ATTR="${smoke}/in/score_attribution.py" Q_DIVERGENCE_SET="${divarg}" \
+      Q_SCORE_ATTR="${smoke}/in/score_attribution.py" Q_PIP_VERDICT="${smoke}/in/pip_unpinned_verdict.py" Q_DIVERGENCE_SET="${divarg}" \
       Q_START_DIR="${startdir}" \
       /bin/bash "${smoke}/in/release_smoke_inner.sh" ) >"${OUT}/inner-stdout.txt" 2>&1
   local rc=$?
@@ -352,6 +354,21 @@ if [ "${LEG}" = "linux-3.15-neg" ]; then
   else
     echo "driver re-check: pip output is NOT a clean Requires-Python refusal" >>"${TRANSCRIPT}.body"
     VERDICT="FAIL"
+  fi
+  # D-02 / N2: independent re-check of the unpinned resolve from the copied artifacts.
+  UNPF="${INNER_OUT}/pip-unpinned.txt"
+  if [ ! -f "${UNPF}" ] || [ ! -f "${INNER_OUT}/pip-unpinned.rc" ]; then
+    echo "driver re-check: unpinned pip output missing" >>"${TRANSCRIPT}.body"
+    VERDICT="FAIL"
+  else
+    UNP_LINE="$(python3 "${SCRIPT_DIR}/pip_unpinned_verdict.py" --report "${INNER_OUT}/pip-unpinned.json" \
+      --output "${UNPF}" --rc "$(cat "${INNER_OUT}/pip-unpinned.rc")" --expected "${EXPECTED}" 2>&1)"
+    if [ $? -eq 0 ]; then
+      echo "driver re-check: unpinned resolve - ${UNP_LINE}" >>"${TRANSCRIPT}.body"
+    else
+      echo "driver re-check: unpinned resolve - ${UNP_LINE}" >>"${TRANSCRIPT}.body"
+      VERDICT="FAIL"
+    fi
   fi
 fi
 
