@@ -89,6 +89,6 @@ def test_self_test_runs_with_quirk_unimportable(monkeypatch, capsys):
 
 def test_self_test_under_host_python_isolated():
     r = subprocess.run([sys.executable, "-I", str(SCRIPT), "--self-test"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, close_fds=False)
     assert r.returncode == 0
     assert r.stdout.strip().splitlines()[-1] == "self-test: 6/6"
