@@ -46,12 +46,20 @@ ALLOW_ANYWHERE=0; SELF_CHECK=0
 # --------------------------------------------------------------------------
 abspath() { ( cd "$(dirname "$1")" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "$(basename "$1")" ); }
 
-# out_dir_ok PATH ALLOW  -> prints a reason and returns 1 when refused
+# out_dir_ok PATH ALLOW  -> prints a reason and returns 1 when refused.
+# Side-effect free: resolves the longest EXISTING ancestor and never creates
+# anything (235.1 IN-05); the caller mkdirs only after this returns 0.
 out_dir_ok() {
-  local p="$1" allow="$2" parent
-  mkdir -p "$(dirname "${p}")" 2>/dev/null
-  parent="$(abspath "${p}")"
-  [ -z "${parent}" ] && { echo "cannot resolve ${p}"; return 1; }
+  local p="$1" allow="$2" anc rel base parent
+  case "${p}" in /*) ;; *) p="${PWD}/${p}" ;; esac
+  case "${p}/" in */../*|*/./*) echo "refusing --out containing . or .. segments"; return 1 ;; esac
+  anc="${p}"
+  while [ ! -d "${anc}" ] && [ "${anc}" != "/" ]; do anc="$(dirname "${anc}")"; done
+  base="$(cd "${anc}" 2>/dev/null && pwd -P)"
+  [ -z "${base}" ] && { echo "cannot resolve ${p}"; return 1; }
+  rel="${p#"${anc}"}"
+  [ "${base}" = "/" ] && parent="${rel}" || parent="${base}${rel}"
+  [ -z "${parent}" ] && parent="/"
   case "${parent}" in
     "${REPO_ROOT}"|"${REPO_ROOT}"/*) echo "refusing --out inside the repository checkout"; return 1 ;;
     /tmp|/tmp/*|/private/tmp|/private/tmp/*|/var/folders/*|/private/var/folders/*)
@@ -204,9 +212,16 @@ HEADER="${OUT}/header.txt"
 
 INNER_OUT=""   # directory holding the inner transcript once the leg ran
 
-run_env() {   # prints the Q_* variable assignments shared by both runtimes
-  printf 'Q_LEG=%s Q_SOURCE_KIND=%s Q_EXPECTED_VERSION=%s Q_TARGETS=%s' \
-    "${LEG}" "${SRC_KIND}" "${EXPECTED}" "${TARGETS}"
+COPY_FAILED=""   # set (with a reason) when any docker cp / cp into or out of the leg fails
+
+# free_port : a currently-free 127.0.0.1 TCP port chosen by the kernel
+free_port() {
+  python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1]); s.close()'
+}
+
+# dcp ARGS... : docker cp that records its own failure instead of swallowing it
+dcp() {
+  docker cp "$@" >/dev/null 2>&1 || COPY_FAILED="${COPY_FAILED:+${COPY_FAILED}; }docker cp $* failed"
 }
 
 # --------------------------------------------------------------------------
@@ -234,17 +249,17 @@ run_linux() {
   trap 'docker rm -f "'"${cn}"'" >/dev/null 2>&1' EXIT
 
   docker exec "${cn}" mkdir -p /smoke/out
-  docker cp "${SCRIPT_DIR}/release_smoke_inner.sh" "${cn}:/smoke/release_smoke_inner.sh"
-  docker cp "${SCRIPT_DIR}/score_attribution.py" "${cn}:/smoke/score_attribution.py"
-  docker cp "${SCRIPT_DIR}/pip_unpinned_verdict.py" "${cn}:/smoke/pip_unpinned_verdict.py"
-  docker cp "${CMDS_JSON}" "${cn}:/smoke/readme-commands.json"
+  dcp "${SCRIPT_DIR}/release_smoke_inner.sh" "${cn}:/smoke/release_smoke_inner.sh"
+  dcp "${SCRIPT_DIR}/score_attribution.py" "${cn}:/smoke/score_attribution.py"
+  dcp "${SCRIPT_DIR}/pip_unpinned_verdict.py" "${cn}:/smoke/pip_unpinned_verdict.py"
+  dcp "${CMDS_JSON}" "${cn}:/smoke/readme-commands.json"
   local srcval="${SRC_VALUE}" divarg=""
   if [ "${SRC_KIND}" = "wheel" ]; then
-    docker cp "${SRC_VALUE}" "${cn}:/smoke/$(basename "${SRC_VALUE}")"
+    dcp "${SRC_VALUE}" "${cn}:/smoke/$(basename "${SRC_VALUE}")"
     srcval="/smoke/$(basename "${SRC_VALUE}")"
   fi
   if [ -n "${DIVERGENCE_SET}" ]; then
-    docker cp "${DIVERGENCE_SET}" "${cn}:/smoke/divergence.json"; divarg="/smoke/divergence.json"
+    dcp "${DIVERGENCE_SET}" "${cn}:/smoke/divergence.json"; divarg="/smoke/divergence.json"
   fi
   docker exec \
     -e Q_LEG="${LEG}" -e Q_SOURCE_KIND="${SRC_KIND}" -e Q_SOURCE_VALUE="${srcval}" \
@@ -253,8 +268,7 @@ run_linux() {
     -e Q_SCORE_ATTR=/smoke/score_attribution.py -e Q_PIP_VERDICT=/smoke/pip_unpinned_verdict.py -e Q_DIVERGENCE_SET="${divarg}" \
     "${cn}" bash /smoke/release_smoke_inner.sh >"${OUT}/inner-stdout.txt" 2>&1
   local rc=$?
-  mkdir -p "${OUT}/inner"
-  docker cp "${cn}:/smoke/out/." "${OUT}/inner/" >/dev/null 2>&1
+  dcp "${cn}:/smoke/out/." "${OUT}/inner/"
   docker rm -f "${cn}" >/dev/null 2>&1
   trap - EXIT
   INNER_OUT="${OUT}/inner"
@@ -280,10 +294,13 @@ run_host() {
     echo "${D07_LIMITATION}"
   } >>"${HEADER}"
 
-  cp "${SCRIPT_DIR}/release_smoke_inner.sh" "${smoke}/in/"
-  cp "${SCRIPT_DIR}/score_attribution.py" "${smoke}/in/"
-  cp "${SCRIPT_DIR}/pip_unpinned_verdict.py" "${smoke}/in/"
-  cp "${CMDS_JSON}" "${smoke}/in/readme-commands.json"
+  cp "${SCRIPT_DIR}/release_smoke_inner.sh" "${smoke}/in/" || return 2
+  cp "${SCRIPT_DIR}/score_attribution.py" "${smoke}/in/" || return 2
+  cp "${SCRIPT_DIR}/pip_unpinned_verdict.py" "${smoke}/in/" || return 2
+  cp "${CMDS_JSON}" "${smoke}/in/readme-commands.json" || return 2
+  local qport
+  qport="$(free_port)" || return 2
+  echo "dashboard port (driver-chosen, free at launch): ${qport}" >>"${HEADER}"
   local srcval="${SRC_VALUE}" divarg="" startdir=""
   if [ "${SRC_KIND}" = "wheel" ]; then
     cp "${SRC_VALUE}" "${smoke}/in/"; srcval="${smoke}/in/$(basename "${SRC_VALUE}")"
@@ -305,15 +322,14 @@ run_host() {
   ( cd "${smoke}/work" && env -i \
       HOME="${smoke}/home" TMPDIR="${smoke}/tmp" LANG=en_US.UTF-8 \
       PATH="${smoke}/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
-      Q_LEG="${LEG}" Q_SOURCE_KIND="${SRC_KIND}" Q_SOURCE_VALUE="${srcval}" \
+      Q_LEG="${LEG}" Q_SOURCE_KIND="${SRC_KIND}" Q_SOURCE_VALUE="${srcval}" Q_PORT="${qport}" \
       Q_EXPECTED_VERSION="${expected}" Q_TARGETS="${TARGETS}" \
       Q_COMMANDS_JSON="${smoke}/in/readme-commands.json" Q_OUT="${smoke}/out" \
       Q_SCORE_ATTR="${smoke}/in/score_attribution.py" Q_PIP_VERDICT="${smoke}/in/pip_unpinned_verdict.py" Q_DIVERGENCE_SET="${divarg}" \
       Q_START_DIR="${startdir}" \
       /bin/bash "${smoke}/in/release_smoke_inner.sh" ) >"${OUT}/inner-stdout.txt" 2>&1
   local rc=$?
-  mkdir -p "${OUT}/inner"
-  cp -R "${smoke}/out/." "${OUT}/inner/" 2>/dev/null
+  cp -R "${smoke}/out/." "${OUT}/inner/" || COPY_FAILED="${COPY_FAILED:+${COPY_FAILED}; }cp -R of the leg output failed"
   INNER_OUT="${OUT}/inner"
   return "${rc}"
 }
@@ -321,6 +337,11 @@ run_host() {
 # --------------------------------------------------------------------------
 # Run, assemble the transcript, decide
 # --------------------------------------------------------------------------
+# A previous run's inner/ and inner-stdout.txt must never be mistaken for this
+# run's evidence (235.1 CR-03): remove them before the leg, create fresh.
+rm -rf "${OUT}/inner" "${OUT}/inner-stdout.txt"
+mkdir -p "${OUT}/inner"
+RUN_RC=1
 case "${LEG}" in
   linux-*) run_linux; RUN_RC=$? ;;
   *)       run_host;  RUN_RC=$? ;;
@@ -338,9 +359,22 @@ TRANSCRIPT="${OUT}/transcript.txt"
   fi
 } >"${TRANSCRIPT}.body"
 
+# PASS only when the leg exited 0, every copy worked, and the transcript's LAST
+# line is exactly `RESULT: PASS` (a PASS mid-file proves nothing; 235.1 CR-03).
 VERDICT="FAIL"
-if [ -n "${INNER_OUT}" ] && grep -qx "RESULT: PASS" "${INNER_OUT}/transcript.txt" 2>/dev/null; then
-  VERDICT="PASS"
+if [ "${RUN_RC}" -ne 0 ]; then
+  echo "driver verdict: FAIL - the leg exited ${RUN_RC} (container or script died)" >>"${TRANSCRIPT}.body"
+elif [ -n "${COPY_FAILED}" ]; then
+  echo "driver verdict: FAIL - copy failure: ${COPY_FAILED}" >>"${TRANSCRIPT}.body"
+elif [ -z "${INNER_OUT}" ] || [ ! -f "${INNER_OUT}/transcript.txt" ]; then
+  echo "driver verdict: FAIL - no inner transcript was produced" >>"${TRANSCRIPT}.body"
+else
+  INNER_LAST="$(tail -n 1 "${INNER_OUT}/transcript.txt")"
+  if [ "${INNER_LAST}" = "RESULT: PASS" ]; then
+    VERDICT="PASS"
+  else
+    echo "driver verdict: FAIL - inner transcript last line is '${INNER_LAST}', not 'RESULT: PASS'" >>"${TRANSCRIPT}.body"
+  fi
 fi
 
 # The 3.15 negative leg is re-checked here, independently of the inner script:
