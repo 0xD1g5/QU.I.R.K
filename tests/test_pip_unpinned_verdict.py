@@ -11,6 +11,14 @@ Fixtures were captured live on 2026-11-03/04 with /opt/homebrew/bin/python3.15
       --index-url http://127.0.0.1:9/simple --retries 0 --timeout 2 quirk-scanner
       -> rc 1, "(from versions: none)"   (pip_3_15_network_error.txt)
 
+  pip install --dry-run --quiet --report r4.json \
+      --index-url file://<simple index whose every release says Requires-Python <3.10> quirk-scanner
+      -> rc 1, "Ignored the following versions that require a different python
+         version" + "(from versions: none)"   (pip_3_15_no_candidate.txt; 235.1 IN-02)
+  Note the index-unreachable shape (connection refused, retries 0) prints the
+  SAME "(from versions: none)" line WITHOUT the "Ignored ..." line, so only the
+  "Ignored ..." line proves the index was reachable and every release excluded.
+
 The verdict is tested against these shapes, never against live PyPI.  The
 NETWORK_RE strings in test_network_text_variants are synthetic (pip prints
 them only in non-quiet mode).
@@ -136,3 +144,46 @@ def test_cli_missing_report_with_rc0_fails(tmp_path):
     r = _cli("--report", str(tmp_path / "absent.json"), "--output", "/dev/null",
              "--rc", "0", "--expected", "5.28.1")
     assert r.returncode == 1
+
+
+# --- IN-02 (235.1 review): D-02 "no candidate" is PASS; unknown stays FAIL ---
+
+NO_CANDIDATE = (FX / "pip_3_15_no_candidate.txt")
+
+
+def test_no_candidate_every_release_excluded_by_requires_python_passes():
+    text = NO_CANDIDATE.read_text(encoding="utf-8")
+    state, msg = verdict(None, text, 1, "5.28.1")
+    assert state == "PASS", msg
+    assert "no" in msg.lower() and "candidate" in msg.lower()
+
+
+@pytest.mark.parametrize("net", [
+    "Could not fetch URL https://pypi.org/simple/x/",
+    "NewConnectionError('<urllib3...>')",
+    "Max retries exceeded with url",
+    "Temporary failure in name resolution",
+    "Network is unreachable",
+])
+def test_no_candidate_with_network_error_text_fails(net):
+    text = net + "\n" + NO_CANDIDATE.read_text(encoding="utf-8")
+    assert verdict(None, text, 1, "5.28.1")[0] == "FAIL"
+
+
+def test_ignored_line_without_from_versions_none_fails():
+    out = (
+        "ERROR: Ignored the following versions that require a different python version: 5.25.0 Requires-Python <3.15\n"
+        "ERROR: Could not find a version that satisfies the requirement x (from versions: 5.21.0)\n"
+    )
+    assert verdict(None, out, 1, "5.28.1")[0] == "FAIL"
+
+
+def test_no_candidate_requires_nonzero_rc():
+    # rc 0 with no-candidate text and no report is never a pass.
+    assert verdict(None, NO_CANDIDATE.read_text(encoding="utf-8"), 0, "5.28.1")[0] == "FAIL"
+
+
+def test_cli_pass_on_no_candidate(tmp_path):
+    r = _cli("--report", str(tmp_path / "absent.json"), "--output", str(NO_CANDIDATE),
+             "--rc", "1", "--expected", "5.28.1")
+    assert r.returncode == 0 and r.stdout.startswith("PASS:")

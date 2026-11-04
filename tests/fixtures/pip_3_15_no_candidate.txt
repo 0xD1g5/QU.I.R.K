@@ -1,0 +1,6 @@
+ERROR: Ignored the following versions that require a different python version: 5.25.0 Requires-Python <3.10; 5.27.0 Requires-Python <3.10
+ERROR: Could not find a version that satisfies the requirement quirk-scanner (from versions: none)
+ERROR: No matching distribution found for quirk-scanner
+
+[notice] A new release of pip is available: 26.2.2 -> 26.3
+[notice] To update, run: /opt/homebrew/opt/python@3.15/bin/python3.15 -m pip install --upgrade pip
