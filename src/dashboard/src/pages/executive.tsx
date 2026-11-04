@@ -118,12 +118,12 @@ function SubscoreSlot({ score, label, maxValue = 25 }: { score: number | null; l
   return <ScoreGauge score={score} label={label} size={120} maxValue={maxValue} />
 }
 
-function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
+export function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[] }) {
   function badgeElement(entry: PartialFailureEntry) {
     const cat = entry.error_category
     // Derive status from error_category per UI-SPEC:
-    // missing_extra -> Skipped (gray), exception -> Failed (red), partial -> Partial (amber)
-    if (cat === "missing_extra") {
+    // missing_extra / missing_binary -> Skipped (gray), exception -> Failed (red), partial -> Partial (amber)
+    if (cat === "missing_extra" || cat === "missing_binary") {
       return (
         <Badge variant="secondary" aria-label="status: Skipped">
           Skipped

@@ -44,6 +44,8 @@ const STATUS_COLOR_CLASS: Record<string, string> = {
   "missing-extra": "text-[var(--ds-medium)]",
   "no-eligible-targets": "text-[var(--ds-medium)]",
   "missing-credentials": "text-[var(--ds-high)]",
+  // 235.1 D-05: a missing tool is an actionable operator gap, same token as missing-credentials.
+  "missing-binary": "text-[var(--ds-high)]",
   failed: "text-[var(--ds-critical)]",
 }
 

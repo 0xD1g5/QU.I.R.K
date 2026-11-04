@@ -113,4 +113,23 @@ describe("ScanCoverageChip", () => {
     const skippedStatusCell = screen.getByText("skipped: missing-credentials")
     expect(skippedStatusCell.className).toContain("--ds-high")
   })
+
+  it("colours a missing-binary skip with --ds-high (actionable gap), not the disabled-by-config colour", async () => {
+    mockFetchApi.mockResolvedValue(
+      jsonResponse({
+        recorded: true,
+        ran: 0,
+        skipped: 1,
+        phases: [
+          { phase_name: "source_scanning", label: "Source", status: "skipped", reason: "missing-binary", detail: "semgrep not on PATH", duration_sec: null },
+        ],
+      }),
+    )
+    render(<ScanCoverageChip scanRunId="run-1" />)
+    fireEvent.click(await screen.findByText("Show detail"))
+
+    const cell = await screen.findByText("skipped: missing-binary")
+    expect(cell.className).toContain("--ds-high")
+    expect(cell.className).not.toContain("--ds-medium")
+  })
 })
