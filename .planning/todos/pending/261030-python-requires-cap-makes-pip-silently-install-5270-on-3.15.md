@@ -9,7 +9,16 @@ resolves_phase: "235.1"
 owner: "999.129"
 target_release: "5.28.1"
 ---
-# `requires-python = "<3.15"` makes pip on Python 3.15 silently install 5.27.0
+# `requires-python = "<3.15"` makes pip on Python 3.15 silently install 5.21.0
+
+## Corrected 2026-11-03 (235.1)
+
+The reproduction below used `--no-deps`, which hid the dependency constraint: 5.25.0/5.27.0 depend on
+sslyze (`nassl<6`, no 3.15 wheel), so a real unpinned resolve on 3.15.2 backtracks past them to **5.21.0**,
+not 5.27.0. The "drop the cap" candidate fix is **falsified**: an uncapped 5.28.1.dev0 still loses to 5.21.0
+on 3.15. The fix is D-01 (operator yanks the 17 pre-sslyze releases in 235.2, cap kept; see
+`235.1-YANK-PREP.md`) plus D-02 (smoke leg check N2, `scripts/pip_unpinned_verdict.py`). Original text kept
+below as history; steps 1 and the "yank does not help" claim there are superseded.
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, finding CR-01; operator decision Q1 "Keep GO, file for 5.28.1 (Recommended)")
 **Priority:** P1 for 5.28.1. A 3.15 user following the unpinned README Quick Start gets the previous release with no error.
