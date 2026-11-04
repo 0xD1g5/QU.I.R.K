@@ -3,6 +3,7 @@ import json
 import math
 import multiprocessing
 import os
+import shutil
 import sys
 import time
 from datetime import datetime, timezone
@@ -24,6 +25,7 @@ if sys.platform == "win32":
 from quirk.config import load_config, _parse_host_port
 from quirk.config_redaction import credential_is_set  # Phase 192 / OBS-01 / D-05
 from quirk.util.safe_exc import safe_str
+from quirk.util.scanner_binaries import SCANNER_BINARIES  # Phase 235.1 D-05
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
@@ -340,7 +342,7 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
             host=scanner_label,
             port=0,
             protocol="ERROR",
-            scan_error=str(exc) or exc.__class__.__name__,
+            scan_error=safe_str(exc) or exc.__class__.__name__,
             scan_error_category="exception",
         ))
         return []
@@ -362,6 +364,39 @@ def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endp
         scan_error=f"optional extra [{extra_group}] not installed",
         scan_error_category="missing_extra",
     ))
+
+
+def _emit_missing_binary_advisory(scanner_name: str, binary: str, error_code: str, error_endpoints) -> None:
+    """Phase 235.1 D-06: stderr advisory + ADVISORY CryptoEndpoint for a missing scanner binary.
+
+    Mirrors `_emit_missing_extra_advisory`. The row carries `scan_error`, so
+    `evidence.scan_error_count` counts it (D-07). semgrep/syft are system
+    binaries, not pip extras, hence the distinct `missing_binary` category.
+    """
+    print(format_error(error_code), file=sys.stderr)
+    error_endpoints.append(CryptoEndpoint(
+        host=scanner_name,
+        port=0,
+        protocol="ADVISORY",
+        scan_error=f"{binary} is not installed (QRK-{error_code})",
+        scan_error_category="missing_binary",
+    ))
+
+
+def _missing_binary_detail(binary: str, error_endpoints) -> Optional[str]:
+    """Phase 235.1 D-05: importable missing-binary gate shared by the source and
+    container phase closures (tests exercise this real helper, not a copy).
+
+    Returns None when `binary` is on PATH. Otherwise emits the advisory and
+    returns the skip detail "<binary> is not installed (QRK-<code>)".
+    """
+    spec = SCANNER_BINARIES[binary]
+    if shutil.which(binary) is not None:
+        return None
+    _emit_missing_binary_advisory(
+        spec.scanner_label, binary, spec.error_code, error_endpoints
+    )
+    return f"{binary} is not installed (QRK-{spec.error_code})"
 
 
 def _broker_missing_extra(enable_broker: bool, error_endpoints) -> bool:
@@ -3274,6 +3309,9 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_container is false")
             if not cfg.connectors.container_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.container_targets is empty")
+            _missing = _missing_binary_detail("syft", error_endpoints)
+            if _missing is not None:
+                return _recorder.skip("missing-binary", _missing)
             return scan_container_targets(
                 cfg.connectors.container_targets,
                 timeout=cfg.scan.timeouts.container_seconds,
@@ -3293,6 +3331,9 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_source is false")
             if not cfg.connectors.source_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.source_targets is empty")
+            _missing = _missing_binary_detail("semgrep", error_endpoints)
+            if _missing is not None:
+                return _recorder.skip("missing-binary", _missing)
             return scan_source_targets(
                 cfg.connectors.source_targets,
                 timeout=cfg.scan.timeouts.source_seconds,
