@@ -132,20 +132,36 @@ def _check_qramm_present() -> Tuple[bool, str]:
         return True, "[yellow][!] QRAMM module not installed — run Phase 51 first[/yellow]"
 
 
-def _check_db() -> dict:
-    """Phase 75 D-02 (WR-02) — honor ``QUIRK_DB_PATH`` then ``_default_db_path()``.
+def _no_db_yet(resolved: str) -> dict:
+    return {
+        "ok": True,
+        "informational": True,
+        "detail": f"no database yet at {resolved} — created by the first scan",
+        "remediation": "",
+    }
 
-    Returns the typed status dict ``{"ok", "detail", "remediation"}``.
+
+def _check_db() -> dict:
+    """Phase 75 D-02 (WR-02) + Phase 235.1 D-10 — truthful, side-effect-free DB check.
+
+    Resolves ``QUIRK_DB_PATH`` first, then ``_default_db_path()``, and applies the
+    SAME rules to both (IN-02 symmetry):
+
+    * path exists: must be a regular file (a directory FAILs) and readable, then
+      ``SELECT 1`` over a connection to that existing file.
+    * path absent: the first existing ancestor must be a directory and writable
+      (a regular file in an ancestor's place, or a read-only directory, FAILs);
+      otherwise it is an informational "created by the first scan" OK.
+
+    ``sqlite3.connect`` only ever runs on an existing regular file, so this
+    function never creates or migrates a database or any directory. On Windows
+    directory ``os.access(W_OK)`` is unreliable (it ignores ACLs), so only
+    ``isdir`` is required there.
     """
     env_path = os.environ.get("QUIRK_DB_PATH")
     if env_path:
-        if not (os.path.exists(env_path) and os.access(env_path, os.R_OK)):
-            return {
-                "ok": False,
-                "detail": f"QUIRK_DB_PATH={env_path!r} not readable",
-                "remediation": "Unset QUIRK_DB_PATH or point it at a readable SQLite file.",
-            }
         resolved = env_path
+        hint = "Unset QUIRK_DB_PATH or point it at a usable SQLite file path."
     else:
         # D-02 falls back to D-03 single canonical resolver.
         try:
@@ -157,32 +173,54 @@ def _check_db() -> dict:
                 "detail": safe_str(ve),
                 "remediation": "Set QUIRK_DB_PATH to disambiguate between the legacy DB files listed above.",
             }
+        hint = "Fix the permissions on the database location or set QUIRK_DB_PATH to a writable path."
+
+    if os.path.exists(resolved):
         if not os.path.isfile(resolved):
-            # Phase 235 D-24: first-run machine. Do not connect (it would fail or
-            # silently create an empty DB); report informationally.
+            return {
+                "ok": False,
+                "detail": f"{resolved} exists but is not a file",
+                "remediation": hint,
+            }
+        if not os.access(resolved, os.R_OK):
+            return {
+                "ok": False,
+                "detail": f"{resolved} is not readable",
+                "remediation": hint,
+            }
+        try:
+            conn = sqlite3.connect(resolved, timeout=2)
+            try:
+                conn.execute("SELECT 1")
+            finally:
+                conn.close()
             return {
                 "ok": True,
-                "informational": True,
-                "detail": f"no database yet at {resolved} — created by the first scan",
+                "detail": f"DB at {resolved} reachable",
                 "remediation": "",
             }
-    try:
-        conn = sqlite3.connect(resolved, timeout=2)
-        try:
-            conn.execute("SELECT 1")
-        finally:
-            conn.close()
-        return {
-            "ok": True,
-            "detail": f"DB at {resolved} reachable",
-            "remediation": "",
-        }
-    except Exception as exc:
+        except Exception as exc:
+            return {
+                "ok": False,
+                "detail": f"DB at {resolved} not reachable: {safe_str(exc)}",
+                "remediation": "Verify QUIRK_DB_PATH or run `quirk init` to create the database.",
+            }
+
+    # Not created yet: walk up to the first existing ancestor (read-only).
+    ancestor = os.path.dirname(os.path.abspath(resolved))
+    while ancestor and not os.path.exists(ancestor):
+        parent = os.path.dirname(ancestor)
+        if parent == ancestor:
+            break
+        ancestor = parent
+    usable = os.path.isdir(ancestor) and (os.name == "nt" or os.access(ancestor, os.W_OK))
+    if not usable:
         return {
             "ok": False,
-            "detail": f"DB at {resolved} not reachable: {safe_str(exc)}",
-            "remediation": "Verify QUIRK_DB_PATH or run `quirk init` to create the database.",
+            "detail": f"cannot create database at {resolved} ({ancestor} is not a writable directory)",
+            "remediation": hint,
         }
+    return _no_db_yet(resolved)
 
 
 def _check_config(config_path: str = _CONFIG_DEFAULT_PATH) -> Tuple[bool, str, str]:
