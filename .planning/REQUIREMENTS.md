@@ -62,13 +62,21 @@ Checked live at the milestone boundary (2026-11-03):
 
 ### Install truth (INSTALL)
 
-- [ ] **INSTALL-05**: A user on Python 3.15 who runs an unpinned `pip install quirk-scanner` gets
-  the current release, not a silent fallback to 5.27.0. The `requires-python` upper cap is removed
-  (CR-01). The release smoke's 3.15 leg asserts the *unpinned* resolution, alongside the existing
-  pinned check.
+- [ ] **INSTALL-05**: The release smoke's 3.15 leg asserts that an *unpinned* resolve on Python
+  3.15 never selects an older `quirk-scanner`, alongside the existing pinned check. 5.28.1 keeps
+  `requires-python = ">=3.10,<3.15"` (CR-01, 235.1 D-01/D-02). *Corrected 2026-11-03 (235.1
+  discuss):* this requirement first said "the upper cap is removed". A live Python 3.15.2
+  measurement showed that would not work: unpinned 3.15 resolves **5.21.0** (not 5.27.0), even with
+  an uncapped 5.28.1 available, because `sslyze` pins `nassl<6` and no nassl 5.x supports 3.15.
 - [ ] **INSTALL-06**: `quirk doctor` reports a Python version outside 3.10–3.14 as unsupported, so
   the stated range is enforced at runtime now that pip no longer enforces it. A bare clone on Python
   3.10 imports `quirk` without failing on `tomllib` (IN-01).
+
+- [ ] **INSTALL-07**: An unpinned `pip install quirk-scanner` on Python 3.15 fails loudly
+  (`ResolutionImpossible`) instead of silently installing an old release. The operator yanks the
+  un-yanked releases 4.10.0 through 5.21.0 on PyPI (17 as of 2026-11-03). The yank is reversible,
+  and exact pins still install. It is verified after the yank by re-running the 3.15 dry-run against
+  live PyPI. No agent yanks (235.1 D-01).
 
 ### Source-scan truth (SRCSCAN)
 
@@ -146,7 +154,7 @@ Deferred to v5.29 or later:
 | Azure Key Vault key scanning (`999.126`) | Disclosed known defect; a connector fix, not a patch-release truth fix |
 | Windows `install.ps1` sensor identity (`999.129` item) | Disclosed known defect; needs installer design work |
 | Announcing Python 3.15 support | INSTALL-05 stops pip backtracking; it does not claim 3.15 works. The announcement keeps "3.10 to 3.14" |
-| Yanking 5.27.0 | Does not fix CR-01: pip would resolve 5.25.0 instead |
+| Yanking 5.27.0 or 5.25.0 | Not needed: both are already unsatisfiable on 3.15 (they need sslyze, hence nassl<6). The yank set is the pre-sslyze releases only (INSTALL-07) |
 | Kerberos weak-etype findings in the report (DETECT-02) | Disclosed; feature work for v5.29 |
 
 ## Traceability
@@ -164,12 +172,13 @@ Deferred to v5.29 or later:
 | HARNESS-06 | Phase 235.1 | Pending |
 | DEP-03 | Phase 235.1 | Pending |
 | REL-08 | Phase 235.1 | Pending |
+| INSTALL-07 | Phase 235.2 | Pending |
 | REL-09 | Phase 235.2 | Pending |
 | REL-10 | Phase 235.2 | Pending |
 | LAUNCH-08 | Phase 235.2 | Pending |
 | LAUNCH-09 | Phase 235.2 | Pending |
 
-**Coverage:** 15 requirements, 15 mapped, 0 unmapped.
+**Coverage:** 16 requirements, 16 mapped, 0 unmapped. (INSTALL-07 added 2026-11-03 at the 235.1 discuss.)
 
 ---
 *Requirements defined: 2026-11-03*

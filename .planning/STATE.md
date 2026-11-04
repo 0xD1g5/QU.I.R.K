@@ -4,7 +4,7 @@ milestone: v5.28.1
 milestone_name: Install & Source-Scan Truth
 status: planning
 last_updated: "2026-11-03T23:30:00.000Z"
-last_activity: "2026-11-03 -- Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
+last_activity: "2026-11-03 -- Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
 progress:
   total_phases: 2
   completed_phases: 0
@@ -1504,9 +1504,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: Not started (v5.28.1 requirements and roadmap defined; next is 235.1)
+Phase: 235.1 (Install & Source-Scan Truth Fixes) — context gathered 2026-11-03; next `/gsd-plan-phase 235.1`
 Plan: —
-Status: Milestone v5.28.1 Install & Source-Scan Truth opened 2026-11-03 (patch release). 15 requirements,
+Status: Milestone v5.28.1 Install & Source-Scan Truth opened 2026-11-03 (patch release). 16 requirements (INSTALL-07 added at the 235.1 discuss),
 Phases 235.1–235.2, branch `v5281-open` cut from `main` at `f4564d2c` (PR #65 merge, `branch_ci_state`
 exit 0). Ship by 2026-11-23.
 Last activity: 2026-11-03. Milestone opened by hand from pre-images. No `state.milestone-switch`,
@@ -3534,8 +3534,9 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: none. v5.28 is closed (2026-11-03); its phase directories are now under
-`.planning/milestones/v5.28-phases/`. Next: 5.28.1, then `/gsd-new-milestone`.
+Resume file: `.planning/phases/235.1-install-source-scan-truth-fixes-inserted/235.1-CONTEXT.md`. Next: `/gsd-plan-phase 235.1`.
+*Prior:* none. v5.28 is closed (2026-11-03); its phase directories are now under
+`.planning/milestones/v5.28-phases/`.
 
 Last session: 2026-11-03. **Confirmed `main` CI green at `66e6a992` (after PR #64), then closed v5.28 by hand.** Every count was re-derived
 from disk. Three drifted from what was carried in:
