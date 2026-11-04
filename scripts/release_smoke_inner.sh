@@ -102,7 +102,7 @@ needs_inshell() {
 # Returns the command's rc, or 124 on expiry. stdout/stderr are the caller's.
 run_bounded() {
   local secs="$1" text="$2" pid wd rc mark
-  if command -v timeout >/dev/null 2>&1; then
+  if [ -z "${Q_NO_TIMEOUT_BIN:-}" ] && command -v timeout >/dev/null 2>&1; then
     timeout -k 5 "${secs}" bash -c "${text}" </dev/null
     return $?
   fi
@@ -171,7 +171,7 @@ if [ "${1:-}" = "--self-check" ]; then
   [ "$(verdict_line 0 0 3)" = "RESULT: PASS" ] && echo "  ok   verdict_line: clean run is PASS" || { echo "  FAIL verdict_line rejected a clean run"; bad=1; }
   # watchdog: a hung command must come back 124 quickly (WR-10)
   t0="$(date +%s)"
-  run_bounded 1 'sleep 30' >/dev/null 2>&1; wrc=$?
+  run_bounded 1 'sleep 12' >/dev/null 2>&1; wrc=$?
   t1="$(date +%s)"
   if [ "${wrc}" -ne 0 ] && [ $((t1 - t0)) -le 8 ]; then echo "  ok   run_bounded times out a hung command (rc ${wrc}, $((t1 - t0))s)"; else echo "  FAIL run_bounded did not stop a hung command (rc ${wrc}, $((t1 - t0))s)"; bad=1; fi
   run_bounded 5 'exit 0' >/dev/null 2>&1 && echo "  ok   run_bounded passes a quick command" || { echo "  FAIL run_bounded failed a quick command"; bad=1; }
