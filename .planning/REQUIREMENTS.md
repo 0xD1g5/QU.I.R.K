@@ -109,7 +109,9 @@ Checked live at the milestone boundary (2026-11-03):
 - [ ] **DEP-03**: The four critical Dependabot alerts (#3, #31, #83, #84) are closed by dependency
   bumps (`vitest`/`tinypool` in `src/dashboard`, `grpc` in `labs/grpc-tls`). An alert that cannot
   be bumped is dismissed only with a written reachability reason. The dashboard bundle and the
-  `grpc-tls` lab still build, and their gates stay green.
+  `grpc-tls` lab still build, and their gates stay green. *Scoped 2026-11-03 (235.1 plan check):*
+  Dependabot only re-evaluates the default branch, so 235.1 delivers the bumps on `v5281-open`, and
+  #3/#31 reading `fixed` is verified after the 235.2 merge.
 
 ### Release (REL)
 

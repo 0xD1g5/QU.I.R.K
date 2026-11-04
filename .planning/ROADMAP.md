@@ -112,23 +112,57 @@ candidate below. Requirements are in `.planning/REQUIREMENTS.md` (16).
 - [ ] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
 
 ### Phase 235.1: Install & Source-Scan Truth Fixes (INSERTED)
-**Goal**: The fixes 5.28.1 exists for are on `v5281-open` with tests: pip on Python 3.15 no longer silently installs an older release, a scan whose source or container tool is missing never reads as a clean scan, `quirk doctor` reports Python range, missing scanners and unusable DB paths truthfully, the release smoke and audit scripts cannot report a false pass, and the four critical Dependabot alerts are closed.
+**Goal**: The fixes 5.28.1 exists for are on `v5281-open` with tests: pip on Python 3.15 no longer silently installs an older release, a scan whose source or container tool is missing never reads as a clean scan, `quirk doctor` reports Python range, missing scanners and unusable DB paths truthfully, the release smoke and audit scripts cannot report a false pass, and the fixes for the four critical Dependabot alerts are on the branch (#83/#84 dismissed with the operator-approved reason; #3/#31 verified `fixed` after the 235.2 merge).
 **Depends on**: Phase 235 (v5.28.0 shipped; post-GO review CR-01/CR-02 filed)
 **Requirements**: INSTALL-05, INSTALL-06, SRCSCAN-01, SRCSCAN-02, SRCSCAN-03, DOCTOR-01, HARNESS-04, HARNESS-05, HARNESS-06, DEP-03, REL-08
 **Success Criteria** (what must be TRUE):
   1. `pyproject.toml` keeps `requires-python = ">=3.10,<3.15"` (235.1 D-01: dropping it was measured and does not help, because 3.15 still resolves 5.21.0 through sslyze's `nassl<6` pin). The 3.15 smoke leg's new unpinned assertion fails on any older `quirk-scanner` and has a test that goes red on that shape. `quirk doctor` on a Python outside 3.10–3.14 is a hard failure. A bare clone on 3.10 imports `quirk`.
   2. A scan with `source_targets` set and `semgrep` absent from `PATH` shows Source Code as skipped or Not assessed in Scan Coverage, the HTML report and `/api/scan/latest`, never as ran with zero findings. The same test with `syft` absent covers container scanning. `quirk doctor` warns in both cases. When one source target fails, the others' results are kept and the error is reported.
   3. `quirk doctor` fails its DB check for an unusable path, including one set through the environment variable. The release smoke harness, the audit script and the score-attribution script each have a test where a failed, empty or out-of-range step turns them red. The Semgrep-claim and CHANGELOG-parity gates have a fixture for each blind spot the review named, and each fixture goes red.
-  4. Dependabot alerts #3, #31, #83 and #84 are closed, or dismissed with a written reachability reason. The dashboard bundle gate and the `grpc-tls` lab build stay green.
+  4. The fixes for Dependabot alerts #3 and #31 are on `v5281-open` (lockfile `vitest` >=3.2.6, `labs/grpc-tls/go.mod` grpc >=1.79.3), and #83 and #84 are dismissed with the operator-approved reachability reason. Dependabot only re-evaluates the default branch, so #3 and #31 reading `fixed` is checked after the 235.2 merge (235.2 criterion 1). The dashboard bundle gate and the `grpc-tls` lab build stay green.
   5. CHANGELOG `[5.28.1]` describes the fixes and the `[5.28.0]` Semgrep wording names both cases. The README CR-02 known-defect line matches the fixed behaviour, and the doc-claim ledger gate is green. `branch_ci_state.py --branch v5281-open` exits 0 at the phase-close HEAD.
-**Plans**: TBD
+**Plans**: 15 plans in 6 waves (checker passed at iteration 3: 0 blockers; the final warnings were fixed inline by the orchestrator)
+
+Plans:
+**Wave 1**
+- [ ] 235.1-01-PLAN.md — CR-02 at the scan engine: `missing-binary` skip reason, missing-binary advisory, score and end-to-end proof across HTML, API and coverage (D-05/D-06/D-07)
+- [ ] 235.1-02-PLAN.md — `missing_binary` treated like `missing_extra` downstream (trends, sensor push, findings_evaluator)
+- [ ] 235.1-03-PLAN.md — Source scanner keeps partial results, shows every error as a row, redacts paths; files a todo for container-scanner syft failures (D-09)
+- [ ] 235.1-04-PLAN.md — vitest/@vitest/ui 3.2.7 (#31) plus the dashboard "Skipped" badge and colour for a missing tool (checkpoint: npm package check)
+- [ ] 235.1-05-PLAN.md — The 3.15 smoke leg's unpinned "no older release" verdict (D-01/D-02), yank-prep artifact, CR-01 todo corrected
+- [ ] 235.1-06-PLAN.md — score_attribution and readme_audit cannot pass vacuously (WR-04/WR-05)
+- [ ] 235.1-07-PLAN.md — Semgrep-claim and CHANGELOG-parity gate blind spots closed (WR-06/IN-06); 5.28.0 test pinned
+- [ ] 235.1-08-PLAN.md — Dismiss tinypool alerts #83/#84 with a reachability reason (checkpoint: operator approval); #3/#31 handoff to 235.2
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 235.1-09-PLAN.md — grpc-tls grpc v1.79.3, Go 1.24+ builder, TLS before/after diff, oracle updated from the measurement (checkpoint: operator starts Docker)
+- [ ] 235.1-10-PLAN.md — doctor: Python 3.10–3.14 range, configured-but-missing warning, DB check rewrite, `tomllib` guard (D-03/D-04/D-08/D-10)
+- [ ] 235.1-11-PLAN.md — Release smoke harness false-PASS paths removed, with a CI-safe stub-docker test (CR-03/WR-09/WR-10/IN-05)
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 235.1-12-PLAN.md — CHANGELOG `[5.28.1]` (test-first) and the `[5.28.0]` Semgrep line corrected; CHANGELOG ledger rows (D-15)
+
+**Wave 4** *(blocked on Wave 3)*
+- [ ] 235.1-13-PLAN.md — README and reference docs for the fixed missing-scanner behaviour; ledger re-anchored (D-16)
+
+**Wave 5** *(blocked on Wave 4)*
+- [ ] 235.1-15-PLAN.md — Guides, connectors, chaos-lab doc and oracles; master guide regenerated; vault synced (D-16)
+
+**Wave 6** *(blocked on Wave 5)*
+- [ ] 235.1-14-PLAN.md — UAT-SERIES, vault phase note, full suite, push and dispatch, `branch_ci_state.py` exit 0 at HEAD (no commit after the observation)
+
+Cross-cutting constraints:
+- No mutating gsd-sdk/gsd-tools `state.*`/`roadmap.*`/`requirements.*`/`phase.*` verb in any plan; the orchestrator hand-edits STATE/ROADMAP/REQUIREMENTS.
+- Every gate fix has a red-on-defect proof with a non-zero test selection; UAT-cited test names are preserved.
+- No yank, version bump, tag or publish in 235.1.
+- The doc-claim ledger is edited in plan order 07 → 09 → 12 → 13 → 15.
 
 ### Phase 235.2: Release 5.28.1 & Announcement Re-check (INSERTED)
 **Goal**: The version a new user installs from the announcement is 5.28.1, it works as the README says on every supported leg, and the operator has a re-checked announcement and a recorded go/no-go before anything is posted.
 **Depends on**: Phase 235.1
 **Requirements**: INSTALL-07, REL-09, REL-10, LAUNCH-08, LAUNCH-09
 **Success Criteria** (what must be TRUE):
-  1. The version reads 5.28.1 in `pyproject.toml`, `README.md` and `docs/UAT-SERIES.md` (UAT-1-02 and header). `v5281-open` is merged to `main` through a PR, `branch_ci_state.py --branch main` exits 0 at the merge commit, and `v5.28.1` is tagged on it. `release.yml` publishes it, and PyPI lists 5.28.1, all on or before 2026-11-23 (or after a hand re-verification of CMVP against its `source_url`).
+  1. The version reads 5.28.1 in `pyproject.toml`, `README.md` and `docs/UAT-SERIES.md` (UAT-1-02 and header). `v5281-open` is merged to `main` through a PR, `branch_ci_state.py --branch main` exits 0 at the merge commit, and `v5.28.1` is tagged on it. Dependabot alerts #3 and #31 read `fixed` on `main` after that merge (`gh api repos/0xD1g5/QU.I.R.K/dependabot/alerts/{3,31} -q .state`; DEP-03 handoff from 235.1). `release.yml` publishes it, and PyPI lists 5.28.1, all on or before 2026-11-23 (or after a hand re-verification of CMVP against its `source_url`).
   2. The operator has yanked the pre-sslyze releases (4.10.0–5.21.0, list re-derived from PyPI at yank time), and an unpinned `pip install --dry-run quirk-scanner` on Python 3.15 against live PyPI fails `ResolutionImpossible` instead of selecting an old release. A clean PyPI install of 5.28.1 passes the release smoke test on macOS, Linux 3.10, Linux 3.11 and the contributor leg. The 3.15 leg's unpinned resolution check passes. Attestations verify, and the PyPI-rendered description's links all resolve.
   3. `docs/images/dashboard-hero.png` is recaptured from a 5.28.1 scan against a snapshot DB, its caption describes that image, and the operator has accepted it visually.
   4. The announcement draft is re-checked sentence by sentence against 5.28.1, with no leak-grep or false-capability-grep hits, and the operator's go/no-go is recorded. No agent posts anything.
