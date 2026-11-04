@@ -1077,6 +1077,27 @@ def _collect_stage_partial_failures(
     return stage_failures
 
 
+def _source_row_partial_failures(stage: str, endpoints: list) -> list:
+    """235.1 review WR-01: partial_failures entries for in-band SOURCE error rows.
+
+    scan_source_targets returns a failed target as a SOURCE row carrying
+    scan_error (it never reaches error_endpoints), so
+    _collect_stage_partial_failures cannot see it. Same entry shape; the
+    scanner is the generic label "source_scanner", never the repo path.
+    """
+    return [
+        {
+            "stage": stage,
+            "scanner": "source_scanner",
+            "error_category": getattr(ep, "scan_error_category", None) or "exception",
+            "error_message": getattr(ep, "scan_error", "") or "",
+            "endpoint_count": 0,
+        }
+        for ep in endpoints
+        if getattr(ep, "scan_error", None)
+    ]
+
+
 def _resolve_db_path(args) -> str | None:
     """Phase 67 RESUME-01: resolve db_path for pre-scan commands (list-resumable)."""
     if getattr(args, "db_path", None):
@@ -3425,6 +3446,10 @@ def main():
 
         _flush_stage_endpoints(cfg.output.db_path, jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints + fuzz_endpoints, scan_run_id)  # Phase 67 RESUME-01
         _api_pf = _collect_stage_partial_failures(run_stats, "api", error_endpoints, _err_before_api)
+        # WR-01: failed source targets are in-band rows, not error_endpoints.
+        _src_pf = _source_row_partial_failures("api", source_endpoints)
+        run_stats.setdefault("partial_failures", []).extend(_src_pf)
+        _api_pf = _api_pf + _src_pf
         if args.db_path:
             write_scan_checkpoint(args.db_path, scan_run_id, "api",
                 status="partial" if _api_pf else "completed",

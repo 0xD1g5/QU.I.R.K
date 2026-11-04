@@ -39,7 +39,8 @@ tell the truth. It changes no scoring model: `SCORING_VERSION` stays 4.0.
 - **Source scanning keeps the results of repositories that succeeded.** When one repository fails
   (a timeout, unreadable output, or another error), the other repositories' findings are now kept
   and each failed repository is recorded as its own scan error, with file paths redacted, instead of
-  one failure discarding the scan. The scan still stops with an error when every repository fails; a repository path that is rejected as invalid counts as failed, not as scanned.
+  one failure discarding the scan. A failed repository appears in the dashboard's Scanner Status and
+  as a "Source scan incomplete" finding. The scan still stops with an error when every repository fails; a repository path that is rejected as invalid counts as failed, not as scanned.
   Because each failed repository now counts as a scan error and the findings from the repositories
   that succeeded now count, a source scan where some repositories fail can score differently than in
   5.28.0. In the case we measured (three repositories, one succeeding with two findings, two

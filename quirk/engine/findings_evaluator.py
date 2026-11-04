@@ -590,6 +590,28 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 f["detail"] = scan_err
                 findings.append(f)
                 continue
+            if proto == "SOURCE":
+                # 235.1 review IN-01: a failed/timed-out source target is
+                # incomplete coverage, not a benign observation. Visible
+                # (no coverage_gap category), host is the redacted repo label.
+                f = _build_finding(
+                    severity="INFO",
+                    host=host,
+                    port=port,
+                    title=f"Source scan incomplete for {host}",
+                    description=(
+                        "The source code scan of this repository failed or only "
+                        "partly completed, so its cryptographic usage was not fully "
+                        "assessed. Findings from other repositories are unaffected."
+                    ),
+                    recommendation=(
+                        "Review the error detail, fix the cause (timeout, unreadable "
+                        "output, ruleset availability) and re-run the scan."
+                    ),
+                )
+                f["detail"] = scan_err
+                findings.append(f)
+                continue
             f = _build_finding(
                 severity="INFO",
                 host=host,
