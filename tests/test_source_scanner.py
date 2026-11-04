@@ -191,7 +191,10 @@ def test_wrapped_phase_records_source_ruleset_failure(fake_semgrep):
     assert rows[0]["detail"].startswith("SourceRulesetUnavailable")
     assert len(error_endpoints) == 1
     assert error_endpoints[0].protocol == "ERROR"
-    assert error_endpoints[0].scan_error.startswith("ruleset unavailable")
+    # 235.1-01 (SRCSCAN-03 WR-02): scan_error is now built with safe_str(exc),
+    # so it carries the same class-name prefix as the persisted detail.
+    assert error_endpoints[0].scan_error.startswith("SourceRulesetUnavailable")
+    assert "ruleset unavailable" in error_endpoints[0].scan_error
 
 
 def test_semgrep_warn_level_errors_do_not_fail(fake_semgrep):
