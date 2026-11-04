@@ -232,7 +232,8 @@ def _is_transient(status: int) -> bool:
     return status == 429 or status >= 500
 
 
-def check_links(urls: Iterable[str], fetcher: Fetcher, timeout: float) -> dict:
+def check_links(urls: Iterable[str], fetcher: Fetcher, timeout: float,
+                min_links: int = 1) -> dict:
     ok: List[str] = []
     broken: List[dict] = []
     unknown: List[str] = []
@@ -251,13 +252,15 @@ def check_links(urls: Iterable[str], fetcher: Fetcher, timeout: float) -> dict:
             broken.append({"url": url, "status": status})
         else:
             ok.append(url)
-    if unknown:
+    checked = len(ok) + len(broken) + len(unknown)
+    if unknown or checked < min_links:
+        # Zero (or under-floor) links checked is never green (WR-05).
         verdict = "unknown"
     elif broken:
         verdict = "red"
     else:
         verdict = "green"
-    return {"checked": len(ok) + len(broken) + len(unknown), "ok": ok,
+    return {"checked": checked, "ok": ok,
             "broken": broken, "unknown": unknown, "verdict": verdict}
 
 
@@ -267,14 +270,18 @@ def _source_text(source: str, timeout: float, json_loader) -> Optional[str]:
         with open(value, encoding="utf-8") as fh:
             return fh.read()
     if kind == "pypi":
+        data = json_loader(value, timeout)
+        description = (data.get("info") or {}).get("description") or ""
+        if not description.strip():
+            print("PyPI JSON has no info.description; nothing to check "
+                  "(verdict unknown)", file=sys.stderr)
+            return None
         try:
             from readme_renderer.markdown import render
         except ImportError:
             print("readme-renderer[md] is not installed; pypi mode cannot "
                   "render the description (verdict unknown)", file=sys.stderr)
             return None
-        data = json_loader(value, timeout)
-        description = data.get("info", {}).get("description") or ""
         rendered = render(description)
         if rendered is None:
             print("readme-renderer refused the description", file=sys.stderr)
@@ -300,7 +307,8 @@ def _links(args, fetcher: Fetcher, json_loader) -> int:
     urls = [u for u in raw if u and not u.startswith(("#", "mailto:"))]
     if args.substitute_ref:
         urls = [substitute_ref(u, args.substitute_ref) for u in urls]
-    report.update(check_links(urls, fetcher, args.timeout))
+    report.update(check_links(urls, fetcher, args.timeout,
+                              getattr(args, "min_links", 1)))
     print(json.dumps(report, indent=2))
     return {"green": 0, "red": 1, "unknown": 2}[report["verdict"]]
 
@@ -316,6 +324,8 @@ def main(argv=None, fetcher: Fetcher = default_fetcher,
                     help="file:PATH or pypi:VERSION")
     pl.add_argument("--substitute-ref", default=None)
     pl.add_argument("--timeout", type=float, default=15.0)
+    pl.add_argument("--min-links", type=int, default=1,
+                    help="fewer checked links than this is unknown (exit 2)")
     args = parser.parse_args(argv)
 
     if args.cmd == "commands":

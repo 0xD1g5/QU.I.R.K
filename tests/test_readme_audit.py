@@ -162,3 +162,38 @@ def test_commands_blocks_and_python_range(capsys):
     assert readme_audit.stated_python_range("no range here") is None
     assert readme_audit.main(["commands", "--readme", str(README)]) == 0
     assert "python_range" in json.loads(capsys.readouterr().out)
+
+
+def test_check_links_empty_is_unknown():
+    res = readme_audit.check_links([], lambda u, t: 200, 5)
+    assert res["verdict"] == "unknown" and res["checked"] == 0
+
+
+def test_links_with_no_links_exits_2(tmp_path, capsys):
+    src = _write(tmp_path, "no links here\n")
+    rc = readme_audit.main(["links", "--source", src],
+                           fetcher=lambda u, t: 200)
+    report = json.loads(capsys.readouterr().out)
+    assert rc == 2 and report["verdict"] == "unknown"
+
+
+@pytest.mark.parametrize("info", [{}, {"description": ""}, {"description": "  "}])
+def test_pypi_empty_description_is_unknown(info, capsys):
+    rc = readme_audit.main(
+        ["links", "--source", "pypi:1.0.0"], fetcher=lambda u, t: 200,
+        json_loader=lambda v, t: {"info": info})
+    cap = capsys.readouterr()
+    assert rc == 2 and "info.description" in cap.err
+    assert json.loads(cap.out)["verdict"] == "unknown"
+
+
+def test_min_links_floor(tmp_path, capsys):
+    three = _write(tmp_path, " ".join(
+        f"[l](https://example.com/{i})" for i in range(3)) + "\n")
+    assert readme_audit.main(["links", "--source", three, "--min-links", "5"],
+                             fetcher=lambda u, t: 200) == 2
+    capsys.readouterr()
+    five = _write(tmp_path, " ".join(
+        f"[l](https://example.com/{i})" for i in range(5)) + "\n")
+    assert readme_audit.main(["links", "--source", five, "--min-links", "5"],
+                             fetcher=lambda u, t: 200) == 0
