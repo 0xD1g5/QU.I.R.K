@@ -239,6 +239,13 @@ def scan_source_targets(
         try:
             eps = scan_source_repo(repo_path, timeout=timeout, logger=logger)
             results.extend(eps)
+            # WR-02: a rejected target (invalid_input) returns a row instead of
+            # raising, but it is not evidence -- it counts as a failure so a mix
+            # of rejected + ruleset-unavailable targets cannot read as ``ran``.
+            if eps and all(e.scan_error_category == "invalid_input" for e in eps):
+                failures.append(SourceScanError(
+                    f"invalid target rejected: {eps[0].scan_error}"
+                ))
         except SourceScanError as exc:
             failures.append(exc)
             results.append(_error_row(repo_path, safe_str(exc), exc.category))

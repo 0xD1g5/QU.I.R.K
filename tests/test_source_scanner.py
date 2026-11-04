@@ -375,3 +375,39 @@ def test_null_or_garbage_results_is_error_not_clean(fake_semgrep_repos, results)
     eps = scan_source_targets([bad, good])
     assert len([e for e in eps if e.scan_error]) == 1
     assert len([e for e in eps if not e.scan_error]) == 2
+
+
+# --------------------------------------------------------------------------
+# 235.1 review WR-02: invalid_input rows are not evidence
+# --------------------------------------------------------------------------
+
+def test_wr02_invalid_plus_ruleset_unavailable_raises_not_ran(fake_semgrep_repos):
+    """A rejected target plus a ruleset-404 target produced zero evidence; the
+    phase must fail (recorded failed), not return rows and read as ``ran``."""
+    import run_scan
+
+    (repo,) = fake_semgrep_repos({"a": (EXIT7_FIXTURE.read_text(), 7)})
+    with pytest.raises(SourceScanError) as ei:
+        scan_source_targets(["-bad", repo])
+    assert str(ei.value).startswith("source scan failed for all targets")
+    recorder = run_scan._PhaseRecorder()
+    run_stats = {"timings_sec": {}, "phase_records": recorder}
+    run_scan._wrapped_phase(
+        run_stats, "source_scanning", "source_scanner",
+        lambda: scan_source_targets(["-bad", repo]), [], MagicMock(),
+    )
+    (row,) = [r for r in recorder.rows() if r["phase_name"] == "source_scanning"]
+    assert row["reason"] == "failed"
+
+
+def test_wr02_only_invalid_targets_raises(fake_semgrep_repos):
+    fake_semgrep_repos({"a": ("{}", 0)})
+    with pytest.raises(SourceScanError):
+        scan_source_targets(["-bad"])
+
+
+def test_wr02_invalid_plus_ok_target_still_returns_rows(fake_semgrep_repos):
+    (good,) = fake_semgrep_repos({"b": (json.dumps(SAMPLE_SEMGREP_OUTPUT), 0)})
+    eps = scan_source_targets(["-bad", good])
+    assert len([e for e in eps if not e.scan_error]) == 2
+    assert [e.scan_error_category for e in eps if e.scan_error] == ["invalid_input"]
