@@ -298,3 +298,57 @@ def test_e2e_api_coverage_and_scan_latest_partial_failures(missing_semgrep_scan,
     assert not any(
         str(f.get("protocol", "")).upper() == "SOURCE" for f in body["findings"]
     )
+
+
+# ---------------------------------------------------------------------------
+# Container leg (SRCSCAN-01): the same end-to-end run with syft absent.
+# ---------------------------------------------------------------------------
+
+_SYFT_DETAIL = "syft is not installed (QRK-INSTALL-007)"
+
+
+@pytest.mark.slow
+def test_e2e_container_phase_recorded_skipped_missing_binary(tmp_path):
+    out = tmp_path / "out"
+    db = tmp_path / "quirk.db"
+
+    tmpl = os.path.join(_REPO, "quirk", "config_template.yaml")
+    text = open(tmpl, encoding="utf-8").read()
+    text = text.replace('directory: "./quirk-output"', f'directory: "{out}"')
+    text = text.replace('db_path: "./quirk-output/quirk.db"', f'db_path: "{db}"')
+    assert str(out) in text and str(db) in text
+    text = text.replace("  # container_targets: []", "  container_targets: ['alpine:3.19']")
+    assert "alpine:3.19" in text
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(text, encoding="utf-8")
+
+    mp = pytest.MonkeyPatch()
+    try:
+        mp.chdir(tmp_path)
+        mp.setattr(run_scan.shutil, "which", _which_without("syft"))
+        mp.setattr(sys, "argv", [
+            "run_scan.py", "--config", str(cfg_path), "--db-path", str(db),
+        ])
+        run_scan.main()
+    finally:
+        mp.undo()
+
+    from quirk.db import get_session
+
+    with get_session(str(db)) as session:
+        rec = session.query(ScanPhaseRecord).filter_by(phase_name="container_scanning").one()
+        assert (rec.status, rec.reason, rec.detail) == (
+            "skipped", "missing-binary", _SYFT_DETAIL,
+        )
+        advisories = (
+            session.query(CryptoEndpoint)
+            .filter_by(protocol="ADVISORY", scan_error_category="missing_binary")
+            .all()
+        )
+        assert [a.host for a in advisories] == ["container_scanner"]
+
+    htmls = glob.glob(str(out / "report-*.html"))
+    assert len(htmls) == 1
+    html = open(htmls[0], encoding="utf-8").read()
+    assert "Container</td><td>skipped</td>" in html
+    assert "Container</td><td>ran</td>" not in html
