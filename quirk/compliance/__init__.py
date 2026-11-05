@@ -288,6 +288,9 @@ TITLE_IDENTITY_CLASS: Dict[str, str] = {
     "Code-signing certificate expiring within 90 days: ": "PRESERVE_IDENTITY",
     # findings_evaluator.py:1080 — as above.
     "Code-signing certificate uses weak algorithm: ": "PRESERVE_IDENTITY",
+    # findings_evaluator.py:601 — DISCRIMINATOR: host is the failed source
+    # repository; two failed repos are two distinct findings.
+    "Source scan incomplete for ": "PRESERVE_IDENTITY",
 }
 
 
