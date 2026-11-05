@@ -34715,6 +34715,10 @@ gh release view v5.28.0 --json body -q .body
 **Date:** 2026-10-30  **Tester:** Automated (Phase 235 post-release plan 16)
 **Notes:** Re-executed after publish. The remainder of the body, 1163 chars, is the unsigned-binary notice and Windows asset quick-install section appended by the release workflow, as in 5.27.0. This also closes debug finding 1 of github-release-notes-and-ci-failures (D-13). Run on 2026-10-30.
 
+## Series 235.1: Install & Source-Scan Truth Fixes (Phase 235.1 — v5.28.1)
+
+**Last Updated:** 2026-11-05 (Phase 235.1)
+
 ### UAT-235.1-01: Source scan with semgrep absent reads "Not assessed -- skipped: missing-binary"
 
 **ID:** UAT-235.1-01
