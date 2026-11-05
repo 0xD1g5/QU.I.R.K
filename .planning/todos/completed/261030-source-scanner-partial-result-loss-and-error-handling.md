@@ -4,7 +4,8 @@ created: 2026-10-30
 source: Phase 235 post-GO code review (WR-01, WR-02, IN-03, IN-04), .planning/phases/235-release-launch-gate/235-REVIEW.md
 priority: medium
 area: quirk/scanner/source_scanner.py
-status: pending
+status: completed
+completed: 2026-11-05
 resolves_phase: "235.1"
 owner: "999.127"
 ---
@@ -41,3 +42,7 @@ CR-02 (missing binary recorded as ran) touches the same file; do both in one pas
 - **Unknowns:** how coverage/report should present "some repos failed, some produced findings"; there is no
   precedent row type for a partial phase.
 - **Spike needed?** No. Fixtures for mixed results can be built from `tests/fixtures/semgrep_exit7_p_cryptography.json`.
+
+## Resolved (2026-11-05, Phase 235.1)
+
+Fixed on `v5281-open` and verified `passed` at `af4f755c` (`235.1-VERIFICATION.md`, branch CI green). Ships in 5.28.1 (Phase 235.2).

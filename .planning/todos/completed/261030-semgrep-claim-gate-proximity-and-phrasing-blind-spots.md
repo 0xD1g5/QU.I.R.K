@@ -4,7 +4,8 @@ created: 2026-10-30
 source: Phase 235 post-GO code review (WR-06), .planning/phases/235-release-launch-gate/235-REVIEW.md
 priority: low
 area: semgrep doc-claim guard test
-status: pending
+status: completed
+completed: 2026-11-05
 resolves_phase: "235.1"
 owner: "999.127"
 ---
@@ -40,3 +41,7 @@ the marker is subject-bound; state the scan-set limits in the docstring (or exte
 - **Unknowns:** whether the tightened flag trips existing honest docs (run it over the tree first); whether
   extending to non-`.md` surfaces is worth the false-positive cost.
 - **Spike needed?** No.
+
+## Resolved (2026-11-05, Phase 235.1)
+
+Fixed on `v5281-open` and verified `passed` at `af4f755c` (`235.1-VERIFICATION.md`, branch CI green). Ships in 5.28.1 (Phase 235.2).

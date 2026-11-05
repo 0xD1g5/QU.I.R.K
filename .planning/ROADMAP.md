@@ -108,7 +108,7 @@ release-evidence and doctor defects found by the same post-GO review. Ship `v5.2
 v4.10.1. Phases are numbered 235.1 and 235.2, inserted after Phase 235, so Phase 236 stays the v5.29
 candidate below. Requirements are in `.planning/REQUIREMENTS.md` (16).
 
-- [ ] **Phase 235.1: Install & Source-Scan Truth Fixes** - An unpinned 3.15 install no longer backtracks to 5.27.0, a missing semgrep or syft reads as not assessed, doctor tells the truth, and the release-evidence scripts cannot pass falsely
+- [x] **Phase 235.1: Install & Source-Scan Truth Fixes** - An unpinned 3.15 install no longer backtracks to 5.27.0, a missing semgrep or syft reads as not assessed, doctor tells the truth, and the release-evidence scripts cannot pass falsely
 - [ ] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
 
 ### Phase 235.1: Install & Source-Scan Truth Fixes (INSERTED)
@@ -122,34 +122,35 @@ candidate below. Requirements are in `.planning/REQUIREMENTS.md` (16).
   4. The fixes for Dependabot alerts #3 and #31 are on `v5281-open` (lockfile `vitest` >=3.2.6, `labs/grpc-tls/go.mod` grpc >=1.79.3), and #83 and #84 are dismissed with the operator-approved reachability reason. Dependabot only re-evaluates the default branch, so #3 and #31 reading `fixed` is checked after the 235.2 merge (235.2 criterion 1). The dashboard bundle gate and the `grpc-tls` lab build stay green.
   5. CHANGELOG `[5.28.1]` describes the fixes and the `[5.28.0]` Semgrep wording names both cases. The README CR-02 known-defect line matches the fixed behaviour, and the doc-claim ledger gate is green. `branch_ci_state.py --branch v5281-open` exits 0 at the phase-close HEAD.
 **Plans**: 15 plans in 6 waves (checker passed at iteration 3: 0 blockers; the final warnings were fixed inline by the orchestrator)
+**Completed**: 2026-11-05. Verified `passed` 5/5 at `af4f755c` after two re-verifications (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0; Python CI 42092994455, Dashboard Quality 42092999192), re-observed green at the close parent `00a39593` (Series 235.1 UAT heading only; Python CI 42100802738, Dashboard Quality 42100807186). Code review: 0 critical, WR-01..06 + IN-01/02/07 fixed, the rest deferred to todo `261104-phase-2351-review-deferred-warnings-and-info` (999.127). Deferred to 235.2 by design: Dependabot #3/#31 reading `fixed`, the live-PyPI 3.15 N2 leg after the yank, a real Python 3.10 bare-clone import.
 
 Plans:
 **Wave 1**
-- [ ] 235.1-01-PLAN.md — CR-02 at the scan engine: `missing-binary` skip reason, missing-binary advisory, score and end-to-end proof across HTML, API and coverage (D-05/D-06/D-07)
-- [ ] 235.1-02-PLAN.md — `missing_binary` treated like `missing_extra` downstream (trends, sensor push, findings_evaluator)
-- [ ] 235.1-03-PLAN.md — Source scanner keeps partial results, shows every error as a row, redacts paths; files a todo for container-scanner syft failures (D-09)
-- [ ] 235.1-04-PLAN.md — vitest/@vitest/ui 3.2.7 (#31) plus the dashboard "Skipped" badge and colour for a missing tool (checkpoint: npm package check)
-- [ ] 235.1-05-PLAN.md — The 3.15 smoke leg's unpinned "no older release" verdict (D-01/D-02), yank-prep artifact, CR-01 todo corrected
-- [ ] 235.1-06-PLAN.md — score_attribution and readme_audit cannot pass vacuously (WR-04/WR-05)
-- [ ] 235.1-07-PLAN.md — Semgrep-claim and CHANGELOG-parity gate blind spots closed (WR-06/IN-06); 5.28.0 test pinned
-- [ ] 235.1-08-PLAN.md — Dismiss tinypool alerts #83/#84 with a reachability reason (checkpoint: operator approval); #3/#31 handoff to 235.2
+- [x] 235.1-01-PLAN.md — CR-02 at the scan engine: `missing-binary` skip reason, missing-binary advisory, score and end-to-end proof across HTML, API and coverage (D-05/D-06/D-07)
+- [x] 235.1-02-PLAN.md — `missing_binary` treated like `missing_extra` downstream (trends, sensor push, findings_evaluator)
+- [x] 235.1-03-PLAN.md — Source scanner keeps partial results, shows every error as a row, redacts paths; files a todo for container-scanner syft failures (D-09)
+- [x] 235.1-04-PLAN.md — vitest/@vitest/ui 3.2.7 (#31) plus the dashboard "Skipped" badge and colour for a missing tool (checkpoint: npm package check)
+- [x] 235.1-05-PLAN.md — The 3.15 smoke leg's unpinned "no older release" verdict (D-01/D-02), yank-prep artifact, CR-01 todo corrected
+- [x] 235.1-06-PLAN.md — score_attribution and readme_audit cannot pass vacuously (WR-04/WR-05)
+- [x] 235.1-07-PLAN.md — Semgrep-claim and CHANGELOG-parity gate blind spots closed (WR-06/IN-06); 5.28.0 test pinned
+- [x] 235.1-08-PLAN.md — Dismiss tinypool alerts #83/#84 with a reachability reason (checkpoint: operator approval); #3/#31 handoff to 235.2
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 235.1-09-PLAN.md — grpc-tls grpc v1.79.3, Go 1.24+ builder, TLS before/after diff, oracle updated from the measurement (checkpoint: operator starts Docker)
-- [ ] 235.1-10-PLAN.md — doctor: Python 3.10–3.14 range, configured-but-missing warning, DB check rewrite, `tomllib` guard (D-03/D-04/D-08/D-10)
-- [ ] 235.1-11-PLAN.md — Release smoke harness false-PASS paths removed, with a CI-safe stub-docker test (CR-03/WR-09/WR-10/IN-05)
+- [x] 235.1-09-PLAN.md — grpc-tls grpc v1.79.3, Go 1.24+ builder, TLS before/after diff, oracle updated from the measurement (checkpoint: operator starts Docker)
+- [x] 235.1-10-PLAN.md — doctor: Python 3.10–3.14 range, configured-but-missing warning, DB check rewrite, `tomllib` guard (D-03/D-04/D-08/D-10)
+- [x] 235.1-11-PLAN.md — Release smoke harness false-PASS paths removed, with a CI-safe stub-docker test (CR-03/WR-09/WR-10/IN-05)
 
 **Wave 3** *(blocked on Wave 2)*
-- [ ] 235.1-12-PLAN.md — CHANGELOG `[5.28.1]` (test-first) and the `[5.28.0]` Semgrep line corrected; CHANGELOG ledger rows (D-15)
+- [x] 235.1-12-PLAN.md — CHANGELOG `[5.28.1]` (test-first) and the `[5.28.0]` Semgrep line corrected; CHANGELOG ledger rows (D-15)
 
 **Wave 4** *(blocked on Wave 3)*
-- [ ] 235.1-13-PLAN.md — README and reference docs for the fixed missing-scanner behaviour; ledger re-anchored (D-16)
+- [x] 235.1-13-PLAN.md — README and reference docs for the fixed missing-scanner behaviour; ledger re-anchored (D-16)
 
 **Wave 5** *(blocked on Wave 4)*
-- [ ] 235.1-15-PLAN.md — Guides, connectors, chaos-lab doc and oracles; master guide regenerated; vault synced (D-16)
+- [x] 235.1-15-PLAN.md — Guides, connectors, chaos-lab doc and oracles; master guide regenerated; vault synced (D-16)
 
 **Wave 6** *(blocked on Wave 5)*
-- [ ] 235.1-14-PLAN.md — UAT-SERIES, vault phase note, full suite, push and dispatch, `branch_ci_state.py` exit 0 at HEAD (no commit after the observation)
+- [x] 235.1-14-PLAN.md — UAT-SERIES, vault phase note, full suite, push and dispatch, `branch_ci_state.py` exit 0 at HEAD (no commit after the observation)
 
 Cross-cutting constraints:
 - No mutating gsd-sdk/gsd-tools `state.*`/`roadmap.*`/`requirements.*`/`phase.*` verb in any plan; the orchestrator hand-edits STATE/ROADMAP/REQUIREMENTS.

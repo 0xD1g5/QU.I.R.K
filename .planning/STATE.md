@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v5.28.1
 milestone_name: Install & Source-Scan Truth
-status: executing
-last_updated: "2026-11-04T12:00:00.000Z"
-last_activity: "2026-11-04 -- Phase 235.1 EXECUTING: waves 1-5 complete (14/15; CHANGELOG [5.28.1], README/reference docs, guides + vault sync done); code review gate, then wave 6 (plan 14: UAT-SERIES, full suite, push, branch CI). Prior: wave 2 complete (grpc-tls lab now negotiates X25519MLKEM768, oracle updated from measurement). Prior: wave 1 complete (plans 01-08, 8/15); operator approved vitest 3.2.7 and the tinypool #83/#84 tolerable_risk dismissal (both dismissed, #31/#3 still open until the 235.2 merge); next wave 2 (plan 09 needs Docker). Prior: Phase 235.1 PLANNED: 15 plans in 6 waves, research HIGH confidence, plan checker passed at iteration 3 (0 blockers), 11/11 requirements and D-01..D-16 covered (decisions checked independently, because check.decision-coverage-plan skipped 0/0); 3 operator checkpoints (npm package check, Dependabot #83/#84 approval, start Docker). Prior: Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
+status: phase_complete
+last_updated: "2026-11-05T20:30:00.000Z"
+last_activity: "2026-11-05 -- Phase 235.1 COMPLETE: 15/15 plans, verified passed 5/5 at af4f755c after two re-verifications (branch_ci_state exit 0; Python CI 42092994455, Dashboard Quality 42092999192); code review WR-01..06 + IN-01/02/07 fixed, rest deferred (999.127); 10/11 requirements Complete, DEP-03 delivered and held open for the 235.2 merge; next /gsd-plan-phase 235.2. Prior: waves 1-5 complete (14/15; CHANGELOG [5.28.1], README/reference docs, guides + vault sync done). Prior: wave 2 complete (grpc-tls lab now negotiates X25519MLKEM768, oracle updated from measurement). Prior: wave 1 complete (plans 01-08, 8/15); operator approved vitest 3.2.7 and the tinypool #83/#84 tolerable_risk dismissal (both dismissed, #31/#3 still open until the 235.2 merge); next wave 2 (plan 09 needs Docker). Prior: Phase 235.1 PLANNED: 15 plans in 6 waves, research HIGH confidence, plan checker passed at iteration 3 (0 blockers), 11/11 requirements and D-01..D-16 covered (decisions checked independently, because check.decision-coverage-plan skipped 0/0); 3 operator checkpoints (npm package check, Dependabot #83/#84 approval, start Docker). Prior: Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 15
-  completed_plans: 14
-  percent: 93
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -1504,8 +1504,8 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
-Phase: 235.1 (Install & Source-Scan Truth Fixes) — EXECUTING since 2026-11-04, 15 plans in 6 waves (serial)
-Plan: 14 of 15 complete (waves 1-5 done; code review gate, then wave 6: 14 UAT-SERIES + full suite + push + branch CI)
+Phase: 235.1 (Install & Source-Scan Truth Fixes) — COMPLETE 2026-11-05, verified passed 5/5 at `af4f755c` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0; Python CI 42092994455, Dashboard Quality 42092999192); CI re-observed green at the close parent `00a39593` (Python CI 42100802738, Dashboard Quality 42100807186). 1 of 2 phases in v5.28.1; next: Phase 235.2 (`/gsd-plan-phase 235.2`). Branch `v5281-open` pushed, no PR yet (the 235.2 merge opens it).
+Plan: 15 of 15 complete (Phase 235.1)
 Status: Milestone v5.28.1 Install & Source-Scan Truth opened 2026-11-03 (patch release). 16 requirements (INSTALL-07 added at the 235.1 discuss),
 Phases 235.1–235.2, branch `v5281-open` cut from `main` at `f4564d2c` (PR #65 merge, `branch_ci_state`
 exit 0). Ship by 2026-11-23.

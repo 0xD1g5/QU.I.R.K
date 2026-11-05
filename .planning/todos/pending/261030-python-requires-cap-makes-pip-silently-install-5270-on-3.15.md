@@ -5,7 +5,7 @@ source: Phase 235 post-GO code review (CR-01, IN-01), .planning/phases/235-relea
 priority: high
 area: pyproject.toml, quirk/cli/doctor_cmd.py, scripts/release_smoke_inner.sh
 status: pending
-resolves_phase: "235.1"
+resolves_phase: "235.2"
 owner: "999.129"
 target_release: "5.28.1"
 ---
@@ -70,3 +70,7 @@ hard refusal. Confirm that is the intended behaviour (it is the only way to stop
 
 - Do not yank 5.27.0 as the fix; pip then resolves 5.25.0.
 - Do not announce 3.15 support. The announcement draft says Python 3.10 to 3.14.
+
+## Retargeted (2026-11-05, Phase 235.1 close)
+
+235.1 delivered the detection half: the 3.15 leg's unpinned N2 check (`scripts/pip_unpinned_verdict.py`, now bounded by `Q_CMD_TIMEOUT`) and the yank list in `235.1-YANK-PREP.md`. The fix itself is the operator's yank of 4.10.0-5.21.0 (INSTALL-07), verified by re-running N2 against live PyPI in 235.2. It printed `FAIL: unpinned resolve selected older quirk-scanner 5.21.0` on 2026-11-05, as designed before the yank.

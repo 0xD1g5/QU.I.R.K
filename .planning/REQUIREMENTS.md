@@ -62,13 +62,13 @@ Checked live at the milestone boundary (2026-11-03):
 
 ### Install truth (INSTALL)
 
-- [ ] **INSTALL-05**: The release smoke's 3.15 leg asserts that an *unpinned* resolve on Python
+- [x] **INSTALL-05**: The release smoke's 3.15 leg asserts that an *unpinned* resolve on Python
   3.15 never selects an older `quirk-scanner`, alongside the existing pinned check. 5.28.1 keeps
   `requires-python = ">=3.10,<3.15"` (CR-01, 235.1 D-01/D-02). *Corrected 2026-11-03 (235.1
   discuss):* this requirement first said "the upper cap is removed". A live Python 3.15.2
   measurement showed that would not work: unpinned 3.15 resolves **5.21.0** (not 5.27.0), even with
   an uncapped 5.28.1 available, because `sslyze` pins `nassl<6` and no nassl 5.x supports 3.15.
-- [ ] **INSTALL-06**: `quirk doctor` reports a Python version outside 3.10–3.14 as unsupported, so
+- [x] **INSTALL-06**: `quirk doctor` reports a Python version outside 3.10–3.14 as unsupported, so
   the stated range is enforced at runtime now that pip no longer enforces it. A bare clone on Python
   3.10 imports `quirk` without failing on `tomllib` (IN-01).
 
@@ -80,28 +80,28 @@ Checked live at the milestone boundary (2026-11-03):
 
 ### Source-scan truth (SRCSCAN)
 
-- [ ] **SRCSCAN-01**: With `source_targets` set and `semgrep` not installed, the Source Code domain
+- [x] **SRCSCAN-01**: With `source_targets` set and `semgrep` not installed, the Source Code domain
   reads as skipped or Not assessed in Scan Coverage, the HTML/PDF/DOCX reports and the dashboard.
   It never reads as "ran" with zero findings (CR-02). The same holds for container scanning when
   `syft` is missing.
-- [ ] **SRCSCAN-02**: `quirk doctor` warns when source or container scanning is configured on but
+- [x] **SRCSCAN-02**: `quirk doctor` warns when source or container scanning is configured on but
   the binary it needs is not installed.
-- [ ] **SRCSCAN-03**: When one source target fails, the source scanner keeps the results from the
+- [x] **SRCSCAN-03**: When one source target fails, the source scanner keeps the results from the
   others. It surfaces scanner errors instead of dropping them (WR-01, WR-02, IN-03, IN-04).
 
 ### Doctor (DOCTOR)
 
-- [ ] **DOCTOR-01**: `quirk doctor`'s database check fails, rather than reporting OK, when the
+- [x] **DOCTOR-01**: `quirk doctor`'s database check fails, rather than reporting OK, when the
   configured DB path is unusable. That includes a path supplied through the environment variable
   (WR-03, IN-02).
 
 ### Release-evidence gates (HARNESS)
 
-- [ ] **HARNESS-04**: The release smoke harness (`scripts/release_smoke*.sh`) has no path that
+- [x] **HARNESS-04**: The release smoke harness (`scripts/release_smoke*.sh`) has no path that
   prints `RESULT: PASS` after a failed or skipped step (CR-03, WR-09, WR-10, IN-05).
-- [ ] **HARNESS-05**: The milestone-audit and score-attribution scripts fail on empty or
+- [x] **HARNESS-05**: The milestone-audit and score-attribution scripts fail on empty or
   out-of-range input instead of passing vacuously (WR-04, WR-05).
-- [ ] **HARNESS-06**: The Semgrep working-claim gate and the CHANGELOG parity test catch the
+- [x] **HARNESS-06**: The Semgrep working-claim gate and the CHANGELOG parity test catch the
   proximity, phrasing and substring cases the post-GO review showed they miss (WR-06, IN-06).
 
 ### Dependencies (DEP)
@@ -111,11 +111,12 @@ Checked live at the milestone boundary (2026-11-03):
   be bumped is dismissed only with a written reachability reason. The dashboard bundle and the
   `grpc-tls` lab still build, and their gates stay green. *Scoped 2026-11-03 (235.1 plan check):*
   Dependabot only re-evaluates the default branch, so 235.1 delivers the bumps on `v5281-open`, and
-  #3/#31 reading `fixed` is verified after the 235.2 merge.
+  #3/#31 reading `fixed` is verified after the 235.2 merge. *Status 2026-11-05:* bumps on the branch (vitest/@vitest/ui 3.2.7, grpc v1.79.3), #83/#84
+  dismissed `tolerable_risk`; box left unchecked on purpose until #3/#31 read `fixed`.
 
 ### Release (REL)
 
-- [ ] **REL-08**: CHANGELOG has a `[5.28.1]` section describing the fixes. The `[5.28.0]` Semgrep
+- [x] **REL-08**: CHANGELOG has a `[5.28.1]` section describing the fixes. The `[5.28.0]` Semgrep
   known-defect wording is corrected to name both cases (ruleset unavailable, and semgrep not
   installed). Once SRCSCAN-01 lands, the repo README's CR-02 known-defect line is removed or
   rewritten to match the fixed behaviour. The doc-claim ledger gate stays green.
@@ -163,17 +164,17 @@ Deferred to v5.29 or later:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INSTALL-05 | Phase 235.1 | Pending |
-| INSTALL-06 | Phase 235.1 | Pending |
-| SRCSCAN-01 | Phase 235.1 | Pending |
-| SRCSCAN-02 | Phase 235.1 | Pending |
-| SRCSCAN-03 | Phase 235.1 | Pending |
-| DOCTOR-01 | Phase 235.1 | Pending |
-| HARNESS-04 | Phase 235.1 | Pending |
-| HARNESS-05 | Phase 235.1 | Pending |
-| HARNESS-06 | Phase 235.1 | Pending |
-| DEP-03 | Phase 235.1 | Pending |
-| REL-08 | Phase 235.1 | Pending |
+| INSTALL-05 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| INSTALL-06 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| SRCSCAN-01 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| SRCSCAN-02 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| SRCSCAN-03 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| DOCTOR-01 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| HARNESS-04 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| HARNESS-05 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| HARNESS-06 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
+| DEP-03 | Phase 235.1 | Delivered on `v5281-open` (235.1); stays open until #3/#31 read `fixed` on `main` after the 235.2 merge (235.2 criterion 1); #83/#84 dismissed |
+| REL-08 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
 | INSTALL-07 | Phase 235.2 | Pending |
 | REL-09 | Phase 235.2 | Pending |
 | REL-10 | Phase 235.2 | Pending |

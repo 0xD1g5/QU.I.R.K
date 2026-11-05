@@ -34,6 +34,15 @@ result, so they were deferred. The full text and proposed fixes are in
 - **IN-08** Two tests use a row shape that differs from the one production emits.
 - **IN-09** The `quirk/__init__.py` version fallback leaves helper names in the package namespace.
 
+Found during verification (2026-11-05). These are INFO items, none of which can produce a PASS:
+- `quirk --version`, `quirk doctor`, the fallback `quirk init` and the chromium launch probe in
+  `release_smoke_inner.sh` still run without the watchdog. None of them installs or scans.
+- `release_smoke.sh` never passes `Q_CMD_TIMEOUT` into the container or the `env -i` host leg, so the limit is always 900s
+  and an operator cannot change it.
+- `test_python315_leg_pip_calls_are_bounded` checks the script's source text. A behavioural test that hangs a fake pip
+  on the 3.15 leg was run by hand during verification but is not committed.
+- `run_readme_cmd` labels only rc 124 as "timed out" (137 still FAILs). Same class as IN-03.
+
 ## Feasibility & Effort
 
 All are small and local: about one day in total. WR-08 needs a scoring decision first (it changes no code by itself).

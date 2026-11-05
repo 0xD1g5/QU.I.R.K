@@ -4,7 +4,8 @@ created: 2026-10-30
 source: Phase 235 post-GO code review (WR-04, WR-05), .planning/phases/235-release-launch-gate/235-REVIEW.md
 priority: medium
 area: release-gate evidence scripts (audit, score_attribution)
-status: pending
+status: completed
+completed: 2026-11-05
 resolves_phase: "235.1"
 owner: "999.129"
 ---
@@ -36,3 +37,7 @@ owner: "999.129"
 - **Unknowns:** how many of the existing score-parity PASS results in Phase 235 evidence would flip under a real
   bound. That is worth knowing before 235-18 cites SCORE-PARITY as evidence.
 - **Spike needed?** Small: rerun `score_attribution` over the saved evidence with a gap cap and see which flip.
+
+## Resolved (2026-11-05, Phase 235.1)
+
+Fixed on `v5281-open` and verified `passed` at `af4f755c` (`235.1-VERIFICATION.md`, branch CI green). Ships in 5.28.1 (Phase 235.2).
