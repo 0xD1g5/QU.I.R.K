@@ -126,6 +126,8 @@ MUTATIONS = {
                          'bash -c "${text}" </dev/null'),
     "port_check_blind": ("sys.exit(0 if s.connect_ex((\"127.0.0.1\", int(sys.argv[1]))) == 0 else 1)",
                          "sys.exit(1)"),
+    "timeout_rc_ignored": ('timed_out() { [ "$1" -eq 124 ] || [ "$1" -eq 137 ]; }',
+                           'timed_out() { false; }'),
     "everything_runs_bounded": ('*"cd "*|*"source "*|". "*|*"&& . "*|*"; . "*|*"export "*) return 0 ;;',
                                 '*"zzzz"*) return 0 ;;'),
 }
@@ -143,6 +145,23 @@ def test_inner_self_check_goes_red_on_mutation(name, tmp_path):
     r = run_fork_safe([BASH, str(d / "release_smoke_inner.sh"), "--self-check"], timeout=120)
     assert r.returncode == 1, f"mutation {name} stayed green\n{_diag(r)}"
     assert "inner self-check: FAILED" in r.stdout
+
+
+def test_python315_leg_pip_calls_are_bounded():
+    """Both 3.15-leg pip calls run under the watchdog, and a watchdog expiry is a
+    FAIL before any verdict reads the killed command's partial output (235.1
+    verification gap: the CHANGELOG says a stalled install fails after
+    Q_CMD_TIMEOUT)."""
+    src = INNER.read_text(encoding="utf-8")
+    assert 'run_bounded "${Q_CMD_TIMEOUT:-900}" "${AS_RUN}" >"${Q_OUT}/pip-negative.txt"' in src
+    assert 'eval "${AS_RUN}" >"${Q_OUT}/pip-negative.txt"' not in src
+    n2 = src.index('check "N2. unpinned resolve selects no older quirk-scanner"')
+    n2_block = src[n2:src.index("ABORT=1", n2)]
+    assert 'run_bounded "${Q_CMD_TIMEOUT:-900}"' in n2_block
+    assert n2_block.index('timed_out "${PIP_U_RC}"') < n2_block.index('"${Q_PIP_VERDICT}" --report')
+    n1 = src.index('check "N. Python 3.15 is refused by Requires-Python"')
+    n1_block = src[n1:n2]
+    assert n1_block.index('timed_out "${PIP_RC}"') < n1_block.index("neg_verdict")
 
 
 def _listener():

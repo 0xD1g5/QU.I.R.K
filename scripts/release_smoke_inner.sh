@@ -117,6 +117,10 @@ run_bounded() {
   return "${rc}"
 }
 
+# timed_out RC : 0 when RC is a run_bounded watchdog expiry (124, or 137 once -k
+# escalates to SIGKILL). A killed command's partial output must never be judged.
+timed_out() { [ "$1" -eq 124 ] || [ "$1" -eq 137 ]; }
+
 # port_in_use PORT : 0 when something already answers on 127.0.0.1:PORT
 port_in_use() {
   python3 - "$1" <<'PY' >/dev/null 2>&1
@@ -174,6 +178,7 @@ if [ "${1:-}" = "--self-check" ]; then
   run_bounded 1 'sleep 12' >/dev/null 2>&1; wrc=$?
   t1="$(date +%s)"
   if [ "${wrc}" -ne 0 ] && [ $((t1 - t0)) -le 8 ]; then echo "  ok   run_bounded times out a hung command (rc ${wrc}, $((t1 - t0))s)"; else echo "  FAIL run_bounded did not stop a hung command (rc ${wrc}, $((t1 - t0))s)"; bad=1; fi
+  if timed_out 124 && timed_out 137 && ! timed_out 1 && ! timed_out 0; then echo "  ok   timed_out recognises 124/137 only"; else echo "  FAIL timed_out misclassifies watchdog exits"; bad=1; fi
   run_bounded 5 'exit 0' >/dev/null 2>&1 && echo "  ok   run_bounded passes a quick command" || { echo "  FAIL run_bounded failed a quick command"; bad=1; }
   needs_inshell 'python3.12 -m venv .venv && source .venv/bin/activate' && echo "  ok   needs_inshell keeps source in-shell" || { echo "  FAIL needs_inshell on source"; bad=1; }
   needs_inshell 'pip install x' && { echo "  FAIL needs_inshell flagged pip"; bad=1; } || echo "  ok   needs_inshell lets pip run bounded"
@@ -434,10 +439,12 @@ while IFS=$'\t' read -r LN KIND BLOCK TEXT; do
       fi
       if [ "${NEG}" -eq 1 ]; then
         say "RUN: ${AS_RUN}   (expected to be refused)"
-        set +u; eval "${AS_RUN}" >"${Q_OUT}/pip-negative.txt" 2>&1 </dev/null; PIP_RC=$?; set -u
+        set +u; run_bounded "${Q_CMD_TIMEOUT:-900}" "${AS_RUN}" >"${Q_OUT}/pip-negative.txt" 2>&1; PIP_RC=$?; set -u
         sed 's/^/    | /' "${Q_OUT}/pip-negative.txt" >>"${LOG}"
         check "N. Python 3.15 is refused by Requires-Python"; N_RAN=1
-        if [ "${PIP_RC}" -ne 0 ] && neg_verdict "${Q_OUT}/pip-negative.txt"; then
+        if timed_out "${PIP_RC}"; then
+          fail "pip timed out after ${Q_CMD_TIMEOUT:-900}s (rc ${PIP_RC})" "a hung install is not a refusal"
+        elif [ "${PIP_RC}" -ne 0 ] && neg_verdict "${Q_OUT}/pip-negative.txt"; then
           pass "pip refused the install with a Requires-Python message (rc ${PIP_RC})"
         else
           fail "pip rc ${PIP_RC}; refusal not a clean Requires-Python message" \
@@ -445,11 +452,15 @@ while IFS=$'\t' read -r LN KIND BLOCK TEXT; do
         fi
         # N2 (235.1 D-02): an UNPINNED resolve must not fall back to an older release.
         check "N2. unpinned resolve selects no older quirk-scanner"; N2_RAN=1
-        set +u; python -m pip install --dry-run --quiet --report "${Q_OUT}/pip-unpinned.json" quirk-scanner \
-          >"${Q_OUT}/pip-unpinned.txt" 2>&1 </dev/null; PIP_U_RC=$?; set -u
+        set +u; run_bounded "${Q_CMD_TIMEOUT:-900}" \
+          "python -m pip install --dry-run --quiet --report \"${Q_OUT}/pip-unpinned.json\" quirk-scanner" \
+          >"${Q_OUT}/pip-unpinned.txt" 2>&1; PIP_U_RC=$?; set -u
         printf '%s\n' "${PIP_U_RC}" >"${Q_OUT}/pip-unpinned.rc"
         sed 's/^/    | /' "${Q_OUT}/pip-unpinned.txt" >>"${LOG}"
-        if [ -z "${Q_PIP_VERDICT:-}" ] || [ ! -f "${Q_PIP_VERDICT}" ]; then
+        if timed_out "${PIP_U_RC}"; then
+          fail "unpinned pip resolve timed out after ${Q_CMD_TIMEOUT:-900}s (rc ${PIP_U_RC})" \
+               "a killed resolve's partial output is not a verdict"
+        elif [ -z "${Q_PIP_VERDICT:-}" ] || [ ! -f "${Q_PIP_VERDICT}" ]; then
           fail "pip_unpinned_verdict.py not provided" "the harness must copy scripts/pip_unpinned_verdict.py and set Q_PIP_VERDICT"
         else
           PIP_U_LINE="$(python3 "${Q_PIP_VERDICT}" --report "${Q_OUT}/pip-unpinned.json" \
