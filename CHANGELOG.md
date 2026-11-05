@@ -55,8 +55,10 @@ tell the truth. It changes no scoring model: `SCORING_VERSION` stays 4.0.
   yet under a writable location is still informational on a first run.
 - **The release smoke test can no longer report a pass it did not earn.** It no longer reuses a
   previous run's transcript, fails when a step is skipped, fails or never ran, refuses a port that
-  is already in use, and a stalled command now fails after `Q_CMD_TIMEOUT` seconds (default 900)
-  instead of hanging. A new check fails the run when an unpinned install on Python 3.15 selects an
+  is already in use, and a stalled install or scan command now fails after `Q_CMD_TIMEOUT` seconds
+  (default 900) instead of hanging. README lines that change directory or set environment variables
+  still run without that limit, so one that stalls can still hang the run, although it can never
+  make it pass. A new check fails the run when an unpinned install on Python 3.15 selects an
   older release. The score-attribution and README link checks now fail on missing or out-of-range
   input instead of passing.
 - **Source scan errors are classified by the scanner's own error code.** A "ruleset unavailable"
