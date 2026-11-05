@@ -8,7 +8,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
-## [5.28.1] - 2026-11-04
+## [5.28.1] - 2026-11-05
 
 This is a fix release for 5.28.0. It closes an install trap on Python 3.15, makes a scan that
 cannot run semgrep or syft say so instead of reporting a clean result, keeps the results of source
