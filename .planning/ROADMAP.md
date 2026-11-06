@@ -109,7 +109,7 @@ v4.10.1. Phases are numbered 235.1 and 235.2, inserted after Phase 235, so Phase
 candidate below. Requirements are in `.planning/REQUIREMENTS.md` (16).
 
 - [x] **Phase 235.1: Install & Source-Scan Truth Fixes** - An unpinned 3.15 install no longer backtracks to 5.27.0, a missing semgrep or syft reads as not assessed, doctor tells the truth, and the release-evidence scripts cannot pass falsely
-- [ ] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
+- [x] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
 
 ### Phase 235.1: Install & Source-Scan Truth Fixes (INSERTED)
 **Goal**: The fixes 5.28.1 exists for are on `v5281-open` with tests: pip on Python 3.15 no longer silently installs an older release, a scan whose source or container tool is missing never reads as a clean scan, `quirk doctor` reports Python range, missing scanners and unusable DB paths truthfully, the release smoke and audit scripts cannot report a false pass, and the fixes for the four critical Dependabot alerts are on the branch (#83/#84 dismissed with the operator-approved reason; #3/#31 verified `fixed` after the 235.2 merge).
@@ -167,7 +167,8 @@ Cross-cutting constraints:
   2. The operator has yanked the pre-sslyze releases (4.10.0–5.21.0, list re-derived from PyPI at yank time), and an unpinned `pip install --dry-run quirk-scanner` on Python 3.15 against live PyPI fails `ResolutionImpossible` instead of selecting an old release. A clean PyPI install of 5.28.1 passes the release smoke test on macOS, Linux 3.10, Linux 3.11 and the contributor leg. The 3.15 leg's unpinned resolution check passes. Attestations verify, and the PyPI-rendered description's links all resolve.
   3. `docs/images/dashboard-hero.png` is recaptured from a 5.28.1 scan against a snapshot DB, its caption describes that image, and the operator has accepted it visually.
   4. The announcement draft is re-checked sentence by sentence against 5.28.1, with no leak-grep or false-capability-grep hits, and the operator's go/no-go is recorded. No agent posts anything.
-**Plans**: TBD
+**Plans**: none (release runbook run by hand; task record in the 2026-11-06 handoff)
+**Completed**: 2026-11-06. Verified `passed` 4/4 at `139ed513` (CITRUTH-03: `branch_ci_state.py --branch main --compare-main` exit 0; Python CI 42223519913, Dashboard Quality 42223519835). `v5.28.1` tagged on `68bbe62d` and published (release run 42154086272); all PyPI smoke legs PASS, including 3.15 N2 after the operator also yanked 5.25.0 and 5.27.0. Dependabot #3/#31 `fixed`. Announcement re-check clean; **operator decision NO-GO**, pending the 5.28.2 fix for connectors that report `ran` without scanning (todo `261105-unscanned-surfaces-inflate-score-in-real-engagements`).
 
 ## Next Milestone Candidates (v5.29)
 
