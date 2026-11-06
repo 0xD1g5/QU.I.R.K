@@ -114,6 +114,37 @@ def test_ledger_names_no_embargoed_item():
     )
 
 
+TOOLING_AREAS = {"gsd-tooling", "dev-env"}
+TOOLING_HEADING = "## Development tooling (not shipped)"
+_SECTION_RE = re.compile(r"^## (.+?)(?: \(\d+\))?$", re.M)
+_FULL_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([A-Z]+)\s*\|\s*P\d\s*\|\s*([^|]+?)\s*\|", re.M)
+
+
+def _rows_by_section(text: str) -> dict[str, list[tuple[str, str, str]]]:
+    """Section heading (count stripped) -> [(id, status, area)] for each row under it."""
+    out: dict[str, list[tuple[str, str, str]]] = {}
+    marks = [(m.start(), m.group(1)) for m in _SECTION_RE.finditer(text)]
+    for (start, name), (end, _) in zip(marks, marks[1:] + [(len(text), "")]):
+        out[name] = [r for r in _FULL_ROW_RE.findall(text[start:end]) if r[1] in STATUSES]
+    return out
+
+
+def test_tooling_rows_live_in_their_own_section():
+    """Operator decision (2026-11-06): GSD-toolchain and dev-environment items stay in the
+    ledger but outside the product's Open/Deferred tables and priority counts."""
+    sections = _rows_by_section(_ledger_text())
+    tooling_name = TOOLING_HEADING[3:]
+    assert tooling_name in sections, f"{TOOLING_HEADING!r} section is missing"
+    misplaced = [f"{i} (area {a}) is in § {s}" for s in ("Open", "Deferred")
+                 for i, _, a in sections.get(s, []) if a in TOOLING_AREAS]
+    misplaced += [f"{i} (area {a}) is in § {tooling_name} but is not tooling"
+                  for i, _, a in sections[tooling_name] if a not in TOOLING_AREAS]
+    misplaced += [f"{i} is {st} but still in § {tooling_name}; closed rows go to § Closed"
+                  for i, st, _ in sections[tooling_name] if st not in LIVE_STATUSES]
+    assert not misplaced, "Ledger rows in the wrong section:\n" + "\n".join(
+        f"  - {m}" for m in misplaced)
+
+
 def test_row_parser_reads_each_shape():
     text = (
         "| ID | Status | Priority | Area | Title | Source | Evidence |\n"
