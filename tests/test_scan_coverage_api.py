@@ -87,6 +87,44 @@ def test_scan_coverage_recorded_matches_loader_payload(tmp_path, monkeypatch):
     assert vault["detail"] == "VAULT_TOKEN not set"
 
 
+def test_scan_coverage_serves_missing_binary_skip_verbatim(tmp_path, monkeypatch):
+    """Phase 235.1 D-05: missing-binary skipped rows (semgrep + syft) are served as-is."""
+    scan_run_id = "run-cov-mb"
+    db_path = str(tmp_path / "coverage_mb.db")
+    init_db(db_path)
+    with get_session(db_path) as session:
+        session.add_all([
+            ScanPhaseRecord(
+                scan_run_id=scan_run_id, phase_name="source_scanning",
+                status="skipped", reason="missing-binary",
+                detail="semgrep is not installed (QRK-INSTALL-008)",
+                recorded_at=_now(),
+            ),
+            ScanPhaseRecord(
+                scan_run_id=scan_run_id, phase_name="container_scanning",
+                status="skipped", reason="missing-binary",
+                detail="syft is not installed (QRK-INSTALL-007)",
+                recorded_at=_now(),
+            ),
+        ])
+        session.commit()
+    client = _client(monkeypatch, db_path)
+
+    resp = client.get(f"/api/scans/{scan_run_id}/coverage")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["recorded"] is True
+    assert data["skipped"] == 2
+    by_name = {p["phase_name"]: p for p in data["phases"]}
+    src = by_name["source_scanning"]
+    assert src["status"] == "skipped"
+    assert src["reason"] == "missing-binary"
+    assert src["detail"] == "semgrep is not installed (QRK-INSTALL-008)"
+    ctr = by_name["container_scanning"]
+    assert ctr["reason"] == "missing-binary"
+    assert "QRK-INSTALL-007" in ctr["detail"]
+
+
 def test_scan_coverage_no_rows_returns_200_not_404(tmp_path, monkeypatch):
     db_path = str(tmp_path / "empty.db")
     init_db(db_path)

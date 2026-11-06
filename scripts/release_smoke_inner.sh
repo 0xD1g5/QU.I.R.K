@@ -13,6 +13,7 @@
 #   Q_COMMANDS_JSON     output of `readme_audit.py commands`
 #   Q_OUT               directory the transcript and artifacts are written to
 #   Q_SCORE_ATTR        path to score_attribution.py
+#   Q_PIP_VERDICT       path to pip_unpinned_verdict.py (linux-3.15-neg check N2; missing = FAIL)
 #   Q_DIVERGENCE_SET    optional path to a divergence-set JSON
 #   Q_START_DIR         optional starting directory (contributor clone parent)
 #   Q_PORT              dashboard port (default 8512, the README default)
@@ -77,6 +78,67 @@ neg_verdict() {
     && ! grep -q "ResolutionImpossible" "$1"
 }
 
+# verdict_line FAILED SKIPS TOTAL : the ONLY place a run verdict is decided.
+# PASS requires zero failures, zero skips and at least one recorded check
+# (235.1 HARNESS-04 NEW-1/NEW-2: a SKIP or an empty run must never print PASS).
+verdict_line() {
+  if [ "$1" -eq 0 ] && [ "$2" -eq 0 ] && [ "$3" -gt 0 ]; then
+    echo "RESULT: PASS"
+  else
+    echo "RESULT: FAIL"
+  fi
+}
+
+# needs_inshell TEXT : 0 when the command changes shell state (cd/source/./
+# export) and therefore must run via in-shell eval, not under a watchdog.
+needs_inshell() {
+  case "$1" in
+    *"cd "*|*"source "*|". "*|*"&& . "*|*"; . "*|*"export "*) return 0 ;;
+  esac
+  return 1
+}
+
+# run_bounded SECS TEXT : run TEXT in a child shell with a watchdog.
+# Returns the command's rc, or 124 on expiry. stdout/stderr are the caller's.
+run_bounded() {
+  local secs="$1" text="$2" pid wd rc mark
+  if [ -z "${Q_NO_TIMEOUT_BIN:-}" ] && command -v timeout >/dev/null 2>&1; then
+    timeout -k 5 "${secs}" bash -c "${text}" </dev/null
+    return $?
+  fi
+  mark="$(mktemp "${TMPDIR:-/tmp}/qwd.XXXXXX")"; rm -f "${mark}"
+  ( eval "${text}" ) </dev/null &
+  pid=$!
+  ( sleep "${secs}"; : >"${mark}"; kill -TERM "${pid}" 2>/dev/null; sleep 2; kill -KILL "${pid}" 2>/dev/null ) &
+  wd=$!
+  wait "${pid}"; rc=$?
+  kill "${wd}" 2>/dev/null; wait "${wd}" 2>/dev/null
+  if [ -f "${mark}" ]; then rm -f "${mark}"; return 124; fi
+  return "${rc}"
+}
+
+# timed_out RC : 0 when RC is a run_bounded watchdog expiry (124, or 137 once -k
+# escalates to SIGKILL). A killed command's partial output must never be judged.
+timed_out() { [ "$1" -eq 124 ] || [ "$1" -eq 137 ]; }
+
+# port_in_use PORT : 0 when something already answers on 127.0.0.1:PORT
+port_in_use() {
+  python3 - "$1" <<'PY' >/dev/null 2>&1
+import socket, sys
+s = socket.socket()
+s.settimeout(2)
+try:
+    sys.exit(0 if s.connect_ex(("127.0.0.1", int(sys.argv[1]))) == 0 else 1)
+finally:
+    s.close()
+PY
+}
+
+if [ "${1:-}" = "--probe-port" ]; then
+  if port_in_use "${2:?port}"; then echo "port ${2} already in use"; exit 1; fi
+  echo "port ${2} free"; exit 0
+fi
+
 if [ "${1:-}" = "--self-check" ]; then
   bad=0
   expect() {
@@ -97,6 +159,39 @@ if [ "${1:-}" = "--self-check" ]; then
   printf 'Requires-Python ... ResolutionImpossible\n' >"${d}/b"
   if neg_verdict "${d}/a"; then echo "  ok   neg_verdict accepts a Requires-Python refusal"; else echo "  FAIL neg_verdict (a)"; bad=1; fi
   if neg_verdict "${d}/b"; then echo "  FAIL neg_verdict accepted ResolutionImpossible"; bad=1; else echo "  ok   neg_verdict rejects ResolutionImpossible"; fi
+  PV="$(dirname "$0")/pip_unpinned_verdict.py"
+  printf '{"version":"1","install":[{"metadata":{"name":"quirk-scanner","version":"5.21.0"}}]}' >"${d}/u.json"
+  printf 'ERROR: ResolutionImpossible: for help visit\n' >"${d}/u.txt"
+  if python3 "${PV}" --report "${d}/u.json" --output "${d}/u.txt" --rc 0 --expected 5.28.1 >/dev/null; then
+    echo "  FAIL unpinned verdict accepted an older selected release"; bad=1
+  else echo "  ok   unpinned verdict rejects an older selected release"; fi
+  if python3 "${PV}" --report "${d}/none.json" --output "${d}/u.txt" --rc 1 --expected 5.28.1 >/dev/null; then
+    echo "  ok   unpinned verdict accepts ResolutionImpossible"
+  else echo "  FAIL unpinned verdict rejected ResolutionImpossible"; bad=1; fi
+  # verdict_line: SKIP, zero checks and a clean PASS (235.1 NEW-1/NEW-2)
+  [ "$(verdict_line 0 1 3)" = "RESULT: FAIL" ] && echo "  ok   verdict_line: a SKIP is FAIL" || { echo "  FAIL verdict_line accepted a SKIP"; bad=1; }
+  [ "$(verdict_line 0 0 0)" = "RESULT: FAIL" ] && echo "  ok   verdict_line: zero checks is FAIL" || { echo "  FAIL verdict_line accepted zero checks"; bad=1; }
+  [ "$(verdict_line 1 0 3)" = "RESULT: FAIL" ] && echo "  ok   verdict_line: a failure is FAIL" || { echo "  FAIL verdict_line accepted a failure"; bad=1; }
+  [ "$(verdict_line 0 0 3)" = "RESULT: PASS" ] && echo "  ok   verdict_line: clean run is PASS" || { echo "  FAIL verdict_line rejected a clean run"; bad=1; }
+  # watchdog: a hung command must come back 124 quickly (WR-10)
+  t0="$(date +%s)"
+  run_bounded 1 'sleep 12' >/dev/null 2>&1; wrc=$?
+  t1="$(date +%s)"
+  if [ "${wrc}" -ne 0 ] && [ $((t1 - t0)) -le 8 ]; then echo "  ok   run_bounded times out a hung command (rc ${wrc}, $((t1 - t0))s)"; else echo "  FAIL run_bounded did not stop a hung command (rc ${wrc}, $((t1 - t0))s)"; bad=1; fi
+  if timed_out 124 && timed_out 137 && ! timed_out 1 && ! timed_out 0; then echo "  ok   timed_out recognises 124/137 only"; else echo "  FAIL timed_out misclassifies watchdog exits"; bad=1; fi
+  run_bounded 5 'exit 0' >/dev/null 2>&1 && echo "  ok   run_bounded passes a quick command" || { echo "  FAIL run_bounded failed a quick command"; bad=1; }
+  needs_inshell 'python3.12 -m venv .venv && source .venv/bin/activate' && echo "  ok   needs_inshell keeps source in-shell" || { echo "  FAIL needs_inshell on source"; bad=1; }
+  needs_inshell 'pip install x' && { echo "  FAIL needs_inshell flagged pip"; bad=1; } || echo "  ok   needs_inshell lets pip run bounded"
+  # port collision: a live listener must be seen (WR-09)
+  python3 -c "
+import socket, sys, time
+s = socket.socket(); s.bind(('127.0.0.1', 0)); s.listen(1)
+print(s.getsockname()[1], flush=True); time.sleep(8)" >"${d}.port" &
+  lpid=$!
+  for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "${d}.port" ] && break; sleep 0.3; done
+  lport="$(head -n 1 "${d}.port")"
+  if [ -n "${lport}" ] && port_in_use "${lport}"; then echo "  ok   port_in_use sees a foreign listener"; else echo "  FAIL port_in_use missed a foreign listener"; bad=1; fi
+  kill "${lpid}" 2>/dev/null; wait "${lpid}" 2>/dev/null; rm -f "${d}.port"
   rm -rf "${d}"
   [ "${bad}" -eq 0 ] && echo "inner self-check: ok" && exit 0
   echo "inner self-check: FAILED"; exit 1
@@ -139,8 +234,18 @@ finish() {
     for d in "${DIVERGENCE[@]}"; do say "  - ${d}"; done
   fi
   say ""
-  if [ "${FAILED}" -eq 0 ]; then say "RESULT: PASS"; exit 0; fi
-  say "RESULT: FAIL"; exit 1
+  local skips=0 j=0
+  while [ "${j}" -lt "${#RESULT_STATE[@]}" ]; do
+    [ "${RESULT_STATE[$j]}" = "SKIP" ] && skips=$((skips + 1))
+    j=$((j + 1))
+  done
+  [ "${skips}" -gt 0 ] && say "NOTE: ${skips} check(s) were SKIPPED; a skipped check is not a pass"
+  [ "${#RESULT_NAME[@]}" -eq 0 ] && say "NOTE: no checks were recorded; an empty run is not a pass"
+  local vline
+  vline="$(verdict_line "${FAILED}" "${skips}" "${#RESULT_NAME[@]}")"
+  say "${vline}"
+  [ "${vline}" = "RESULT: PASS" ] && exit 0
+  exit 1
 }
 
 SERVE_PID=""
@@ -161,11 +266,19 @@ run_readme_cmd() {
   before="$(wc -l <"${CMDLOG}")"
   say "RUN: $1"
   set +u
-  eval "$1" >>"${CMDLOG}" 2>&1 </dev/null
-  rc=$?
+  if needs_inshell "$1"; then
+    eval "$1" >>"${CMDLOG}" 2>&1 </dev/null
+    rc=$?
+  else
+    run_bounded "${Q_CMD_TIMEOUT:-900}" "$1" >>"${CMDLOG}" 2>&1 </dev/null
+    rc=$?
+  fi
   set -u
   after="$(wc -l <"${CMDLOG}")"
   tail -n $((after - before)) "${CMDLOG}" | sed 's/^/    | /' >>"${LOG}"
+  if [ "${rc}" -eq 124 ]; then
+    fail "timed out after ${Q_CMD_TIMEOUT:-900}s: $1" "a README command hung; see commands.log"
+  fi
   return "${rc}"
 }
 
@@ -208,7 +321,7 @@ say "README commands enumerated: $(wc -l <"${TSV}" | tr -d ' ')"
 
 NEG=0; [ "${Q_LEG}" = "linux-3.15-neg" ] && NEG=1
 CONTRIB=0; [ "${Q_LEG}" = "contributor" ] && CONTRIB=1
-SCAN_DONE=0; REWRITTEN=0
+SCAN_DONE=0; REWRITTEN=0; N_RAN=0; N2_RAN=0
 
 pip_target() {
   # $1 = extras string such as "[all]" (may be empty)
@@ -326,14 +439,35 @@ while IFS=$'\t' read -r LN KIND BLOCK TEXT; do
       fi
       if [ "${NEG}" -eq 1 ]; then
         say "RUN: ${AS_RUN}   (expected to be refused)"
-        set +u; eval "${AS_RUN}" >"${Q_OUT}/pip-negative.txt" 2>&1 </dev/null; PIP_RC=$?; set -u
+        set +u; run_bounded "${Q_CMD_TIMEOUT:-900}" "${AS_RUN}" >"${Q_OUT}/pip-negative.txt" 2>&1; PIP_RC=$?; set -u
         sed 's/^/    | /' "${Q_OUT}/pip-negative.txt" >>"${LOG}"
-        check "N. Python 3.15 is refused by Requires-Python"
-        if [ "${PIP_RC}" -ne 0 ] && neg_verdict "${Q_OUT}/pip-negative.txt"; then
+        check "N. Python 3.15 is refused by Requires-Python"; N_RAN=1
+        if timed_out "${PIP_RC}"; then
+          fail "pip timed out after ${Q_CMD_TIMEOUT:-900}s (rc ${PIP_RC})" "a hung install is not a refusal"
+        elif [ "${PIP_RC}" -ne 0 ] && neg_verdict "${Q_OUT}/pip-negative.txt"; then
           pass "pip refused the install with a Requires-Python message (rc ${PIP_RC})"
         else
           fail "pip rc ${PIP_RC}; refusal not a clean Requires-Python message" \
                "a ResolutionImpossible or a successful install means python_requires is wrong"
+        fi
+        # N2 (235.1 D-02): an UNPINNED resolve must not fall back to an older release.
+        check "N2. unpinned resolve selects no older quirk-scanner"; N2_RAN=1
+        set +u; run_bounded "${Q_CMD_TIMEOUT:-900}" \
+          "python -m pip install --dry-run --quiet --report \"${Q_OUT}/pip-unpinned.json\" quirk-scanner" \
+          >"${Q_OUT}/pip-unpinned.txt" 2>&1; PIP_U_RC=$?; set -u
+        printf '%s\n' "${PIP_U_RC}" >"${Q_OUT}/pip-unpinned.rc"
+        sed 's/^/    | /' "${Q_OUT}/pip-unpinned.txt" >>"${LOG}"
+        if timed_out "${PIP_U_RC}"; then
+          fail "unpinned pip resolve timed out after ${Q_CMD_TIMEOUT:-900}s (rc ${PIP_U_RC})" \
+               "a killed resolve's partial output is not a verdict"
+        elif [ -z "${Q_PIP_VERDICT:-}" ] || [ ! -f "${Q_PIP_VERDICT}" ]; then
+          fail "pip_unpinned_verdict.py not provided" "the harness must copy scripts/pip_unpinned_verdict.py and set Q_PIP_VERDICT"
+        else
+          PIP_U_LINE="$(python3 "${Q_PIP_VERDICT}" --report "${Q_OUT}/pip-unpinned.json" \
+            --output "${Q_OUT}/pip-unpinned.txt" --rc "${PIP_U_RC}" --expected "${Q_EXPECTED_VERSION:-}" 2>&1)"
+          PIP_U_VRC=$?
+          if [ "${PIP_U_VRC}" -eq 0 ]; then pass "${PIP_U_LINE}"
+          else fail "${PIP_U_LINE}" "an unpinned 3.15 install must refuse, not fall back to an older release (yank, 235.2)"; fi
         fi
         ABORT=1
       else
@@ -368,6 +502,11 @@ while IFS=$'\t' read -r LN KIND BLOCK TEXT; do
   esac
 done <"${TSV}"
 
+if [ "${NEG}" -eq 1 ]; then
+  # NEW-2: a negative leg whose README install line never matched ran no check N.
+  if [ "${N_RAN}" -eq 0 ]; then check "N. Python 3.15 is refused by Requires-Python"; fail "check N never ran" "the README install line was not matched on the negative leg"; fi
+  if [ "${N2_RAN}" -eq 0 ]; then check "N2. unpinned resolve selects no older quirk-scanner"; fail "check N2 never ran" "the README install line was not matched on the negative leg"; fi
+fi
 if [ "${NEG}" -eq 1 ] || [ "${ABORT}" -eq 1 ]; then finish; fi
 
 # --------------------------------------------------------------------------
@@ -443,7 +582,11 @@ else
 fi
 
 check "6. quirk serve answers"
-if [ -f config.yaml ]; then
+UP=0; PORT_BUSY=0
+if port_in_use "${PORT}"; then
+  PORT_BUSY=1
+  fail "port ${PORT} already in use; refusing to probe a foreign server" "pick a free Q_PORT; the probe must reach OUR dashboard"
+elif [ -f config.yaml ]; then
   quirk serve --port "${PORT}" >"${Q_OUT}/serve.log" 2>&1 &
   SERVE_PID=$!
   UP=0
@@ -455,7 +598,10 @@ PY
     then UP=1; break; fi
     sleep 1
   done
-  [ "${UP}" -eq 1 ] && pass "dashboard answering on 127.0.0.1:${PORT}" || fail "dashboard did not answer within 30s" "see serve.log"
+  if [ "${UP}" -eq 1 ] && ! kill -0 "${SERVE_PID}" 2>/dev/null; then
+    UP=0; fail "quirk serve exited; the probe answered from another process" "see serve.log"
+  elif [ "${UP}" -eq 1 ]; then pass "dashboard answering on 127.0.0.1:${PORT}"
+  else fail "dashboard did not answer within 30s" "see serve.log"; fi
 else
   UP=0; fail "no config.yaml to serve from"
 fi
@@ -496,7 +642,7 @@ PY
   sed 's/^/    | /' "${Q_OUT}/fonts.txt" >>"${LOG}"
   [ "${FONT_RC}" -eq 0 ] && pass "every /fonts URL: 200, font/ttf, TrueType magic" || fail "font route contract broken" "see fonts.txt"
 else
-  skip "dashboard not up"
+  fail "dashboard not up; font contract unchecked"
 fi
 
 check "8. score parity (intel == html strictly; dashboard == report or attributed)"
@@ -526,7 +672,7 @@ PY
     [ "${SA_RC}" -eq 0 ] && pass "score_attribution.py exit 0" || fail "score_attribution.py exit ${SA_RC}" "see the SCORE-* and UNATTRIBUTED lines above"
   fi
 else
-  skip "dashboard or HTML report unavailable"
+  fail "dashboard or HTML report unavailable; score parity unchecked"
 fi
 
 check "9. brand accent recorded for the visual walkthrough"

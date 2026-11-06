@@ -316,7 +316,7 @@ connectors:
     - "./crypto-antipatterns-java"
 ```
 
-**Expected result (5.28.0, known defect):** the Semgrep `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so this scan produces an ERROR row for the source phase (`ruleset unavailable`), Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`, there are zero SOURCE findings and the readiness score is lower than a scan without `source_targets`. This describes a scan with Semgrep installed; without Semgrep the source phase is wrongly recorded as ran with no findings and shown as assessed and clean. The weaknesses listed above are what the repositories contain, not what the scanner currently reports.
+**Expected result (5.28.0, known defect):** the Semgrep `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so this scan produces an ERROR row for the source phase (`ruleset unavailable`), Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`, there are zero SOURCE findings and the readiness score is lower than a scan without `source_targets`. This describes a scan with Semgrep installed; without Semgrep (5.28.1) the source phase is skipped with reason `missing-binary` and reads Not assessed, with one `missing_binary` advisory row counted as a scan error. The weaknesses listed above are what the repositories contain, not what the scanner currently reports.
 
 ---
 
@@ -1266,8 +1266,9 @@ TLS probe.
 
 | Port  | Service   | Image                                | Expected Finding                                                       | Severity |
 |-------|-----------|----------------------------------------|----------------------------------------------------------------------------|----------|
-| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.23-alpine) | `TLS certificate uses quantum-vulnerable RSA key` (RSA-2048, `CN=grpc-tls.chaos.local`) | MEDIUM |
-| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.23-alpine) | TLS 1.2/1.3 ciphers — Go defaults (ECDHE-RSA, forward secrecy)          | Informational |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.26-alpine) | `TLS certificate uses quantum-vulnerable RSA key` (RSA-2048, `CN=grpc-tls.chaos.local`) | MEDIUM |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.26-alpine) | TLS 1.2/1.3 ciphers — Go defaults (ECDHE-RSA, forward secrecy)          | Informational |
+| 39443 | grpc-tls  | build: labs/grpc-tls (golang:1.26-alpine) | TLS 1.3 key exchange negotiates `X25519MLKEM768` (hybrid ML-KEM, Go >= 1.24 default); QUIRK records `pqc-hybrid-detected` and `pqc_hybrid_endpoint_count = 1` | Informational |
 
 **Start:**
 

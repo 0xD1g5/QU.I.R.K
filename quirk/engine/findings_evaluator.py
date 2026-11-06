@@ -471,8 +471,11 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
         proto = getattr(e, "protocol", "UNKNOWN")
 
         # Phase 45 / D-04, D-05: ADVISORY rows produced by quirk.util.optional_extra
-        # become coverage_gap findings. INFO severity, zero score impact (D-07
-        # — see quirk/intelligence/evidence.py for the score-exclusion path).
+        # become coverage_gap findings. INFO severity. The coverage_gap finding
+        # itself is score-neutral (see quirk/intelligence/evidence.py for the
+        # score-exclusion path), but a missing_binary ADVISORY endpoint's
+        # scan_error IS counted by evidence.scan_error_count (Phase 235 D-09 /
+        # 235.1 D-07), so the skipped scan is not entirely free of score impact.
         # The `continue` is critical: it prevents the row from also being
         # processed by the generic scan_err handler below (which would emit a
         # duplicate "Informational protocol observation" finding).
@@ -493,6 +496,32 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     scan_err_msg or
                     "Install the missing optional extra (pip install 'quirk-scanner[<extra>]') "
                     "and re-run the scan to obtain coverage for this protocol."
+                ),
+            )
+            adv["category"] = "coverage_gap"
+            findings.append(adv)
+            continue
+
+        # 235.1 D-06: a required external binary (semgrep/syft) is absent. Same
+        # INFO coverage_gap shape as missing_extra; scan_error is a fixed
+        # template ("<bin> is not installed (QRK-INSTALL-00N)") with no paths.
+        if proto == "ADVISORY" and getattr(e, "scan_error_category", "") == "missing_binary":
+            scan_err_msg = getattr(e, "scan_error", "") or ""
+            adv = _build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="Scanner skipped — required tool not installed",
+                description=(
+                    "A QUIRK scan phase was skipped because a required external tool "
+                    "is not installed in this environment"
+                    + (f" ({scan_err_msg})" if scan_err_msg else "")
+                    + ". Coverage for this domain is incomplete until the tool is "
+                    "installed; the gap is reported informationally."
+                ),
+                recommendation=(
+                    "Install the missing tool (see `quirk doctor` for the exact "
+                    "command) and re-run the scan to obtain coverage."
                 ),
             )
             adv["category"] = "coverage_gap"
@@ -557,6 +586,28 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                         "be validated out-of-band."
                     ),
                     recommendation="Confirm client certificate requirements and document trust chain and onboarding process.",
+                )
+                f["detail"] = scan_err
+                findings.append(f)
+                continue
+            if proto == "SOURCE":
+                # 235.1 review IN-01: a failed/timed-out source target is
+                # incomplete coverage, not a benign observation. Visible
+                # (no coverage_gap category), host is the redacted repo label.
+                f = _build_finding(
+                    severity="INFO",
+                    host=host,
+                    port=port,
+                    title=f"Source scan incomplete for {host}",
+                    description=(
+                        "The source code scan of this repository failed or only "
+                        "partly completed, so its cryptographic usage was not fully "
+                        "assessed. Findings from other repositories are unaffected."
+                    ),
+                    recommendation=(
+                        "Review the error detail, fix the cause (timeout, unreadable "
+                        "output, ruleset availability) and re-run the scan."
+                    ),
                 )
                 f["detail"] = scan_err
                 findings.append(f)

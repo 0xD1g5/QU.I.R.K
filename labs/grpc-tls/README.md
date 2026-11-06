@@ -53,6 +53,6 @@ cd labs/grpc-tls && make certs
 |------|---------|
 | `main.go` | Minimal `grpc.NewServer` with `credentials.NewServerTLSFromFile` |
 | `go.mod` / `go.sum` | Pinned `google.golang.org/grpc` dependency |
-| `Dockerfile` | Multi-stage build (`golang:1.23-alpine` → `alpine:3.20`) |
+| `Dockerfile` | Multi-stage build (`golang:1.26-alpine` → `alpine:3.20`) |
 | `Makefile` | `make certs` generates RSA-2048 self-signed cert (also auto-run by `lab.sh`) |
 | `certs/` | Generated at lab-spin-up time; `*.key` / `*.crt` gitignored |

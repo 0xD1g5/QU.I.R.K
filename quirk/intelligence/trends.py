@@ -32,6 +32,9 @@ FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 # Severity bucketing
 # ---------------------------------------------------------------------------
 
+# 235.1 D-06: advisory-only categories never count as scan-error regressions.
+_ADVISORY_ONLY_CATEGORIES = frozenset({"missing_extra", "missing_binary"})
+
 _SEVERITY_BUCKET = {
     "CRITICAL": "high",
     "HIGH": "high",
@@ -426,18 +429,19 @@ def compute_trend_report(
     resolved_counts = _count_by_bucket(resolved_keys, previous_sev)
 
     # D-05: scan error count delta computed independently of finding delta.
-    # Phase 41 / D-15: exclude category='missing_extra' so that "user did not
+    # Phase 41 / D-15 + 235.1 D-06: exclude advisory-only categories
+    # (missing_extra, missing_binary) so that "user did not
     # install [motion] this run" does not register as a scan-error regression.
     # getattr(..., None) tolerates older DB rows that predate the column.
     cur_err = sum(
         1 for ep in current_eps
         if ep.scan_error is not None
-        and getattr(ep, "scan_error_category", None) != "missing_extra"
+        and getattr(ep, "scan_error_category", None) not in _ADVISORY_ONLY_CATEGORIES
     )
     prev_err = sum(
         1 for ep in previous_eps
         if ep.scan_error is not None
-        and getattr(ep, "scan_error_category", None) != "missing_extra"
+        and getattr(ep, "scan_error_category", None) not in _ADVISORY_ONLY_CATEGORIES
     )
     scan_errors_new_count = max(0, cur_err - prev_err)
     scan_errors_resolved_count = max(0, prev_err - cur_err)

@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.28
-milestone_name: Score & Finding Truth
-status: milestone_complete
-last_updated: "2026-11-03T21:30:00.000Z"
-last_activity: "2026-11-03 -- v5.28 CLOSED + ARCHIVED by hand: audit tech_debt 29/29; shipped as tag v5.28.0 (PyPI + GitHub Releases, 2026-10-30); main green at 66e6a992; archives at .planning/milestones/v5.28-*, phases moved to v5.28-phases/, REQUIREMENTS.md removed. Next: 5.28.1 (CR-01, CR-02), then /gsd-new-milestone"
+milestone: v5.28.1
+milestone_name: Install & Source-Scan Truth
+status: phase_complete
+last_updated: "2026-11-05T20:30:00.000Z"
+last_activity: "2026-11-05 -- Phase 235.1 COMPLETE: 15/15 plans, verified passed 5/5 at af4f755c after two re-verifications (branch_ci_state exit 0; Python CI 42092994455, Dashboard Quality 42092999192); code review WR-01..06 + IN-01/02/07 fixed, rest deferred (999.127); 10/11 requirements Complete, DEP-03 delivered and held open for the 235.2 merge; next /gsd-plan-phase 235.2. Prior: waves 1-5 complete (14/15; CHANGELOG [5.28.1], README/reference docs, guides + vault sync done). Prior: wave 2 complete (grpc-tls lab now negotiates X25519MLKEM768, oracle updated from measurement). Prior: wave 1 complete (plans 01-08, 8/15); operator approved vitest 3.2.7 and the tinypool #83/#84 tolerable_risk dismissal (both dismissed, #31/#3 still open until the 235.2 merge); next wave 2 (plan 09 needs Docker). Prior: Phase 235.1 PLANNED: 15 plans in 6 waves, research HIGH confidence, plan checker passed at iteration 3 (0 blockers), 11/11 requirements and D-01..D-16 covered (decisions checked independently, because check.decision-coverage-plan skipped 0/0); 3 operator checkpoints (npm package check, Dependabot #83/#84 approval, start Docker). Prior: Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 88
-  completed_plans: 88
+  total_phases: 2
+  completed_phases: 1
+  total_plans: 15
+  completed_plans: 15
   percent: 100
 ---
 
@@ -353,7 +353,7 @@ See: .planning/PROJECT.md (updated 2026-11-03)
 
 **Core value:** Complete, defensible cryptographic inventory with CBOM deliverable and quantum-readiness score — handed to a client in under two hours — now with continuous hardware lifecycle monitoring (drift detection, EOL tracking, sensor-fleet coverage, lightweight check-in re-probes, and catalog-level vendor PQC trend tracking) layered on top of the v5.7–v5.10 agentless hardware PQC fingerprinting foundation.
 
-**Current focus:** None — **v5.28 is closed and archived (2026-11-03), and it shipped as `v5.28.0` (2026-10-30), launch gate GO.** Next is **5.28.1** (CR-01 `<3.15` cap, CR-02 missing-semgrep reads clean, CHANGELOG/PyPI wording), planned as a quick release or an inserted phase before v5.29. Then `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary; Phase 236 (score-divergence closure, `999.132`) is the carried v5.29 candidate. *Superseded:* v5.28 Score & Finding Truth, opened 2026-10-15. Defining requirements, then the roadmap (phases continue from 227). *Superseded:* None — **v5.27 is closed and archived (2026-10-15), and it shipped as `v5.27.0`.** The social-launch gate is satisfied. Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Owed at that review: an owner for the 118 `doc224` product-defect todos (14 high), W15, and `999.120` (P2b, P1, operator-reserved), the v5.28 anchor. Surface `999.121` (GUI-first gaps), as the operator asked.
+**Current focus:** **v5.28.1 Install & Source-Scan Truth** (patch release, opened 2026-11-03 on `v5281-open`). Phase 235.1 (Install & Source-Scan Truth Fixes) is next: `/gsd-discuss-phase 235.1`. Ship `v5.28.1` by 2026-11-23 (CMVP red 2026-11-24), then re-check the announcement. Phase 236 stays the v5.29 candidate. *Superseded:* None — **v5.28 is closed and archived (2026-11-03), and it shipped as `v5.28.0` (2026-10-30), launch gate GO.** Next is **5.28.1** (CR-01 `<3.15` cap, CR-02 missing-semgrep reads clean, CHANGELOG/PyPI wording), planned as a quick release or an inserted phase before v5.29. Then `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary; Phase 236 (score-divergence closure, `999.132`) is the carried v5.29 candidate. *Superseded:* v5.28 Score & Finding Truth, opened 2026-10-15. Defining requirements, then the roadmap (phases continue from 227). *Superseded:* None — **v5.27 is closed and archived (2026-10-15), and it shipped as `v5.27.0`.** The social-launch gate is satisfied. Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Owed at that review: an owner for the 118 `doc224` product-defect todos (14 high), W15, and `999.120` (P2b, P1, operator-reserved), the v5.28 anchor. Surface `999.121` (GUI-first gaps), as the operator asked.
 
 *Superseded:* None — **v5.26 is closed and archived (2026-10-02).** Next is `/gsd-new-milestone`, after the PM review of HORIZON + backlog the operator asks for at every boundary. Committed for v5.27 already: the claim-by-claim review of every user-facing doc that gates the social launch (HORIZON 2026-09-30 row). Live owners carried in: `999.118`, `999.119`, `999.120` (P1, operator-reserved).
 
@@ -1504,6 +1504,15 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
+Phase: 235.1 (Install & Source-Scan Truth Fixes) — COMPLETE 2026-11-05, verified passed 5/5 at `af4f755c` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0; Python CI 42092994455, Dashboard Quality 42092999192); CI re-observed green at the close parent `00a39593` (Python CI 42100802738, Dashboard Quality 42100807186). 1 of 2 phases in v5.28.1; next: Phase 235.2 (`/gsd-plan-phase 235.2`). Branch `v5281-open` pushed, no PR yet (the 235.2 merge opens it).
+Plan: 15 of 15 complete (Phase 235.1)
+Status: Milestone v5.28.1 Install & Source-Scan Truth opened 2026-11-03 (patch release). 16 requirements (INSTALL-07 added at the 235.1 discuss),
+Phases 235.1–235.2, branch `v5281-open` cut from `main` at `f4564d2c` (PR #65 merge, `branch_ci_state`
+exit 0). Ship by 2026-11-23.
+Last activity: 2026-11-03. Milestone opened by hand from pre-images. No `state.milestone-switch`,
+`phases.clear` or roadmapper write was used.
+
+**Prior position (v5.28 close, superseded 2026-11-03):**
 Phase: — (milestone v5.28 closed 2026-11-03; no phase open)
 Plan: —
 Status: v5.28 Score & Finding Truth CLOSED and ARCHIVED, and SHIPPED as tag `v5.28.0` (PyPI + GitHub
@@ -3525,8 +3534,10 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: none. v5.28 is closed (2026-11-03); its phase directories are now under
-`.planning/milestones/v5.28-phases/`. Next: 5.28.1, then `/gsd-new-milestone`.
+Resume file: `.planning/phases/235.1-install-source-scan-truth-fixes-inserted/` (15 PLAN files + CONTEXT/RESEARCH/VALIDATION). Next: `/gsd-execute-phase 235.1`.
+*Prior:* Resume file `235.1-CONTEXT.md`; next `/gsd-plan-phase 235.1`.
+*Prior:* none. v5.28 is closed (2026-11-03); its phase directories are now under
+`.planning/milestones/v5.28-phases/`.
 
 Last session: 2026-11-03. **Confirmed `main` CI green at `66e6a992` (after PR #64), then closed v5.28 by hand.** Every count was re-derived
 from disk. Three drifted from what was carried in:

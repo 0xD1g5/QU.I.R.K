@@ -245,6 +245,8 @@ git clone http://localhost:20006/labadmin/crypto-antipatterns-python && cd crypt
 ```
 **Expected (5.28.0, known defect):** the `p/cryptography` ruleset is unavailable (HTTP 404, semgrep exit 7), so a QU.I.R.K. scan with `enable_source` and these clones in `source_targets` does **not** produce source findings. The `source_scanner` phase records an ERROR row whose scan error starts `ruleset unavailable` (phase detail `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`); Scan Coverage reads `Not assessed — skipped: failed (SourceRulesetUnavailable: ruleset unavailable ...)`; there are zero SOURCE findings; and the readiness score is lower than the same scan without `source_targets`, because scan errors feed the hygiene and modern-TLS error-rate inputs. The seeded anti-pattern table above describes the lab's seeded repositories, not current scanner output.
 
+**Semgrep not installed (5.28.1):** a scan with `enable_source` and these clones in `source_targets` records the `source_scanner` phase as `skipped: missing-binary` (Scan Coverage reads `Not assessed`), emits one ADVISORY `missing_binary` row counted as a scan error, prints `QRK-INSTALL-008` on stderr, and produces zero SOURCE findings.
+
 ---
 
 ## Profile: ssh-weak
@@ -1196,6 +1198,7 @@ PROFILE_ARGS="--profile grpc-tls" ./lab.sh up
 | 39443 | grpc-tls | TLS direct | `cert_subject=CN=grpc-tls.chaos.local, key_size=2048`; risk: "RSA-2048 certificate (quantum-vulnerable)" (MEDIUM, TLS-02) | sslyze CERTIFICATE_INFO |
 | 39443 | grpc-tls | TLS 1.2 ciphers | `accepted_ciphers=[TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256]` — Go TLS defaults (ECDHE-RSA, forward secrecy) | Informational — no HIGH weak-cipher finding (Go's TLS 1.2 defaults are modern) |
 | 39443 | grpc-tls | TLS 1.3 ciphers | `accepted_ciphers=[TLS_CHACHA20_POLY1305_SHA256, TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256]` | Informational |
+| 39443 | grpc-tls | TLS 1.3 key-exchange group | `negotiated_group=X25519MLKEM768`; second endpoint row `cipher_suite="X25519MLKEM768"`, `service_detail="pqc-hybrid-detected\|group=X25519MLKEM768"` (host OpenSSL >= 3.5 required; `capability_ok=True`). Evidence counter `pqc_hybrid_endpoint_count = 1`; CBOM gains an `X25519MLKEM768` cryptographic-asset component | Informational — a PQC-hybrid positive, no new finding (finding list unchanged: self-signed HIGH + RSA-2048 MEDIUM) |
 
 **D-03 empirical result (confirmed at execution time, Phase 89 Plan 03):**
 sslyze successfully negotiates the TLS handshake against the grpc-go server despite
@@ -1206,9 +1209,13 @@ layer. The openssl s_client fallback (D-03) was NOT needed.
 **Expected findings summary:**
 - RSA-2048 cert (quantum-vulnerable) — MEDIUM (TLS-02)
 - TLS cipher suites — informational (Go TLS defaults are ECDHE-RSA + PFS; no HIGH finding)
+- PQC-hybrid key exchange detected (`X25519MLKEM768`, `pqc_hybrid_endpoint_count = 1`) — measured with QUIRK against the rebuilt image on 2026-11-04 (before the bump, the pre-bump Go 1.23 build negotiated plain `X25519` and `pqc_hybrid_endpoint_count = 0`)
 
 **Weak TLS profile note:** The grpc-tls service uses Go's default `tls.Config` — TLS 1.2+
-with ECDHE-RSA cipher suites. The intentional weakness is the RSA-2048 key size (D-02
+with ECDHE-RSA cipher suites. The hybrid ML-KEM key exchange (`X25519MLKEM768`) is a Go
+default from Go 1.24 on; Go keys that default (GODEBUG `tlsmlkem`) to the `go` directive of the
+main module (`labs/grpc-tls/go.mod`, now `go 1.24.0`), so it is the go.mod directive together
+with the Go 1.26 builder that determines it. The intentional weakness is the RSA-2048 key size (D-02
 quantum-vulnerable MEDIUM finding). There is no deliberately weak cipher config (unlike
 redis-tls / kafka-tls which force 3DES/RSA-KX ciphers).
 
@@ -1216,7 +1223,7 @@ redis-tls / kafka-tls which force 3DES/RSA-KX ciphers).
 ALPN ScanCommand but completes the TLS handshake and produces full cipher/cert findings.
 
 **Reference:** Scanner: sslyze direct TLS on port 39443. Lab image: built from
-`labs/grpc-tls/Dockerfile` (FROM golang:1.23-alpine). Config: `labs/grpc-tls/main.go`.
+`labs/grpc-tls/Dockerfile` (FROM golang:1.26-alpine, grpc-go v1.79.3, `go 1.24.0`). Config: `labs/grpc-tls/main.go`.
 Requirement: LAB-05.
 
 ---

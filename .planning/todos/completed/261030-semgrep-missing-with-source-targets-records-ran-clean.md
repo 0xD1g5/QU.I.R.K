@@ -4,8 +4,9 @@ created: 2026-10-30
 source: Phase 235 post-GO code review (CR-02), .planning/phases/235-release-launch-gate/235-REVIEW.md
 priority: high
 area: quirk/scanner/source_scanner.py, run_scan.py (_run_source_phase), quirk/cli/doctor_cmd.py, CHANGELOG.md
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-11-05
+resolves_phase: "235.1"
 owner: "999.127"
 target_release: "5.28.1"
 ---
@@ -75,3 +76,7 @@ interpretation text to describe both states, and remove the README disclosure li
 - **Unknowns:** whether `skip("missing-binary", ...)` renders sensibly in coverage, report and dashboard (reason enum
   may need a new value); whether other optional-binary phases share the shape.
 - **Spike needed?** No; one in-process run with `PATH` stripped would confirm the current behaviour first.
+
+## Resolved (2026-11-05, Phase 235.1)
+
+Fixed on `v5281-open` and verified `passed` at `af4f755c` (`235.1-VERIFICATION.md`, branch CI green). Ships in 5.28.1 (Phase 235.2).

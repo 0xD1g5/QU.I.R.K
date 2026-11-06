@@ -8,6 +8,78 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
+## [5.28.1] - 2026-11-05
+
+This is a fix release for 5.28.0. It closes an install trap on Python 3.15, makes a scan that
+cannot run semgrep or syft say so instead of reporting a clean result, keeps the results of source
+repositories that succeeded when another one fails, and makes `quirk doctor` and the release checks
+tell the truth. It changes no scoring model: `SCORING_VERSION` stays 4.0.
+
+**Upgrade notes:**
+
+- **Python 3.15 is not supported.** 5.28.x requires Python 3.10 to 3.14. On 3.15, pip used to fall
+  back silently to an old release, because the newer releases could not be installed there. The
+  releases that predate the `sslyze` dependency (4.10.0 through 5.21.0) are being yanked, so an
+  unpinned `pip install quirk-scanner` on 3.15 now fails with a resolution error instead of
+  installing one of them. Anyone who needs one of those versions can still install it with an exact
+  pin, which a yank does not block: `pip install quirk-scanner==5.21.0`.
+- **Scores can move down on upgrade for two kinds of scan** (see the first two items under Fixed).
+  Scans with no source or container targets are not affected by the scanner-binary change.
+
+### Fixed
+
+- **A missing semgrep or syft no longer reads as a clean scan.** With `source_targets` set and
+  semgrep not installed (or `container_targets` set and syft not installed), the domain was recorded
+  as scanned with no findings. It now reads Not assessed (skipped: missing-binary), the run prints
+  the install hint, and the missing tool counts as a scan error. Before rounding, such a scan
+  scores about 1 to 2 points lower; the more domains a scan assesses, the smaller the effect.
+  Because subscores and the headline are whole numbers, the displayed change can be larger: in a
+  three-domain fixture the hygiene and modern TLS subscores each moved from 25 to 24 and the
+  headline score from 84 to 81. Scans without source or container targets are unaffected.
+- **Source scanning keeps the results of repositories that succeeded.** When one repository fails
+  (a timeout, unreadable output, or another error), the other repositories' findings are now kept
+  and each failed repository is recorded as its own scan error, with file paths redacted, instead of
+  one failure discarding the scan. A failed repository appears in the dashboard's Scanner Status and
+  as a "Source scan incomplete" finding. The scan still stops with an error when every repository fails; a repository path that is rejected as invalid counts as failed, not as scanned.
+  Because each failed repository now counts as a scan error and the findings from the repositories
+  that succeeded now count, a source scan where some repositories fail can score differently than in
+  5.28.0. In the case we measured (three repositories, one succeeding with two findings, two
+  failing) the headline score was 81 both ways, because both reach the same step of the scan-error
+  curve; more failing repositories can add further steps. Relative to a scan with no source targets,
+  one scan error costs about 3 headline points in that fixture.
+- **`quirk doctor` is stricter and more specific.** It now fails (exit code 1) when run on a Python
+  outside 3.10 to 3.14, warns when source or container scanning is configured with targets but
+  semgrep or syft is missing, and its database check now fails for a path that cannot be used (a
+  directory, a path under a file, an unwritable location, or an existing read-only database file), including a path set with
+  `QUIRK_DB_PATH`. It never creates the database or its directory. A database that does not exist
+  yet under a writable location is still informational on a first run.
+- **The release smoke test can no longer report a pass it did not earn.** It no longer reuses a
+  previous run's transcript, fails when a step is skipped, fails or never ran, refuses a port that
+  is already in use, and a stalled install or scan command now fails after `Q_CMD_TIMEOUT` seconds
+  (default 900) instead of hanging. README lines that change directory or set environment variables
+  still run without that limit, so one that stalls can still hang the run, although it can never
+  make it pass. A new check fails the run when an unpinned install on Python 3.15 selects an
+  older release. The score-attribution and README link checks now fail on missing or out-of-range
+  input instead of passing.
+- **Source scan errors are classified by the scanner's own error code.** A "ruleset unavailable"
+  error is recognised from semgrep's exit code rather than by matching words in its message.
+
+### Changed
+
+- **Chaos lab test environment.** The `grpc-tls` lab service was rebuilt on a current gRPC release,
+  so QUIRK now measures an X25519MLKEM768 key exchange on its test endpoint. This changes the test
+  lab only, not scanner behaviour.
+
+**Known defects carried from 5.28.0 that still apply:**
+
+- Source code scanning still records a "ruleset unavailable" scan error and reads Not assessed,
+  because the upstream Semgrep `p/cryptography` ruleset is no longer available.
+- Azure Key Vault key scanning has a known defect and currently records no keys.
+- The dashboard and the report can still differ in the score they give one scan; see the 5.28.0
+  known defects for the cases that move the score.
+- The Windows sensor installer script does not write a sensor identity or scan configuration, so
+  pushes are rejected until the sensor is enrolled by hand; see the admin guide.
+
 ## [5.28.0] - 2026-10-29
 
 This release carries the **v5.28 Score & Finding Truth** milestone. It moves the readiness score
@@ -49,6 +121,8 @@ the model and worked examples. `quirk doctor` and `quirk qramm` also change beha
 - Source code scanning records a "ruleset unavailable" scan error and reads Not assessed, because
   the upstream Semgrep `p/cryptography` ruleset this scanner used is no longer available. The error
   is counted, so a scan that sets `source_targets` scores lower than it did before.
+  With semgrep not installed, a scan that set `source_targets` was instead recorded as ran with no
+  findings; fixed in 5.28.1.
 - Azure Key Vault key scanning has a known defect and currently records no keys.
 - The dashboard and the report can still differ in the score they give one scan, because they
   derive findings separately. Known cases that move the score: the legacy TLS version finding

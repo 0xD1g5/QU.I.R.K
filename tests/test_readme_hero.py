@@ -322,3 +322,37 @@ def test_server_output_goes_to_a_log_file_not_an_unread_pipe(tmp_path, monkeypat
     msg = str(exc.value)
     assert msg.startswith("SERVER_NOT_READY") and "boom-from-uvicorn" in msg
     assert list(tmproot.iterdir()) == []
+
+
+def test_build_scoped_config_reads_an_explicit_artifacts_dir(tmp_path, monkeypatch):
+    """235.2: --artifacts-dir lets the hero come from a scratch scan, so the
+    capture never needs report files copied into the canonical quirk-output/."""
+    import pytest
+    import yaml
+
+    import scripts.capture_readme_hero as hero
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "config.yaml").write_text("output:\n  directory: ./quirk-output\n", encoding="utf-8")
+    monkeypatch.setattr(hero, "REPO_ROOT", root)
+    stamp = "20261105-214340"
+    arts = tmp_path / "scratch"
+    arts.mkdir()
+    for name in (f"report-{stamp}.html", f"run-stats-{stamp}.json", "report-20260101-000000.html"):
+        (arts / name).write_text("x", encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    evidence: dict = {}
+    cfg_path = hero.build_scoped_config(stamp, str(work), evidence, arts)
+    linked = sorted(p.name for p in (work / "reports").iterdir())
+    assert linked == [f"report-{stamp}.html", f"run-stats-{stamp}.json"]
+    assert all((work / "reports" / n).resolve().parent == arts.resolve() for n in linked)
+    cfg = yaml.safe_load(open(cfg_path, encoding="utf-8"))
+    assert cfg["output"]["directory"] == str(work / "reports")
+
+    # Default (no artifacts_dir) still reads REPO_ROOT/quirk-output and fails
+    # closed when that scan's files are not there.
+    with pytest.raises(SystemExit) as exc:
+        hero.build_scoped_config(stamp, str(tmp_path / "work2"), {})
+    assert str(exc.value).startswith("NO_REPORT_ARTIFACTS") and "quirk-output" in str(exc.value)

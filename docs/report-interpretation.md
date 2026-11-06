@@ -1955,7 +1955,7 @@ all, which is what this section discloses.
 The heading is followed by a `{N} ran / {M} skipped` summary line, then one row per phase: ran
 rows show the phase's wall-clock duration; skipped rows show the skip reason plus a short,
 non-secret detail string (e.g. `connectors.vault_token / VAULT_TOKEN not set`). There are exactly
-five skip reasons, each implying a specific operator action:
+six skip reasons, each implying a specific operator action:
 
 | Skip reason | What it means | What to do |
 |---|---|---|
@@ -1963,9 +1963,10 @@ five skip reasons, each implying a specific operator action:
 | `missing-extra` | The scanner needs an optional Python package that isn't installed. | Install the optional extra that provides the named package (see `docs/operators-guide.md` §2.2, Optional extras matrix). The extra named in some skip details does not exist: `(extras: vault)` means `[cloud]`, which carries hvac, and `(extras: aws)` names no extra (boto3 is a core dependency). |
 | `no-eligible-targets` | The scanner is enabled, but no targets were configured for it. | Add hosts/addresses to the named config key (e.g. `connectors.vault_targets`). |
 | `missing-credentials` | The scanner is enabled and has targets, but the credential it needs to authenticate is not set. Today only the Vault phase makes this check, when the phase starts during the scan (`connectors.vault_token` / `VAULT_TOKEN`); a dashboard submit does not check it. | Supply the named config key or environment variable — see the Effective config panel (`docs/operators-guide.md` §3.1.2) to check credential status before submitting a scan; the panel shows each credential as set or not set and never shows a value. |
+| `missing-binary` | A required external tool (semgrep for source code, syft for container images) is not installed. The domain is Not assessed and the missing tool is counted as a scan error. | Install the tool and re-scan; run `quirk doctor` to see which binary is missing. |
 | `failed` | The phase started and aborted with an error. | Check the error rows / logs for that phase; this is not a configuration gap, it is a runtime failure. |
 
-In 5.28.0, when Semgrep is installed, source code scanning records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. When Semgrep is not installed and `source_targets` is set, the phase is instead recorded as ran with no findings, so Scan Coverage shows Source code as assessed and clean and `quirk doctor` still exits 0. Both are known defects, not configuration gaps, and no config change fixes either. Run `semgrep --version` before trusting a clean source result.
+In 5.28.0, when Semgrep is installed, source code scanning records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. When Semgrep is not installed and `source_targets` is set (or Syft is not installed and `container_targets` is set), the phase is recorded as skipped with reason `missing-binary` (5.28.1), the domain reads *Not assessed*, and the missing tool counts as a scan error. Before 5.28.1 that case was recorded as ran with no findings. The ruleset-unavailable case is a known defect, not a configuration gap, and no config change fixes it.
 
 ### A skipped phase never fabricates a zero
 

@@ -94,8 +94,8 @@ direct-registry path, from `~/.docker/config.json`), so no additional configurat
 
 ## Graceful Degradation
 
-If Syft is not found on `PATH`, the container connector returns an empty result set and, in
-verbose runs, logs a message that begins `syft is not installed`. The rest of that message
+If Syft is not found on `PATH`, the container phase is skipped with reason `missing-binary` (5.28.1): Scan Coverage reads Not assessed, one `missing_binary` advisory row is recorded and counted as a scan error, `quirk doctor` warns that syft is configured but missing, and, in
+verbose runs, a log a message that begins `syft is not installed`. The rest of that message
 carries an install hint that is known to be wrong; follow the Prerequisites section above
 instead.
 

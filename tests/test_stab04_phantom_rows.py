@@ -114,3 +114,32 @@ def test_no_phantom_rows_in_merged_output(tmp_path):
         f"Merged output must not contain port=0 endpoints; got: "
         f"{[(e.host, e.port) for e in phantom_port_zero]}"
     )
+
+
+def test_read_scan_endpoints_excludes_missing_binary_advisory(tmp_path):
+    """235.1 D-06: missing_binary advisory rows are filtered like missing_extra;
+    real SOURCE rows and NULL-category rows stay."""
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.cli.sensor_cmd import _read_scan_endpoints
+    from quirk.db import init_db
+    from quirk.models import CryptoEndpoint
+
+    db_path = str(tmp_path / "scan.db")
+    engine = init_db(db_path)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with sessionmaker(bind=engine)() as db:
+        db.add(CryptoEndpoint(
+            host="source_scanner", port=0, protocol="ADVISORY",
+            scan_error="semgrep is not installed (QRK-INSTALL-008)",
+            scan_error_category="missing_binary", scanned_at=None,
+        ))
+        db.add(CryptoEndpoint(
+            host="repo/app.py", port=0, protocol="SOURCE",
+            scan_error_category=None, scanned_at=now,
+        ))
+        db.commit()
+
+    hosts = {r.host for r in _read_scan_endpoints(db_path)}
+    assert "source_scanner" not in hosts
+    assert "repo/app.py" in hosts

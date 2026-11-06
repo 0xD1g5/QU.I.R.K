@@ -1,0 +1,5 @@
+ERROR: Cannot install quirk-scanner because these package versions have conflicting dependencies.
+
+[notice] A new release of pip is available: 26.2.2 -> 26.3
+[notice] To update, run: <venv>/bin/python -m pip install --upgrade pip
+ERROR: ResolutionImpossible: for help visit https://pip.pypa.io/en/latest/topics/dependency-resolution/#dealing-with-dependency-conflicts

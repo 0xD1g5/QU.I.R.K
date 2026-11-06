@@ -88,3 +88,26 @@ def test_advisory_with_other_category_falls_through():
     assert any("Informational protocol observation" in t for t in titles), (
         f"expected generic scan_err handler to fire: {titles!r}"
     )
+
+
+def test_missing_binary_advisory_becomes_titled_coverage_gap_finding():
+    """235.1 D-06: ADVISORY/missing_binary -> one INFO coverage_gap finding with
+    the dedicated title, naming the binary, and no generic observation."""
+    ep = _ep(
+        host="source_scanner",
+        port=0,
+        protocol="ADVISORY",
+        scan_error="semgrep is not installed (QRK-INSTALL-008)",
+        scan_error_category="missing_binary",
+    )
+    findings = evaluate_endpoints(_cfg(), [ep])
+
+    coverage = [f for f in findings if f.get("category") == "coverage_gap"]
+    assert len(coverage) == 1, f"expected one coverage_gap finding, got {findings!r}"
+    f = coverage[0]
+    assert f["severity"] == "INFO"
+    assert f["title"] == "Scanner skipped \u2014 required tool not installed"
+    assert "semgrep" in f["description"]
+    titles = [x.get("title", "") for x in findings]
+    assert "Informational protocol observation" not in titles
+    assert len(findings) == 1

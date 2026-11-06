@@ -5,11 +5,20 @@ source: Phase 235 post-GO code review (CR-01, IN-01), .planning/phases/235-relea
 priority: high
 area: pyproject.toml, quirk/cli/doctor_cmd.py, scripts/release_smoke_inner.sh
 status: pending
-resolves_phase: null
+resolves_phase: "235.2"
 owner: "999.129"
 target_release: "5.28.1"
 ---
-# `requires-python = "<3.15"` makes pip on Python 3.15 silently install 5.27.0
+# `requires-python = "<3.15"` makes pip on Python 3.15 silently install 5.21.0
+
+## Corrected 2026-11-03 (235.1)
+
+The reproduction below used `--no-deps`, which hid the dependency constraint: 5.25.0/5.27.0 depend on
+sslyze (`nassl<6`, no 3.15 wheel), so a real unpinned resolve on 3.15.2 backtracks past them to **5.21.0**,
+not 5.27.0. The "drop the cap" candidate fix is **falsified**: an uncapped 5.28.1.dev0 still loses to 5.21.0
+on 3.15. The fix is D-01 (operator yanks the 17 pre-sslyze releases in 235.2, cap kept; see
+`235.1-YANK-PREP.md`) plus D-02 (smoke leg check N2, `scripts/pip_unpinned_verdict.py`). Original text kept
+below as history; steps 1 and the "yank does not help" claim there are superseded.
 
 **Filed:** 2026-10-30 (Phase 235 post-GO code review, finding CR-01; operator decision Q1 "Keep GO, file for 5.28.1 (Recommended)")
 **Priority:** P1 for 5.28.1. A 3.15 user following the unpinned README Quick Start gets the previous release with no error.
@@ -61,3 +70,7 @@ hard refusal. Confirm that is the intended behaviour (it is the only way to stop
 
 - Do not yank 5.27.0 as the fix; pip then resolves 5.25.0.
 - Do not announce 3.15 support. The announcement draft says Python 3.10 to 3.14.
+
+## Retargeted (2026-11-05, Phase 235.1 close)
+
+235.1 delivered the detection half: the 3.15 leg's unpinned N2 check (`scripts/pip_unpinned_verdict.py`, now bounded by `Q_CMD_TIMEOUT`) and the yank list in `235.1-YANK-PREP.md`. The fix itself is the operator's yank of 4.10.0-5.21.0 (INSTALL-07), verified by re-running N2 against live PyPI in 235.2. It printed `FAIL: unpinned resolve selected older quirk-scanner 5.21.0` on 2026-11-05, as designed before the yank.

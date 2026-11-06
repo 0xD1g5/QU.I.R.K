@@ -591,6 +591,68 @@ class TestFourSurfaceCoverageParity:
         assert html_labels == expected_labels
         assert docx_labels == expected_labels
 
+    def test_missing_binary_skip_reason_and_detail_match_across_four_surfaces(self, tmp_path):
+        """Phase 235.1 D-05: a missing-binary skipped source_scanning row shows its
+        reason and detail verbatim on technical md, executive md, HTML and DOCX."""
+        from docx import Document
+
+        from quirk.reports.docx_renderer import render_docx_report
+        from quirk.reports.executive import build_exec_markdown
+        from quirk.reports.html_renderer import render_html_report
+        from quirk.reports.technical import build_tech_markdown
+
+        detail = "semgrep is not installed (QRK-INSTALL-008)"
+        coverage = _coverage(
+            ran=1,
+            skipped=1,
+            phases=[
+                {
+                    "phase_name": "tls_scanning", "label": "TLS", "status": "ran",
+                    "reason": None, "detail": None, "duration_sec": 1.0,
+                },
+                {
+                    "phase_name": "source_scanning", "label": "Source Code",
+                    "status": "skipped", "reason": "missing-binary",
+                    "detail": detail, "duration_sec": None,
+                },
+            ],
+        )
+        tech_md = build_tech_markdown(_make_minimal_cfg(), [], [], coverage=coverage)
+        exec_md = build_exec_markdown(
+            _make_minimal_cfg_with_intelligence(), [], [], coverage=coverage
+        )
+        html_path = str(tmp_path / "mb.html")
+        render_html_report(
+            path=html_path,
+            cfg=_make_minimal_cfg(str(tmp_path)),
+            endpoints=[],
+            findings=[],
+            score={"score": 70, "rating": "FAIR", "subscores": {}, "drivers": []},
+            conf={"confidence": 0},
+            roadmap_items=[],
+            exec_content=_exec_content(coverage=coverage),
+        )
+        with open(html_path, encoding="utf-8") as f:
+            html = f.read()
+        docx_path = str(tmp_path / "mb.docx")
+        render_docx_report(
+            path=docx_path,
+            cfg=_make_minimal_cfg(str(tmp_path)),
+            findings=[],
+            exec_content=_exec_content(coverage=coverage),
+        )
+        docx_text = _docx_full_text(Document(docx_path))
+
+        for surface_name, surface_text in [
+            ("technical", tech_md),
+            ("executive", exec_md),
+            ("html", html),
+            ("docx", docx_text),
+        ]:
+            assert "missing-binary" in surface_text, surface_name
+            assert detail in surface_text, surface_name
+            assert "Source Code" in surface_text, surface_name
+
     def test_absence_parity_no_data_row_anywhere(self, tmp_path):
         from docx import Document
 

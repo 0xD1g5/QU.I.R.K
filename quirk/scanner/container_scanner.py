@@ -2,6 +2,11 @@
 
 Uses syft to scan container images and returns one CryptoEndpoint per
 crypto library found in the image. Degrades gracefully if syft is absent.
+
+Phase 235.1 D-05: the defensive ``shutil.which`` fallback below stays (other
+callers exist), but the engine gate in ``run_scan.py`` now records a
+``missing-binary`` skip before this scanner is ever called, so a configured
+container scan with syft absent never reads as "ran" with zero findings.
 """
 import json
 import logging

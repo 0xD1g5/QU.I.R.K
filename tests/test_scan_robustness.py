@@ -12,6 +12,8 @@ appear in run_scan source.
 """
 from __future__ import annotations
 
+import pytest
+
 import inspect
 
 
@@ -138,3 +140,42 @@ def test_trends_excludes_missing_extra_from_error_counts() -> None:
     tsrc = _inspect.getsource(_trends)
     assert "missing_extra" in tsrc
     assert "getattr(ep, \"scan_error_category\", None)" in tsrc
+
+
+@pytest.mark.parametrize("category", ["missing_extra", "missing_binary"])
+def test_trends_advisory_category_not_a_scan_error_regression(tmp_path, category) -> None:
+    """235.1 D-06: advisory-only categories never register as scan-error regressions.
+
+    Drives the real compute_trend_report (not a reimplementation of its filter):
+    previous session clean, current session adds one <category> ADVISORY row and
+    one genuine exception row -> exactly one new scan error.
+    """
+    from datetime import datetime
+
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.db import init_db
+    from quirk.intelligence.trends import compute_trend_report
+    from quirk.models import CryptoEndpoint
+
+    prev_ts = datetime(2026, 1, 1, 10, 0, 0)
+    cur_ts = datetime(2026, 1, 2, 10, 0, 0)
+    engine = init_db(str(tmp_path / "t.db"))
+    with sessionmaker(bind=engine)() as db:
+        db.add(CryptoEndpoint(host="10.0.0.1", port=443, protocol="tls", scanned_at=prev_ts))
+        db.add(CryptoEndpoint(host="10.0.0.1", port=443, protocol="tls", scanned_at=cur_ts))
+        db.add(CryptoEndpoint(
+            host="source_scanner", port=0, protocol="ADVISORY",
+            scan_error="semgrep is not installed (QRK-INSTALL-008)",
+            scan_error_category=category, scanned_at=cur_ts,
+        ))
+        db.commit()
+        report = compute_trend_report(cur_ts, prev_ts, db, findings_deriver=lambda eps: [])
+        assert report.scan_errors_new_count == 0
+        db.add(CryptoEndpoint(
+            host="10.0.0.2", port=443, protocol="tls", scan_error="boom",
+            scan_error_category="exception", scanned_at=cur_ts,
+        ))
+        db.commit()
+        report = compute_trend_report(cur_ts, prev_ts, db, findings_deriver=lambda eps: [])
+        assert report.scan_errors_new_count == 1

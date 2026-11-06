@@ -58,6 +58,9 @@ def test_same_identity_bearing_title_still_collapses_under_compliance_policy():
 
 
 def test_title_identity_class_is_exhaustive_and_closed_vocabulary():
+    # 24 since 2026-11-05: "Source scan incomplete for " (Phase 235.1 WR-01/IN-01,
+    # one finding per failed source repository) was added.
+    #
     # 23 since 2026-09-14: "Weak SAML encryption certificate: -" was added
     # alongside the pre-existing signing title, because a SAML IdP publishes a
     # KeyDescriptor per USE and the encryption row was being mis-titled
@@ -68,7 +71,7 @@ def test_title_identity_class_is_exhaustive_and_closed_vocabulary():
     # is, and it regenerates its occurrence set from the source AST on every run
     # (in both directions: unclassified AND stale). Bumping this number without
     # that gate passing proves nothing.
-    assert len(TITLE_IDENTITY_CLASS) == 23
+    assert len(TITLE_IDENTITY_CLASS) == 24
     assert set(TITLE_IDENTITY_CLASS.values()) <= {
         "NORMALIZE",
         "PRESERVE_IDENTITY",

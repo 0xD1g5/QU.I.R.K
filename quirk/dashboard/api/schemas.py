@@ -595,7 +595,7 @@ class PartialFailureEntry(BaseModel):
 
     Sourced from scan_checkpoints.error_summary JSON array.
     stage: inventory|tls|ssh|api|identity|data_at_rest|broker_email|reports
-    error_category: exception|missing_extra
+    error_category: exception|missing_extra|missing_binary
     """
     stage: str
     scanner: str

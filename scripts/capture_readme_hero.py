@@ -118,7 +118,8 @@ def stamp_from_scanned_at(scanned_at: str) -> str:
     return ymd.replace("-", "") + "-" + hms[:8].replace(":", "")
 
 
-def build_scoped_config(stamp: str, workdir: str, evidence: dict) -> str:
+def build_scoped_config(stamp: str, workdir: str, evidence: dict,
+                        artifacts_dir: Path | None = None) -> str:
     """Write a config whose output.directory holds ONLY the canonical scan's real
     report artifacts (symlinked, never regenerated), so the executive header's
     "Report from scan" refers to the scan the dashboard is displaying rather than
@@ -126,7 +127,7 @@ def build_scoped_config(stamp: str, workdir: str, evidence: dict) -> str:
     """
     import yaml
 
-    src_dir = REPO_ROOT / "quirk-output"
+    src_dir = artifacts_dir if artifacts_dir is not None else REPO_ROOT / "quirk-output"
     out_dir = Path(workdir) / "reports"
     out_dir.mkdir(parents=True, exist_ok=True)
     linked = []
@@ -137,7 +138,7 @@ def build_scoped_config(stamp: str, workdir: str, evidence: dict) -> str:
         n.startswith("run-stats-") for n in linked
     ):
         raise SystemExit(
-            f"NO_REPORT_ARTIFACTS: quirk-output/ has no report-{stamp}.html + "
+            f"NO_REPORT_ARTIFACTS: {src_dir} has no report-{stamp}.html + "
             f"run-stats-{stamp}.json for the canonical scan; generate them first."
         )
     cfg = yaml.safe_load((REPO_ROOT / "config.yaml").read_text())
@@ -415,6 +416,8 @@ def main(argv=None) -> int:
     ap.add_argument("--height", type=int, default=900)
     ap.add_argument("--out", default="docs/images/dashboard-hero.png")
     ap.add_argument("--db", default=str(REPO_ROOT / "quirk-output" / "quirk.db"))
+    ap.add_argument("--artifacts-dir", default=None,
+                    help="Directory holding the scan's report-*/run-stats-* files (default: quirk-output/).")
     ap.add_argument("--allow-wrapped-gauges", action="store_true",
                     help="Do not fail when the 7 gauges wrap (layout is max-w-[1200px]; width cannot fix it).")
     ap.add_argument("--pad", type=int, default=24)
@@ -464,7 +467,8 @@ def _run(args, db: Path, evidence: dict) -> None:
     # and the report symlinks live only for the duration of the capture.
     with tempfile.TemporaryDirectory(prefix="quirk-hero-reports-") as workdir:
         cfg_path = build_scoped_config(
-            stamp_from_scanned_at(scanned_at), workdir, evidence)
+            stamp_from_scanned_at(scanned_at), workdir, evidence,
+            Path(args.artifacts_dir).resolve() if args.artifacts_dir else None)
         _capture_with_server(args, db, cfg_path, evidence)
 
 

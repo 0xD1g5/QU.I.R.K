@@ -11,8 +11,9 @@ clone repositories.
 > (`SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7`), Scan Coverage shows the
 > source phase as `skipped: failed (...)`, and the source domain reads Not assessed. It
 > produces no source findings. With semgrep not installed and `source_targets` set, the phase is
-> instead wrongly recorded as ran with no findings, so Scan Coverage shows Source code as
-> assessed and clean and `quirk doctor` still exits 0. Because the scan error counts against the hygiene and TLS
+> (5.28.1) skipped with reason `missing-binary`: Scan Coverage shows Source code as Not
+> assessed, the missing tool is counted as a scan error, and `quirk doctor` warns that semgrep is
+> configured but missing. Because the scan error counts against the hygiene and TLS
 > error-rate readiness inputs, a scan with `source_targets` configured scores lower than one
 > without. Disable `connectors.enable_source` until the ruleset is replaced.
 
@@ -54,8 +55,8 @@ patterns run; see the known defect above.
 
 ## How the Scan Works
 
-QU.I.R.K. calls (the `p/cryptography` pack named here is the unavailable ruleset; this is the
-known defect described above):
+QU.I.R.K. calls (the `p/cryptography` pack named here is the known defect described above:
+its ruleset is unavailable):
 
 ```
 semgrep --json --config p/cryptography -- <repo_path>
@@ -71,8 +72,8 @@ in `config.yaml` to change it.
 
 ## Graceful Degradation
 
-If semgrep is not found on `PATH` (separate from the known defect, ruleset unavailable), the source connector returns an empty result set and, in
-verbose runs, logs a message that begins `semgrep is not installed`. The rest of that message
+If semgrep is not found on `PATH` (separate from the known defect, ruleset unavailable), the source phase is skipped with reason `missing-binary` (5.28.1): Scan Coverage reads Not assessed, one `missing_binary` advisory row is recorded and counted as a scan error, `quirk doctor` warns that semgrep is configured but missing, and, in
+verbose runs, a log a message that begins `semgrep is not installed`. The rest of that message
 carries an install hint that is known to be wrong; use `pip install semgrep` or
 `brew install semgrep` as shown in Prerequisites.
 

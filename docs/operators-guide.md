@@ -341,8 +341,12 @@ require the dashboard API token like every other `/api/scans`/`/api/jobs` route.
 
 Expanding "Show detail" reveals one row per scanner phase — ran rows show duration, skipped rows
 show the reason and detail exactly as described in `docs/report-interpretation.md` §22's skip-reason
-table, colored by severity (`missing-credentials` amber, `failed` red, the other three skip
-reasons neutral, `ran` green).
+table, colored by severity (`missing-credentials` amber, `failed` red, `missing-binary` in the high-severity
+color, the other three skip reasons neutral, `ran` green). `missing-binary` (5.28.1) means a
+configured container scan (or source scan) could not run because its required external
+binary is not on `PATH`:
+unlike the neutral reasons it is counted as a scan error, the domain reads Not assessed, and one
+`missing_binary` advisory row is recorded.
 
 **Scans from before this feature (pre-v5.21)** show an honest two-line notice — "Coverage data not
 recorded" / "This scan predates per-phase coverage tracking (pre-v5.21). Re-scan to get full
@@ -1096,7 +1100,7 @@ the connector rows.
 | SSH | SSH banner + KEX/host-key/cipher audit | `timeouts.ssh_seconds` | `ssh-audit` | "SSH quantum planning advisory" |
 | JWT/API | JWKS key discovery (algorithm and key size per key) at each base URL | `connectors.enable_jwt`, `jwt_targets`, `timeouts.jwt_seconds` | (none, core) | `JWKS fetched with TLS certificate verification disabled` HIGH finding when `allow_insecure_jwks` is on |
 | Container | Crypto libraries in Docker images via Syft SBOM | `connectors.enable_container`, `container_targets` | `syft` binary | "Container image uses quantum-vulnerable crypto library" |
-| Source code | semgrep (registry pack `p/cryptography`, ruleset unavailable in 5.28.0: known defect: with Semgrep installed the domain reads Not assessed, and with Semgrep missing the phase is wrongly recorded as ran with no findings and shown as assessed and clean; see [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
+| Source code | semgrep (registry pack `p/cryptography`, ruleset unavailable in 5.28.0: known defect: with Semgrep installed the domain reads Not assessed, and with Semgrep missing (5.28.1) the phase is skipped with reason `missing-binary` and the domain also reads Not assessed; see [`docs/connectors/git.md`](connectors/git.md)) on local repository directories | `connectors.enable_source`, `source_targets` | `semgrep` | (semgrep rule id plus `file:line`) |
 | DNSSEC | DNSKEY / DS records | `connectors.enable_dnssec`, `dnssec_targets`, `timeouts.dnssec_seconds` | (none, core: `dnspython`) | `ds-chain-broken`, `sha1-ds-digest` |
 | Kerberos | KDC enctype enumeration (port 88) | `connectors.enable_kerberos`, `kerberos_targets`, `kerberos_probe_principal`, `timeouts.kerberos_seconds` | `quirk-scanner[identity]` (`impacket`) | (DES / RC4 / AES-128 etype findings) |
 | SAML | SAML IdP metadata: signing certificates and SHA-1 algorithm URIs | `connectors.enable_saml`, `saml_targets`, `timeouts.saml_seconds` | (none, core: `lxml`) | "SHA-1 algorithm URI detected in SAML metadata" |
@@ -1218,7 +1222,7 @@ findings. Requires `syft` on `PATH` and `connectors.enable_container=true`.
 built to run semgrep with the registry pack `p/cryptography` against each directory in
 `source_targets`, but as of 2026-10-12 the Semgrep registry answers HTTP 404 for that pack
 name, so a scan records a "ruleset unavailable" error, Scan Coverage shows `skipped: failed`,
-with Semgrep installed the source domain reads Not assessed and no source findings are produced; with Semgrep missing the phase is wrongly recorded as ran with no findings, so Scan Coverage shows Source code as assessed and clean and `quirk doctor` still exits 0 (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
+with Semgrep installed the source domain reads Not assessed and no source findings are produced; with Semgrep missing (5.28.1) the phase is skipped with reason `missing-binary`, Scan Coverage shows Source code as Not assessed, the missing tool is counted as a scan error, and `quirk doctor` warns that semgrep is configured but missing (details in [`docs/connectors/git.md`](connectors/git.md)). Each entry must be a
 path to an existing local directory (for example a clone); remote URLs are not fetched,
 and a path that is missing or contains `..` or shell metacharacters is rejected with an
 `invalid_input` row. Once a working ruleset is configured, findings carry the semgrep rule id and `file:line`. Requires
@@ -1512,18 +1516,19 @@ It takes no arguments: `quirk doctor --help` prints usage and exits 0 without ru
 
 | # | Category | Severity | Failure exits 1? |
 |---|----------|----------|------------------|
-| 1 | Python environment (>= 3.10 and < 3.15) | non-informational | yes |
-| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | informational | **no** (a missing binary is reported but does not set exit 1) |
+| 1 | Python environment (>= 3.10 and < 3.15) | non-informational | yes (any version outside 3.10-3.14 fails, QRK-INSTALL-005) |
+| 2 | Scanner binaries (`nmap`, `syft`, `semgrep` in PATH) | informational | **no** (a missing binary is reported but does not set exit 1). When `syft` or `semgrep` is absent and its scanner is enabled with targets in `./config.yaml` (`connectors.enable_container` + `container_targets`, or `connectors.enable_source` + `source_targets`), the row reads "configured but missing" and names the install code (QRK-INSTALL-007 / QRK-INSTALL-008); exit status stays 0 |
 | 3 | Compliance framework freshness (within `STALENESS_THRESHOLD_DAYS`) | non-informational | yes |
 | 4 | QRAMM module availability | informational | **no** |
-| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes (unreadable `QUIRK_DB_PATH`, unopenable database, or more than one legacy file); a database that has not been created yet is informational |
+| 5 | Database (`QUIRK_DB_PATH` if set, else `./quirk-output/quirk.db`, or the one existing legacy `./quirk.db` / `./output/quirk.db`; more than one legacy file is a failure) | non-informational | yes (unreadable `QUIRK_DB_PATH`, unopenable database, an existing database file that is not writable, a path that exists but is not a file, a path whose first existing ancestor is not a writable directory, or more than one legacy file); a database that has not been created yet under a writable directory is informational (it is created by the first scan). Doctor never creates the database or its directory |
 | 6 | Configuration (`./config.yaml` parses) | non-informational | yes (malformed); informational only if file is absent |
 | 7 | Network connectivity (DNS lookup of `example.com`) | informational | **no** |
 | 8 | Dashboard process (HTTP HEAD to `http://127.0.0.1:8512/`) | informational | **no** |
 
 The Python check accepts the same range as the package metadata (`requires-python`):
 3.10 up to and including 3.14. Python 3.15 is not yet supported. Missing optional binaries
-and a not-yet-created database are reported with `[!]` and leave the exit status at 0; a
+(including a "configured but missing" `syft` or `semgrep`) and a not-yet-created database are
+reported with `[!]` and leave the exit status at 0; a
 Python version outside the range, a failed core import, stale compliance data or an
 unreadable database still exit 1.
 

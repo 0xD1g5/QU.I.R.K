@@ -80,9 +80,12 @@ def test_check_db_uses_quirk_db_path_env(tmp_path, monkeypatch):
     assert result["ok"] is True
 
 
-def test_check_db_quirk_db_path_nonexistent_fails(monkeypatch):
-    """D-02: When QUIRK_DB_PATH is unreadable, ok=False and remediation mentions env var."""
-    monkeypatch.setenv("QUIRK_DB_PATH", "/nonexistent/path/quirk.db")
+def test_check_db_quirk_db_path_unusable_fails(tmp_path, monkeypatch):
+    """D-02/D-10: an unusable QUIRK_DB_PATH (a regular file where a directory
+    must be) is ok=False and the remediation names the env var."""
+    blocker = tmp_path / "not-a-dir"
+    blocker.write_text("x")
+    monkeypatch.setenv("QUIRK_DB_PATH", str(blocker / "quirk.db"))
     result = _check_db()
     assert isinstance(result, dict)
     assert result["ok"] is False
@@ -94,7 +97,7 @@ def test_check_db_quirk_db_path_nonexistent_fails(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_default_db_path_no_dbs_returns_canonical(tmp_path, monkeypatch):
-    """D-03: With no legacy DBs, returns canonical ./quirk-output/quirk.db."""
+    """D-03: With no legacy DBs, returns the canonical quirk-output DB path (relative to cwd)."""
     monkeypatch.delenv("QUIRK_DB_PATH", raising=False)
     monkeypatch.chdir(tmp_path)
     result = _default_db_path()
