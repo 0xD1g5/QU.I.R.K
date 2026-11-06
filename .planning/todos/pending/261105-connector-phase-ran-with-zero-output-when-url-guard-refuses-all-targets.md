@@ -59,3 +59,32 @@ did not run reads as if it ran clean. Scan Coverage shows "ran". The score has n
 (`missing-binary`, `missing-credentials` in `quirk/reports/coverage.py`), so the change is a refusal counter
 per scanner plus a new skip reason, tests per connector, the coverage-gap/UAT entries and the doc line.
 Candidate for a 5.28.x fix before the dashboard-first launch messaging leans on GUI scans.
+
+## Second instance: S3 with no AWS credentials (confirmed 2026-11-05)
+
+The URL guard is not the only cause. In both host GUI scans that night, `s3_scanning` recorded `ran` (about 2.1 s)
+with **0 rows**, including the scan made after `allow_internal_targets: true` was in place. Direct call:
+`_scan_s3_encryption(boto3.Session(), logger, endpoint_url="http://localhost:29000")` with no credentials in
+the chain -> `list_buckets()` raises `NoCredentialsError` ("Unable to locate credentials"), the outer
+`except Exception` in `quirk/scanner/aws_connector.py` logs it only through `logger.v()` (verbose) and returns
+`[]`. With `AWS_ACCESS_KEY_ID/SECRET=minioadmin` the same call returns the two oracle buckets
+(`encrypted-bucket` S3/sse-s3, `unencrypted-bucket` S3/unencrypted HIGH). The dashboard has no S3 credential
+field (cloud connectors use the server process's ambient chain, by design), so a dashboard started without
+AWS credentials can never scan S3, and says nothing.
+
+So the fix belongs in the phase-status layer, not in one scanner: **a connector that produced zero rows
+because it could not authenticate or was refused every target must record `skipped` (or `failed`) with a
+reason** (`missing-credentials`, `internal-target-refused`, `auth-failed`), never `ran`. The Vault connector
+already does this (`missing-credentials: connectors.vault_token / VAULT_TOKEN not set`); S3, JWT and SAML do
+not. Audit every connector's outer `except` for this.
+
+## Third symptom: page empty states ignore the recorded skip reason
+
+The Data at Rest page (`src/dashboard/src/pages/data-at-rest.tsx:320`, `:342`) shows static empty-state
+text whenever its list is empty. In the second scan Vault was **enabled with an address** and was recorded as
+`skipped / missing-credentials`, yet the page said "No Vault mounts scanned in this session — enable the Vault
+connector or configure a Vault address", which points the operator at the wrong cause. Empty states should read
+the connector's `scan_phase_records` row and say "skipped: missing credentials (vault_token)" or "ran, 0
+results", the same rule as the per-connector report sections in `261105-report-sections-per-enabled-connector.md`.
+Also: database rows with `scan_error` are dropped from the Database Encryption table (`scan.py:680`), so a
+target that failed to connect (2 of 3 Postgres targets that night) simply disappears from the page.
