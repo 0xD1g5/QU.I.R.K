@@ -1,6 +1,7 @@
 """Phase 189 Plan 03 (TRIAGE-09): the derived backlog-reconciliation gate.
 
-WHAT THIS ENFORCES: `.planning/HORIZON.md` declared itself (2026-09-07) the single canonical
+WHAT THIS ENFORCES (ledger moved to `.planning/LEDGER.md` on 2026-11-06; the history below
+names HORIZON.md, where it lived until then): `.planning/HORIZON.md` declared itself (2026-09-07) the single canonical
 open-item ledger. This module makes that declaration mechanically true: no `BACK-*` / `999.*`
 ID may be simultaneously un-closed and un-ledgered. Enumeration is regenerated from source at
 every run -- there is no hand-written ID list anywhere in this file. That is a deliberate
@@ -123,7 +124,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MILESTONES_DIR = REPO_ROOT / ".planning" / "milestones"
 BACKLOG_DIR = REPO_ROOT / ".planning" / "backlog"
-HORIZON_PATH = REPO_ROOT / ".planning" / "HORIZON.md"
+# The Open-Item Ledger moved out of HORIZON.md into its own file on 2026-11-06.
+LEDGER_PATH = REPO_ROOT / ".planning" / "LEDGER.md"
 
 # ---------------------------------------------------------------------------
 # Parsing primitives -- independent, no imports from scripts/ or any sibling
@@ -497,16 +499,16 @@ def test_back_star_ci_enforced_leg():
     # WR-05: enumeration reads the SAME widened set as closure -- an ID first
     # (or only) declared in a REQUIREMENTS file or phase doc must not escape.
     entries = _enumerate_back_ids(closure_universe)
-    horizon_text = HORIZON_PATH.read_text(encoding="utf-8", errors="replace")
+    horizon_text = LEDGER_PATH.read_text(encoding="utf-8", errors="replace")
     offenders = _offenders(entries, closure_universe, horizon_text)
 
     if offenders:
         detail = "\n".join(f"  - {o}" for o in offenders)
         pytest.fail(
             f"{len(offenders)} BACK-* ID(s) found neither closed-with-evidence nor listed in "
-            f".planning/HORIZON.md's Open-Item Ledger:\n{detail}\n\n"
+            f".planning/LEDGER.md:\n{detail}\n\n"
             "Fix: add an honest row (or a 'Resolved by' subsection entry) to "
-            ".planning/HORIZON.md's Open-Item Ledger for each ID above."
+            ".planning/LEDGER.md for each ID above."
         )
 
 
@@ -556,16 +558,16 @@ def test_full_corpus_local_only_leg():
     id_999_entries = _enumerate_999_ids(BACKLOG_DIR)
     entries = {**back_entries, **id_999_entries}
 
-    horizon_text = HORIZON_PATH.read_text(encoding="utf-8", errors="replace")
+    horizon_text = LEDGER_PATH.read_text(encoding="utf-8", errors="replace")
     offenders = _offenders(entries, closure_universe, horizon_text)
 
     if offenders:
         detail = "\n".join(f"  - {o}" for o in offenders)
         pytest.fail(
             f"{len(offenders)} BACK-*/999.* ID(s) found neither closed-with-evidence nor "
-            f"listed in .planning/HORIZON.md's Open-Item Ledger:\n{detail}\n\n"
+            f"listed in .planning/LEDGER.md:\n{detail}\n\n"
             "Fix: add an honest row (or a 'Resolved by' subsection entry) to "
-            ".planning/HORIZON.md's Open-Item Ledger for each ID above. Do not narrow "
+            ".planning/LEDGER.md for each ID above. Do not narrow "
             "enumeration or hand-exempt IDs to make this pass."
         )
 
@@ -798,7 +800,7 @@ def test_narrowing_is_not_vacuous_on_the_real_corpus():
 # A todo pointer is DANGLING when it names an owner that can no longer act:
 #   - `resolves_phase: N` or an `**Owner...:**` line citing `Phase N`, where
 #     phase N is checked `[x]` in ROADMAP.md or any archived *-ROADMAP.md;
-#   - an `**Owner...:**` line citing `999.N` with no HORIZON.md table row, or
+#   - an `**Owner...:**` line citing `999.N` with no LEDGER.md table row, or
 #     whose row's status cell says CLOSED / RESOLVED / DRAINED.
 #
 # Ownership is NOT enforced here for non-doc224 todos: ~30 older todos carry no
@@ -831,7 +833,7 @@ _OWNER_LINE_RE = re.compile(r"^\*\*Owner[^*]*:\*\*\s*(.*)$", re.M)
 _PHASE_REF_RE = re.compile(r"\bPhase\s+(\d+(?:\.\d+)*)\b")
 _BACKLOG_REF_RE = re.compile(r"\b(999\.\d+)\b")
 _HORIZON_ROW_RE = re.compile(r"^\|\s*\**(999\.\d+)\**\s*\|\s*([^|]*)\|", re.M)
-_TERMINAL_STATUS_RE = re.compile(r"\b(CLOSED|RESOLVED|DRAINED)\b")
+_TERMINAL_STATUS_RE = re.compile(r"\b(CLOSED|RESOLVED|DRAINED|DONE|DUPLICATE|OBSOLETE)\b")
 
 
 def _closed_phases(roadmap_paths: list[Path]) -> set[str]:
@@ -867,9 +869,9 @@ def _dangling_pointers(todo_paths: list[Path], closed: set[str], rows: dict[str,
                 offenders.append(f"{path.name}: owner Phase {phase} is closed")
         for item in backlog:
             if item not in rows:
-                offenders.append(f"{path.name}: owner {item} has no HORIZON.md table row")
+                offenders.append(f"{path.name}: owner {item} has no LEDGER.md table row")
             elif _TERMINAL_STATUS_RE.search(rows[item]):
-                offenders.append(f"{path.name}: owner {item}'s HORIZON.md row is closed")
+                offenders.append(f"{path.name}: owner {item}'s LEDGER.md row is closed")
     return offenders
 
 
@@ -877,13 +879,13 @@ def test_no_pending_todo_points_at_a_closed_owner():
     todo_paths = sorted(TODOS_PENDING_DIR.glob("*.md"))
     roadmaps = [ROADMAP_PATH] + sorted(MILESTONES_DIR.glob("*-ROADMAP.md"))
     closed = _closed_phases([p for p in roadmaps if p.is_file()])
-    rows = _horizon_rows(HORIZON_PATH.read_text(encoding="utf-8", errors="replace"))
+    rows = _horizon_rows(LEDGER_PATH.read_text(encoding="utf-8", errors="replace"))
 
     # Non-vacuity: a regex that silently stops matching must not read as clean.
     pointing = [p for p in todo_paths if any(_todo_pointers(p.read_text(encoding="utf-8")))]
     assert todo_paths and pointing and closed and rows, (
         f"vacuous: {len(todo_paths)} todos, {len(pointing)} with an owner pointer, "
-        f"{len(closed)} closed phases, {len(rows)} HORIZON 999.* rows -- a parser has "
+        f"{len(closed)} closed phases, {len(rows)} LEDGER 999.* rows -- a parser has "
         "stopped matching; fix the parser, do not delete this assertion"
     )
 
@@ -892,7 +894,7 @@ def test_no_pending_todo_points_at_a_closed_owner():
         detail = "\n".join(f"  - {o}" for o in offenders)
         pytest.fail(
             f"{len(offenders)} pending todo pointer(s) name an owner that can no longer act:\n"
-            f"{detail}\n\nFix: re-point each at a live HORIZON.md 999.* row, or move a "
+            f"{detail}\n\nFix: re-point each at a live LEDGER.md 999.* row, or move a "
             "resolved todo to .planning/todos/completed/ with a Resolution section. Do not "
             "delete the pointer to make this pass."
         )
@@ -943,7 +945,7 @@ _OWNER_VALUE_RE = re.compile(
 # mapping table maps `| 999.13 | BACK-17 | SHIPPED ... |`. A row is a live owner only if cell 2
 # says OPEN and no row for that ID carries a terminal word in cell 2 or 3.
 _OWNER_ROW_RE = re.compile(r"^\|\s*\**(999\.\d+)\**\s*\|([^|]*)\|([^|]*)\|", re.M)
-_OWNER_TERMINAL_RE = re.compile(r"\b(CLOSED|RESOLVED|DRAINED|SHIPPED|OBSOLETE|SUPERSEDED)\b")
+_OWNER_TERMINAL_RE = re.compile(r"\b(CLOSED|RESOLVED|DRAINED|SHIPPED|OBSOLETE|SUPERSEDED|DONE|DUPLICATE)\b")
 _REQ_LINE_RE = re.compile(r"^- \[( |[xX])\] \*\*([A-Z][A-Z0-9]*-\d+)\*\*", re.M)
 _TRACE_ROW_RE = re.compile(r"^\|\s*([A-Z][A-Z0-9]*-\d+)\s*\|\s*Phase\s+(\d+(?:\.\d+)*)\s*\|", re.M)
 
@@ -997,9 +999,9 @@ def _owner_offenders(todo_paths: list[Path], req_states: dict[str, bool], rows: 
             offenders.append(f"{path.name}: {problem}")
         elif owner.startswith("999."):
             if owner not in rows:
-                offenders.append(f"{path.name}: owner {owner} has no HORIZON.md table row")
+                offenders.append(f"{path.name}: owner {owner} has no LEDGER.md table row")
             elif not rows[owner]:
-                offenders.append(f"{path.name}: owner {owner}'s HORIZON.md row is not OPEN (closed, shipped or a mapping row)")
+                offenders.append(f"{path.name}: owner {owner}'s LEDGER.md row is not OPEN (closed, shipped or a mapping row)")
         elif owner not in req_states:
             offenders.append(
                 f"{path.name}: owner {owner} is not in .planning/REQUIREMENTS.md (milestone archived?): "
@@ -1106,7 +1108,7 @@ def test_doc224_owner_detection_each_shape(tmp_path):
     assert "[x]" in by_name["d-doc224-reqchecked.md"] and "completed" in by_name["d-doc224-reqchecked.md"]
     assert "REQUIREMENTS.md" in by_name["e-doc224-reqabsent.md"]
     assert "quoted" in by_name["i-doc224-floattrap.md"]
-    assert "no HORIZON.md table row" in by_name["h-doc224-norow.md"]
+    assert "no LEDGER.md table row" in by_name["h-doc224-norow.md"]
     for name in ("g-doc224-rowclosed.md", "n-doc224-closedcell3.md", "o-doc224-shippedmapping.md"):
         assert "not OPEN" in by_name[name], by_name[name]
     assert rows == {"999.119": True, "999.117": False, "999.113": False, "999.13": False}
@@ -1117,7 +1119,7 @@ def test_every_doc224_todo_has_a_live_owner():
     req_text = _live_requirements_text()
     between_milestones = not req_text
     req_states = _requirement_states(req_text)
-    rows = _open_owner_rows(HORIZON_PATH.read_text(encoding="utf-8", errors="replace"))
+    rows = _open_owner_rows(LEDGER_PATH.read_text(encoding="utf-8", errors="replace"))
 
     owners = [_owner_of(p.read_text(encoding="utf-8", errors="replace"))[0] for p in todo_paths]
     n_backlog = sum(1 for o in owners if o and o.startswith("999."))
@@ -1130,7 +1132,7 @@ def test_every_doc224_todo_has_a_live_owner():
     n_req = sum(1 for o in liveness_owners if o and not o.startswith("999."))
     assert todo_paths and (req_states or between_milestones) and rows and n_req >= 1 and n_backlog >= 1, (
         f"vacuous: {len(todo_paths)} doc224 todos, {len(req_states)} requirement states, "
-        f"{len(rows)} HORIZON 999.* rows, {n_req} requirement owners, {n_backlog} 999.* owners "
+        f"{len(rows)} LEDGER 999.* rows, {n_req} requirement owners, {n_backlog} 999.* owners "
         "-- a parser has stopped matching; fix the parser, do not delete this assertion"
     )
 

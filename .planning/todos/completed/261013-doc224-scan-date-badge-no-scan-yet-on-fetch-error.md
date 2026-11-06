@@ -22,3 +22,11 @@ When fixed, update docs/report-interpretation.md §11 state table ("No scan has 
 
 - **Verdict: CONFIRMED, effort S.** `useScanList.ts:36,54`; `ScanDateBadge.tsx:11,17`.
 - Fix: destructure `error` and render an "unavailable" label; add a vitest.
+
+## Resolution
+
+**DUPLICATE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence high).
+
+duplicate of 261013-doc224-scan-date-badge-shows-newest-not-selected-scan (its item 3); still open: ScanDateBadge.tsx ignores `error`
+
+Ledger row:  § Closed.

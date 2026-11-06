@@ -107,3 +107,13 @@ matters most. Item 4 is a design improvement worth doing before a real client es
 Items 1-3 landed, so the earlier advice to skip the map no longer applies. The map now renders 12
 nodes and 19 edges for the demo estate: three shared keys, the largest spanning five endpoints.
 That is a showable finding — one key compromise takes five endpoints with it.
+
+## Resolution
+
+**DONE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence high).
+
+main 8ceaef8d (items 1-3: dedupe, self-edges, scan scoping), confirmed ancestor of main
+
+item 4 (hub-per-key layout) left optional; 5d77bbfc added shared-CA hub nodes
+
+Ledger row:  § Closed.
