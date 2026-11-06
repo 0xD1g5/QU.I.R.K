@@ -140,6 +140,77 @@ Checked live at the milestone boundary (2026-11-03):
 
 ---
 
+## v5.28.2 Connector Coverage Truth (patch release, opened 2026-11-06)
+
+**Milestone goal:** a scan never records a connector as `ran` when it could not look at anything.
+The 5.28.1 announcement was NO-GO on 2026-11-05 because dashboard scans recorded JWT, SAML and S3
+as `ran` with zero rows when the server policy refused every internal URL or no AWS credentials were
+available. Each unscanned surface added zero findings, so the score came out higher than the estate
+deserved. Sources: todos `261105-unscanned-surfaces-inflate-score-in-real-engagements` (critical) and
+`261105-connector-phase-ran-with-zero-output-when-url-guard-refuses-all-targets`.
+
+### Coverage truth (COVTRUTH)
+
+- [ ] **COVTRUTH-01**: A connector phase reads `ran` only if at least one target answered. If none
+  did, it reads `skipped` with a named reason. Partial refusal or failure reads `ran` plus one
+  scan-error row per target that did not answer. A live endpoint that answers with nothing stays
+  `ran` with 0 rows. This covers JWT, SAML, S3 and every other connector the source audit
+  (COVTRUTH-03) finds.
+- [ ] **COVTRUTH-02**: Two new reasons are added to `SCAN_PHASE_SKIP_REASONS`: `internal-target-refused`
+  (URL guard / server `security.allow_internal_targets` policy) and `auth-failed` (credentials
+  present but rejected). `missing-credentials` (no credentials in the chain) and `failed` (every
+  target unreachable) are reused. Each skip emits an ADVISORY scan-error row that counts in the score
+  like 5.28.1's `missing-binary` (235.1 D-07). The rows are handled downstream (trends, sensor push,
+  findings_evaluator) in the same way.
+- [ ] **COVTRUTH-03**: A test enumerates every connector phase from source at run time, with no hand
+  list. It fails if any connector can return no rows from an exception or refusal path while its
+  phase records `ran`. It is red on the pre-fix code.
+- [ ] **COVTRUTH-04**: The Scan Coverage chips, the dashboard page empty states (Data at Rest,
+  Identity, Motion, …) and the reports show the recorded skip reason. Database targets that failed
+  to connect appear as failed rows, not omitted.
+- [ ] **COVTRUTH-05**: The New Scan form warns when a target or connector URL is loopback or RFC1918
+  and the server's `security.allow_internal_targets` is false.
+- [ ] **COVTRUTH-06**: `docs/operators-guide.md` §3.0 gets a "before a client scan" checklist (server
+  `config.yaml` with `allow_internal_targets` and scoped `trusted_targets`; start `quirk serve` with
+  the cloud credentials it should use; treat an enabled connector with zero results as unverified).
+  CHANGELOG `[5.28.2]` describes the fix. The UAT series, `docs/uat-coverage-gaps.md` and the vault
+  are regenerated or synced.
+
+### Release (REL)
+
+- [ ] **REL-11**: The version is 5.28.2 in every declaring file. `v5.28.2` is tagged on a `main` merge
+  commit with green CI (`branch_ci_state.py` exit 0), `release.yml` publishes it, and PyPI lists it,
+  by 2026-11-23 (or after a hand re-verification of CMVP).
+- [ ] **REL-12**: A clean PyPI install of 5.28.2 passes the release smoke test on macOS, Linux 3.10,
+  Linux 3.11, contributor and the 3.15 unpinned leg. Attestations verify.
+
+### Launch (LAUNCH)
+
+- [ ] **LAUNCH-10**: The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No
+  enabled connector reads `ran` with 0 rows unless a target answered, and every skip names its true
+  cause (operator, 2026-11-06: this is the GO evidence).
+- [ ] **LAUNCH-11**: The announcement draft is re-checked sentence by sentence against 5.28.2 (claim
+  table, leak grep, false-capability grep). The operator's go/no-go is recorded. No agent posts anything.
+
+### v5.28.2 Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| COVTRUTH-01 | Phase 235.3 | Pending |
+| COVTRUTH-02 | Phase 235.3 | Pending |
+| COVTRUTH-03 | Phase 235.3 | Pending |
+| COVTRUTH-04 | Phase 235.3 | Pending |
+| COVTRUTH-05 | Phase 235.3 | Pending |
+| COVTRUTH-06 | Phase 235.3 | Pending |
+| REL-11 | Phase 235.4 | Pending |
+| REL-12 | Phase 235.4 | Pending |
+| LAUNCH-10 | Phase 235.4 | Pending |
+| LAUNCH-11 | Phase 235.4 | Pending |
+
+**Coverage:** 10 requirements, 10 mapped, 0 unmapped.
+
+---
+
 ## Future Requirements
 
 Deferred to v5.29 or later:
