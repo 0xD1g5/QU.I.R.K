@@ -87,3 +87,5 @@ selected on the first live run). Against live PyPI the `linux-3.15-neg` leg's N2
 then passed: "unpinned resolve finds no candidate (every release excluded by Requires-Python)". A 3.15 user now gets a
 loud Requires-Python refusal and nothing installed, not a silent older release. The pre-yank FAIL transcript is kept as
 `235.2-evidence/smoke-pypi/linux-3.15-neg.pre-yank-FAIL.txt`.
+
+Ledger row: § Closed (2026-11-06 ledger consolidation).

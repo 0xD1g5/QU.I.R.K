@@ -24,3 +24,13 @@ When fixed, update docs/report-interpretation.md §3 Agility table, "Certificate
 - **Verdict: CONFIRMED, effort S.** `evidence.py:258-264` (three prefix branches only); `scoring.py:546-548` (penalty).
 - Fix: add a PQC bucket (ML-DSA/SLH-DSA) that counts as determined (and arguably earns a bonus), and decide DSA.
 - Unknown: CBOM classifier naming for PQC signature algs (`quirk/cbom/classifier.py`) to keep prefixes consistent.
+
+## Resolution
+
+**DONE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence medium).
+
+main 23ef4228 (scoring 4.0 PQC cert bucket); quirk/intelligence/evidence.py:39 _PQC_CERT_KEY_TOKENS, :186 PQC bucket
+
+partially done: ML-DSA/SLH-DSA now a PQC bucket; DSA still undetermined (not decided). Real scans still blocked by 261027 tls item
+
+Ledger row:  § Closed.

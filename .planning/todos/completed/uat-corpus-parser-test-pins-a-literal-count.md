@@ -60,3 +60,11 @@ maintenance burden with a looser tolerance.
 - Do not remove the `independent_count` cross-check. That one is load-bearing: it is the structural
   guarantee that `uat_corpus.iter_cases` has not silently narrowed its ID grammar, re-derived from
   source on every run, and it is the direct mitigation for the defect that opened this phase.
+
+## Resolution
+
+**DONE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence high).
+
+main 70362251; tests/test_uat_corpus_parser.py:522-533 frozen pin replaced by derived count + lower bound
+
+Ledger row:  § Closed.
