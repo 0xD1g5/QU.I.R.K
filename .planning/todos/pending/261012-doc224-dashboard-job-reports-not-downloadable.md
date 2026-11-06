@@ -42,3 +42,14 @@ job dir" and "write to configured output dir" interacts with scan history and th
 association. Unknowns: whether scheduled scans (not checked) share this output layout and should land in the
 same place, and the interaction with `QUIRK_CONFIG_PATH` in deployed consoles. **Spike first** (half a day) on
 the shared association question before implementing.
+
+## Re-confirmed 2026-11-05 on 5.28.1
+
+The operator ran a New Scan for 127.0.0.1 against the full chaos lab. The job wrote all five formats (HTML, PDF,
+DOCX, CBOM JSON, CBOM XML) to `output/jobs/ab1592b6-.../`, while the Executive page read "No report artifacts
+yet — run a scan first" with every download button inert. Only Export PDF (the Playwright print of `/print`)
+worked. This is still the first thing a GUI-first operator hits after a successful scan.
+
+A related hazard came up in the same session: when `quirk serve` starts in a directory its user cannot write
+(the multihost prober runs as `quirk` in a root-owned `/work`), the job output path `output/jobs/<id>` is not
+writable either. Nothing checks for that before a job is accepted.
