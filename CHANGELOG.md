@@ -19,9 +19,10 @@ tell the truth. It changes no scoring model: `SCORING_VERSION` stays 4.0.
 
 - **Python 3.15 is not supported.** 5.28.x requires Python 3.10 to 3.14. On 3.15, pip used to fall
   back silently to an old release, because the newer releases could not be installed there. The
-  releases that predate the `sslyze` dependency (4.10.0 through 5.21.0) are being yanked, so an
-  unpinned `pip install quirk-scanner` on 3.15 now fails with a resolution error instead of
-  installing one of them. Anyone who needs one of those versions can still install it with an exact
+  releases that predate the `sslyze` dependency (4.10.0 through 5.21.0) are yanked, and so are
+  5.25.0 and 5.27.0, which also set no upper Python bound (yanked after the 5.28.1 tag, when the
+  3.15 release smoke showed pip still selecting 5.27.0). An unpinned `pip install quirk-scanner` on
+  3.15 now fails with "No matching distribution found" instead of installing one of them. Anyone who needs one of those versions can still install it with an exact
   pin, which a yank does not block: `pip install quirk-scanner==5.21.0`.
 - **Scores can move down on upgrade for two kinds of scan** (see the first two items under Fixed).
   Scans with no source or container targets are not affected by the scanner-binary change.

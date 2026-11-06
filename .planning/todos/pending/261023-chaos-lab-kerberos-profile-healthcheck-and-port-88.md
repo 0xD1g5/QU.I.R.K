@@ -40,3 +40,13 @@ Per CLAUDE.md Chaos Lab Maintenance, any fix must update `lab.sh`, the lab READM
 - **LIKELY** effort **S**.
 - **UNKNOWN**: which command in the image is a reliable readiness signal (`samba-tool` presence was observed, a healthy-state run was not).
 - **Spike**: no. Owner 999.119 ("CI and chaos-lab hygiene", the row that already holds the chaos-lab todos) is OPEN (read 2026-10-23).
+
+## Re-observed 2026-11-05 (5.28.1 full-lab bring-up)
+
+Both still reproduce. `mh-kdc` reported **unhealthy** for the whole session (`smbclient: not found`) while
+ports 88 and 389 on 10.80.0.42 accepted connections from the prober. `PROFILE_ARGS='... --profile kerberos'
+./lab.sh up` aborted the whole compose wave with `listen tcp 0.0.0.0:88: bind: address already in use`. The
+abort also left `keycloak-tls` and `phpldapadmin`, from the same wave, in `Created`, so one profile's port
+collision stopped unrelated services. Note that `lsof -iTCP:88` run without root shows nothing, because the
+macOS KDC listener runs as root, so a preflight check has to go through sudo or just try the bind.
+Sibling lab defects from the same session: `261105-chaos-lab-full-bringup-defects.md`.
