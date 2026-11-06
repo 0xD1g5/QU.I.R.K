@@ -74,3 +74,13 @@ hard refusal. Confirm that is the intended behaviour (it is the only way to stop
 ## Retargeted (2026-11-05, Phase 235.1 close)
 
 235.1 delivered the detection half: the 3.15 leg's unpinned N2 check (`scripts/pip_unpinned_verdict.py`, now bounded by `Q_CMD_TIMEOUT`) and the yank list in `235.1-YANK-PREP.md`. The fix itself is the operator's yank of 4.10.0-5.21.0 (INSTALL-07), verified by re-running N2 against live PyPI in 235.2. It printed `FAIL: unpinned resolve selected older quirk-scanner 5.21.0` on 2026-11-05, as designed before the yank.
+
+## Resolution
+
+**DONE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence medium).
+
+main 61670221 (scripts/pip_unpinned_verdict.py, smoke N2 check) + 5.28.1 published with pre-sslyze releases yanked (D-01, Phase 235.2)
+
+cap kept by design (pyproject.toml:10); fix was yanks (PyPI-side, not verifiable from repo) plus smoke check
+
+Ledger row:  § Closed.

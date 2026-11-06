@@ -72,7 +72,7 @@ Checked live at the milestone boundary (2026-11-03):
   the stated range is enforced at runtime now that pip no longer enforces it. A bare clone on Python
   3.10 imports `quirk` without failing on `tomllib` (IN-01).
 
-- [ ] **INSTALL-07**: An unpinned `pip install quirk-scanner` on Python 3.15 fails loudly
+- [x] **INSTALL-07**: An unpinned `pip install quirk-scanner` on Python 3.15 fails loudly
   (`ResolutionImpossible`) instead of silently installing an old release. The operator yanks the
   un-yanked releases 4.10.0 through 5.21.0 on PyPI (17 as of 2026-11-03). The yank is reversible,
   and exact pins still install. It is verified after the yank by re-running the 3.15 dry-run against
@@ -106,13 +106,13 @@ Checked live at the milestone boundary (2026-11-03):
 
 ### Dependencies (DEP)
 
-- [ ] **DEP-03**: The four critical Dependabot alerts (#3, #31, #83, #84) are closed by dependency
+- [x] **DEP-03**: The four critical Dependabot alerts (#3, #31, #83, #84) are closed by dependency
   bumps (`vitest`/`tinypool` in `src/dashboard`, `grpc` in `labs/grpc-tls`). An alert that cannot
   be bumped is dismissed only with a written reachability reason. The dashboard bundle and the
   `grpc-tls` lab still build, and their gates stay green. *Scoped 2026-11-03 (235.1 plan check):*
   Dependabot only re-evaluates the default branch, so 235.1 delivers the bumps on `v5281-open`, and
   #3/#31 reading `fixed` is verified after the 235.2 merge. *Status 2026-11-05:* bumps on the branch (vitest/@vitest/ui 3.2.7, grpc v1.79.3), #83/#84
-  dismissed `tolerable_risk`; box left unchecked on purpose until #3/#31 read `fixed`.
+  dismissed `tolerable_risk`; box left unchecked on purpose until #3/#31 read `fixed`. *Closed 2026-11-06:* #3 and #31 read `fixed` on `main` (2026-11-06T00:10Z, after the PR #66 merge).
 
 ### Release (REL)
 
@@ -120,23 +120,94 @@ Checked live at the milestone boundary (2026-11-03):
   known-defect wording is corrected to name both cases (ruleset unavailable, and semgrep not
   installed). Once SRCSCAN-01 lands, the repo README's CR-02 known-defect line is removed or
   rewritten to match the fixed behaviour. The doc-claim ledger gate stays green.
-- [ ] **REL-09**: The version is 5.28.1 in every declaring file (`pyproject.toml`, `README.md`,
+- [x] **REL-09**: The version is 5.28.1 in every declaring file (`pyproject.toml`, `README.md`,
   `docs/UAT-SERIES.md` UAT-1-02 and header). `v5.28.1` is tagged on a `main` merge commit whose CI
   is green (`branch_ci_state.py` exit 0). `release.yml` publishes it, PyPI lists 5.28.1, and the
   PyPI long description is true. All of this is done by 2026-11-23, or after a hand re-verification
   of CMVP.
-- [ ] **REL-10**: A clean install of 5.28.1 from PyPI passes the release smoke test on every leg.
+- [x] **REL-10**: A clean install of 5.28.1 from PyPI passes the release smoke test on every leg.
   The legs are macOS, Linux 3.10, Linux 3.11, contributor, and the 3.15 leg with its new unpinned
   assertion. Attestations are verified.
 
 ### Launch (LAUNCH)
 
-- [ ] **LAUNCH-08**: The README hero image (`docs/images/dashboard-hero.png`) is recaptured from a
+- [x] **LAUNCH-08**: The README hero image (`docs/images/dashboard-hero.png`) is recaptured from a
   5.28.1 scan, with a caption that describes that image, and the operator has accepted it visually.
   The recapture uses a snapshot DB, never the canonical DB.
-- [ ] **LAUNCH-09**: The announcement draft is re-checked sentence by sentence against 5.28.1 (claim
+- [x] **LAUNCH-09**: The announcement draft is re-checked sentence by sentence against 5.28.1 (claim
   table, leak grep, false-capability grep). The operator's go/no-go for the 5.28.1 announcement is
   recorded. No agent posts anything.
+
+---
+
+## v5.28.2 Connector Coverage Truth (patch release, opened 2026-11-06)
+
+**Milestone goal:** a scan never records a connector as `ran` when it could not look at anything.
+The 5.28.1 announcement was NO-GO on 2026-11-05 because dashboard scans recorded JWT, SAML and S3
+as `ran` with zero rows when the server policy refused every internal URL or no AWS credentials were
+available. Each unscanned surface added zero findings, so the score came out higher than the estate
+deserved. Sources: todos `261105-unscanned-surfaces-inflate-score-in-real-engagements` (critical) and
+`261105-connector-phase-ran-with-zero-output-when-url-guard-refuses-all-targets`.
+
+### Coverage truth (COVTRUTH)
+
+- [ ] **COVTRUTH-01**: A connector phase reads `ran` only if at least one target answered. If none
+  did, it reads `skipped` with a named reason. Partial refusal or failure reads `ran` plus one
+  scan-error row per target that did not answer. A live endpoint that answers with nothing stays
+  `ran` with 0 rows. This covers JWT, SAML, S3 and every other connector the source audit
+  (COVTRUTH-03) finds.
+- [ ] **COVTRUTH-02**: Two new reasons are added to `SCAN_PHASE_SKIP_REASONS`: `internal-target-refused`
+  (URL guard / server `security.allow_internal_targets` policy) and `auth-failed` (credentials
+  present but rejected). `missing-credentials` (no credentials in the chain) and `failed` (every
+  target unreachable) are reused. Each skip emits an ADVISORY scan-error row that counts in the score
+  like 5.28.1's `missing-binary` (235.1 D-07). The rows are handled downstream (trends, sensor push,
+  findings_evaluator) in the same way.
+- [ ] **COVTRUTH-03**: A test enumerates every connector phase from source at run time, with no hand
+  list. It fails if any connector can return no rows from an exception or refusal path while its
+  phase records `ran`. It is red on the pre-fix code.
+- [ ] **COVTRUTH-04**: The Scan Coverage chips, the dashboard page empty states (Data at Rest,
+  Identity, Motion, …) and the reports show the recorded skip reason. Database targets that failed
+  to connect appear as failed rows, not omitted.
+- [ ] **COVTRUTH-05**: The New Scan form warns when a target or connector URL is loopback or RFC1918
+  and the server's `security.allow_internal_targets` is false.
+- [ ] **COVTRUTH-06**: `docs/operators-guide.md` §3.0 gets a "before a client scan" checklist (server
+  `config.yaml` with `allow_internal_targets` and scoped `trusted_targets`; start `quirk serve` with
+  the cloud credentials it should use; treat an enabled connector with zero results as unverified).
+  CHANGELOG `[5.28.2]` describes the fix. The UAT series, `docs/uat-coverage-gaps.md` and the vault
+  are regenerated or synced.
+
+### Release (REL)
+
+- [ ] **REL-11**: The version is 5.28.2 in every declaring file. `v5.28.2` is tagged on a `main` merge
+  commit with green CI (`branch_ci_state.py` exit 0), `release.yml` publishes it, and PyPI lists it,
+  by 2026-11-23 (or after a hand re-verification of CMVP).
+- [ ] **REL-12**: A clean PyPI install of 5.28.2 passes the release smoke test on macOS, Linux 3.10,
+  Linux 3.11, contributor and the 3.15 unpinned leg. Attestations verify.
+
+### Launch (LAUNCH)
+
+- [ ] **LAUNCH-10**: The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No
+  enabled connector reads `ran` with 0 rows unless a target answered, and every skip names its true
+  cause (operator, 2026-11-06: this is the GO evidence).
+- [ ] **LAUNCH-11**: The announcement draft is re-checked sentence by sentence against 5.28.2 (claim
+  table, leak grep, false-capability grep). The operator's go/no-go is recorded. No agent posts anything.
+
+### v5.28.2 Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| COVTRUTH-01 | Phase 235.3 | Pending |
+| COVTRUTH-02 | Phase 235.3 | Pending |
+| COVTRUTH-03 | Phase 235.3 | Pending |
+| COVTRUTH-04 | Phase 235.3 | Pending |
+| COVTRUTH-05 | Phase 235.3 | Pending |
+| COVTRUTH-06 | Phase 235.3 | Pending |
+| REL-11 | Phase 235.4 | Pending |
+| REL-12 | Phase 235.4 | Pending |
+| LAUNCH-10 | Phase 235.4 | Pending |
+| LAUNCH-11 | Phase 235.4 | Pending |
+
+**Coverage:** 10 requirements, 10 mapped, 0 unmapped.
 
 ---
 
@@ -157,7 +228,7 @@ Deferred to v5.29 or later:
 | Azure Key Vault key scanning (`999.126`) | Disclosed known defect; a connector fix, not a patch-release truth fix |
 | Windows `install.ps1` sensor identity (`999.129` item) | Disclosed known defect; needs installer design work |
 | Announcing Python 3.15 support | INSTALL-05 stops pip backtracking; it does not claim 3.15 works. The announcement keeps "3.10 to 3.14" |
-| Yanking 5.27.0 or 5.25.0 | Not needed: both are already unsatisfiable on 3.15 (they need sslyze, hence nassl<6). The yank set is the pre-sslyze releases only (INSTALL-07) |
+| Yanking 5.27.0 or 5.25.0 | Not needed: both are already unsatisfiable on 3.15 (they need sslyze, hence nassl<6). The yank set is the pre-sslyze releases only (INSTALL-07). *Superseded 2026-11-05 (235.2):* wrong in practice. Both had an uncapped `requires-python`, pip on 3.15-slim selected 5.27.0, and the operator yanked 5.25.0 and 5.27.0 too |
 | Kerberos weak-etype findings in the report (DETECT-02) | Disclosed; feature work for v5.29 |
 
 ## Traceability
@@ -173,13 +244,13 @@ Deferred to v5.29 or later:
 | HARNESS-04 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
 | HARNESS-05 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
 | HARNESS-06 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
-| DEP-03 | Phase 235.1 | Delivered on `v5281-open` (235.1); stays open until #3/#31 read `fixed` on `main` after the 235.2 merge (235.2 criterion 1); #83/#84 dismissed |
+| DEP-03 | Phase 235.1 | Complete (2026-11-06, verified at 139ed513): delivered in 235.1; #3/#31 read `fixed` on `main` after the 235.2 merge; #83/#84 dismissed |
 | REL-08 | Phase 235.1 | Complete (2026-11-05, verified at af4f755c) |
-| INSTALL-07 | Phase 235.2 | Pending |
-| REL-09 | Phase 235.2 | Pending |
-| REL-10 | Phase 235.2 | Pending |
-| LAUNCH-08 | Phase 235.2 | Pending |
-| LAUNCH-09 | Phase 235.2 | Pending |
+| INSTALL-07 | Phase 235.2 | Complete (2026-11-06, verified at 139ed513) |
+| REL-09 | Phase 235.2 | Complete (2026-11-06, verified at 139ed513) |
+| REL-10 | Phase 235.2 | Complete (2026-11-06, verified at 139ed513) |
+| LAUNCH-08 | Phase 235.2 | Complete (2026-11-06, verified at 139ed513) |
+| LAUNCH-09 | Phase 235.2 | Complete (2026-11-06, verified at 139ed513; operator decision NO-GO recorded) |
 
 **Coverage:** 16 requirements, 16 mapped, 0 unmapped. (INSTALL-07 added 2026-11-03 at the 235.1 discuss.)
 

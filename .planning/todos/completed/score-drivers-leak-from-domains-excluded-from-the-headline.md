@@ -71,3 +71,11 @@ counters coupled; that preserves the coincidence instead of removing the depende
 Delete the `xfail(strict=True)` marker on `test_p5c_...` and let it stand as a green gate. Note
 that strict mode will force this: once fixed, the test XPASSes and the suite fails until the marker
 is removed.
+
+## Resolution
+
+**DONE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence high).
+
+quirk/intelligence/scoring.py:759-778 drivers carried in category_table with assessed flag (999.115 P5c fix)
+
+Ledger row:  § Closed.
