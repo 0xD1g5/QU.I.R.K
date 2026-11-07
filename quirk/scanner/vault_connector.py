@@ -486,9 +486,14 @@ def scan_vault_targets(
     try:
         if not client.is_authenticated():
             if outcomes is not None:
+                # 235.3 review A-IN-07: hvac's is_authenticated() returns False
+                # only for Forbidden / InvalidPath / InvalidRequest; a sealed
+                # Vault raises VaultDown and takes the exception branch below.
+                # (The row text is pinned by docs/connectors/vault.md and the
+                # doc-claim ledger, so it is left for a docs change.)
                 outcomes.record(
                     target, OUTCOME_AUTH_FAILED,
-                    "token rejected or Vault sealed", row_emitted=True,
+                    "token rejected by Vault", row_emitted=True,
                 )
             return [CryptoEndpoint(
                 host=resolved_addr,

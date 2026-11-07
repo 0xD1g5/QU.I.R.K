@@ -650,3 +650,16 @@ def test_vault_contract_error_propagates():
         with pytest.raises(TargetOutcomeContractError):
             scan_vault_targets("http://127.0.0.1:1", token="t",
                                outcomes=TargetOutcomes(["a", "b"]))
+
+
+def test_vault_outcome_auth_rejected_detail_does_not_blame_seal():
+    """235.3 review A-IN-07: is_authenticated() returns False only for a
+    rejected token (a sealed Vault raises VaultDown and takes the exception
+    branch), so the dashboard-visible skip detail must not mention sealing."""
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["http://127.0.0.1:8200"])
+    _vault_scan(_build_mock_client(is_auth=False), sink)
+    o = sink.resolved()[0]
+    assert o.kind == "auth_failed"
+    assert "sealed" not in o.detail.lower()
+    assert o.detail == "token rejected by Vault"
