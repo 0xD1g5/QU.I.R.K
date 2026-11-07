@@ -11,6 +11,11 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    TargetOutcomeContractError,
+    outcome_for_cloud_exception,
+)
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # azure SDK optional import (D-16, D-18)
@@ -49,7 +54,16 @@ _AZURE_EC_CURVE_SIZES = {
 }
 
 
-def _scan_keyvault_keys(credential, vault_url: str, logger) -> List[CryptoEndpoint]:
+def _note_failure(outcomes, target, exc) -> None:
+    """Record a swallowed Azure failure against ``target`` (no-op without a sink)."""
+    if outcomes is not None:
+        kind, detail = outcome_for_cloud_exception(exc)
+        outcomes.record(target, kind, detail)
+
+
+def _scan_keyvault_keys(
+    credential, vault_url: str, logger, *, outcomes=None
+) -> List[CryptoEndpoint]:
     """Enumerate Key Vault keys and map to CryptoEndpoint instances."""
     results: List[CryptoEndpoint] = []
     try:
@@ -104,14 +118,21 @@ def _scan_keyvault_keys(credential, vault_url: str, logger) -> List[CryptoEndpoi
                 results.append(ep)
             except Exception as exc:
                 if logger:
-                    logger.v(f"KeyVault key scan error for key in {vault_url}: {exc}")
+                    logger.v(f"KeyVault key scan error for key in {vault_url}: {safe_str(exc)}")
+        if outcomes is not None:
+            outcomes.answered(vault_url)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         if logger:
-            logger.v(f"KeyVault scan error for {vault_url}: {exc}")
+            logger.v(f"KeyVault scan error for {vault_url}: {safe_str(exc)}")
+        _note_failure(outcomes, vault_url, exc)
     return results
 
 
-def _scan_app_gateways(credential, subscription_id: str, logger) -> List[CryptoEndpoint]:
+def _scan_app_gateways(
+    credential, subscription_id: str, logger, *, outcomes=None
+) -> List[CryptoEndpoint]:
     """Enumerate Azure Application Gateways and capture TLS policy info."""
     results: List[CryptoEndpoint] = []
     try:
@@ -141,13 +162,18 @@ def _scan_app_gateways(credential, subscription_id: str, logger) -> List[CryptoE
                 results.append(ep)
             except Exception as exc:
                 if logger:
-                    logger.v(f"AppGateway policy scan error: {exc}")
+                    logger.v(f"AppGateway policy scan error: {safe_str(exc)}")
+        if outcomes is not None:
+            outcomes.answered(subscription_id)
+    except TargetOutcomeContractError:
+        raise
     except ImportError:
         if logger:
             logger.v("azure-mgmt-network not installed — App Gateway scanning unavailable")
     except Exception as exc:
         if logger:
-            logger.v(f"App Gateway scan error: {exc}")
+            logger.v(f"App Gateway scan error: {safe_str(exc)}")
+        _note_failure(outcomes, subscription_id, exc)
     return results
 
 
@@ -156,6 +182,8 @@ def _scan_blob_encryption(
     subscription_id: str,
     logger,
     session_start=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Detect Azure Blob container encryption posture (STOR-02).
 
@@ -180,6 +208,8 @@ def _scan_blob_encryption(
         subscription_id: Azure subscription UUID.
         logger: optional logger with .v() method.
         session_start: timezone-aware datetime; falls back to now() when absent (ISSUE-3).
+        outcomes: optional TargetOutcomes sink (Phase 235.3); records against
+            ``outcomes.sole_target()`` (the subscription).
     """
     results: List[CryptoEndpoint] = []
     if not AZURE_AVAILABLE:
@@ -198,6 +228,7 @@ def _scan_blob_encryption(
 
     try:
         client = StorageManagementClient(credential, subscription_id)
+        blob_target = outcomes.sole_target() if outcomes is not None else None
         for account in client.storage_accounts.list():
             account_name = getattr(account, "name", None) or "unknown"
             try:
@@ -249,7 +280,7 @@ def _scan_blob_encryption(
                     ))
                 except Exception as exc:
                     if logger:
-                        logger.v(f"Azure Blob list containers error for {account_name}: {exc}")
+                        logger.v(f"Azure Blob list containers error for {account_name}: {safe_str(exc)}")
                     continue
 
                 for container in containers:
@@ -274,10 +305,16 @@ def _scan_blob_encryption(
                     results.append(ep)
             except Exception as exc:
                 if logger:
-                    logger.v(f"Azure Blob account scan error for {account_name}: {exc}")
+                    logger.v(f"Azure Blob account scan error for {account_name}: {safe_str(exc)}")
+        if outcomes is not None:
+            outcomes.answered(blob_target)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         if logger:
-            logger.v(f"Azure Blob scan error: {exc}")
+            logger.v(f"Azure Blob scan error: {safe_str(exc)}")
+        if outcomes is not None:
+            _note_failure(outcomes, outcomes.sole_target(), exc)
     return results
 
 
@@ -285,6 +322,8 @@ def scan_azure_targets(
     subscription_id: str,
     keyvault_urls: Optional[List[str]] = None,
     logger=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Enumerate Azure cryptographic resources and return as CryptoEndpoint list.
 
@@ -294,6 +333,9 @@ def scan_azure_targets(
         subscription_id: Azure subscription UUID string.
         keyvault_urls: List of Key Vault base URLs (e.g. "https://myvault.vault.azure.net").
         logger: Optional logger with .v() method.
+        outcomes: Optional TargetOutcomes sink (Phase 235.3). Records against the
+            raw configured strings: each ``keyvault_urls`` entry and the raw
+            ``subscription_id`` (App Gateway). Labels are never recomputed here.
 
     Returns:
         List of CryptoEndpoint instances. Empty list if azure SDK not installed.
@@ -302,10 +344,21 @@ def scan_azure_targets(
         if logger:
             logger.v("azure SDK not installed — Azure scanning unavailable")
         return []
-    credential = DefaultAzureCredential()
+    try:
+        credential = DefaultAzureCredential()
+    except TargetOutcomeContractError:
+        raise
+    except Exception as exc:
+        if outcomes is None:
+            raise
+        if logger:
+            logger.v(f"Azure credential construction failed: {safe_str(exc)}")
+        for target in list(outcomes.expected):
+            _note_failure(outcomes, target, exc)
+        return []
     results: List[CryptoEndpoint] = []
     for vault_url in (keyvault_urls or []):
-        results.extend(_scan_keyvault_keys(credential, vault_url, logger))
+        results.extend(_scan_keyvault_keys(credential, vault_url, logger, outcomes=outcomes))
     if subscription_id:
-        results.extend(_scan_app_gateways(credential, subscription_id, logger))
+        results.extend(_scan_app_gateways(credential, subscription_id, logger, outcomes=outcomes))
     return results

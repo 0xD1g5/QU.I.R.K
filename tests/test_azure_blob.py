@@ -179,3 +179,69 @@ def test_azure_blob_protocol_value():
         mock_cls.return_value = client
         result = _scan_blob_encryption(credential=MagicMock(), subscription_id="s", logger=None)
     assert all(ep.protocol == "AZURE_BLOB" for ep in result)
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 (COVTRUTH-01): per-target outcome recording
+# ---------------------------------------------------------------------------
+
+from quirk.scanner.target_outcome import (  # noqa: E402
+    TargetOutcomeContractError,
+    TargetOutcomes,
+)
+
+
+class ClientAuthenticationError(Exception):
+    """Stub carrying the exact class name the outcome classifier matches."""
+
+
+def _blob_scan(sink, *, accounts=(), list_error=None):
+    from quirk.scanner.azure_connector import _scan_blob_encryption
+    with patch("quirk.scanner.azure_connector.AZURE_AVAILABLE", True), \
+         patch("azure.mgmt.storage.StorageManagementClient", create=True) as mock_cls:
+        client = MagicMock()
+        if list_error is not None:
+            client.storage_accounts.list.side_effect = list_error
+        else:
+            client.storage_accounts.list.return_value = list(accounts)
+        client.blob_containers.list.return_value = []
+        mock_cls.return_value = client
+        return _scan_blob_encryption(
+            credential=MagicMock(), subscription_id="s", logger=None, outcomes=sink
+        )
+
+
+def test_azure_blob_outcome_zero_accounts_answered():
+    sink = TargetOutcomes(["sub-1"])
+    assert _blob_scan(sink) == []
+    (o,) = sink.resolved()
+    assert o.kind == "answered" and o.target
+
+
+def test_azure_blob_outcome_zero_containers_answered():
+    sink = TargetOutcomes(["sub-1"])
+    _blob_scan(sink, accounts=[_make_account("a1", "Microsoft.Storage")])
+    assert sink.resolved()[0].kind == "answered"
+
+
+def test_azure_blob_outcome_auth_failure_recorded():
+    sink = TargetOutcomes(["sub-1"])
+    assert _blob_scan(sink, list_error=ClientAuthenticationError("401")) == []
+    assert sink.resolved()[0].kind == "auth_failed"
+
+
+def test_azure_blob_outcome_generic_failure_unreachable():
+    sink = TargetOutcomes(["sub-1"])
+    _blob_scan(sink, list_error=ConnectionError("down"))
+    assert sink.resolved()[0].kind == "unreachable"
+
+
+def test_azure_blob_outcome_none_sink_unchanged():
+    assert _blob_scan(None, list_error=ClientAuthenticationError("401")) == []
+
+
+def test_azure_blob_outcome_contract_violation_propagates():
+    # sole_target() needs exactly one expected target; a two-target sink violates it.
+    sink = TargetOutcomes(["a", "b"])
+    with pytest.raises(TargetOutcomeContractError):
+        _blob_scan(sink)
