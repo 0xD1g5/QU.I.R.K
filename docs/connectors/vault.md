@@ -91,7 +91,9 @@ Token auth is always reported HIGH: Vault cannot disable it.
 If `hvac` is not installed, the Vault phase is skipped before the connector is called and is
 recorded as skipped (`missing-extra`). Verbose runs log `hvac not installed -- Vault scanning
 skipped`, and every run prints a `[QRK-INSTALL-001]` line to stderr. If the token is rejected or Vault is sealed, the connector
-returns a single endpoint whose scan error begins `vault-auth-failed:`. A failing sub-scanner
+returns a single endpoint whose scan error begins `vault-auth-failed:` and the phase reads `auth-failed`. If Vault cannot be
+reached (a network or connection error), the scan error begins `vault-unreachable:` instead, so an outage no longer reads as a bad
+token; when no Vault target answered, the phase is recorded with the matching reason (`auth-failed` for a rejected token, `failed` for an unreachable Vault). A failing sub-scanner
 (transit, PKI or auth) does not suppress the others. All other scanners continue to run normally.
 
 ## Troubleshooting
@@ -99,6 +101,7 @@ returns a single endpoint whose scan error begins `vault-auth-failed:`. A failin
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
 | `vault-auth-failed: token rejected or Vault sealed` scan error | Bad token, expired token, or sealed Vault | Create a fresh token with the policy above; unseal Vault |
+| `vault-unreachable:` scan error | Network or connection error reaching `vault_addr` (wrong address, firewall, Vault down) | Check `vault_addr` and connectivity; this is not a token problem |
 | Vault phase skipped as `missing-credentials` | Neither `vault_token` nor `VAULT_TOKEN` is set | Export `VAULT_TOKEN` |
 | Vault phase skipped as `no-eligible-targets` | Neither `vault_addr` nor `VAULT_ADDR` is set | Set `vault_addr` |
 | No transit results | `vault_transit_mount` does not match the mount path, or the token lacks `list` on `<mount>/keys` | Set `vault_transit_mount` and extend the policy |

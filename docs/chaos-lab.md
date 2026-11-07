@@ -239,6 +239,12 @@ security:
   allow_internal_targets: true
 ```
 
+> **Dashboard scans:** the lab endpoints are loopback addresses, and `security.allow_internal_targets` is
+> server policy read from the `config.yaml` that `quirk serve` loads (`QUIRK_CONFIG_PATH`, default
+> `./config.yaml`), not from the scan form. Without it a dashboard scan of these JWT targets (and of the
+> SAML IdP in §3.13) does not read `ran`: the phase reads `skipped` with reason `internal-target-refused`
+> and the New Scan page warns before you submit. The CLI equivalent is `--allow-internal-targets`.
+
 > **Corrected 2026-09-17.** Two defects made this profile unscannable as previously
 > documented. First, the targets were written as `.../token`: the connector probes JWKS
 > paths by concatenating them onto each target, so `/token` made it request
@@ -576,7 +582,7 @@ The `storage-s3` profile (introduced in Phase 28) ships an S3-compatible object 
 | 29000 | minio         | encrypted-bucket    | SSE-S3   | `S3/sse-s3`          | (none)   |
 | 29000 | minio         | unencrypted-bucket  | None     | `S3/unencrypted`     | HIGH     |
 
-Credentials: access key `minioadmin`, secret key `minioadmin` (historical MinIO-era values, kept so the seed and the scanner configs need no edit).
+Credentials: access key `minioadmin`, secret key `minioadmin` (historical MinIO-era values, kept so the seed and the scanner configs need no edit). Export them (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell that runs `quirk scan` or `quirk serve`: without a usable credential the S3 phase of a dashboard scan reads `skipped` / `missing-credentials` rather than `ran` with zero rows.
 
 **Start:**
 
