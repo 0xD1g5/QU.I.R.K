@@ -13,6 +13,10 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    TargetOutcomeContractError,
+    outcome_for_db_exception,
+)
 from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
@@ -59,6 +63,8 @@ def scan_pg_targets(
     logger=None,
     session_start=None,
     cfg=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Scan PostgreSQL targets for SSL enforcement posture.
 
@@ -107,6 +113,8 @@ def scan_pg_targets(
 
         try:
             conn = psycopg2.connect(**pg_kwargs)
+            if outcomes is not None:
+                outcomes.answered(target)
             with conn:
                 with conn.cursor() as cur:
                     # Tier 1: server-level SSL enabled?
@@ -169,8 +177,13 @@ def scan_pg_targets(
                             scanned_at=now,
                         ))
 
+        except TargetOutcomeContractError:
+            raise
         except Exception as exc:
             # Phase 72 D-21 / WR-08: route raw exception through safe_str before logging.
+            if outcomes is not None:
+                _kind, _detail = outcome_for_db_exception(exc)
+                outcomes.record(target, _kind, _detail, row_emitted=True)
             if logger:
                 logger.v(f"PostgreSQL scan error for {ep_host}: {safe_str(exc)}")
             results.append(CryptoEndpoint(
@@ -195,6 +208,8 @@ def scan_mysql_targets(
     logger=None,
     session_start=None,
     cfg=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Scan MySQL/MariaDB targets for SSL session status.
 
@@ -246,6 +261,8 @@ def scan_mysql_targets(
 
         try:
             conn = pymysql.connect(**my_kwargs)
+            if outcomes is not None:
+                outcomes.answered(target)
             with conn:
                 with conn.cursor() as cur:
                     # NOTE: With ssl_disabled=True the scanner's own Ssl_cipher is always empty.
@@ -286,8 +303,13 @@ def scan_mysql_targets(
                             scanned_at=now,
                         ))
 
+        except TargetOutcomeContractError:
+            raise
         except Exception as exc:
             # Phase 72 D-21 / WR-08: route raw exception through safe_str before logging.
+            if outcomes is not None:
+                _kind, _detail = outcome_for_db_exception(exc)
+                outcomes.record(target, _kind, _detail, row_emitted=True)
             if logger:
                 logger.v(f"MySQL scan error for {ep_host}: {safe_str(exc)}")
             results.append(CryptoEndpoint(
