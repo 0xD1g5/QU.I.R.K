@@ -175,3 +175,71 @@ def test_contract_error_in_production_records_failed_with_error_row():
     assert row["status"] == "skipped" and row["reason"] == "failed"
     assert len(eps) == 1 and eps[0].protocol == "ERROR"
     assert eps[0].scan_error_category == "exception"
+
+
+# ---------------------------------------------------------------------------
+# D-07 (235.1 D-07 rule): each skip reason lowers the score through the real pipeline
+# ---------------------------------------------------------------------------
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "reason", ["internal-target-refused", "auth-failed", "missing-credentials", "failed"]
+)
+def test_coverage_skip_advisory_lowers_score_through_real_pipeline(reason, capsys):
+    """Baseline is an ANSWERED-EMPTY connector (contributes nothing to evidence).
+
+    Against a connector that ran and found weak keys a skip may score
+    differently (RESEARCH Pitfall 7); that is outside the D-07 statement.
+    Findings come from derive_report_findings and are passed as
+    build_evidence_summary(findings=...) before compute_readiness_score.
+    """
+    from quirk.engine.findings_evaluator import derive_report_findings
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import (
+        SCORE_WEIGHTS,
+        _count_curve,
+        compute_readiness_score,
+    )
+
+    tls = CryptoEndpoint(
+        host="10.0.0.1", port=443, protocol="TLS",
+        tls_version="TLSv1.3", tls_supported_versions="TLSv1.3",
+    )
+    adv: list = []
+    run_scan._emit_coverage_skip_advisory("jwt_scanner", reason, "detail", adv)
+    base_eps, skipped_eps = [tls], [tls] + adv
+
+    def _measure(eps, with_findings):
+        findings = derive_report_findings(eps, None) if with_findings else None
+        ev = build_evidence_summary(eps, findings=findings)
+        return ev, compute_readiness_score(ev)
+
+    results = {}
+    for with_findings in (True, False):
+        ev0, s0 = _measure(base_eps, with_findings)
+        ev1, s1 = _measure(skipped_eps, with_findings)
+        assert ev0["scan_error"]["count"] == 0
+        assert ev1["scan_error"]["count"] == 1
+        assert s1["score"] < s0["score"]
+        results[with_findings] = (s0, s1)
+
+    s0, s1 = results[True]
+    curve = _count_curve(1)
+    w_h = SCORE_WEIGHTS["hygiene_scan_error_rate"]
+    w_m = SCORE_WEIGHTS["modern_tls_scan_error_rate"]
+    expected = (w_h + w_m) * curve
+    assert s1["subscores"]["hygiene"] == round(25 - w_h * curve)
+    assert s1["subscores"]["modern_tls"] == round(25 - w_m * curve)
+    raw_drop = (25 - s1["subscores"]["hygiene"]) + (25 - s1["subscores"]["modern_tls"])
+    assert abs(raw_drop - expected) <= 1.0  # integer rounding of two subscores
+    d_with = results[True][0]["score"] - results[True][1]["score"]
+    d_without = results[False][0]["score"] - results[False][1]["score"]
+    assert d_with == d_without
+    with capsys.disabled():
+        print(
+            f"\n[235.3-09] {reason}: evaluator-inclusive delta {d_with} "
+            f"({s0['score']} -> {s1['score']}); endpoint-only delta {d_without}; "
+            f"expected subscore delta {expected:.3f}"
+        )
