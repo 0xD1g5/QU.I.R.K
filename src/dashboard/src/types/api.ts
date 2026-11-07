@@ -782,10 +782,12 @@ export interface ExposureMapResponse {
   unavailable_reason?: string | null
 }
 
-// Phase 235.3 (D-11): GET /api/config/internal-target-check. Names the New
-// Scan form values the server's internal-target policy will refuse, so the
-// operator sees it before submit. Warning only; the policy stays server-side.
-export interface InternalTargetCheckItem {
+// Phase 235.3 (D-11): POST /api/config/internal-target-check. Names the New
+// Scan form's JWT / SAML connector URLs the server's internal-target policy
+// will refuse, so the operator sees it before submit. Warning only; the
+// policy stays server-side. Names mirror quirk/dashboard/api/schemas.py
+// (InternalTargetEntry / InternalTargetCheckResponse, C-IN-03).
+export interface InternalTargetEntry {
   field: string
   preview: string
   reason: string
@@ -794,6 +796,6 @@ export interface InternalTargetCheckItem {
 export interface InternalTargetCheckResponse {
   allow_internal_targets: boolean
   config_error: string | null
-  internal: InternalTargetCheckItem[]
+  internal: InternalTargetEntry[]
   truncated: boolean
 }
