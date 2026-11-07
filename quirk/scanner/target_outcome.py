@@ -201,8 +201,56 @@ AUTH_FAILED_CODES: Final[frozenset] = frozenset({
     "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId",
     "ExpiredToken", "ExpiredTokenException", "UnrecognizedClientException",
     "AccessDenied", "AccessDeniedException",
+    # 235.3 review A-WR-01: AWS EC2-style denial plus Azure ARM / Key Vault
+    # RBAC denials and Azure token rejections.
+    "UnauthorizedOperation", "AuthorizationFailed", "Forbidden",
+    "InvalidAuthenticationToken", "ExpiredAuthenticationToken",
 })
-_IAM_PERMISSION_CODES: Final[frozenset] = frozenset({"AccessDenied", "AccessDeniedException"})
+_IAM_PERMISSION_CODES: Final[frozenset] = frozenset({
+    "AccessDenied", "AccessDeniedException", "UnauthorizedOperation",
+    "AuthorizationFailed", "Forbidden",
+})
+
+# 235.3 review A-WR-02: DefaultAzureCredential / ChainedTokenCredential raise a
+# plain ClientAuthenticationError carrying this sentence when no credential in
+# the chain produced a token. Each "Attempted credentials" line that reports
+# one of these markers is a credential that never attempted authentication
+# (CredentialUnavailableError); a line without any marker is a credential that
+# tried and was rejected, which ends the chain.
+_AZURE_CHAIN_SENTENCE: Final[str] = "failed to retrieve a token from the included credentials"
+_AZURE_UNAVAILABLE_MARKERS: Final[Tuple[str, ...]] = (
+    "unavailable", "not found", "not installed", "could not be found",
+    "requires the", "no accounts", "not fully configured", "not configured",
+    "az login", "connect-azaccount", "azd auth login",
+)
+
+
+def _azure_chain_had_no_credentials(message: str) -> bool:
+    if _AZURE_CHAIN_SENTENCE not in message:
+        return False
+    _head, sep, tail = message.partition("Attempted credentials:")
+    if not sep:
+        return "unavailable" in message.lower()
+    attempts = []
+    for line in tail.splitlines():
+        line = line.strip()
+        if not line or line.lower().startswith(("to mitigate", "visit https")):
+            continue
+        attempts.append(line.lower())
+    if not attempts:
+        return "unavailable" in message.lower()
+    return all(any(m in a for m in _AZURE_UNAVAILABLE_MARKERS) for a in attempts)
+
+
+def _http_status(exc: BaseException):
+    """HTTP status of a GCP HttpError / Azure HttpResponseError (duck-typed)."""
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status is None:
+        status = getattr(exc, "status_code", None)
+    try:
+        return int(status) if status is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _mro_names(exc: BaseException) -> List[str]:
@@ -228,6 +276,19 @@ def outcome_for_cloud_exception(exc: BaseException) -> Tuple[str, str]:
     if any(n in _MISSING_CREDENTIAL_CLASSES for n in names):
         return OUTCOME_MISSING_CREDENTIALS, safe_str(exc)
     if "ClientAuthenticationError" in names:
+        try:
+            message = str(getattr(exc, "message", None) or exc)
+        except Exception:
+            message = ""
+        if _azure_chain_had_no_credentials(message):
+            return (
+                OUTCOME_MISSING_CREDENTIALS,
+                "no Azure credential source available (DefaultAzureCredential chain "
+                "exhausted: no environment credentials, az login, or managed identity)",
+            )
+        return OUTCOME_AUTH_FAILED, safe_str(exc)
+    if "RefreshError" in names:
+        # google.auth: expired / revoked ADC (invalid_grant) -- present but rejected.
         return OUTCOME_AUTH_FAILED, safe_str(exc)
     if "ClientError" in names or "HttpResponseError" in names:
         code = _error_code(exc)
@@ -238,6 +299,14 @@ def outcome_for_cloud_exception(exc: BaseException) -> Tuple[str, str]:
                     "credentials lack a required IAM permission: " + safe_str(exc),
                 )
             return OUTCOME_AUTH_FAILED, safe_str(exc)
+    if "HttpError" in names or "HttpResponseError" in names:
+        # googleapiclient.errors.HttpError (resp.status) / Azure HttpResponseError
+        # (status_code) with no recognised error code: 401/403 is a denial.
+        if _http_status(exc) in (401, 403):
+            return (
+                OUTCOME_AUTH_FAILED,
+                "credentials lack a required permission: " + safe_str(exc),
+            )
     return OUTCOME_UNREACHABLE, safe_str(exc)
 
 

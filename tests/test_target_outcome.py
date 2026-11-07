@@ -159,3 +159,89 @@ def test_outcome_advisory_categories_and_skip_reasons():
     assert to.PER_TARGET_ERROR_CATEGORY not in c
     from quirk.models import SCAN_PHASE_SKIP_REASONS as R
     assert len(R) == 8 and {"internal-target-refused", "auth-failed"} <= R
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-WR-01: GCP / Azure / AWS permission denials are auth_failed
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_outcome_cloud_gcp_http_error_401_403_is_auth_failed(status):
+    errors = pytest.importorskip("googleapiclient.errors")
+    httplib2 = pytest.importorskip("httplib2")
+    exc = errors.HttpError(httplib2.Response({"status": str(status)}),
+                           b'{"error": {"code": %d, "message": "denied"}}' % status)
+    assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
+
+def test_outcome_cloud_gcp_http_error_500_stays_unreachable():
+    errors = pytest.importorskip("googleapiclient.errors")
+    httplib2 = pytest.importorskip("httplib2")
+    exc = errors.HttpError(httplib2.Response({"status": "503"}), b"unavailable")
+    assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_UNREACHABLE
+
+
+def test_outcome_cloud_gcp_refresh_error_is_auth_failed():
+    gexc = pytest.importorskip("google.auth.exceptions")
+    exc = gexc.RefreshError("invalid_grant: Token has been expired or revoked.")
+    assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
+
+@pytest.mark.parametrize("code", ["AuthorizationFailed", "Forbidden"])
+def test_outcome_cloud_azure_permission_denial_is_auth_failed(code):
+    az = pytest.importorskip("azure.core.exceptions")
+    exc = az.HttpResponseError(message="denied")
+    exc.error = type("E", (), {"code": code})()
+    assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
+
+def test_outcome_cloud_aws_unauthorized_operation_is_auth_failed():
+    exceptions = pytest.importorskip("botocore.exceptions")
+    exc = exceptions.ClientError(
+        {"Error": {"Code": "UnauthorizedOperation", "Message": "no"}}, "DescribeKey")
+    kind, detail = to.outcome_for_cloud_exception(exc)
+    assert kind == OUTCOME_AUTH_FAILED and "lack a required IAM permission" in detail
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-WR-02: Azure chain-exhausted "no credentials" is missing
+# ---------------------------------------------------------------------------
+
+def test_outcome_cloud_azure_default_credential_empty_env_is_missing(monkeypatch):
+    identity = pytest.importorskip("azure.identity")
+    import os
+    for k in list(os.environ):
+        if k.startswith(("AZURE_", "IDENTITY_", "MSI_")):
+            monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("PATH", "/nonexistent")  # no az / pwsh / azd on PATH
+    cred = identity.DefaultAzureCredential(
+        exclude_managed_identity_credential=True,
+        exclude_shared_token_cache_credential=True,
+        exclude_visual_studio_code_credential=True,
+    )
+    with pytest.raises(Exception) as ei:
+        cred.get_token("https://management.azure.com/.default")
+    assert to.outcome_for_cloud_exception(ei.value)[0] == OUTCOME_MISSING_CREDENTIALS
+
+
+def test_outcome_cloud_azure_chain_with_real_rejection_is_auth_failed():
+    az = pytest.importorskip("azure.core.exceptions")
+    msg = (
+        "DefaultAzureCredential failed to retrieve a token from the included credentials.\n"
+        "Attempted credentials:\n"
+        "\tEnvironmentCredential: EnvironmentCredential authentication unavailable. "
+        "Environment variables are not fully configured.\n"
+        "\tAzureCliCredential: AADSTS700082: The refresh token has expired due to inactivity.\n"
+        "To mitigate this issue, please refer to the troubleshooting guidelines here at "
+        "https://aka.ms/azsdk/python/identity/defaultazurecredential/troubleshoot."
+    )
+    exc = az.ClientAuthenticationError(message=msg)
+    assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
+
+def test_outcome_cloud_azure_401_client_auth_error_stays_auth_failed():
+    az = pytest.importorskip("azure.core.exceptions")
+    exc = az.ClientAuthenticationError(message="Unauthorized")
+    exc.error = type("E", (), {"code": "InvalidAuthenticationToken"})()
+    assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
