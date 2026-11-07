@@ -164,6 +164,6 @@ describe("ScanNewPage - internal target warning (D-11)", () => {
       await vi.advanceTimersByTimeAsync(400)
     })
     expect(checkCalls().length).toBe(1)
-    expect(decodeURIComponent(String(checkCalls()[0][0]))).toContain("https://ab.example.com")
+    expect(String(checkCalls()[0][1]?.body)).toContain("https://ab.example.com")
   })
 })

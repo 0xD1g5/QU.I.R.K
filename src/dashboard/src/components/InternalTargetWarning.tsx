@@ -5,7 +5,7 @@ import type { ConnectorOverlayValue, InternalTargetCheckResponse } from "@/types
 /**
  * Phase 235.3 (D-11 / COVTRUTH-05): non-blocking pre-submit warning when a
  * connector URL will be refused by the server's internal-target policy. Calls
- * GET /api/config/internal-target-check (debounced, cancelled on
+ * POST /api/config/internal-target-check (debounced, cancelled on
  * change/unmount) whenever the URL-bearing connector fields change,
  * independent of the Effective config panel. C-WR-01: plain scan targets are
  * TLS / SSH, which the policy never refuses, so they are not sent. Warning only: the policy is
@@ -30,16 +30,19 @@ interface InternalTargetWarningProps {
   connectors?: Record<string, ConnectorOverlayValue>
 }
 
+/**
+ * JSON request body for the preflight, or "" when there is nothing to check.
+ * C-WR-07: a CSRF-protected POST body, so a cross-site page cannot make the
+ * server resolve names it chooses.
+ */
 function buildQuery(props: InternalTargetWarningProps): string {
-  const params = new URLSearchParams()
   const picked: Record<string, ConnectorOverlayValue> = {}
   for (const key of CHECKED_KEYS) {
     const v = props.connectors?.[key]
     if (v === undefined || v === "" || (Array.isArray(v) && v.length === 0)) continue
     picked[key] = v
   }
-  if (Object.keys(picked).length > 0) params.set("connectors", JSON.stringify(picked))
-  return params.toString()
+  return Object.keys(picked).length > 0 ? JSON.stringify({ connectors: picked }) : ""
 }
 
 export function InternalTargetWarning(props: InternalTargetWarningProps) {
@@ -56,7 +59,10 @@ export function InternalTargetWarning(props: InternalTargetWarningProps) {
     let cancelled = false
     const timer = setTimeout(async () => {
       try {
-        const resp = await fetchApi(`/api/config/internal-target-check?${query}`)
+        const resp = await fetchApi("/api/config/internal-target-check", {
+          method: "POST",
+          body: query,
+        })
         if (!resp.ok) {
           if (!cancelled) setAnswer({ query, result: null })
           return

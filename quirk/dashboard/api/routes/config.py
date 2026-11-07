@@ -17,7 +17,11 @@ import ipaddress
 import json
 import logging
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Any, Dict, List, Literal, Optional, Tuple
+
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import ValidationError
@@ -35,6 +39,7 @@ from quirk.util.url_allowlist import (
 )
 from quirk.dashboard.api.config_preview import resolve_effective_config
 from quirk.dashboard.api.middleware.auth import require_auth
+from quirk.dashboard.api.middleware.csrf import require_csrf
 from quirk.dashboard.api.routes.jobs import build_advanced_overlays
 from quirk.dashboard.api.schemas import (
     AdvancedScanFields,
@@ -42,6 +47,7 @@ from quirk.dashboard.api.schemas import (
     ConfigField,
     ConfigResponse,
     ConfigSection,
+    InternalTargetCheckRequest,
     InternalTargetCheckResponse,
     InternalTargetEntry,
     validate_connectors_overlay,
@@ -320,26 +326,59 @@ def get_effective_config(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/config/internal-target-check (235.3 / D-11 / P-12)
+# POST /api/config/internal-target-check (235.3 / D-11 / P-12)
 # ---------------------------------------------------------------------------
 
 _INTERNAL_REASONS = frozenset({RC_LOOPBACK, RC_INTERNAL_IP, RC_LINK_LOCAL})
-_INTERNAL_CHECK_LIMIT = 64
 # C-WR-01: the connector URL lists the server's allow_internal_targets policy
 # actually refuses. run_scan.py threads cfg.security.allow_internal_targets
 # into the JWT and SAML scanners for these lists only. Plain scan targets are
 # TLS / SSH, which ignore the policy, so they are never checked here: telling
 # the operator "these connectors will be skipped" for them would be false.
 _POLICY_GATED_FIELDS = ("jwt_targets", "saml_targets")
+# C-WR-07: bounds on what one request can make the server do. Values beyond
+# _INTERNAL_CHECK_LIMIT, hostnames beyond _INTERNAL_DNS_LIMIT, and lookups
+# still running at the deadline are not checked, and the answer says
+# truncated. Lookups run on a small dedicated pool, never inline on the
+# shared AnyIO threadpool, so a slow resolver cannot starve the dashboard.
+_INTERNAL_CHECK_LIMIT = 32
+_INTERNAL_DNS_LIMIT = 16
+_INTERNAL_CHECK_DEADLINE_S = 3.0
+_DNS_WORKERS = 4
+_dns_pool: Optional[ThreadPoolExecutor] = None
+_dns_pool_lock = threading.Lock()
+_HOST_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
-def _internal_reason_for(value: str) -> Optional[str]:
-    """Return an internal-range reason code for *value*, or None.
+def _dns_executor() -> ThreadPoolExecutor:
+    global _dns_pool
+    with _dns_pool_lock:
+        if _dns_pool is None:
+            _dns_pool = ThreadPoolExecutor(
+                max_workers=_DNS_WORKERS, thread_name_prefix="quirk-preflight-dns"
+            )
+        return _dns_pool
 
-    Uses the real SSRF guard (validate_external_url, DNS resolution only, no
-    connection). Metadata / console / bad-scheme / DNS-failure verdicts are
-    not "internal" -- flipping the policy would not help (P-04).
+
+def _is_complete_hostname(host: str) -> bool:
+    """True for a syntactically complete DNS name worth resolving.
+
+    C-WR-07: the form fires the preflight on a typing pause, so a value typed
+    half-way ("http://loc", "https://a.example.c") must not reach the
+    resolver. ``localhost`` is accepted (a hosts-file answer); anything else
+    needs at least two valid labels and an alphabetic TLD of 2+ characters.
     """
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    labels = host.split(".")
+    if len(labels) < 2 or not all(_HOST_LABEL_RE.match(lb) for lb in labels):
+        return False
+    tld = labels[-1]
+    return len(tld) >= 2 and tld.isalpha()
+
+
+def _checked_url_for(value: str) -> Optional[Tuple[str, bool]]:
+    """Return (url to classify, needs DNS) for *value*, or None to skip it."""
     value = value.strip()
     if not value:
         return None
@@ -351,6 +390,26 @@ def _internal_reason_for(value: str) -> Optional[str]:
             host = f"[{host}]"
         url = f"http://{host}/"
     try:
+        host = (urlsplit(url).hostname or "").rstrip(".").lower()
+    except ValueError:
+        return None
+    if not host:
+        return None
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return (url, True) if _is_complete_hostname(host) else None
+    return url, False
+
+
+def _internal_reason_for(url: str) -> Optional[str]:
+    """Return an internal-range reason code for *url*, or None.
+
+    Uses the real SSRF guard (validate_external_url, DNS resolution only, no
+    connection). Metadata / console / bad-scheme / DNS-failure verdicts are
+    not "internal" -- flipping the policy would not help (P-04).
+    """
+    try:
         result = validate_external_url(url, allow_internal=False)
     except Exception:  # defensive: a malformed value is never an internal hit
         return None
@@ -360,57 +419,87 @@ def _internal_reason_for(value: str) -> Optional[str]:
 
 
 def classify_internal_targets(
-    values_by_field: Dict[str, List[str]], limit: int = _INTERNAL_CHECK_LIMIT
+    values_by_field: Dict[str, List[str]],
+    limit: int = _INTERNAL_CHECK_LIMIT,
+    dns_limit: int = _INTERNAL_DNS_LIMIT,
+    deadline: Optional[float] = None,
 ) -> Tuple[List[InternalTargetEntry], bool]:
-    """Classify submitted values; return (internal entries, truncated)."""
-    entries: List[InternalTargetEntry] = []
-    checked = 0
+    """Classify submitted values; return (internal entries, truncated).
+
+    IP literals are classified inline (no DNS). Hostnames resolve on the
+    dedicated pool under one wall-clock *deadline* (default
+    _INTERNAL_CHECK_DEADLINE_S, read at call time); a lookup still running at
+    the deadline is abandoned and marks the answer truncated.
+    """
+    if deadline is None:
+        deadline = _INTERNAL_CHECK_DEADLINE_S
+    planned: List[Tuple[str, str, bool]] = []
     truncated = False
+    dns_count = 0
     for field, values in values_by_field.items():
         for value in values:
-            if not isinstance(value, str) or not value.strip():
+            plan = _checked_url_for(value)
+            if plan is None:
                 continue
-            if checked >= limit:
+            url, needs_dns = plan
+            if len(planned) >= limit or (needs_dns and dns_count >= dns_limit):
                 truncated = True
-                return entries, truncated
-            checked += 1
-            reason = _internal_reason_for(value)
-            if reason:
-                entries.append(
-                    InternalTargetEntry(
-                        field=field,
-                        preview=_redact_url_preview(value.strip(), max_len=64),
-                        reason=reason,
-                    )
+                continue
+            dns_count += int(needs_dns)
+            planned.append((field, url, needs_dns))
+
+    reasons: Dict[int, Optional[str]] = {}
+    futures = {}
+    for idx, (_field, url, needs_dns) in enumerate(planned):
+        if needs_dns:
+            futures[_dns_executor().submit(_internal_reason_for, url)] = idx
+        else:
+            reasons[idx] = _internal_reason_for(url)
+    if futures:
+        done, not_done = wait(list(futures), timeout=deadline)
+        for fut in not_done:
+            fut.cancel()
+            truncated = True
+        for fut in done:
+            reasons[futures[fut]] = fut.result()
+
+    entries: List[InternalTargetEntry] = []
+    for idx, (field, url, _needs_dns) in enumerate(planned):
+        reason = reasons.get(idx)
+        if reason:
+            entries.append(
+                InternalTargetEntry(
+                    field=field,
+                    preview=_redact_url_preview(url, max_len=64),
+                    reason=reason,
                 )
+            )
     return entries, truncated
 
 
-@effective_router.get(
-    "/config/internal-target-check", response_model=InternalTargetCheckResponse
+@effective_router.post(
+    "/config/internal-target-check",
+    response_model=InternalTargetCheckResponse,
+    dependencies=[Depends(require_csrf)],
 )
-def get_internal_target_check(
-    connectors: Optional[str] = Query(None),
+def post_internal_target_check(
+    body: InternalTargetCheckRequest,
 ) -> InternalTargetCheckResponse:
-    """GET /api/config/internal-target-check -- which submitted values the
-    server's internal-target policy will refuse (235.3 D-11).
+    """POST /api/config/internal-target-check -- which submitted connector
+    URLs the server's internal-target policy will refuse (235.3 D-11).
 
     Auth: inherited from router-level require_auth (do NOT add per-route).
-    Read-only warning surface: the policy comes only from
-    load_server_security(); a client-sent allow_internal_targets is ignored.
-    DNS resolution only, never a connection; at most 64 values are checked.
+    C-WR-07: POST + the X-Quirk-Request CSRF header, so a cross-site page
+    cannot make the server resolve names it chooses (auth is a passthrough
+    when no QUIRK_API_TOKEN is set). Read-only warning surface: the policy
+    comes only from load_server_security(); a client-sent
+    allow_internal_targets is ignored. DNS resolution only, never a
+    connection, and bounded by the limits above.
     """
     overlay: dict = {}
-    if connectors is not None:
-        _msg = "connectors must be a JSON object of connector overlay values"
+    if body.connectors is not None:
         try:
-            parsed = json.loads(connectors)
-        except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=422, detail=_msg) from exc
-        if not isinstance(parsed, dict):
-            raise HTTPException(status_code=422, detail=_msg)
-        try:
-            overlay = validate_connectors_overlay(parsed) or {}
+            overlay = validate_connectors_overlay(body.connectors) or {}
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 

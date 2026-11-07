@@ -59,6 +59,19 @@ describe("InternalTargetWarning", () => {
     expect(banner).not.toHaveTextContent("SAML")
   })
 
+  it("internal target warning posts the connector values with fetchApi", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse({
+      allow_internal_targets: false, config_error: null, truncated: false, internal: [],
+    }))
+    await renderAndWait({ jwt_targets: ["http://localhost:20001"] })
+
+    expect(checkCalls().length).toBe(1)
+    const [path, init] = checkCalls()[0]
+    expect(path).toBe("/api/config/internal-target-check")
+    expect(init?.method).toBe("POST")
+    expect(JSON.parse(String(init?.body))).toEqual({ connectors: { jwt_targets: ["http://localhost:20001"] } })
+  })
+
   it("internal target warning never sends openapi_spec_path", async () => {
     mockFetchApi.mockResolvedValue(jsonResponse({
       allow_internal_targets: false, config_error: null, truncated: false, internal: [],

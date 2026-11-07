@@ -134,7 +134,8 @@ export const FIXTURE_HANDLERS = Object.freeze([
   {
     id: "internal-target-check",
     match: { prefix: "/api/config/internal-target-check" },
-    // New Scan preflight (235.3 D-11); empty list keeps the scan-new baselines unchanged.
+    // New Scan preflight (235.3 D-11), a POST since C-WR-07 (handlers match the
+    // URL, not the method); empty list keeps the scan-new baselines unchanged.
     default: { json: { allow_internal_targets: false, config_error: null, internal: [], truncated: false } },
     empty: { na: "New Scan preflight (235.3 D-11): only requested once targets or connector URLs are entered; the empty state never types any, so the route is never called" },
     loading: { na: "New Scan preflight (235.3 D-11): a held request renders no banner, identical to the resting page; nothing to prove" },

@@ -50,7 +50,13 @@ class ConfigEffectiveResponse(BaseModel):
     redacted_field_count: int
 
 
-# 235.3 / D-11 / P-12: GET /api/config/internal-target-check response shapes.
+# 235.3 / D-11 / P-12: POST /api/config/internal-target-check shapes.
+class InternalTargetCheckRequest(BaseModel):
+    # Connector overlay values, validated by validate_connectors_overlay.
+    # C-WR-07: a POST body (CSRF-protected), not GET query parameters.
+    connectors: Optional[Dict[str, Any]] = None
+
+
 class InternalTargetEntry(BaseModel):
     field: str      # "jwt_targets" | "saml_targets" (the policy-gated connector lists)
     preview: str    # redacted via _redact_url_preview
