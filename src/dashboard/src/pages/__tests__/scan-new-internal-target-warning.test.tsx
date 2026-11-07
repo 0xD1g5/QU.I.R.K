@@ -126,14 +126,26 @@ describe("ScanNewPage - internal target warning (D-11)", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument()
   })
 
-  it("new scan says server policy could not be read on config error", async () => {
+  it("new scan says the scan will be refused on config error", async () => {
+    // C-WR-05: POST /api/jobs answers an unreadable server config with a 503
+    // (DASHBOARD-014) and refuses the whole scan, not a partial skip.
     mockFetchApi.mockResolvedValue(
-      jsonResponse({ allow_internal_targets: false, config_error: "bad yaml", internal: [], truncated: false }),
+      jsonResponse({
+        allow_internal_targets: false,
+        config_error: "[QRK-DASHBOARD-014] Server configuration file could not be read.",
+        internal: [],
+        truncated: false,
+      }),
     )
     renderPage()
     await typeJwtAndWait("http://localhost:20001")
 
-    expect(screen.getByRole("status")).toHaveTextContent("Server policy could not be read")
+    const banner = screen.getByRole("status")
+    expect(banner).toHaveTextContent("config.yaml could not be read")
+    expect(banner).toHaveTextContent("Scans will be refused until it is fixed")
+    expect(banner).toHaveTextContent("quirk doctor")
+    expect(banner).toHaveTextContent("[QRK-DASHBOARD-014] Server configuration file could not be read.")
+    expect(banner).not.toHaveTextContent("may be skipped")
   })
 
   it("new scan shows nothing when the internal target check fails", async () => {

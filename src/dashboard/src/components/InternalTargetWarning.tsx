@@ -99,9 +99,15 @@ export function InternalTargetWarning(props: InternalTargetWarningProps) {
       }}
     >
       {configError ? (
-        <p className="font-semibold">
-          Server policy could not be read, so internal JWT and SAML URLs may be skipped.
-        </p>
+        <>
+          {/* C-WR-05: POST /api/jobs refuses every submission with a 503
+              (DASHBOARD-014) while the server config is unreadable. */}
+          <p className="font-semibold">
+            The server&apos;s config.yaml could not be read. Scans will be refused until it is fixed
+            (run quirk doctor on the server).
+          </p>
+          <p className="text-xs mt-1">{result.config_error}</p>
+        </>
       ) : internal.length === 0 ? (
         <p className="font-semibold">
           Not every value was checked against the server&apos;s internal-target policy (too many values,
