@@ -189,3 +189,53 @@ def test_classifier_empty_expected_set_is_not_failed():
     assert result is run_scan._PHASE_SKIPPED
     assert rec._pending_reason == "no-eligible-targets"
     assert not [e for e in eps if e.scan_error_category == "targets_unreachable"]
+
+
+# ------------------------------------------------------------------ A-WR-03
+
+def _hide_run_scan_modules(monkeypatch, *names):
+    real = run_scan._module_available
+    monkeypatch.setattr(
+        run_scan, "_module_available", lambda n: False if n in names else real(n),
+    )
+
+
+def test_azure_subscription_without_network_sdk_is_missing_extra(tmp_path, monkeypatch):
+    _hide_run_scan_modules(monkeypatch, "azure.mgmt.network")
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_azure": True, "azure_subscription_id": "00000000-harness",
+    }})
+    row = phases["azure_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "missing-extra"
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+    assert not [e for e in eps if e["category"] == "targets_unreachable"]
+
+
+def test_azure_keyvault_answered_network_sdk_missing_no_unanswered_row(tmp_path, monkeypatch):
+    import quirk.scanner.azure_connector as az
+
+    _hide_run_scan_modules(monkeypatch, "azure.mgmt.network")
+
+    def fake_kv(credential, vault_url, logger, *, outcomes=None):
+        outcomes.answered(vault_url)
+        return []
+
+    monkeypatch.setattr(az, "_scan_keyvault_keys", fake_kv)
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_azure": True, "azure_subscription_id": "00000000-harness",
+        "azure_keyvault_urls": ["https://harness.vault.azure.net"],
+    }})
+    assert phases["azure_scanning"]["status"] == "ran"
+    assert not [e for e in eps if e["category"] == "target_unanswered"]
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+
+
+def test_blob_without_storage_sdk_is_missing_extra(tmp_path, monkeypatch):
+    _hide_run_scan_modules(monkeypatch, "azure.mgmt.storage")
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_blob": True, "azure_subscription_id": "00000000-harness",
+    }})
+    row = phases["blob_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "missing-extra"
+    assert "extras: cloud" in row["detail"]
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)

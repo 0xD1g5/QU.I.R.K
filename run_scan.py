@@ -3693,12 +3693,31 @@ def main():
                     "no-eligible-targets",
                     "connectors.azure_subscription_id and connectors.azure_keyvault_urls are both empty",
                 )
+            # Review A-WR-03: the App Gateway leg imports azure-mgmt-network
+            # lazily and records nothing when it is absent, so the
+            # subscription would read "did not answer". Gate that leg here.
+            _sub_id = cfg.connectors.azure_subscription_id or ""
+            if _sub_id and not _module_available("azure.mgmt.network"):
+                _net_msg = (
+                    "azure-mgmt-network not installed (a core dependency; "
+                    "reinstall quirk-scanner)"
+                )
+                if not cfg.connectors.azure_keyvault_urls:
+                    return _missing_extra_skip(
+                        cfg, _recorder, "azure_connector", "azure.mgmt.network", "core",
+                        _net_msg, error_endpoints, message=_net_msg,
+                    )
+                _missing_extra_note(
+                    cfg, "azure_connector", "azure.mgmt.network", "core",
+                    error_endpoints, message=_net_msg,
+                )
+                _sub_id = ""
             _expected = list(cfg.connectors.azure_keyvault_urls or [])
-            if cfg.connectors.azure_subscription_id:
-                _expected.append(cfg.connectors.azure_subscription_id)
+            if _sub_id:
+                _expected.append(_sub_id)
             _outcomes = TargetOutcomes(_expected)
             _rows = scan_azure_targets(
-                subscription_id=cfg.connectors.azure_subscription_id or "",
+                subscription_id=_sub_id,
                 keyvault_urls=cfg.connectors.azure_keyvault_urls,
                 logger=logger,
                 outcomes=_outcomes,
@@ -3916,6 +3935,13 @@ def main():
             if not AZURE_AVAILABLE:
                 logger.v("azure SDK not installed — Azure Blob scanning skipped")
                 return _recorder.skip("missing-extra", "azure SDK not installed")
+            if not _module_available("azure.mgmt.storage"):
+                # Review A-WR-03: _scan_blob_encryption returns [] and records
+                # nothing without azure-mgmt-storage ("did not answer").
+                return _missing_extra_skip(
+                    cfg, _recorder, "azure_blob_connector", "azure.mgmt.storage", "cloud",
+                    "azure-mgmt-storage not installed (extras: cloud)", error_endpoints,
+                )
             if not (cfg.connectors.azure_subscription_id or "").strip():
                 logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
                 return _recorder.skip(
