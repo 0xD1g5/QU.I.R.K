@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from quirk.models import CryptoEndpoint
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
+from quirk.scanner.target_outcome import COVERAGE_SKIP_ADVISORY_CATEGORIES
 
 FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 
@@ -33,7 +34,9 @@ FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 # ---------------------------------------------------------------------------
 
 # 235.1 D-06: advisory-only categories never count as scan-error regressions.
-_ADVISORY_ONLY_CATEGORIES = frozenset({"missing_extra", "missing_binary"})
+# 235.3 D-07/P-02: sourced from the one shared set so a new coverage-skip
+# category cannot drift between consumers. target_unanswered is NOT in it.
+_ADVISORY_ONLY_CATEGORIES = COVERAGE_SKIP_ADVISORY_CATEGORIES
 
 _SEVERITY_BUCKET = {
     "CRITICAL": "high",
@@ -430,7 +433,7 @@ def compute_trend_report(
 
     # D-05: scan error count delta computed independently of finding delta.
     # Phase 41 / D-15 + 235.1 D-06: exclude advisory-only categories
-    # (missing_extra, missing_binary) so that "user did not
+    # (missing_extra, missing_binary, and the 235.3 coverage-skip categories) so that "user did not
     # install [motion] this run" does not register as a scan-error regression.
     # getattr(..., None) tolerates older DB rows that predate the column.
     cur_err = sum(

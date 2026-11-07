@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from quirk.engine.findings_evaluator import evaluate_endpoints
 
 
@@ -111,3 +113,24 @@ def test_missing_binary_advisory_becomes_titled_coverage_gap_finding():
     titles = [x.get("title", "") for x in findings]
     assert "Informational protocol observation" not in titles
     assert len(findings) == 1
+
+
+@pytest.mark.parametrize("category", [
+    "internal_target_refused", "auth_failed", "missing_credentials", "targets_unreachable",
+])
+def test_coverage_skip_advisory_becomes_titled_coverage_gap_finding(category):
+    """235.3 D-07: each coverage-skip ADVISORY -> exactly one INFO coverage_gap
+    finding carrying the skip detail, and no generic observation duplicate."""
+    detail = "1 of 1 targets refused (internal address)"
+    ep = _ep(
+        host="jwt_scanner", port=0, protocol="ADVISORY",
+        scan_error=detail, scan_error_category=category,
+    )
+    findings = evaluate_endpoints(_cfg(), [ep])
+    assert len(findings) == 1, f"expected one finding, got {findings!r}"
+    f = findings[0]
+    assert f["category"] == "coverage_gap"
+    assert f["severity"] == "INFO"
+    assert f["title"] == "Connector skipped \u2014 no target answered"
+    assert detail in f["description"]
+    assert "Informational protocol observation" not in f["title"]
