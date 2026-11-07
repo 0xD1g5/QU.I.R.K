@@ -52,7 +52,7 @@ class ConfigEffectiveResponse(BaseModel):
 
 # 235.3 / D-11 / P-12: GET /api/config/internal-target-check response shapes.
 class InternalTargetEntry(BaseModel):
-    field: str      # "targets" | "jwt_targets" | "saml_targets" | "openapi_spec_path"
+    field: str      # "jwt_targets" | "saml_targets" (the policy-gated connector lists)
     preview: str    # redacted via _redact_url_preview
     reason: str     # "loopback" | "internal_ip" | "link_local"
 

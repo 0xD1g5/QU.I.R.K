@@ -4,10 +4,11 @@ import type { ConnectorOverlayValue, InternalTargetCheckResponse } from "@/types
 
 /**
  * Phase 235.3 (D-11 / COVTRUTH-05): non-blocking pre-submit warning when a
- * target or connector URL will be refused by the server's internal-target
- * policy. Calls GET /api/config/internal-target-check (debounced, cancelled on
- * change/unmount) whenever targets or the URL-bearing connector fields change,
- * independent of the Effective config panel. Warning only: the policy is
+ * connector URL will be refused by the server's internal-target policy. Calls
+ * GET /api/config/internal-target-check (debounced, cancelled on
+ * change/unmount) whenever the URL-bearing connector fields change,
+ * independent of the Effective config panel. C-WR-01: plain scan targets are
+ * TLS / SSH, which the policy never refuses, so they are not sent. Warning only: the policy is
  * server-side config (security.allow_internal_targets) and there is no toggle
  * here (deferred, 999.121). A failed fetch renders nothing and never blocks.
  */
@@ -16,14 +17,11 @@ const DEBOUNCE_MS = 500
 const CHECKED_KEYS = ["jwt_targets", "saml_targets", "openapi_spec_path"] as const
 
 interface InternalTargetWarningProps {
-  targets: string
   connectors?: Record<string, ConnectorOverlayValue>
 }
 
 function buildQuery(props: InternalTargetWarningProps): string {
   const params = new URLSearchParams()
-  const trimmed = props.targets.trim()
-  if (trimmed) params.set("targets", trimmed)
   const picked: Record<string, ConnectorOverlayValue> = {}
   for (const key of CHECKED_KEYS) {
     const v = props.connectors?.[key]

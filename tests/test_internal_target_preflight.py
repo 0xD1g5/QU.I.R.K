@@ -32,7 +32,7 @@ def test_401_without_token_200_with_token(monkeypatch, tmp_path):
     assert tc.get(URL, headers={"Authorization": "Bearer tok"}).status_code == 200
 
 
-def test_policy_false_reports_three_fields(client):
+def test_policy_false_reports_connector_fields(client):
     r = client.get(
         URL,
         params={
@@ -48,10 +48,18 @@ def test_policy_false_reports_three_fields(client):
     assert body["allow_internal_targets"] is False
     got = [(e["field"], e["reason"]) for e in body["internal"]]
     assert got == [
-        ("targets", "loopback"),
         ("jwt_targets", "loopback"),
         ("saml_targets", "internal_ip"),
     ]
+
+
+def test_plain_targets_are_never_reported(client):
+    """C-WR-01: allow_internal_targets gates only the JWT / SAML connector URL
+    lists (run_scan.py). TLS / SSH plain targets are never refused, so the
+    preflight must not claim a skip for them."""
+    r = client.get(URL, params={"targets": "127.0.0.1, 10.0.0.5, localhost, 10.0.0.0/8"})
+    assert r.status_code == 200, r.text
+    assert r.json()["internal"] == []
 
 
 def test_policy_true_reports_nothing(monkeypatch, tmp_path):
@@ -60,7 +68,7 @@ def test_policy_true_reports_nothing(monkeypatch, tmp_path):
     monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
     monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
     _, tc = _app_with_db()
-    r = tc.get(URL, params={"targets": "127.0.0.1"})
+    r = tc.get(URL, params=_conn(jwt_targets=["http://127.0.0.1/"]))
     assert r.status_code == 200
     assert r.json()["allow_internal_targets"] is True
     assert r.json()["internal"] == []
@@ -72,7 +80,11 @@ def test_unreadable_config_is_warning_not_503(monkeypatch, tmp_path):
     monkeypatch.setenv("QUIRK_CONFIG_PATH", str(cfg))
     monkeypatch.setenv("QUIRK_API_TOKEN", "env-token")
     _, tc = _app_with_db()
-    r = tc.get(URL, params={"targets": "127.0.0.1"}, headers={"Authorization": "Bearer env-token"})
+    r = tc.get(
+        URL,
+        params=_conn(jwt_targets=["http://127.0.0.1/"]),
+        headers={"Authorization": "Bearer env-token"},
+    )
     assert r.status_code == 200
     assert r.json()["config_error"]
     assert r.json()["internal"] == []
@@ -84,32 +96,26 @@ def test_metadata_is_not_internal(client):
     assert r.json()["internal"] == []
 
 
-def test_cidr_and_public(client):
-    r = client.get(URL, params={"targets": "10.0.0.0/8, 8.8.8.8"})
-    got = [(e["preview"], e["reason"]) for e in r.json()["internal"]]
-    assert got == [("10.0.0.0/8", "internal_ip")]
-
-
 def test_name_resolving_internal(client, monkeypatch):
     def fake(host, port, family=0, *a, **k):
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", 0))]
 
     monkeypatch.setattr("quirk.util.url_allowlist.socket.getaddrinfo", fake)
-    r = client.get(URL, params={"targets": "sso.corp.internal"})
+    r = client.get(URL, params=_conn(jwt_targets=["https://sso.corp.internal/"]))
     assert [e["reason"] for e in r.json()["internal"]] == ["internal_ip"]
 
 
 def test_client_allow_internal_query_ignored(client):
     r = client.get(
-        URL, params={"targets": "127.0.0.1", "allow_internal_targets": "true"}
+        URL,
+        params={**_conn(jwt_targets=["http://127.0.0.1/"]), "allow_internal_targets": "true"},
     )
     assert r.json()["allow_internal_targets"] is False
     assert len(r.json()["internal"]) == 1
 
 
 def test_bounds_truncates_at_64(client):
-    targets = ",".join(f"10.0.0.{i}" for i in range(100))
-    r = client.get(URL, params={"targets": targets})
+    r = client.get(URL, params=_conn(jwt_targets=[f"http://10.0.0.{i}/" for i in range(100)]))
     body = r.json()
     assert body["truncated"] is True
     assert len(body["internal"]) == 64

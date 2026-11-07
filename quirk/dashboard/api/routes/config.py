@@ -325,6 +325,12 @@ def get_effective_config(
 
 _INTERNAL_REASONS = frozenset({RC_LOOPBACK, RC_INTERNAL_IP, RC_LINK_LOCAL})
 _INTERNAL_CHECK_LIMIT = 64
+# C-WR-01: the connector URL lists the server's allow_internal_targets policy
+# actually refuses. run_scan.py threads cfg.security.allow_internal_targets
+# into the JWT and SAML scanners for these lists only. Plain scan targets are
+# TLS / SSH, which ignore the policy, so they are never checked here: telling
+# the operator "these connectors will be skipped" for them would be false.
+_POLICY_GATED_FIELDS = ("jwt_targets", "saml_targets")
 
 
 def _internal_reason_for(value: str) -> Optional[str]:
@@ -337,19 +343,6 @@ def _internal_reason_for(value: str) -> Optional[str]:
     value = value.strip()
     if not value:
         return None
-    if "/" in value and "://" not in value:
-        try:
-            net = ipaddress.ip_network(value, strict=False)
-        except ValueError:
-            pass
-        else:
-            if net.is_loopback:
-                return RC_LOOPBACK
-            if net.is_link_local:
-                return RC_LINK_LOCAL
-            if net.is_private:
-                return RC_INTERNAL_IP
-            return None
     if "://" in value:
         url = value
     else:
@@ -397,7 +390,6 @@ def classify_internal_targets(
     "/config/internal-target-check", response_model=InternalTargetCheckResponse
 )
 def get_internal_target_check(
-    targets: Optional[str] = Query(None),
     connectors: Optional[str] = Query(None),
 ) -> InternalTargetCheckResponse:
     """GET /api/config/internal-target-check -- which submitted values the
@@ -434,9 +426,8 @@ def get_internal_target_check(
         return InternalTargetCheckResponse(allow_internal_targets=True, internal=[])
 
     values: Dict[str, List[str]] = {
-        "targets": [t for t in re.split(r"[,\s]+", targets or "") if t],
-        "jwt_targets": [v for v in (overlay.get("jwt_targets") or []) if isinstance(v, str)],
-        "saml_targets": [v for v in (overlay.get("saml_targets") or []) if isinstance(v, str)],
+        field: [v for v in (overlay.get(field) or []) if isinstance(v, str)]
+        for field in _POLICY_GATED_FIELDS
     }
     spec = overlay.get("openapi_spec_path")
     if isinstance(spec, str) and re.match(r"https?://", spec.strip(), re.I):

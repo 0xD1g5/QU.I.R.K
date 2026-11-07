@@ -411,7 +411,7 @@ export function ScanNewPage() {
           credentialKeys={Object.keys(credentials).filter((k) => credentials[k])}
         />
 
-        <InternalTargetWarning targets={targets} connectors={connectors} />
+        <InternalTargetWarning connectors={connectors} />
 
         {rejectionBanner && (
           <div
