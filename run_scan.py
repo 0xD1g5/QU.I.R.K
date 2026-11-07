@@ -505,6 +505,13 @@ def _classify_connector_outcomes(scanner_label, outcomes, rows, error_endpoints,
     (P-08); reason priority is P-06.
     """
     resolved = outcomes.resolved()
+    if not resolved:
+        # Review B-CR-02: nothing was eligible to answer, which is not a
+        # network failure. Closures pre-gate this; never invent "failed".
+        error_endpoints.extend(
+            r for r in (rows or []) if getattr(r, "scan_error", None)
+        )
+        return recorder.skip("no-eligible-targets", "no targets were eligible to scan")
     failures = [o for o in resolved if o.kind != OUTCOME_ANSWERED]
     if any(o.kind == OUTCOME_ANSWERED for o in resolved):
         for o in failures:
@@ -523,8 +530,6 @@ def _classify_connector_outcomes(scanner_label, outcomes, rows, error_endpoints,
     detail = (
         f"{len(failures)} of {len(resolved)} targets {_COVERAGE_PHRASE[reason]}: {names}"
     )
-    if not failures:
-        detail = "no targets were configured to answer"
     if reason == "internal-target-refused":
         detail += (
             "; security.allow_internal_targets is false - it is server policy, "
@@ -3525,7 +3530,16 @@ def main():
             _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
             if not _spec_path:
                 return _recorder.skip("no-eligible-targets", "scan.openapi_spec_path is not set")
-            from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+            from quirk.scanner.openapi_scanner import (
+                OPENAPI_AVAILABLE, scan_openapi_spec, SpecParsingError,
+            )
+            if not OPENAPI_AVAILABLE:
+                # Review B-CR-02: the degraded row carries no scan_error and no
+                # outcome, so the phase would read "failed / did not answer".
+                return _missing_extra_skip(
+                    cfg, _recorder, "openapi_scanner", "openapi_spec_validator", "api",
+                    "openapi-spec-validator not installed (extras: api)", error_endpoints,
+                )
             _target_list = []
             if hasattr(cfg, "targets") and cfg.targets is not None:
                 _target_list = list(getattr(cfg.targets, "fqdns", []) or [])
@@ -3759,6 +3773,19 @@ def main():
                 _expected.extend(cfg.connectors.pg_targets or [])
             if PYMYSQL_AVAILABLE:
                 _expected.extend(cfg.connectors.mysql_targets or [])
+            if not _expected:
+                # Review B-CR-02: every configured engine lacks its driver.
+                _missing = []
+                if cfg.connectors.pg_targets:
+                    _missing.append("psycopg2 (connectors.pg_targets)")
+                if cfg.connectors.mysql_targets:
+                    _missing.append("PyMySQL (connectors.mysql_targets)")
+                return _missing_extra_skip(
+                    cfg, _recorder, "db_connector",
+                    "psycopg2" if cfg.connectors.pg_targets else "pymysql", "db",
+                    f"{' and '.join(_missing)} not installed (extras: db)",
+                    error_endpoints,
+                )
             _outcomes = TargetOutcomes(_expected)
             result = []
             if cfg.connectors.pg_targets:
@@ -4079,7 +4106,14 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_kerberos is false")
             if not cfg.connectors.kerberos_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.kerberos_targets is empty")
-            from quirk.scanner.kerberos_scanner import scan_kerberos_targets
+            from quirk.scanner.kerberos_scanner import scan_kerberos_targets, IMPACKET_AVAILABLE
+            if not IMPACKET_AVAILABLE:
+                # Review B-CR-02: the scanner returns [] and records nothing,
+                # which would read "failed / did not answer".
+                return _missing_extra_skip(
+                    cfg, _recorder, "kerberos_scanner", "impacket", "identity",
+                    "impacket not installed (extras: identity)", error_endpoints,
+                )
             _outcomes = TargetOutcomes(cfg.connectors.kerberos_targets)
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
@@ -4186,12 +4220,21 @@ def main():
             if not getattr(args, "inventory_code_signing", False):
                 return _recorder.skip("disabled-by-config", "--inventory-code-signing not set")
             from quirk.scanner.codesign_scanner import (
+                LDAP3_AVAILABLE,
                 scan_codesign_from_ldap,
                 scan_codesign_from_tls_endpoints,
             )
             ldap_eps = []
             _outcomes = None
-            if getattr(cfg.connectors, "codesign_targets", None):
+            _ldap_missing = None
+            if getattr(cfg.connectors, "codesign_targets", None) and not LDAP3_AVAILABLE:
+                # Review B-CR-02: without ldap3 the LDAP scanner returns [] and
+                # records nothing; signal the missing extra instead of "failed".
+                _ldap_missing = "ldap3 not installed (extras: adcs)"
+                _missing_extra_note(
+                    cfg, "codesign_scanner", "ldap3", "adcs", error_endpoints,
+                )
+            elif getattr(cfg.connectors, "codesign_targets", None):
                 # 235.3 D-03: sink only for the LDAP path. The TLS-EKU path below
                 # is in-process and exempt (P-03): it records no outcomes.
                 _outcomes = TargetOutcomes(cfg.connectors.codesign_targets)
@@ -4213,6 +4256,8 @@ def main():
             )
             logger.info("CODE_SIGNING TLS-EKU check: %d CODE_SIGNING endpoints from %d TLS endpoints",
                         len(tls_eps), len(tls_endpoints))
+            if _ldap_missing is not None and not tls_eps:
+                return _recorder.skip("missing-extra", _ldap_missing)
             if _outcomes is None:
                 return ldap_eps + tls_eps
             _classified = _classify_connector_outcomes(

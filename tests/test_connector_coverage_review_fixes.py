@@ -116,3 +116,76 @@ def test_k8s_missing_sdk_skip_counts_extra_once_and_names_cloud(tmp_path, monkey
     assert not any("[k8s]" in (e["error"] or "") for e in eps)
     # K8S-03 path B in-band inaccessible row is forwarded, not deleted.
     assert [e for e in eps if e["error"] == "encryption-config-inaccessible"]
+
+
+# ------------------------------------------------------------------ B-CR-02
+
+def test_kerberos_missing_impacket_is_missing_extra_counted_once(tmp_path, monkeypatch):
+    import quirk.scanner.kerberos_scanner as krb
+
+    monkeypatch.setattr(krb, "IMPACKET_AVAILABLE", False)
+    _hide_modules(monkeypatch, "impacket")
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_kerberos": True, "kerberos_targets": ["127.0.0.1"],
+    }})
+    row = phases["kerberos_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "missing-extra"
+    assert "extras: identity" in row["detail"]
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+    assert not [e for e in eps if e["category"] == "targets_unreachable"]
+
+
+def test_codesign_missing_ldap3_is_missing_extra(tmp_path, monkeypatch):
+    import quirk.scanner.codesign_scanner as cs
+
+    monkeypatch.setattr(cs, "LDAP3_AVAILABLE", False)
+    monkeypatch.setattr(cs, "scan_codesign_from_tls_endpoints", lambda *a, **kw: [])
+    phases, eps = _scan(
+        tmp_path, monkeypatch,
+        {"connectors": {"codesign_targets": ["ldap://127.0.0.1:1"]}},
+        extra_argv=("--inventory-code-signing",),
+    )
+    row = phases["codesign_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "missing-extra"
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+    assert not [e for e in eps if e["category"] == "targets_unreachable"]
+
+
+def test_openapi_missing_extra_is_missing_extra_counted_once(tmp_path, monkeypatch):
+    import quirk.scanner.openapi_scanner as oas
+
+    monkeypatch.setattr(oas, "OPENAPI_AVAILABLE", False)
+    spec = tmp_path / "spec.yaml"
+    spec.write_text("openapi: 3.0.0\ninfo: {title: t, version: '1'}\npaths: {}\n")
+    phases, eps = _scan(tmp_path, monkeypatch, {"scan": {"openapi_spec_path": str(spec)}})
+    row = phases["openapi_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "missing-extra"
+    assert "extras: api" in row["detail"]
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+    assert not [e for e in eps if e["category"] == "targets_unreachable"]
+
+
+def test_db_only_uninstalled_driver_targets_is_missing_extra(tmp_path, monkeypatch):
+    import quirk.scanner.db_connector as db
+
+    monkeypatch.setattr(db, "PSYCOPG2_AVAILABLE", True)
+    monkeypatch.setattr(db, "PYMYSQL_AVAILABLE", False)
+    _hide_modules(monkeypatch, "pymysql")
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_db": True, "mysql_targets": ["127.0.0.1:1"],
+    }})
+    row = phases["db_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "missing-extra"
+    assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+    assert not [e for e in eps if e["category"] == "targets_unreachable"]
+
+
+def test_classifier_empty_expected_set_is_not_failed():
+    rec = run_scan._PhaseRecorder()
+    eps: list = []
+    result = run_scan._classify_connector_outcomes(
+        "x_scanner", TargetOutcomes([]), [], eps, rec,
+    )
+    assert result is run_scan._PHASE_SKIPPED
+    assert rec._pending_reason == "no-eligible-targets"
+    assert not [e for e in eps if e.scan_error_category == "targets_unreachable"]
