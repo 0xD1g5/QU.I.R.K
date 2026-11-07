@@ -123,6 +123,19 @@ def test_classifier_keeps_in_band_rows_when_skipped():
     assert inband in eps and len(eps) == 2
 
 
+def test_classifier_forwards_returned_in_band_rows_when_skipped():
+    """235.3-11 P-08: _wrapped_phase discards a skipped phase's return value,
+    so the scanner's own error rows must be forwarded into error_endpoints."""
+    o = TargetOutcomes(["a"])
+    o.record("a", OUTCOME_UNREACHABLE, "x", row_emitted=True)
+    inband = CryptoEndpoint(host="a", port=0, protocol="ERROR", scan_error="conn",
+                            scan_error_category="exception")
+    clean = CryptoEndpoint(host="a", port=1, protocol="TLS")
+    result, _, eps, _ = _run(o, rows=[inband, clean])
+    assert result is run_scan._PHASE_SKIPPED
+    assert inband in eps and clean not in eps
+
+
 def test_classifier_detail_caps_names_and_redacts():
     raws = [f"http://user:pw@h{i}:1/p?tok=secret{i}" for i in range(7)]
     o = TargetOutcomes(raws)

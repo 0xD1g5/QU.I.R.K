@@ -36,6 +36,7 @@ from quirk.scanner.target_outcome import (  # Phase 235.3 D-05
     PER_TARGET_ERROR_CATEGORY,
     SKIP_REASON_TO_ADVISORY_CATEGORY,
     TargetOutcome,
+    TargetOutcomeContractError,
     TargetOutcomes,
 )
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
@@ -490,6 +491,12 @@ def _classify_connector_outcomes(scanner_label, outcomes, rows, error_endpoints,
             "set it in the server's config.yaml"
         )
     _emit_coverage_skip_advisory(scanner_label, reason, detail, error_endpoints)
+    # P-08: a skipped phase's return value is discarded by _wrapped_phase, so
+    # its in-band error rows (connection-error, no-ADC, inaccessible, ...) must
+    # be forwarded or the skip would delete evidence the scanner emitted.
+    error_endpoints.extend(
+        r for r in (rows or []) if getattr(r, "scan_error", None)
+    )
     return recorder.skip(reason, detail)
 
 
@@ -3432,10 +3439,15 @@ def main():
             _missing = _missing_binary_detail("syft", error_endpoints)
             if _missing is not None:
                 return _recorder.skip("missing-binary", _missing)
-            return scan_container_targets(
+            _outcomes = TargetOutcomes(cfg.connectors.container_targets)
+            _rows = scan_container_targets(
                 cfg.connectors.container_targets,
                 timeout=cfg.scan.timeouts.container_seconds,
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "container_scanner", _outcomes, _rows, error_endpoints, _recorder,
             )
         container_endpoints = _wrapped_phase(
             run_stats, "container_scanning", "container_scanner",
@@ -3445,6 +3457,7 @@ def main():
         # ==============================
         # Source code scan phase
         # ==============================
+        # 235.3 P-15: source_scanning is exempt — scan_source_targets raises when every target fails (235.1 SRCSCAN-03), so _wrapped_phase records it failed with a counted ERROR row; partial failures already emit one row per target
         def _run_source_phase():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_source:
@@ -3699,6 +3712,14 @@ def main():
             # "postgres" / "root". A config-field truthiness gate would
             # silently disable those documented auth paths, so the
             # connectors report their own auth failures instead.
+            # 235.3 D-05: one sink over both lists; a driver that is not
+            # installed never attempts its targets, so they are not expected.
+            _expected = []
+            if PSYCOPG2_AVAILABLE:
+                _expected.extend(cfg.connectors.pg_targets or [])
+            if PYMYSQL_AVAILABLE:
+                _expected.extend(cfg.connectors.mysql_targets or [])
+            _outcomes = TargetOutcomes(_expected)
             result = []
             if cfg.connectors.pg_targets:
                 result.extend(scan_pg_targets(
@@ -3711,6 +3732,7 @@ def main():
                     logger=logger,
                     session_start=session_start,
                     cfg=cfg,
+                    outcomes=_outcomes,
                 ))
             if cfg.connectors.mysql_targets:
                 result.extend(scan_mysql_targets(
@@ -3723,8 +3745,11 @@ def main():
                     logger=logger,
                     session_start=session_start,
                     cfg=cfg,
+                    outcomes=_outcomes,
                 ))
-            return result
+            return _classify_connector_outcomes(
+                "db_connector", _outcomes, result, error_endpoints, _recorder,
+            )
         db_endpoints = _wrapped_phase(
             run_stats, "db_scanning", "db_connector",
             _run_db_phase, error_endpoints, logger,
@@ -3860,7 +3885,15 @@ def main():
             # findings, trends, and scoring evidence. A pre-flight skip would
             # silently delete those previously-emitted signals; the phase
             # honestly records "ran" because the connector did run and emit.
-            from quirk.scanner.k8s_connector import scan_k8s_targets
+            from quirk.scanner.k8s_connector import scan_k8s_targets, K8S_AVAILABLE
+            # 235.3 D-05: single-target connector, so the scanner records
+            # against outcomes.sole_target(). EKS is recorded below with
+            # extra=True so sole_target() stays unambiguous.
+            _k8s_label = (
+                f"k8s:{(cfg.connectors.k8s_provider or '(unset)').lower()}:"
+                f"{cfg.connectors.k8s_cluster_name or '-'}"
+            )
+            _outcomes = TargetOutcomes([_k8s_label])
             eps = scan_k8s_targets(
                 provider=cfg.connectors.k8s_provider or "",
                 cluster_name=cfg.connectors.k8s_cluster_name or "",
@@ -3873,6 +3906,7 @@ def main():
                 aks_clusters=cfg.connectors.aks_clusters or [],
                 logger=logger,
                 session_start=session_start,
+                outcomes=_outcomes,
             )
             # EKS path uses boto3 (NOT kubernetes Python client). Run alongside
             # GKE/AKS/secret enumeration when k8s_provider == "eks".
@@ -3888,13 +3922,39 @@ def main():
                             region_name=getattr(cfg.connectors, "aws_region", None) or None,
                             profile_name=getattr(cfg.connectors, "aws_profile", None) or None,
                         )
-                        eps.extend(_scan_eks_encryption(
+                        _eks_eps = _scan_eks_encryption(
                             _eks_session, logger, session_start=session_start,
-                        ))
+                        )
+                        eps.extend(_eks_eps)
+                        if any(not getattr(e, "scan_error", None) for e in _eks_eps):
+                            _outcomes.record(
+                                f"eks:{cfg.connectors.k8s_cluster_name or '-'}",
+                                OUTCOME_ANSWERED, extra=True,
+                            )
+                except TargetOutcomeContractError:
+                    raise
                 except Exception as exc:
                     logger.v(f"EKS encryption scan unavailable: {exc}")
+                    _outcomes.record(
+                        f"eks:{cfg.connectors.k8s_cluster_name or '-'}",
+                        OUTCOME_UNREACHABLE, safe_str(exc), extra=True,
+                    )
             logger.info(f"K8S scan: {len(eps)} cluster endpoints")
-            return eps
+            # 235.3: a missing kubernetes SDK records no outcome (K8S-03 path B
+            # emits its inaccessible row in-band). Read that as missing_extra,
+            # not as a misleading "did not answer". Post-scan on purpose: the
+            # WR-03 design above keeps K8S-03's in-band rows, so no pre-gate.
+            if not K8S_AVAILABLE and not _outcomes.items.get(_k8s_label):
+                _emit_missing_extra_advisory("k8s_connector", "k8s", error_endpoints)
+                error_endpoints.extend(
+                    e for e in eps if getattr(e, "scan_error", None)
+                )
+                return _recorder.skip(
+                    "missing-extra", "kubernetes SDK not installed (extras: k8s)",
+                )
+            return _classify_connector_outcomes(
+                "k8s_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         k8s_endpoints = _wrapped_phase(
             run_stats, "k8s_scanning", "k8s_connector",
             _run_k8s_phase, error_endpoints, logger,
@@ -3916,16 +3976,20 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_dnssec is false")
             if not cfg.connectors.dnssec_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.dnssec_targets is empty")
+            _outcomes = TargetOutcomes(cfg.connectors.dnssec_targets)
             eps = scan_dnssec_targets(
                 targets=cfg.connectors.dnssec_targets,
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
                 logger=logger,
                 session_start=session_start,
                 resolver=getattr(cfg.connectors, "dnssec_resolver", None),
+                outcomes=_outcomes,
             )
             logger.info("DNSSEC scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.dnssec_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "dnssec_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         dnssec_endpoints = _wrapped_phase(
             run_stats, "dnssec_scanning", "dnssec_scanner",
             _run_dnssec_phase, error_endpoints, logger,
@@ -3966,16 +4030,20 @@ def main():
             if not cfg.connectors.kerberos_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.kerberos_targets is empty")
             from quirk.scanner.kerberos_scanner import scan_kerberos_targets
+            _outcomes = TargetOutcomes(cfg.connectors.kerberos_targets)
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
                 timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
                 principal=cfg.connectors.kerberos_probe_principal,
                 logger=logger,
                 session_start=session_start,
+                outcomes=_outcomes,
             )
             logger.info("Kerberos scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.kerberos_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "kerberos_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         kerberos_endpoints = _wrapped_phase(
             run_stats, "kerberos_scanning", "kerberos_scanner",
             _run_kerberos_phase, error_endpoints, logger,
@@ -3999,16 +4067,20 @@ def main():
             if not getattr(cfg.connectors, "smime_targets", None):
                 return _recorder.skip("no-eligible-targets", "connectors.smime_targets is empty")
             from quirk.scanner.smime_scanner import scan_smime_targets
+            _outcomes = TargetOutcomes(cfg.connectors.smime_targets)
             eps = scan_smime_targets(
                 targets=cfg.connectors.smime_targets,
                 timeout=getattr(cfg.connectors, "smime_timeout", 10),
                 logger=logger,
                 session_start=session_start,
                 search_base=getattr(cfg.connectors, "smime_search_base", None),
+                outcomes=_outcomes,
             )
             logger.info("SMIME scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.smime_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "smime_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         smime_endpoints = _wrapped_phase(
             run_stats, "smime_scanning", "smime_scanner",
             _run_smime_phase, error_endpoints, logger,
@@ -4032,6 +4104,7 @@ def main():
             if not getattr(cfg.connectors, "adcs_targets", None):
                 return _recorder.skip("no-eligible-targets", "connectors.adcs_targets is empty")
             from quirk.scanner.adcs_scanner import scan_adcs_targets
+            _outcomes = TargetOutcomes(cfg.connectors.adcs_targets)
             eps = scan_adcs_targets(
                 targets=cfg.connectors.adcs_targets,
                 timeout=getattr(cfg.connectors, "adcs_timeout", 10),
@@ -4043,10 +4116,13 @@ def main():
                     getattr(cfg.connectors, "adcs_password", None)
                     or os.environ.get("QUIRK_ADCS_PASSWORD", None)
                 ),
+                outcomes=_outcomes,
             )
             logger.info("ADCS scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.adcs_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "adcs_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         adcs_endpoints = _wrapped_phase(
             run_stats, "adcs_scanning", "adcs_scanner",
             _run_adcs_phase, error_endpoints, logger,
@@ -4064,13 +4140,18 @@ def main():
                 scan_codesign_from_tls_endpoints,
             )
             ldap_eps = []
+            _outcomes = None
             if getattr(cfg.connectors, "codesign_targets", None):
+                # 235.3 D-03: sink only for the LDAP path. The TLS-EKU path below
+                # is in-process and exempt (P-03): it records no outcomes.
+                _outcomes = TargetOutcomes(cfg.connectors.codesign_targets)
                 ldap_eps = scan_codesign_from_ldap(
                     targets=cfg.connectors.codesign_targets,
                     timeout=getattr(cfg.connectors, "codesign_timeout", 10),
                     logger=logger,
                     session_start=session_start,
                     search_base=getattr(cfg.connectors, "codesign_search_base", None),
+                    outcomes=_outcomes,
                 )
                 logger.info("CODE_SIGNING LDAP scan: %d endpoints from %d targets",
                             len(ldap_eps), len(cfg.connectors.codesign_targets))
@@ -4082,7 +4163,17 @@ def main():
             )
             logger.info("CODE_SIGNING TLS-EKU check: %d CODE_SIGNING endpoints from %d TLS endpoints",
                         len(tls_eps), len(tls_endpoints))
-            return ldap_eps + tls_eps
+            if _outcomes is None:
+                return ldap_eps + tls_eps
+            _classified = _classify_connector_outcomes(
+                "codesign_scanner", _outcomes, ldap_eps, error_endpoints, _recorder,
+            )
+            if _classified is _PHASE_SKIPPED:
+                # No LDAP target answered. In-process TLS-EKU results are real
+                # evidence, so keep them and let the phase read ran (the
+                # classifier's advisory row still reports the LDAP failure).
+                return tls_eps if tls_eps else _classified
+            return _classified + tls_eps
         codesign_endpoints = _wrapped_phase(
             run_stats, "codesign_scanning", "codesign_scanner",
             _run_codesign_phase, error_endpoints, logger,
@@ -4114,6 +4205,12 @@ def main():
                 "connectors", "vault_token", cfg.connectors.vault_token,
             ):
                 logger.v("vault_token not set -- Vault scanning skipped")
+                # 235.3 P-01: count this skip in the score like every other
+                # missing-credentials skip.
+                _emit_coverage_skip_advisory(
+                    "vault_connector", "missing-credentials",
+                    "connectors.vault_token / VAULT_TOKEN not set", error_endpoints,
+                )
                 return _recorder.skip(
                     "missing-credentials",
                     "connectors.vault_token / VAULT_TOKEN not set",
@@ -4122,18 +4219,23 @@ def main():
             # env fallback inside vault_connector). Source the token here at the caller
             # boundary — config takes precedence; VAULT_TOKEN env is the operator override.
             _vault_token = cfg.connectors.vault_token or os.environ.get("VAULT_TOKEN", "")
+            _vault_addr = (cfg.connectors.vault_addr
+                           or os.environ.get("VAULT_ADDR", ""))
+            _outcomes = TargetOutcomes([_vault_addr])
             eps = scan_vault_targets(
-                vault_addr=(cfg.connectors.vault_addr
-                            or os.environ.get("VAULT_ADDR", "")),
+                vault_addr=_vault_addr,
                 token=_vault_token,
                 transit_mount=cfg.connectors.vault_transit_mount or "transit",
                 tls_verify=cfg.connectors.vault_tls_verify,
                 logger=logger,
                 session_start=session_start,
                 cfg=cfg,
+                outcomes=_outcomes,
             )
             logger.info("Vault scan: %d endpoints", len(eps))
-            return eps
+            return _classify_connector_outcomes(
+                "vault_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         vault_endpoints = _wrapped_phase(
             run_stats, "vault_scanning", "vault_connector",
             _run_vault_phase, error_endpoints, logger,
@@ -4184,6 +4286,7 @@ def main():
         # Phase 67 / D-04: email phase now uses _wrapped_phase for uniform error capture.
         # cfg_email_skip and _emit_missing_extra_advisory() call above remain before the
         # _run_email_phase def — correct ordering preserved.
+        # 235.3 P-03: email_scanning probes speculative default ports on hosts derived from TLS targets; exempt from the D-03 ran-vs-skipped rule
         def _run_email_phase():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_email:
@@ -4285,6 +4388,36 @@ def main():
                 f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)} "
                 f"advisories={len(unreached)}"
             )
+            # 235.3 P-03: D-03 applies only to explicit broker_targets pairs;
+            # with none configured the phase keeps today's behaviour.
+            if explicit_reachable_pairs:
+                _reached = {
+                    (ep.host, ep.port)
+                    for ep in (k + r + rd)
+                    if not ep.scan_error or ep.tls_version or ep.cipher_suite
+                }
+                _outcomes = TargetOutcomes(
+                    [f"{h}:{p}" for h, p in explicit_reachable_pairs]
+                )
+                for _h, _p in explicit_reachable_pairs:
+                    if (_h, _p) in _reached:
+                        _outcomes.answered(f"{_h}:{_p}")
+                    else:
+                        _outcomes.record(
+                            f"{_h}:{_p}", OUTCOME_UNREACHABLE,
+                            "did not respond to any probe", row_emitted=True,
+                        )
+                _explicit = {(h, p) for h, p in explicit_reachable_pairs}
+                if any(key not in _explicit for key in _reached):
+                    _outcomes.record("derived-hosts", OUTCOME_ANSWERED, extra=True)
+                _classified = _classify_connector_outcomes(
+                    "broker_scanner", _outcomes, None, error_endpoints, _recorder,
+                )
+                if _classified is _PHASE_SKIPPED:
+                    # P-08: the unreached-target advisories are in-band rows
+                    # and must still reach error_endpoints / the database.
+                    error_endpoints.extend(unreached)
+                    return _classified
             r = r + unreached
             return (k, r, rd)
         _broker_result = _wrapped_phase(
