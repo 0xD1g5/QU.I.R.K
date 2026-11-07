@@ -1986,6 +1986,12 @@ other connectors with no answering target read `skipped` with a named reason.
 - **A database target that fails to connect:** the Data at Rest page shows a failed row (for example
   "PostgreSQL connection failed") for that target, and the phase reads `failed` or `auth-failed`
   when no target answered.
+- **A PostgreSQL server that answered, but the scanner role lacks `pg_read_all_stats`:** the row
+  reads "POSTGRESQL posture incomplete" with a neutral Incomplete badge and the `GRANT
+  pg_read_all_stats` remediation. It is not a connection failure.
+- **A phase that raised (a scanner defect, not the network):** the empty state reads "Failed: the
+  scanner stopped with an error (<connector>)" followed by the error text, never "no target
+  answered".
 
 **Partial runs.** When some targets answer and others do not, the phase reads `ran` and each target
 that did not answer adds one scan-error row (category `target_unanswered`), so a partial result is
