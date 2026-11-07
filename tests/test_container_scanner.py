@@ -196,3 +196,12 @@ def test_outcome_invalid_input_is_row_emitted():
     assert len(rows) == 1 and rows[0].scan_error_category == "invalid_input"
     o = sink.resolved()[0]
     assert o.kind == "unreachable" and o.row_emitted is True
+
+
+def test_outcome_invalid_input_detail_is_not_type_prefixed():
+    """235.3 review A-IN-01: safe_str() on a plain str gave 'str: <code>'."""
+    sink = TargetOutcomes(["--privileged"])
+    scan_container_targets(["--privileged"], outcomes=sink)
+    detail = sink.resolved()[0].detail
+    assert not detail.startswith("str:")
+    assert detail.startswith("rejected: ")

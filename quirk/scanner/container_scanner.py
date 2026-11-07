@@ -84,7 +84,9 @@ def scan_container_image(
     if not _validation.ok:
         if logger:
             logger.v(f"CONTAINER rejected {_validation.redacted_preview!r}: {_validation.reason}")
-        _report(OUTCOME_UNREACHABLE, safe_str(_validation.reason), row_emitted=True)
+        # 235.3 review A-IN-01: the reason is a fixed reason-code constant, not
+        # an exception; safe_str() would render it as "str: <code>".
+        _report(OUTCOME_UNREACHABLE, f"rejected: {_validation.reason}", row_emitted=True)
         return [CryptoEndpoint(
             host=_validation.redacted_preview,
             port=0,
