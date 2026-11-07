@@ -50,6 +50,20 @@ class ConfigEffectiveResponse(BaseModel):
     redacted_field_count: int
 
 
+# 235.3 / D-11 / P-12: GET /api/config/internal-target-check response shapes.
+class InternalTargetEntry(BaseModel):
+    field: str      # "targets" | "jwt_targets" | "saml_targets" | "openapi_spec_path"
+    preview: str    # redacted via _redact_url_preview
+    reason: str     # "loopback" | "internal_ip" | "link_local"
+
+
+class InternalTargetCheckResponse(BaseModel):
+    allow_internal_targets: bool
+    config_error: Optional[str] = None
+    internal: List[InternalTargetEntry] = []
+    truncated: bool = False
+
+
 # Phase 193 / PARITY-02: GET /api/connectors/availability response shapes.
 # Frozen interfaces -- plan 04's route and plan 07's React panel consume
 # these shapes directly.

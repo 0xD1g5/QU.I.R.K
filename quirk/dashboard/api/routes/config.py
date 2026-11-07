@@ -13,9 +13,11 @@ server-side (T-192-18 / D-07), and badges each field's provenance (D-04).
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
-from typing import Any, Literal, Optional
+import re
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import ValidationError
@@ -23,7 +25,14 @@ from pydantic import ValidationError
 from quirk.config import get_vertical
 from quirk.config_redaction import REDACTED_SET, REDACTED_UNSET, redact_config
 from quirk.errors import format_error
-from quirk.util.server_config import ServerConfigError
+from quirk.util.server_config import ServerConfigError, load_server_security
+from quirk.util.url_allowlist import (
+    RC_INTERNAL_IP,
+    RC_LINK_LOCAL,
+    RC_LOOPBACK,
+    _redact_url_preview,
+    validate_external_url,
+)
 from quirk.dashboard.api.config_preview import resolve_effective_config
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.routes.jobs import build_advanced_overlays
@@ -33,6 +42,8 @@ from quirk.dashboard.api.schemas import (
     ConfigField,
     ConfigResponse,
     ConfigSection,
+    InternalTargetCheckResponse,
+    InternalTargetEntry,
     validate_connectors_overlay,
     validate_credential_names,
 )
@@ -305,4 +316,132 @@ def get_effective_config(
         sections=sections,
         raw=raw,
         redacted_field_count=redacted_field_count,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/config/internal-target-check (235.3 / D-11 / P-12)
+# ---------------------------------------------------------------------------
+
+_INTERNAL_REASONS = frozenset({RC_LOOPBACK, RC_INTERNAL_IP, RC_LINK_LOCAL})
+_INTERNAL_CHECK_LIMIT = 64
+
+
+def _internal_reason_for(value: str) -> Optional[str]:
+    """Return an internal-range reason code for *value*, or None.
+
+    Uses the real SSRF guard (validate_external_url, DNS resolution only, no
+    connection). Metadata / console / bad-scheme / DNS-failure verdicts are
+    not "internal" -- flipping the policy would not help (P-04).
+    """
+    value = value.strip()
+    if not value:
+        return None
+    if "/" in value and "://" not in value:
+        try:
+            net = ipaddress.ip_network(value, strict=False)
+        except ValueError:
+            pass
+        else:
+            if net.is_loopback:
+                return RC_LOOPBACK
+            if net.is_link_local:
+                return RC_LINK_LOCAL
+            if net.is_private:
+                return RC_INTERNAL_IP
+            return None
+    if "://" in value:
+        url = value
+    else:
+        host = value
+        if host.count(":") > 1 and not host.startswith("["):
+            host = f"[{host}]"
+        url = f"http://{host}/"
+    try:
+        result = validate_external_url(url, allow_internal=False)
+    except Exception:  # defensive: a malformed value is never an internal hit
+        return None
+    if not result.ok and result.reason in _INTERNAL_REASONS:
+        return result.reason
+    return None
+
+
+def classify_internal_targets(
+    values_by_field: Dict[str, List[str]], limit: int = _INTERNAL_CHECK_LIMIT
+) -> Tuple[List[InternalTargetEntry], bool]:
+    """Classify submitted values; return (internal entries, truncated)."""
+    entries: List[InternalTargetEntry] = []
+    checked = 0
+    truncated = False
+    for field, values in values_by_field.items():
+        for value in values:
+            if not isinstance(value, str) or not value.strip():
+                continue
+            if checked >= limit:
+                truncated = True
+                return entries, truncated
+            checked += 1
+            reason = _internal_reason_for(value)
+            if reason:
+                entries.append(
+                    InternalTargetEntry(
+                        field=field,
+                        preview=_redact_url_preview(value.strip(), max_len=64),
+                        reason=reason,
+                    )
+                )
+    return entries, truncated
+
+
+@effective_router.get(
+    "/config/internal-target-check", response_model=InternalTargetCheckResponse
+)
+def get_internal_target_check(
+    targets: Optional[str] = Query(None),
+    connectors: Optional[str] = Query(None),
+) -> InternalTargetCheckResponse:
+    """GET /api/config/internal-target-check -- which submitted values the
+    server's internal-target policy will refuse (235.3 D-11).
+
+    Auth: inherited from router-level require_auth (do NOT add per-route).
+    Read-only warning surface: the policy comes only from
+    load_server_security(); a client-sent allow_internal_targets is ignored.
+    DNS resolution only, never a connection; at most 64 values are checked.
+    """
+    overlay: dict = {}
+    if connectors is not None:
+        _msg = "connectors must be a JSON object of connector overlay values"
+        try:
+            parsed = json.loads(connectors)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=422, detail=_msg) from exc
+        if not isinstance(parsed, dict):
+            raise HTTPException(status_code=422, detail=_msg)
+        try:
+            overlay = validate_connectors_overlay(parsed) or {}
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    sec = load_server_security()
+    if sec.error:
+        logger.error("Server security configuration could not be read: %s", sec.error)
+        return InternalTargetCheckResponse(
+            allow_internal_targets=False,
+            config_error=format_error("DASHBOARD-014"),
+            internal=[],
+        )
+    if sec.allow_internal_targets:
+        return InternalTargetCheckResponse(allow_internal_targets=True, internal=[])
+
+    values: Dict[str, List[str]] = {
+        "targets": [t for t in re.split(r"[,\s]+", targets or "") if t],
+        "jwt_targets": [v for v in (overlay.get("jwt_targets") or []) if isinstance(v, str)],
+        "saml_targets": [v for v in (overlay.get("saml_targets") or []) if isinstance(v, str)],
+    }
+    spec = overlay.get("openapi_spec_path")
+    if isinstance(spec, str) and re.match(r"https?://", spec.strip(), re.I):
+        values["openapi_spec_path"] = [spec.strip()]
+    internal, truncated = classify_internal_targets(values)
+    return InternalTargetCheckResponse(
+        allow_internal_targets=False, internal=internal, truncated=truncated
     )
