@@ -102,7 +102,8 @@ def test_scan_phase_record_same_phase_different_scan_run_both_persist(tmp_path) 
 def test_scan_phase_skip_reasons_exact_membership() -> None:
     from quirk.models import SCAN_PHASE_SKIP_REASONS
 
-    assert len(SCAN_PHASE_SKIP_REASONS) == 6
+    # Phase 235.3 D-06: 6 -> 8 (internal-target-refused, auth-failed added).
+    assert len(SCAN_PHASE_SKIP_REASONS) == 8
     assert SCAN_PHASE_SKIP_REASONS == frozenset({
         "disabled-by-config",
         "missing-extra",
@@ -110,6 +111,8 @@ def test_scan_phase_skip_reasons_exact_membership() -> None:
         "missing-credentials",
         "missing-binary",
         "failed",
+        "internal-target-refused",
+        "auth-failed",
     })
 
 
