@@ -54,6 +54,7 @@ from quirk.errors import format_error
 
 from quirk.models import CryptoEndpoint
 from quirk.util.target_trust import _extract_host  # 230-REVIEW-R15 CR-02
+from quirk.scanner.target_outcome import OUTCOME_ANSWERED, OUTCOME_UNREACHABLE
 from quirk.util.safe_exc import safe_str  # IN-01: sanitize tcp_error onto unreachable endpoint
 
 # Module-level logger
@@ -1053,7 +1054,7 @@ def _krb_error_row(target: str, realm: str, timeout: int, logger,
 
 
 def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session_start=None,
-                          principal: str = DEFAULT_PROBE_PRINCIPAL) -> list:
+                          principal: str = DEFAULT_PROBE_PRINCIPAL, *, outcomes=None) -> list:
     """Scan Kerberos KDCs for supported encryption types via unauthenticated AS-REQ probe.
 
     Entry point for the Kerberos scanner. Returns list[CryptoEndpoint] -- one endpoint
@@ -1076,8 +1077,17 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
         targets = [targets]
     results = []
     for target in targets:
+        # 235.3 D-05 label contract: outcomes are keyed by the RAW configured
+        # value, captured before _wire_name() rewrites ``target``.
+        raw_target = target
+
+        def _rec(kind, detail="", row_emitted=False, _raw=raw_target):
+            if outcomes is not None:
+                outcomes.record(_raw, kind, detail, row_emitted=row_emitted)
+
         invalid = _invalid_target_reason(target)
         if invalid is not None:
+            _rec(OUTCOME_UNREACHABLE, "not-probed", True)
             # 230-REVIEW-R9 WR-02/WR-03: never probed (no Kerberos, no LDAP).
             results.append(_not_probed_row(
                 target if isinstance(target, str) else repr(target), None, now,
@@ -1134,24 +1144,28 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             # 230-REVIEW CR-02: code 25 proves pre-auth IS required, but the
             # KDC named no etypes.  Honest gap row like D-25: no UDP fallback,
             # no scan_error, no finding, never "kerberos-no-preauth".
+            _rec(OUTCOME_ANSWERED, "preauth_no_etypes")
             results.append(_preauth_no_etypes_row(target, realm, timeout, logger,
                                                   principal, now))
             continue
         except KerberosRequestBuildError as exc:
             # 230-REVIEW-R10 WR-02/WR-03: nothing was sent; UDP would fail to
             # build the same request.  Not probed: no UDP, no LDAP.
+            _rec(OUTCOME_UNREACHABLE, "not-probed", True)
             results.append(_not_probed_row(target, realm, now, safe_str(exc)))
             continue
         except KerberosPrincipalUnknown:
             # Phase 230 D-25: the KDC answered (code 6) but returns no etype data
             # for this principal.  An assessment gap, not a transport failure:
             # no UDP fallback, no scan_error, and never "kerberos-no-preauth".
+            _rec(OUTCOME_ANSWERED, "principal_unknown")
             results.append(_principal_unknown_row(target, realm, timeout, logger,
                                                   principal, now))
             continue
         except KerberosUnrecognisedReply as exc:
             # 230-REVIEW-R2 WR-01: the peer answered with non-Kerberos bytes.
             # A positive answer, not a transport failure: no UDP fallback.
+            _rec(OUTCOME_ANSWERED, "unrecognised_reply")
             results.append(_unrecognised_reply_row(target, realm, timeout, logger,
                                                    principal, now, exc))
             continue
@@ -1160,6 +1174,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 # WR-01: bytes arrived but broke the framing (short read,
                 # implausible length prefix such as unframed HTTP, a stall or
                 # reset mid-reply).  Same honest row, no UDP fallback.
+                _rec(OUTCOME_ANSWERED, "unrecognised_reply")
                 results.append(_unrecognised_reply_row(target, realm, timeout,
                                                        logger, principal, now, exc))
                 continue
@@ -1184,22 +1199,27 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 etypes = _probe_kdc_udp(target, realm, timeout, principal=principal)
             except KerberosRequestBuildError as udp_exc:
                 # 230-REVIEW-R11 IN-01: nothing was sent on this leg either.
+                _rec(OUTCOME_UNREACHABLE, "not-probed", True)
                 results.append(_not_probed_row(target, realm, now,
                                                safe_str(udp_exc)))
                 continue
             except KerberosPreauthNoEtypes:
+                _rec(OUTCOME_ANSWERED, "preauth_no_etypes")
                 results.append(_preauth_no_etypes_row(target, realm, timeout, logger,
                                                       principal, now))
                 continue
             except KerberosPrincipalUnknown:
+                _rec(OUTCOME_ANSWERED, "principal_unknown")
                 results.append(_principal_unknown_row(target, realm, timeout, logger,
                                                       principal, now))
                 continue
             except KerberosUnrecognisedReply as udp_exc:
+                _rec(OUTCOME_ANSWERED, "unrecognised_reply")
                 results.append(_unrecognised_reply_row(target, realm, timeout, logger,
                                                        principal, now, udp_exc))
                 continue
             except KerberosError as udp_exc:
+                _rec(OUTCOME_ANSWERED, "krb_error")
                 results.append(_krb_error_row(target, realm, timeout, logger,
                                               principal, now, udp_exc))
                 continue
@@ -1207,6 +1227,7 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
                 if isinstance(tcp_error, KerberosError):
                     # The KDC answered over TCP with a KRB_ERROR; a dead UDP leg
                     # does not make it unreachable.
+                    _rec(OUTCOME_ANSWERED, "krb_error")
                     results.append(_krb_error_row(target, realm, timeout, logger,
                                                   principal, now, tcp_error))
                     continue
@@ -1219,12 +1240,17 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             # 230-REVIEW-R3 WR-01: anything else the TCP probe raises is not a
             # transport failure (a decoder failure on untrusted reply bytes),
             # so this gets the honest row instead of a UDP retry.
+            _rec(OUTCOME_ANSWERED, "unrecognised_reply")
             results.append(_unrecognised_reply_row(target, realm, timeout, logger,
                                                    principal, now, exc))
             continue
 
         # Graceful failure: both TCP and UDP failed
         if etypes is None:
+            _rec(OUTCOME_UNREACHABLE,
+                 safe_str(tcp_error if tcp_error is not None else udp_error)
+                 if (tcp_error is not None or udp_error is not None) else "kerberos-unreachable",
+                 True)
             unreachable_ep = CryptoEndpoint(
                 host=target,
                 port=88,
@@ -1250,6 +1276,8 @@ def scan_kerberos_targets(targets: list, timeout: int = 10, logger=None, session
             unreachable_ep.kerberos_scan_json = json.dumps(unreachable_doc)
             results.append(unreachable_ep)
             continue
+
+        _rec(OUTCOME_ANSWERED)
 
         # Build per-etype CryptoEndpoints
         target_endpoints = []

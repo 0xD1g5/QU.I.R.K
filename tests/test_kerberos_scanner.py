@@ -445,3 +445,64 @@ def test_kerberos_session_start_stamps_all_endpoints():
     for ep in results:
         assert ep.scanned_at == expected_naive, \
             f"Expected scanned_at={expected_naive!r}, got {ep.scanned_at!r}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-05: per-target outcomes (stubbed transport; no impacket needed)
+# ---------------------------------------------------------------------------
+
+def test_outcome_both_transports_down_is_unreachable_row_kept():
+    import quirk.scanner.kerberos_scanner as kmod
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_UNREACHABLE
+    sink = TargetOutcomes(["10.0.0.1"])
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc_raises(kmod, ConnectionRefusedError("refused")), \
+         patch.object(kmod, "_probe_kdc_udp", side_effect=OSError("udp down")), \
+         _patch_probe_ldap(kmod, {"ldap_status": "skipped"}):
+        results = scan_kerberos_targets(["10.0.0.1"], timeout=5, outcomes=sink)
+    assert [ep.service_detail for ep in results] == ["kerberos-unreachable"]
+    (kind, _detail, row_emitted), = sink.items["10.0.0.1"]
+    assert kind == OUTCOME_UNREACHABLE and row_emitted is True
+
+
+def test_outcome_principal_unknown_is_answered():
+    import quirk.scanner.kerberos_scanner as kmod
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_ANSWERED
+    sink = TargetOutcomes(["kdc.example.com"])
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc_raises(kmod, kmod.KerberosPrincipalUnknown("probe", 6)), \
+         _patch_probe_ldap(kmod, {"ldap_status": "skipped"}):
+        results = scan_kerberos_targets(["kdc.example.com"], timeout=5, outcomes=sink)
+    assert len(results) >= 1
+    assert [k for (k, _d, _r) in sink.items["kdc.example.com"]] == [OUTCOME_ANSWERED]
+
+
+def test_outcome_as_rep_is_answered():
+    import quirk.scanner.kerberos_scanner as kmod
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_ANSWERED
+    sink = TargetOutcomes(["kdc.example.com"])
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [18]), \
+         _patch_probe_ldap(kmod, {"ldap_status": "skipped"}):
+        results = scan_kerberos_targets(["kdc.example.com"], timeout=5, outcomes=sink)
+    assert len(results) == 1
+    assert [k for (k, _d, _r) in sink.items["kdc.example.com"]] == [OUTCOME_ANSWERED]
+
+
+def test_outcome_none_sink_unchanged():
+    import quirk.scanner.kerberos_scanner as kmod
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [18]), \
+         _patch_probe_ldap(kmod, {"ldap_status": "skipped"}):
+        assert len(scan_kerberos_targets(["kdc.example.com"], timeout=5)) == 1
+
+
+def test_outcome_label_contract_violation_propagates():
+    import quirk.scanner.kerberos_scanner as kmod
+    from quirk.scanner.target_outcome import TargetOutcomes, TargetOutcomeContractError
+    sink = TargetOutcomes(["not-this-target"])
+    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+         _patch_probe_kdc(kmod, [18]), \
+         _patch_probe_ldap(kmod, {"ldap_status": "skipped"}):
+        with pytest.raises(TargetOutcomeContractError):
+            scan_kerberos_targets(["kdc.example.com"], timeout=5, outcomes=sink)
