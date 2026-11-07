@@ -245,3 +245,32 @@ def test_outcome_cloud_azure_401_client_auth_error_stays_auth_failed():
     exc.error = type("E", (), {"code": "InvalidAuthenticationToken"})()
     assert to.outcome_for_cloud_exception(exc)[0] == OUTCOME_AUTH_FAILED
 
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-WR-08: libpq "no password supplied" / pg_hba rejection
+# ---------------------------------------------------------------------------
+
+def test_outcome_db_no_password_supplied_is_missing_credentials():
+    exc = Exception("connection to server at \"db\" (10.0.0.5), port 5432 failed: "
+                    "fe_sendauth: no password supplied\n")
+    assert to.outcome_for_db_exception(exc)[0] == OUTCOME_MISSING_CREDENTIALS
+
+
+def test_outcome_db_pg_hba_rejection_is_auth_failed():
+    exc = Exception('connection to server at "db" (10.0.0.5), port 5432 failed: FATAL:  '
+                    'no pg_hba.conf entry for host "10.0.0.9", user "quirk", '
+                    'database "postgres", no encryption')
+    assert to.outcome_for_db_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
+
+def test_outcome_db_password_authentication_failed_is_auth_failed():
+    exc = Exception('FATAL:  password authentication failed for user "quirk"')
+    assert to.outcome_for_db_exception(exc)[0] == OUTCOME_AUTH_FAILED
+
+
+def test_outcome_db_real_psycopg2_no_password():
+    """A real psycopg2 exception type carrying libpq's no-password message."""
+    psycopg2 = pytest.importorskip("psycopg2")
+    exc = psycopg2.OperationalError("fe_sendauth: no password supplied\n")
+    assert to.outcome_for_db_exception(exc)[0] == OUTCOME_MISSING_CREDENTIALS

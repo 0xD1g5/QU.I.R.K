@@ -316,6 +316,13 @@ def outcome_for_db_exception(exc: BaseException) -> Tuple[str, str]:
     if first == 1045 or first == "1045":
         return OUTCOME_AUTH_FAILED, detail
     low = (str(exc) + " " + detail).lower()
+    # 235.3 review A-WR-08: libpq's "fe_sendauth: no password supplied" is the
+    # D-04 case (no password in config, .pgpass or PGPASSWORD); a pg_hba
+    # rejection is the server answering and refusing this client.
+    if "no password supplied" in low or "password is required" in low:
+        return OUTCOME_MISSING_CREDENTIALS, detail
+    if "no pg_hba.conf entry" in low:
+        return OUTCOME_AUTH_FAILED, detail
     if "authentication failed" in low or "access denied" in low:
         return OUTCOME_AUTH_FAILED, detail
     return OUTCOME_UNREACHABLE, detail
