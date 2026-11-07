@@ -88,7 +88,15 @@ class TargetOutcomeContractError(ValueError):
 
 def redact_target(raw) -> str:
     """Display label for *raw*: userinfo/query/fragment stripped, max 64. NEVER a key."""
-    return _redact_url_preview(str(raw), max_len=64)
+    text = str(raw)
+    if "://" not in text:
+        # Scheme-less refs (container images, host:port) bypass urlsplit's
+        # userinfo handling; drop a ``user:pass@`` before the first "/".
+        authority, sep, rest = text.partition("/")
+        userinfo, at, host = authority.rpartition("@")
+        if at and ":" in userinfo:
+            text = host + sep + rest
+    return _redact_url_preview(text, max_len=64)
 
 
 @dataclass(frozen=True)

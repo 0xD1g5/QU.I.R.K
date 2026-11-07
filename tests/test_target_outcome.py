@@ -29,6 +29,21 @@ def test_outcome_display_label_redacts_userinfo_and_query():
     assert "u:p" not in o.labels[raw]
 
 
+@pytest.mark.parametrize("raw,label", [
+    ("user:pass@reg.io/img:1", "reg.io/img:1"),
+    ("u:p@10.0.0.1:443", "10.0.0.1:443"),
+    ("reg.io/img@sha256:abcd", "reg.io/img@sha256:abcd"),
+    ("host:5000/a/b:tag", "host:5000/a/b:tag"),
+    ("alice@corp.example", "alice@corp.example"),
+])
+def test_outcome_label_redacts_schemeless_userinfo_password(raw, label):
+    # 235.3-20 found scheme-less refs (container images) kept user:pass@.
+    assert to.redact_target(raw) == label
+    o = TargetOutcomes([raw])
+    o.record(raw, OUTCOME_UNREACHABLE, "down")
+    assert all("pass" not in r.target for r in o.resolved())
+
+
 def test_outcome_no_collision_on_shared_prefix_and_query():
     a = "https://login.example.com/" + "t" * 60 + "/discovery/keys"
     b = "https://login.example.com/" + "t" * 60 + "/discovery/v2.0/keys"
