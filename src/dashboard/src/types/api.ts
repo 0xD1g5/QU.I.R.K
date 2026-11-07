@@ -274,6 +274,8 @@ export interface DarFinding {
   quantum_risk?: string
   source?: string
   category: string            // "database" | "object_storage" | "kubernetes" | "vault"
+  // Phase 235.3 COVTRUTH-04: per-row scan error text recorded by the scanner (plan 02)
+  scan_error?: string | null
   // Database
   encryption_at_rest?: boolean | null
   tls_in_transit?: boolean | null
@@ -409,6 +411,23 @@ export interface CompareResponse {
   hardware_drift: HardwareDriftEventItem[]
 }
 
+// Phase 235.3 COVTRUTH-04: per-phase coverage record (GET /api/scans/{id}/coverage)
+export interface ScanCoveragePhase {
+  phase_name: string
+  label: string
+  status: string
+  reason: string | null
+  detail: string | null
+  duration_sec: number | null
+}
+
+export interface ScanCoverageResponse {
+  recorded: boolean
+  ran: number
+  skipped: number
+  phases: ScanCoveragePhase[]
+}
+
 export interface ScanLatestResponse {
   meta: ScanMeta
   score: ScoreData
@@ -423,6 +442,7 @@ export interface ScanLatestResponse {
   hardware_findings: HardwareFinding[]  // Phase 128 HWCOMPAT-07
   hardware_devices: HardwareComponent[]  // Phase 134 CBOM-02
   partial_failures?: PartialFailureEntry[]  // Phase 67 RESUME-02
+  coverage?: ScanCoverageResponse | null  // Phase 235.3 COVTRUTH-04
   burndown?: ClosureBurndown | null  // Phase 181 SURF-03
   // Phase 194 / DASH-09 / D-13: count of TLS endpoints excluded from
   // `certificates` (phantom rows). Non-optional -- the Pydantic default
