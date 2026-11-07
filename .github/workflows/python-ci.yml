@@ -429,9 +429,12 @@ jobs:
       # intentionally excluded from [all] (pyproject.toml lines 60-66, 129-132). Tests gated on those
       # extras take their skip path here; that is expected and still counts as green.
       # Phase 222 D-16: brand PNG drift gate must EXECUTE here; pin must equal pyproject [dev] (asserted by tests/test_brand_assets_freshness.py)
+      # Phase 235.3 follow-up: [api] is installed beside [all] (never inside it) so the OpenAPI
+      # outcome proofs and REST fuzzer tests execute in CI instead of taking their importorskip.
+      # test_install_all_excludes_schemathesis.py resolves [all] alone, so this does not weaken it.
       - name: Install project with all extras and pytest
         run: |
-          pip install -e ".[all]"
+          pip install -e ".[all,api]"
           pip install pytest
           pip install "resvg-py==0.5.0"
 
