@@ -360,3 +360,101 @@ def test_get_latest_scan_empty_table_returns_404_dashboard_006():
     resp = client.get("/api/scan/latest")
     assert resp.status_code == 404, resp.text
     assert "DASHBOARD-006" in resp.json()["detail"], resp.json()
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-09 — coverage block on GET /api/scan/latest
+# ---------------------------------------------------------------------------
+
+_COV_RUN_ID = "2026-11-05T10:00:00"
+
+
+def _coverage_client(tmp_path, monkeypatch, with_phase_records=True):
+    from quirk.dashboard.api.routes import scan as scan_routes
+    from quirk.db import get_session, init_db
+    from quirk.models import ScanPhaseRecord
+
+    db_path = str(tmp_path / "cov-latest.db")
+    init_db(db_path)
+    ts = datetime.fromisoformat(_COV_RUN_ID)
+    with get_session(db_path) as session:
+        session.add(CryptoEndpoint(
+            scanned_at=ts, scan_run_id=_COV_RUN_ID, host="10.0.0.1",
+            port=443, protocol="tls", severity="HIGH",
+        ))
+        if with_phase_records:
+            session.add_all([
+                ScanPhaseRecord(scan_run_id=_COV_RUN_ID, phase_name="jwt_scanning",
+                                status="skipped", reason="internal-target-refused",
+                                detail="10.0.0.5 refused", recorded_at=ts),
+                ScanPhaseRecord(scan_run_id=_COV_RUN_ID, phase_name="s3_scanning",
+                                status="skipped", reason="missing-credentials",
+                                detail="no AWS creds", recorded_at=ts),
+                ScanPhaseRecord(scan_run_id=_COV_RUN_ID, phase_name="db_scanning",
+                                status="ran", duration_sec=1.5, recorded_at=ts),
+            ])
+        session.commit()
+
+    engine = create_engine(f"sqlite:///{db_path}",
+                           connect_args={"check_same_thread": False})
+    TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    monkeypatch.setattr(scan_routes, "_default_db_path", lambda: db_path)
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    return TestClient(app, headers=_CSRF)
+
+
+def _assert_coverage_block(cov):
+    assert cov["recorded"] is True
+    assert cov["skipped"] == 2 and cov["ran"] == 1
+    by_name = {p["phase_name"]: p for p in cov["phases"]}
+    assert by_name["jwt_scanning"]["status"] == "skipped"
+    assert by_name["jwt_scanning"]["reason"] == "internal-target-refused"
+    assert by_name["jwt_scanning"]["detail"] == "10.0.0.5 refused"
+    assert by_name["s3_scanning"]["reason"] == "missing-credentials"
+    assert by_name["db_scanning"]["status"] == "ran"
+
+
+def test_scan_latest_default_branch_carries_coverage(tmp_path, monkeypatch):
+    client = _coverage_client(tmp_path, monkeypatch)
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    _assert_coverage_block(resp.json()["coverage"])
+
+
+def test_scan_latest_scan_id_branch_carries_coverage(tmp_path, monkeypatch):
+    client = _coverage_client(tmp_path, monkeypatch)
+    resp = client.get(f"/api/scan/latest?scan_id={_COV_RUN_ID}")
+    assert resp.status_code == 200, resp.text
+    _assert_coverage_block(resp.json()["coverage"])
+
+
+def test_scan_latest_coverage_without_phase_records_is_not_recorded(tmp_path, monkeypatch):
+    """No phase rows: load_scan_coverage returns the not-recorded payload, so
+    coverage is present with recorded False (never None for a resolved run)."""
+    client = _coverage_client(tmp_path, monkeypatch, with_phase_records=False)
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    cov = resp.json()["coverage"]
+    assert cov is not None and cov["recorded"] is False
+
+
+def test_scan_latest_coverage_load_failure_degrades_to_none(tmp_path, monkeypatch):
+    from quirk.dashboard.api.routes import scan as scan_routes
+    client = _coverage_client(tmp_path, monkeypatch)
+
+    def _boom(*a, **k):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(scan_routes, "load_scan_coverage", _boom)
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["coverage"] is None
