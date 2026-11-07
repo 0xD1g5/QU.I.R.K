@@ -194,7 +194,43 @@ inserted after 235.2, so Phase 236 stays the v5.29 candidate. Requirements are i
   4. A test enumerates every connector phase from `run_scan.py` and the scanner modules at run time, with no hand list. It fails if any connector can return no rows from an exception or refusal path while its phase records `ran`. It goes red on the pre-fix code.
   5. The Scan Coverage chips, the Data at Rest / Identity / Motion empty states and the reports show the recorded reason, not static "enable the connector" text. Database targets that failed to connect appear as failed rows instead of being dropped (`scan.py:680`). The New Scan form warns when a target or connector URL is loopback or RFC1918 and the server's `security.allow_internal_targets` is false.
   6. `docs/operators-guide.md` §3.0 has a "before a client scan" checklist, CHANGELOG has `[5.28.2]`, and the UAT series, coverage-gap artifact and vault are regenerated or synced.
-**Plans**: TBD
+**Plans**: 21 plans in 7 waves (checker passed at iteration 3: 0 blockers, 0 warnings; decisions D-01..D-12 checked independently, because check.decision-coverage-plan skipped 0/0). Every code-committing plan first asserts the branch is `v5282-open`.
+
+Plans:
+**Wave 1**
+- [ ] 235.3-01-PLAN.md — Shared per-target outcome sink (`quirk/scanner/target_outcome.py`, keyed by raw target), 8 skip reasons, fail-closed `_classify_connector_outcomes`, advisory helper (D-03..D-07)
+- [ ] 235.3-02-PLAN.md — Failed DB targets returned as failed rows (D-10); `coverage` block on `/api/scan/latest`
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 235.3-03-PLAN.md — JWT, SAML, OpenAPI record per-target outcomes (fuzz exempt, P-03)
+- [ ] 235.3-04-PLAN.md — S3 + AWS sub-scanners: missing/rejected credentials, unreachable, answered; label contract
+- [ ] 235.3-05-PLAN.md — Azure + GCP outcomes, label contract
+- [ ] 235.3-06-PLAN.md — DB, Vault, K8s outcomes; Vault network error no longer labelled auth-failed
+- [ ] 235.3-07-PLAN.md — DNSSEC + Kerberos outcomes
+- [ ] 235.3-08-PLAN.md — S/MIME, AD CS, code-signing LDAP outcomes
+- [ ] 235.3-09-PLAN.md — One shared advisory category set for trends, sensor push, findings_evaluator; real-pipeline score proof
+- [ ] 235.3-10-PLAN.md — Dashboard `coverage-reason.ts`, chip colours, Executive Skipped badge
+- [ ] 235.3-13-PLAN.md — `GET /api/config/internal-target-check` preflight route; folded + new todos
+- [ ] 235.3-20-PLAN.md — Container scanner records an outcome per image (P-15; source exempt)
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 235.3-11-PLAN.md — Every non-exempt connector closure wired to the classifier; Vault pre-gate advisory (P-01); coverage test harness; full-suite checkpoint
+- [ ] 235.3-12-PLAN.md — Data at Rest / Identity / Motion empty states show the recorded reason; failed DB rows
+
+**Wave 4** *(blocked on Wave 3)*
+- [ ] 235.3-14-PLAN.md — Paired-scan proof: a skip never scores higher than ran-clean, across intel, HTML, API, coverage
+- [ ] 235.3-15-PLAN.md — Backstop: connectors enumerated from source at run time, three legs, socket guard, red on `b6896416` (COVTRUTH-03)
+- [ ] 235.3-16-PLAN.md — New Scan internal-target warning (non-blocking, D-11)
+- [ ] 235.3-21-PLAN.md — Slow in-process e2e: 2026-11-05 repros skip with the right reason; answered-empty JWT and S3 stay `ran`
+
+**Wave 5** *(blocked on Wave 4)*
+- [ ] 235.3-17-PLAN.md — CHANGELOG `[5.28.2]` (gated), report-interpretation, doc-claim ledger
+
+**Wave 6** *(blocked on Wave 5)*
+- [ ] 235.3-18-PLAN.md — operators-guide §3.0 "Before a client scan" checklist, vault.md, master guide regenerated, labs oracles dispositioned, vault sync
+
+**Wave 7** *(blocked on Wave 6)*
+- [ ] 235.3-19-PLAN.md — UAT Series 235.3, coverage gaps regenerated, Obsidian note, full suite, push, CI observed at HEAD (no commit after it)
 
 ### Phase 235.4: Release 5.28.2 & Announcement Re-check (INSERTED)
 **Goal**: The version the announcement points at is 5.28.2, it installs and scans as the README says on every supported leg, the full chaos-lab GUI walkthrough on it shows every enabled connector either ran with results or skipped with a true reason, and the operator records a new go/no-go before anything is posted.
