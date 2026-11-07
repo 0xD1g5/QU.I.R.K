@@ -342,3 +342,35 @@ def test_k8s_unset_provider_is_not_missing_credentials(tmp_path, monkeypatch):
     assert not [e for e in eps if e["category"] == "missing_credentials"]
     # The K8S-03 path A inaccessible row is still persisted.
     assert [e for e in eps if e["error"] == "encryption-config-inaccessible"]
+
+
+# ------------------------------------------------------------------ B-WR-05
+
+def test_s3_bad_profile_is_missing_credentials_not_failed(tmp_path, monkeypatch):
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_s3": True, "aws_profile": "quirk-harness-no-such-profile",
+    }})
+    row = phases["s3_scanning"]
+    assert row["status"] == "skipped"
+    assert row["reason"] == "missing-credentials"
+    assert not [e for e in eps if e["category"] == "exception"]
+
+
+def test_eks_bad_profile_records_missing_credentials(tmp_path, monkeypatch):
+    import quirk.scanner.aws_connector as aws
+    import quirk.scanner.k8s_connector as k8s
+
+    def fake_k8s(**kw):
+        kw["outcomes"].answered(kw["outcomes"].sole_target())
+        return []
+
+    monkeypatch.setattr(k8s, "scan_k8s_targets", fake_k8s)
+    monkeypatch.setattr(aws, "BOTO3_AVAILABLE", True)
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_k8s": True, "k8s_provider": "eks", "k8s_cluster_name": "harness",
+        "aws_profile": "quirk-harness-no-such-profile",
+    }})
+    assert phases["k8s_scanning"]["status"] == "ran"
+    unanswered = [e for e in eps if e["category"] == "target_unanswered"]
+    assert len(unanswered) == 1
+    assert "missing_credentials" in unanswered[0]["error"], unanswered[0]["error"]

@@ -38,6 +38,7 @@ from quirk.scanner.target_outcome import (  # Phase 235.3 D-05
     TargetOutcome,
     TargetOutcomeContractError,
     TargetOutcomes,
+    outcome_for_cloud_exception,
 )
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
 from quirk.interactive import interactive_config
@@ -3904,14 +3905,25 @@ def main():
                 logger.v("boto3 not installed — S3 scanning skipped")
                 return _recorder.skip("missing-extra", "boto3 not installed")
             import boto3
-            s3_session = boto3.Session(
-                region_name=cfg.connectors.aws_region,
-                profile_name=cfg.connectors.aws_profile,
-            )
             _s3_endpoint = cfg.connectors.aws_endpoint_url or None
             _outcomes = TargetOutcomes(
                 [aws_target_label("s3", cfg.connectors.aws_region, _s3_endpoint)]
             )
+            # Review B-WR-05: a bad aws_profile raises ProfileNotFound here;
+            # classify it like scan_aws_targets does (missing-credentials)
+            # instead of letting _wrapped_phase record "failed".
+            try:
+                s3_session = boto3.Session(
+                    region_name=cfg.connectors.aws_region,
+                    profile_name=cfg.connectors.aws_profile,
+                )
+            except Exception as exc:
+                _outcomes.record(
+                    _outcomes.sole_target(), *outcome_for_cloud_exception(exc),
+                )
+                return _classify_connector_outcomes(
+                    "s3_connector", _outcomes, [], error_endpoints, _recorder,
+                )
             eps = _scan_s3_encryption(
                 session=s3_session,
                 logger=logger,
@@ -4034,9 +4046,11 @@ def main():
                     raise
                 except Exception as exc:
                     logger.v(f"EKS encryption scan unavailable: {exc}")
+                    # Review B-WR-05: classify (ProfileNotFound and
+                    # NoCredentialsError are missing-credentials, not unreachable).
                     _outcomes.record(
                         f"eks:{cfg.connectors.k8s_cluster_name or '-'}",
-                        OUTCOME_UNREACHABLE, safe_str(exc), extra=True,
+                        *outcome_for_cloud_exception(exc), extra=True,
                     )
             logger.info(f"K8S scan: {len(eps)} cluster endpoints")
             if (cfg.connectors.k8s_provider or "").strip().lower() not in SUPPORTED_PROVIDERS:
