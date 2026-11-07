@@ -6,7 +6,7 @@ source: 2026-11-05 full chaos-lab GUI scan (5.28.1), reproduced by direct call
 priority: high
 area: quirk/scanner/jwt_scanner.py, quirk/scanner/saml_scanner.py, quirk/util/url_allowlist.py, quirk/reports/coverage.py, quirk/dashboard/api/routes/jobs.py
 status: pending
-resolves_phase: null
+resolves_phase: "235.3"
 owner: null
 ---
 

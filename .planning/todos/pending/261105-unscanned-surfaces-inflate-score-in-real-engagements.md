@@ -6,7 +6,7 @@ source: operator review of the 2026-11-05 full chaos-lab GUI scans (5.28.1)
 priority: critical
 area: quirk/reports/coverage.py, quirk/scanner/*, quirk/intelligence/scoring*, src/dashboard/src/pages/*, docs/operators-guide.md
 status: pending
-resolves_phase: null
+resolves_phase: "235.3"
 owner: null
 release_target: "5.28.2 (before the dashboard-first social launch leans on GUI scans)"
 ---
