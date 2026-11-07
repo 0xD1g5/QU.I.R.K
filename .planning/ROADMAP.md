@@ -180,7 +180,7 @@ anything, so an unscanned surface cannot raise the readiness score or read as co
 inserted after 235.2, so Phase 236 stays the v5.29 candidate. Requirements are in
 `.planning/REQUIREMENTS.md` (v5.28.2 section).
 
-- [ ] **Phase 235.3: Connector Coverage Truth Fixes** - A connector that could not look at any target records a named skip that counts as a scan error, and every surface shows the reason
+- [x] **Phase 235.3: Connector Coverage Truth Fixes** - A connector that could not look at any target records a named skip that counts as a scan error, and every surface shows the reason
 - [ ] **Phase 235.4: Release 5.28.2 & Announcement Re-check** - `v5.28.2` is tagged, published and smoke-tested from PyPI, the full chaos-lab GUI walkthrough shows no silent `ran`/0, and the operator records a new go/no-go
 
 ### Phase 235.3: Connector Coverage Truth Fixes (INSERTED)
@@ -192,45 +192,46 @@ inserted after 235.2, so Phase 236 stays the v5.29 candidate. Requirements are i
   2. Partial refusal or partial failure records `ran`, plus one scan-error row per target that did not answer.
   3. Each such skip emits an ADVISORY scan-error row. For an otherwise identical estate, the score is never higher with a skipped connector than it would be with that connector ran clean (the 235.1 D-07 rule), and this is proven across intel, HTML, API and coverage.
   4. A test enumerates every connector phase from `run_scan.py` and the scanner modules at run time, with no hand list. It fails if any connector can return no rows from an exception or refusal path while its phase records `ran`. It goes red on the pre-fix code.
-  5. The Scan Coverage chips, the Data at Rest / Identity / Motion empty states and the reports show the recorded reason, not static "enable the connector" text. Database targets that failed to connect appear as failed rows instead of being dropped (`scan.py:680`). The New Scan form warns when a target or connector URL is loopback or RFC1918 and the server's `security.allow_internal_targets` is false.
+  5. The Scan Coverage chips, the Data at Rest / Identity / Motion empty states and the reports show the recorded reason, not static "enable the connector" text. Database targets that failed to connect appear as failed rows instead of being dropped (`scan.py:680`). The New Scan form warns when a JWT or SAML connector URL is loopback or RFC1918 and the server's `security.allow_internal_targets` is false. *(Wording corrected 2026-11-07 at the phase close: the server policy never refuses plain TLS/SSH targets, so the warning checks only the JWT and SAML URL fields, review C-WR-01.)*
   6. `docs/operators-guide.md` §3.0 has a "before a client scan" checklist, CHANGELOG has `[5.28.2]`, and the UAT series, coverage-gap artifact and vault are regenerated or synced.
 **Plans**: 21 plans in 7 waves (checker passed at iteration 3: 0 blockers, 0 warnings; decisions D-01..D-12 checked independently, because check.decision-coverage-plan skipped 0/0). Every code-committing plan first asserts the branch is `v5282-open`.
+**Completed**: 2026-11-07. 21/21 plans. Verified `passed` 6/6 at `dc055f3b` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0; Python CI 42344555900, Dashboard Quality 42344557789). Code review: 45 findings in three parts, 31 fixed with red-first tests (3 critical against the phase goal: dropped K8s/EKS/broker/container rows, OpenAPI read `ran` without reading, healthy Postgres shown as failed), 14 deferred with reasons in `235.3-REVIEW.md`. Human UAT (New Scan internal-target warning on a live `quirk serve` with `allow_internal_targets: false`) approved by the operator 2026-11-07. Live GUI leg of UAT-235.3-13 deferred to 235.4 LAUNCH-10 by design. Folded todos `261105-unscanned-surfaces-inflate-score-in-real-engagements` and `261105-connector-phase-ran-with-zero-output-when-url-guard-refuses-all-targets` closed.
 
 Plans:
 **Wave 1**
-- [ ] 235.3-01-PLAN.md — Shared per-target outcome sink (`quirk/scanner/target_outcome.py`, keyed by raw target), 8 skip reasons, fail-closed `_classify_connector_outcomes`, advisory helper (D-03..D-07)
-- [ ] 235.3-02-PLAN.md — Failed DB targets returned as failed rows (D-10); `coverage` block on `/api/scan/latest`
+- [x] 235.3-01-PLAN.md — Shared per-target outcome sink (`quirk/scanner/target_outcome.py`, keyed by raw target), 8 skip reasons, fail-closed `_classify_connector_outcomes`, advisory helper (D-03..D-07)
+- [x] 235.3-02-PLAN.md — Failed DB targets returned as failed rows (D-10); `coverage` block on `/api/scan/latest`
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 235.3-03-PLAN.md — JWT, SAML, OpenAPI record per-target outcomes (fuzz exempt, P-03)
-- [ ] 235.3-04-PLAN.md — S3 + AWS sub-scanners: missing/rejected credentials, unreachable, answered; label contract
-- [ ] 235.3-05-PLAN.md — Azure + GCP outcomes, label contract
-- [ ] 235.3-06-PLAN.md — DB, Vault, K8s outcomes; Vault network error no longer labelled auth-failed
-- [ ] 235.3-07-PLAN.md — DNSSEC + Kerberos outcomes
-- [ ] 235.3-08-PLAN.md — S/MIME, AD CS, code-signing LDAP outcomes
-- [ ] 235.3-09-PLAN.md — One shared advisory category set for trends, sensor push, findings_evaluator; real-pipeline score proof
-- [ ] 235.3-10-PLAN.md — Dashboard `coverage-reason.ts`, chip colours, Executive Skipped badge
-- [ ] 235.3-13-PLAN.md — `GET /api/config/internal-target-check` preflight route; folded + new todos
-- [ ] 235.3-20-PLAN.md — Container scanner records an outcome per image (P-15; source exempt)
+- [x] 235.3-03-PLAN.md — JWT, SAML, OpenAPI record per-target outcomes (fuzz exempt, P-03)
+- [x] 235.3-04-PLAN.md — S3 + AWS sub-scanners: missing/rejected credentials, unreachable, answered; label contract
+- [x] 235.3-05-PLAN.md — Azure + GCP outcomes, label contract
+- [x] 235.3-06-PLAN.md — DB, Vault, K8s outcomes; Vault network error no longer labelled auth-failed
+- [x] 235.3-07-PLAN.md — DNSSEC + Kerberos outcomes
+- [x] 235.3-08-PLAN.md — S/MIME, AD CS, code-signing LDAP outcomes
+- [x] 235.3-09-PLAN.md — One shared advisory category set for trends, sensor push, findings_evaluator; real-pipeline score proof
+- [x] 235.3-10-PLAN.md — Dashboard `coverage-reason.ts`, chip colours, Executive Skipped badge
+- [x] 235.3-13-PLAN.md — `GET /api/config/internal-target-check` preflight route; folded + new todos
+- [x] 235.3-20-PLAN.md — Container scanner records an outcome per image (P-15; source exempt)
 
 **Wave 3** *(blocked on Wave 2)*
-- [ ] 235.3-11-PLAN.md — Every non-exempt connector closure wired to the classifier; Vault pre-gate advisory (P-01); coverage test harness; full-suite checkpoint
-- [ ] 235.3-12-PLAN.md — Data at Rest / Identity / Motion empty states show the recorded reason; failed DB rows
+- [x] 235.3-11-PLAN.md — Every non-exempt connector closure wired to the classifier; Vault pre-gate advisory (P-01); coverage test harness; full-suite checkpoint
+- [x] 235.3-12-PLAN.md — Data at Rest / Identity / Motion empty states show the recorded reason; failed DB rows
 
 **Wave 4** *(blocked on Wave 3)*
-- [ ] 235.3-14-PLAN.md — Paired-scan proof: a skip never scores higher than ran-clean, across intel, HTML, API, coverage
-- [ ] 235.3-15-PLAN.md — Backstop: connectors enumerated from source at run time, three legs, socket guard, red on `b6896416` (COVTRUTH-03)
-- [ ] 235.3-16-PLAN.md — New Scan internal-target warning (non-blocking, D-11)
-- [ ] 235.3-21-PLAN.md — Slow in-process e2e: 2026-11-05 repros skip with the right reason; answered-empty JWT and S3 stay `ran`
+- [x] 235.3-14-PLAN.md — Paired-scan proof: a skip never scores higher than ran-clean, across intel, HTML, API, coverage
+- [x] 235.3-15-PLAN.md — Backstop: connectors enumerated from source at run time, three legs, socket guard, red on `b6896416` (COVTRUTH-03)
+- [x] 235.3-16-PLAN.md — New Scan internal-target warning (non-blocking, D-11)
+- [x] 235.3-21-PLAN.md — Slow in-process e2e: 2026-11-05 repros skip with the right reason; answered-empty JWT and S3 stay `ran`
 
 **Wave 5** *(blocked on Wave 4)*
-- [ ] 235.3-17-PLAN.md — CHANGELOG `[5.28.2]` (gated), report-interpretation, doc-claim ledger
+- [x] 235.3-17-PLAN.md — CHANGELOG `[5.28.2]` (gated), report-interpretation, doc-claim ledger
 
 **Wave 6** *(blocked on Wave 5)*
-- [ ] 235.3-18-PLAN.md — operators-guide §3.0 "Before a client scan" checklist, vault.md, master guide regenerated, labs oracles dispositioned, vault sync
+- [x] 235.3-18-PLAN.md — operators-guide §3.0 "Before a client scan" checklist, vault.md, master guide regenerated, labs oracles dispositioned, vault sync
 
 **Wave 7** *(blocked on Wave 6)*
-- [ ] 235.3-19-PLAN.md — UAT Series 235.3, coverage gaps regenerated, Obsidian note, full suite, push, CI observed at HEAD (no commit after it)
+- [x] 235.3-19-PLAN.md — UAT Series 235.3, coverage gaps regenerated, Obsidian note, full suite, push, CI observed at HEAD (no commit after it)
 
 ### Phase 235.4: Release 5.28.2 & Announcement Re-check (INSERTED)
 **Goal**: The version the announcement points at is 5.28.2, it installs and scans as the README says on every supported leg, the full chaos-lab GUI walkthrough on it shows every enabled connector either ran with results or skipped with a true reason, and the operator records a new go/no-go before anything is posted.

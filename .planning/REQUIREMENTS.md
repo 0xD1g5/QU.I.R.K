@@ -151,26 +151,27 @@ deserved. Sources: todos `261105-unscanned-surfaces-inflate-score-in-real-engage
 
 ### Coverage truth (COVTRUTH)
 
-- [ ] **COVTRUTH-01**: A connector phase reads `ran` only if at least one target answered. If none
+- [x] **COVTRUTH-01**: A connector phase reads `ran` only if at least one target answered. If none
   did, it reads `skipped` with a named reason. Partial refusal or failure reads `ran` plus one
   scan-error row per target that did not answer. A live endpoint that answers with nothing stays
   `ran` with 0 rows. This covers JWT, SAML, S3 and every other connector the source audit
   (COVTRUTH-03) finds.
-- [ ] **COVTRUTH-02**: Two new reasons are added to `SCAN_PHASE_SKIP_REASONS`: `internal-target-refused`
+- [x] **COVTRUTH-02**: Two new reasons are added to `SCAN_PHASE_SKIP_REASONS`: `internal-target-refused`
   (URL guard / server `security.allow_internal_targets` policy) and `auth-failed` (credentials
   present but rejected). `missing-credentials` (no credentials in the chain) and `failed` (every
   target unreachable) are reused. Each skip emits an ADVISORY scan-error row that counts in the score
   like 5.28.1's `missing-binary` (235.1 D-07). The rows are handled downstream (trends, sensor push,
   findings_evaluator) in the same way.
-- [ ] **COVTRUTH-03**: A test enumerates every connector phase from source at run time, with no hand
+- [x] **COVTRUTH-03**: A test enumerates every connector phase from source at run time, with no hand
   list. It fails if any connector can return no rows from an exception or refusal path while its
   phase records `ran`. It is red on the pre-fix code.
-- [ ] **COVTRUTH-04**: The Scan Coverage chips, the dashboard page empty states (Data at Rest,
+- [x] **COVTRUTH-04**: The Scan Coverage chips, the dashboard page empty states (Data at Rest,
   Identity, Motion, …) and the reports show the recorded skip reason. Database targets that failed
   to connect appear as failed rows, not omitted.
-- [ ] **COVTRUTH-05**: The New Scan form warns when a target or connector URL is loopback or RFC1918
-  and the server's `security.allow_internal_targets` is false.
-- [ ] **COVTRUTH-06**: `docs/operators-guide.md` §3.0 gets a "before a client scan" checklist (server
+- [x] **COVTRUTH-05**: The New Scan form warns when a JWT or SAML connector URL is loopback or RFC1918
+  and the server's `security.allow_internal_targets` is false. *(Corrected 2026-11-07 from "a target or
+  connector URL": the policy never refuses plain TLS/SSH targets; review C-WR-01.)*
+- [x] **COVTRUTH-06**: `docs/operators-guide.md` §3.0 gets a "before a client scan" checklist (server
   `config.yaml` with `allow_internal_targets` and scoped `trusted_targets`; start `quirk serve` with
   the cloud credentials it should use; treat an enabled connector with zero results as unverified).
   CHANGELOG `[5.28.2]` describes the fix. The UAT series, `docs/uat-coverage-gaps.md` and the vault
@@ -196,12 +197,12 @@ deserved. Sources: todos `261105-unscanned-surfaces-inflate-score-in-real-engage
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COVTRUTH-01 | Phase 235.3 | Pending |
-| COVTRUTH-02 | Phase 235.3 | Pending |
-| COVTRUTH-03 | Phase 235.3 | Pending |
-| COVTRUTH-04 | Phase 235.3 | Pending |
-| COVTRUTH-05 | Phase 235.3 | Pending |
-| COVTRUTH-06 | Phase 235.3 | Pending |
+| COVTRUTH-01 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
+| COVTRUTH-02 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
+| COVTRUTH-03 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
+| COVTRUTH-04 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
+| COVTRUTH-05 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
+| COVTRUTH-06 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
 | REL-11 | Phase 235.4 | Pending |
 | REL-12 | Phase 235.4 | Pending |
 | LAUNCH-10 | Phase 235.4 | Pending |
