@@ -34,9 +34,9 @@ from quirk.util.url_allowlist import (
     RC_INTERNAL_IP,
     RC_LINK_LOCAL,
     RC_LOOPBACK,
-    _redact_url_preview,
     validate_external_url,
 )
+from quirk.scanner.target_outcome import redact_target
 from quirk.dashboard.api.config_preview import resolve_effective_config
 from quirk.dashboard.api.middleware.auth import require_auth
 from quirk.dashboard.api.middleware.csrf import require_csrf
@@ -385,10 +385,17 @@ def _checked_url_for(value: str) -> Optional[Tuple[str, bool]]:
     if "://" in value:
         url = value
     else:
-        host = value
-        if host.count(":") > 1 and not host.startswith("["):
-            host = f"[{host}]"
-        url = f"http://{host}/"
+        # C-WR-06: drop a scheme-less user:pass@ before anything else, and
+        # bracket only a bare IPv6 literal. Counting colons bracketed
+        # "admin:s3cret@localhost:8080" as IPv6 and classified it None.
+        authority, _sep, rest = value.partition("/")
+        hostport = authority.rpartition("@")[2]
+        try:
+            if ipaddress.ip_address(hostport).version == 6:
+                hostport = f"[{hostport}]"
+        except ValueError:
+            pass
+        url = f"http://{hostport}/{rest}"
     try:
         host = (urlsplit(url).hostname or "").rstrip(".").lower()
     except ValueError:
@@ -478,7 +485,9 @@ def classify_internal_targets(
             entries.append(
                 InternalTargetEntry(
                     field=field,
-                    preview=_redact_url_preview(url, max_len=64),
+                    # C-WR-06: the preview is the classified URL, redacted
+                    # by the same helper the coverage records use.
+                    preview=redact_target(url),
                     reason=reason,
                 )
             )

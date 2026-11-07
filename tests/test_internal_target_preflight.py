@@ -253,3 +253,25 @@ def test_one_long_field_never_starves_the_other(client, monkeypatch):
     assert body["truncated"] is True
     saml = [e["preview"] for e in body["internal"] if e["field"] == "saml_targets"]
     assert saml == ["https://idp.corp.example/md", "http://10.9.9.9/md"]
+
+
+@pytest.mark.parametrize(
+    "value, reason",
+    [
+        ("user:pass@10.0.0.1", "internal_ip"),
+        ("admin:s3cret@localhost:8080", "loopback"),
+        ("admin:s3cret@127.0.0.1:8443/path?tok=s3cret", "loopback"),
+        ("http://admin:s3cret@10.0.0.1/x", "internal_ip"),
+        ("::1", "loopback"),
+        ("[::1]:8080", "loopback"),
+    ],
+)
+def test_scheme_less_userinfo_is_classified_and_never_echoed(client, value, reason):
+    """C-WR-06: the preview is built from the same value that is classified
+    (redact_target), so scheme-less user:pass@ never reaches the response,
+    and a two-colon userinfo value is not mis-bracketed as IPv6."""
+    r = _post(client, jwt_targets=[value])
+    assert r.status_code == 200, r.text
+    assert [e["reason"] for e in r.json()["internal"]] == [reason]
+    for secret in ("pass", "s3cret", "tok="):
+        assert secret not in r.text

@@ -59,7 +59,7 @@ class InternalTargetCheckRequest(BaseModel):
 
 class InternalTargetEntry(BaseModel):
     field: str      # "jwt_targets" | "saml_targets" (the policy-gated connector lists)
-    preview: str    # redacted via _redact_url_preview
+    preview: str    # the classified URL, redacted via target_outcome.redact_target
     reason: str     # "loopback" | "internal_ip" | "link_local"
 
 
