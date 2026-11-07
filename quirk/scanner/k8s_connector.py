@@ -26,6 +26,14 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+)
+from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
 # kubernetes Python client optional import — required for test patching.
@@ -265,6 +273,16 @@ def _scan_aks_encryption(
     return results
 
 
+def _k8s_outcome_for_exception(exc: BaseException):
+    """Classify a kubernetes-client failure (duck-typed; SDK may be absent)."""
+    status = getattr(exc, "status", None)
+    if status in (401, 403):
+        return OUTCOME_AUTH_FAILED, safe_str(exc)
+    if any(n == "ConfigException" for n in (c.__name__ for c in type(exc).__mro__)):
+        return OUTCOME_MISSING_CREDENTIALS, safe_str(exc)
+    return OUTCOME_UNREACHABLE, safe_str(exc)
+
+
 # ---------------------------------------------------------------------------
 # Secret type enumeration — K8S-02
 # ---------------------------------------------------------------------------
@@ -274,6 +292,9 @@ def _enumerate_secret_types(
     namespace: str,
     logger,
     session_start: Optional[datetime] = None,
+    *,
+    outcomes=None,
+    outcome_target=None,
 ) -> Optional[CryptoEndpoint]:
     """Enumerate K8S secret types in namespace without reading any secret values (K8S-02).
 
@@ -306,6 +327,8 @@ def _enumerate_secret_types(
                 f"{namespace!r}"
             )
         type_counts = dict(Counter(t for t in secret_types if t is not None))
+        if outcomes is not None:
+            outcomes.record(outcome_target, OUTCOME_ANSWERED)
         return CryptoEndpoint(
             host=host_id,
             port=0,
@@ -317,12 +340,19 @@ def _enumerate_secret_types(
             ),
             scanned_at=now,
         )
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         # T-29-06: discriminate on status 403 for RBAC insufficient-privilege path.
         # Using getattr duck-typing because ApiException may be None at module level
         # when kubernetes SDK is absent — explicit import guard protects this.
         status = getattr(exc, "status", None)
         if status == 403:
+            if outcomes is not None:
+                outcomes.record(
+                    outcome_target, OUTCOME_AUTH_FAILED,
+                    "insufficient-rbac-privileges", row_emitted=True,
+                )
             return CryptoEndpoint(
                 host=host_id,
                 port=0,
@@ -334,6 +364,8 @@ def _enumerate_secret_types(
                 ),
                 scanned_at=now,
             )
+        if outcomes is not None:
+            outcomes.record(outcome_target, *_k8s_outcome_for_exception(exc))
         # T-29-09: log only namespace + exception string — never raw secret objects
         if logger:
             logger.v(f"K8S secret enumeration error in {namespace}: {exc}")
@@ -392,6 +424,8 @@ def scan_k8s_targets(
     aks_clusters: list = None,
     logger=None,
     session_start: Optional[datetime] = None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """K8S scan dispatcher (public entry point, called by run_scan.py).
 
@@ -410,6 +444,8 @@ def scan_k8s_targets(
     """
     provider_norm = (provider or "").strip().lower()
     results: List[CryptoEndpoint] = []
+    # Phase 235.3 D-05: record against the closure's sole target label only.
+    target = outcomes.sole_target() if outcomes is not None else None
 
     # ── K8S-03 path A: unsupported/unknown provider ─────────────────────────
     if provider_norm not in SUPPORTED_PROVIDERS:
@@ -423,6 +459,11 @@ def scan_k8s_targets(
             ),
             session_start=session_start,
         ))
+        if outcomes is not None:
+            outcomes.record(
+                target, OUTCOME_MISSING_CREDENTIALS,
+                "unsupported or unset Kubernetes provider", row_emitted=True,
+            )
         return results
 
     # ── K8S-03 path B: kubernetes SDK unavailable (even when provider is valid) ─
@@ -479,6 +520,11 @@ def scan_k8s_targets(
                 credential = DefaultAzureCredential()
             except Exception as exc:
                 credential = None
+                if outcomes is not None:
+                    outcomes.record(
+                        target, OUTCOME_MISSING_CREDENTIALS,
+                        safe_str(exc), row_emitted=True,
+                    )
                 if logger:
                     logger.v(f"Azure credential unavailable: {exc}")
                 # CR-02 (Phase 29 gap closure): K8S-03 invariant requires an explicit
@@ -521,6 +567,11 @@ def scan_k8s_targets(
                 # _scan_aks_encryption is NOT called on the empty path (Phase 69 /
                 # CR-09: cluster_configs=[] can raise AttributeError).
                 if not (aks_clusters or []):
+                    if outcomes is not None:
+                        outcomes.record(
+                            target, OUTCOME_MISSING_CREDENTIALS,
+                            "no aks_clusters configured", row_emitted=True,
+                        )
                     results.append(_emit_inaccessible_finding(
                         provider="aks",
                         cluster_name=cluster_name or "aks",
@@ -554,10 +605,16 @@ def scan_k8s_targets(
                 namespace=namespace or "default",
                 logger=logger,
                 session_start=session_start,
+                outcomes=outcomes,
+                outcome_target=target,
             )
             if ep is not None:
                 results.append(ep)
+        except TargetOutcomeContractError:
+            raise
         except Exception as exc:
+            if outcomes is not None:
+                outcomes.record(target, *_k8s_outcome_for_exception(exc))
             if logger:
                 logger.v(f"K8S secret enumeration setup error: {exc}")
 
@@ -565,6 +622,12 @@ def scan_k8s_targets(
     # If somehow no results were produced for a supported provider (e.g., empty
     # cluster_configs with no cluster_name), emit an inaccessible finding rather
     # than silently returning [].
+    if outcomes is not None and not outcomes.items.get(target) and any(
+        not getattr(r, "scan_error", None) for r in results
+    ):
+        # GKE/AKS encryption posture answered without a secret-enumeration record.
+        outcomes.record(target, OUTCOME_ANSWERED)
+
     if not results:
         results.append(_emit_inaccessible_finding(
             provider=provider_norm,

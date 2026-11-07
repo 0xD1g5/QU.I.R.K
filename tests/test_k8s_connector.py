@@ -665,3 +665,103 @@ def test_dat_scan_json_encrypted_includes_key_name():
     assert "key_name" in payload
     assert payload["key_name"].endswith("/cryptoKeys/k")
     assert payload.get("encrypted") is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3-06: per-target outcomes (COVTRUTH-01)
+# ---------------------------------------------------------------------------
+
+class _FakeApiExc(Exception):
+    def __init__(self, status):
+        self.status = status
+        super().__init__(f"{status}")
+
+
+def _k8s_scan_with_core(core_v1, outcomes, load_effect=None):
+    from quirk.scanner.k8s_connector import scan_k8s_targets
+    with patch("quirk.scanner.k8s_connector.K8S_AVAILABLE", True), \
+         patch("quirk.scanner.k8s_connector.k8s_config") as cfg, \
+         patch("quirk.scanner.k8s_connector.k8s_client") as cl:
+        if load_effect is not None:
+            cfg.load_kube_config.side_effect = load_effect
+        cl.CoreV1Api.return_value = core_v1
+        return scan_k8s_targets(
+            provider="eks", cluster_name="ctx-1", namespace="default",
+            outcomes=outcomes,
+        )
+
+
+def test_k8s_outcome_answered_with_zero_secrets():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    v1 = MagicMock()
+    v1.list_namespaced_secret.return_value.items = []
+    sink = TargetOutcomes(["ctx-1"])
+    _k8s_scan_with_core(v1, sink)
+    assert sink.resolved()[0].kind == "answered"
+
+
+def test_k8s_outcome_rbac_403_records_auth_failed_row_emitted():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    v1 = MagicMock()
+    v1.list_namespaced_secret.side_effect = _FakeApiExc(403)
+    sink = TargetOutcomes(["ctx-1"])
+    res = _k8s_scan_with_core(v1, sink)
+    assert any(r.scan_error == "insufficient-rbac-privileges" for r in res)
+    o = sink.resolved()[0]
+    assert o.kind == "auth_failed" and o.row_emitted is True
+
+
+def test_k8s_outcome_unreachable_and_safety_net_row_kept():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    v1 = MagicMock()
+    v1.list_namespaced_secret.side_effect = OSError("connection refused")
+    sink = TargetOutcomes(["ctx-1"])
+    res = _k8s_scan_with_core(v1, sink)
+    assert res and res[0].scan_error == "encryption-config-inaccessible"
+    assert sink.resolved()[0].kind == "unreachable"
+
+
+def test_k8s_outcome_unknown_provider_records_row_emitted():
+    from quirk.scanner.k8s_connector import scan_k8s_targets
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["ctx-1"])
+    res = scan_k8s_targets(provider="bogus", cluster_name="ctx-1", outcomes=sink)
+    assert len(res) == 1
+    o = sink.resolved()[0]
+    assert o.kind == "missing_credentials" and o.row_emitted is True
+
+
+def test_k8s_outcome_aks_credential_failure_missing_credentials():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["ctx-1"])
+    with patch("quirk.scanner.k8s_connector.AKS_AVAILABLE", True):
+        from quirk.scanner.k8s_connector import scan_k8s_targets
+        with patch("azure.identity.DefaultAzureCredential", create=True,
+                   side_effect=RuntimeError("no credentials configured")):
+            scan_k8s_targets(provider="aks", cluster_name="", azure_subscription_id="s",
+                             aks_clusters=[{"name": "a", "resource_group": "r"}],
+                             outcomes=sink)
+    assert sink.resolved()[0].kind == "missing_credentials"
+
+
+def test_k8s_outcomes_none_unchanged():
+    v1 = MagicMock()
+    v1.list_namespaced_secret.return_value.items = []
+    res = _k8s_scan_with_core(v1, None)
+    assert len(res) == 1 and res[0].service_detail == "secret-types-summary"
+
+
+def test_k8s_contract_error_propagates():
+    from quirk.scanner.k8s_connector import scan_k8s_targets
+    from quirk.scanner.target_outcome import TargetOutcomes, TargetOutcomeContractError
+    # sole_target() requires exactly one expected label
+    with pytest.raises(TargetOutcomeContractError):
+        scan_k8s_targets(provider="bogus", cluster_name="x",
+                         outcomes=TargetOutcomes(["a", "b"]))
+    # a record against a label outside the sink inside the broad except path
+    from quirk.scanner.k8s_connector import _enumerate_secret_types
+    v1 = MagicMock()
+    v1.list_namespaced_secret.return_value.items = []
+    with pytest.raises(TargetOutcomeContractError):
+        _enumerate_secret_types(v1, "default", None, outcomes=TargetOutcomes(["not-this-target"]),
+                                outcome_target="ctx-1")

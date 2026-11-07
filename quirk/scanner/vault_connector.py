@@ -32,6 +32,14 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+    outcome_for_vault_exception,
+)
 from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
@@ -403,6 +411,8 @@ def scan_vault_targets(
     logger=None,
     session_start: Optional[datetime] = None,
     cfg=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Enumerate HashiCorp Vault cryptographic posture (VAULT-01/02/03).
 
@@ -417,6 +427,8 @@ def scan_vault_targets(
         return []
 
     now = _now_or(session_start)
+    # Phase 235.3 D-05: one Vault per call; record against the closure's label only.
+    target = outcomes.sole_target() if outcomes is not None else None
     # Phase 72 D-22 / WR-09: explicit token contract — caller must source the token
     # (env var, config, secret manager). No implicit os.environ fallback in connector.
     if token is None:
@@ -427,6 +439,11 @@ def scan_vault_targets(
     resolved_token = token
     if not resolved_token:
         # Caller passed an empty string explicitly — keep the existing scan_error path
+        if outcomes is not None:
+            outcomes.record(
+                target, OUTCOME_MISSING_CREDENTIALS,
+                "no Vault token configured", row_emitted=True,
+            )
         return [CryptoEndpoint(
             host=vault_addr or "vault://unknown",
             port=8200,
@@ -452,6 +469,10 @@ def scan_vault_targets(
             timeout=vault_timeout,
         )
     except Exception as exc:  # noqa: BLE001
+        if outcomes is not None:
+            outcomes.record(
+                target, OUTCOME_UNREACHABLE, safe_str(exc), row_emitted=True,
+            )
         if logger:
             logger.v(f"Vault hvac.Client construction error: {safe_str(exc)}")
         return [CryptoEndpoint(
@@ -464,6 +485,11 @@ def scan_vault_targets(
 
     try:
         if not client.is_authenticated():
+            if outcomes is not None:
+                outcomes.record(
+                    target, OUTCOME_AUTH_FAILED,
+                    "token rejected or Vault sealed", row_emitted=True,
+                )
             return [CryptoEndpoint(
                 host=resolved_addr,
                 port=8200,
@@ -473,16 +499,30 @@ def scan_vault_targets(
                 ),
                 scanned_at=now,
             )]
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:  # noqa: BLE001
+        kind, detail = outcome_for_vault_exception(exc)
+        if outcomes is not None:
+            outcomes.record(target, kind, detail, row_emitted=True)
         if logger:
             logger.v(f"Vault auth check network error: {safe_str(exc)}")
+        # Phase 235.3 D-06: a network error is not an auth failure; only an
+        # Unauthorized/Forbidden response keeps the vault-auth-failed label.
+        label = (
+            "vault-auth-failed" if kind == OUTCOME_AUTH_FAILED else "vault-unreachable"
+        )
         return [CryptoEndpoint(
             host=resolved_addr,
             port=8200,
             protocol="VAULT",
-            scan_error=f"vault-auth-failed: {safe_str(exc)}",
+            scan_error=f"{label}: {safe_str(exc)}",
             scanned_at=now,
         )]
+
+    # Authenticated: the Vault answered, even if it yields zero mounts (D-03).
+    if outcomes is not None:
+        outcomes.record(target, OUTCOME_ANSWERED)
 
     results: List[CryptoEndpoint] = []
     # Sub-scanner isolation: each in its own try/except (D-04 spirit applied broadly)

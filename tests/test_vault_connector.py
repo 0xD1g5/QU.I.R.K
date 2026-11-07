@@ -563,3 +563,90 @@ def test_scan_pki_mounts_parses_multi_cert_chain():
         f"expected 2 certs in the chain, got {len(certs)} — the plural parser "
         f"must split the chain identically to the production code path"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3-06: per-target outcomes + vault-unreachable label (COVTRUTH-01)
+# ---------------------------------------------------------------------------
+
+def _vault_scan(client_or_exc, outcomes=None, addr="http://127.0.0.1:8200"):
+    from quirk.scanner.vault_connector import scan_vault_targets
+    with patch("quirk.scanner.vault_connector.HVAC_AVAILABLE", True), \
+         patch("quirk.scanner.vault_connector.hvac") as mock_hvac:
+        mock_hvac.Client.return_value = client_or_exc
+        return scan_vault_targets(addr, token="t", outcomes=outcomes)
+
+
+def test_vault_outcome_auth_rejected_keeps_auth_failed_row():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["http://127.0.0.1:8200"])
+    res = _vault_scan(_build_mock_client(is_auth=False), sink)
+    assert res[0].scan_error.startswith("vault-auth-failed:")
+    o = sink.resolved()[0]
+    assert o.kind == "auth_failed" and o.row_emitted is True
+
+
+def test_vault_outcome_network_error_is_unreachable_and_relabelled():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    client = MagicMock()
+    client.is_authenticated.side_effect = ConnectionError("connection refused")
+    sink = TargetOutcomes(["http://127.0.0.1:1"])
+    res = _vault_scan(client, sink, addr="http://127.0.0.1:1")
+    assert res[0].scan_error.startswith("vault-unreachable:")
+    assert "vault-auth-failed" not in res[0].scan_error
+    o = sink.resolved()[0]
+    assert o.kind == "unreachable" and o.row_emitted is True
+
+
+def test_vault_network_error_label_without_sink():
+    client = MagicMock()
+    client.is_authenticated.side_effect = ConnectionError("boom")
+    res = _vault_scan(client)
+    assert res[0].scan_error.startswith("vault-unreachable:")
+
+
+def test_vault_outcome_forbidden_is_auth_failed():
+    from quirk.scanner.target_outcome import TargetOutcomes
+
+    class Forbidden(Exception):
+        pass
+
+    client = MagicMock()
+    client.is_authenticated.side_effect = Forbidden("permission denied")
+    sink = TargetOutcomes(["http://127.0.0.1:8200"])
+    res = _vault_scan(client, sink)
+    assert res[0].scan_error.startswith("vault-auth-failed:")
+    assert sink.resolved()[0].kind == "auth_failed"
+
+
+def test_vault_outcome_answered_with_zero_mounts():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["http://127.0.0.1:8200"])
+    res = _vault_scan(_build_mock_client(is_auth=True), sink)
+    assert sink.resolved()[0].kind == "answered"
+    assert all(not r.scan_error for r in res)
+
+
+def test_vault_outcomes_none_unchanged():
+    res = _vault_scan(_build_mock_client(is_auth=False))
+    assert len(res) == 1 and res[0].scan_error.startswith("vault-auth-failed:")
+
+
+def test_vault_outcome_dsn_secret_not_leaked():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    client = MagicMock()
+    client.is_authenticated.side_effect = ConnectionError(
+        "failed http://user:hunter2pw@127.0.0.1:1/x"
+    )
+    sink = TargetOutcomes(["http://127.0.0.1:1"])
+    _vault_scan(client, sink, addr="http://127.0.0.1:1")
+    assert "hunter2pw" not in sink.resolved()[0].detail
+
+
+def test_vault_contract_error_propagates():
+    from quirk.scanner.target_outcome import TargetOutcomes, TargetOutcomeContractError
+    from quirk.scanner.vault_connector import scan_vault_targets
+    with patch("quirk.scanner.vault_connector.HVAC_AVAILABLE", True):
+        with pytest.raises(TargetOutcomeContractError):
+            scan_vault_targets("http://127.0.0.1:1", token="t",
+                               outcomes=TargetOutcomes(["a", "b"]))
