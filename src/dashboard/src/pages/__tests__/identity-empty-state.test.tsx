@@ -25,7 +25,7 @@ afterEach(() => {
 })
 
 describe("IdentityPage — protocol summary cards, no scan data (UAT-7-34)", () => {
-  it("renders a Not Scanned state for each identity protocol card when identity findings are absent", async () => {
+  it("renders a Not Scanned state for each identity protocol card when identity findings are absent (no-coverage static fallback)", async () => {
     scanDataReturn = { data: FIXTURE, loading: false, error: null }
     const { IdentityPage } = await import("@/pages/identity")
     render(<IdentityPage />)
@@ -57,5 +57,21 @@ describe("IdentityPage — protocol summary cards, no scan data (UAT-7-34)", () 
       ),
     ).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
+  })
+
+  it("identity empty state shows the recorded saml refusal", async () => {
+    const phase = (n: string) => ({ phase_name: n, label: n, status: "skipped", reason: "internal-target-refused", detail: null, duration_sec: null })
+    scanDataReturn = { data: { ...FIXTURE, coverage: { recorded: true, ran: 0, skipped: 3, phases: ["kerberos_scanning", "saml_scanning", "dnssec_scanning"].map(phase) } }, loading: false, error: null }
+    const { IdentityPage } = await import("@/pages/identity")
+    render(<IdentityPage />)
+    expect(screen.getByText(/internal targets refused by server policy/)).toBeInTheDocument()
+  })
+
+  it("identity empty state shows ran with zero results", async () => {
+    const phase = (n: string) => ({ phase_name: n, label: n, status: "ran", reason: null, detail: null, duration_sec: 1 })
+    scanDataReturn = { data: { ...FIXTURE, coverage: { recorded: true, ran: 3, skipped: 0, phases: ["kerberos_scanning", "saml_scanning", "dnssec_scanning"].map(phase) } }, loading: false, error: null }
+    const { IdentityPage } = await import("@/pages/identity")
+    render(<IdentityPage />)
+    expect(screen.getByText(/Ran, 0 results/)).toBeInTheDocument()
   })
 })

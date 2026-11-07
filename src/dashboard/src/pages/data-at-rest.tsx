@@ -4,6 +4,7 @@ import type { DarFinding } from "@/types/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyStateCard } from "@/components/EmptyStateCard"
+import { emptyStateFor } from "@/lib/coverage-reason"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -89,14 +90,23 @@ function DatabaseTable({ findings }: { findings: DarFinding[] }) {
                 <TableCell className="text-sm"><SeverityBadge severity={f.severity} /></TableCell>
                 <TableCell className="text-sm">{f.title}</TableCell>
                 <TableCell className="text-sm">
+                  {f.scan_error ? (
+                    <>
+                      <Badge aria-label="status: Failed" className="bg-[hsl(var(--status-critical))] text-white text-xs">Failed</Badge>
+                      <span className="ml-2">{f.scan_error}</span>
+                    </>
+                  ) : (
                   <BoolBadge value={f.encryption_at_rest}
                     trueLabel="ENCRYPTED" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
                     falseLabel="UNENCRYPTED" falseClass="bg-[hsl(var(--status-critical))] text-white" />
+                  )}
                 </TableCell>
                 <TableCell className="text-sm">
+                  {f.scan_error ? <span>—</span> : (
                   <BoolBadge value={f.tls_in_transit}
                     trueLabel="TLS ON" trueClass="bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]"
                     falseLabel="TLS OFF" falseClass="bg-[hsl(var(--status-critical))] text-white" />
+                  )}
                 </TableCell>
                 <TableCell className="text-sm">{nullDash(f.quantum_risk)}</TableCell>
                 <TableCell className="text-sm">{truncate(f.remediation)}</TableCell>
@@ -306,7 +316,7 @@ export function DataAtRestPage() {
           Database Encryption
         </h2>
         {dbFindings.length === 0 ? (
-          <EmptyStateCard emptyFor="scan-latest" message="No database endpoints scanned in this session — enable the DB scanner in your config or scan a database host." />
+          <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["db_scanning"], "No database endpoints scanned in this session — enable the DB scanner in your config or scan a database host.")} />
         ) : (
           <DatabaseTable findings={dbFindings} />
         )}
@@ -317,7 +327,7 @@ export function DataAtRestPage() {
           Object Storage
         </h2>
         {objFindings.length === 0 ? (
-          <EmptyStateCard emptyFor="scan-latest" message="No object storage buckets scanned in this session — enable the object storage scanner or configure cloud credentials." />
+          <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["s3_scanning", "blob_scanning"], "No object storage buckets scanned in this session — enable the object storage scanner or configure cloud credentials.")} />
         ) : (
           <ObjectStorageTable findings={objFindings} />
         )}
@@ -328,7 +338,7 @@ export function DataAtRestPage() {
           Kubernetes Secrets
         </h2>
         {k8sFindings.length === 0 ? (
-          <EmptyStateCard emptyFor="scan-latest" message="No Kubernetes secrets scanned in this session — enable the Kubernetes scanner or configure cluster access." />
+          <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["k8s_scanning"], "No Kubernetes secrets scanned in this session — enable the Kubernetes scanner or configure cluster access.")} />
         ) : (
           <KubernetesTable findings={k8sFindings} />
         )}
@@ -339,7 +349,7 @@ export function DataAtRestPage() {
           Vault
         </h2>
         {vaultFindings.length === 0 ? (
-          <EmptyStateCard emptyFor="scan-latest" message="No Vault mounts scanned in this session — enable the Vault connector or configure a Vault address." />
+          <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["vault_scanning"], "No Vault mounts scanned in this session — enable the Vault connector or configure a Vault address.")} />
         ) : (
           <VaultTable findings={vaultFindings} />
         )}

@@ -10,6 +10,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table"
 import { useScanData } from "@/hooks/useScanData"
+import { emptyStateFor } from "@/lib/coverage-reason"
 import type { IdentityFinding } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -138,7 +139,7 @@ export function IdentityPage() {
 
       {/* Identity findings table (D-11) */}
       {identityFindings.length === 0 ? (
-        <EmptyStateCard emptyFor="scan-latest" message="No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan." />
+        <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["kerberos_scanning", "saml_scanning", "dnssec_scanning"], "No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan.")} />
       ) : (
         <>
           <div className="flex gap-3 items-center">

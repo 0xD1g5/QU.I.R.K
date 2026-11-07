@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useScanData } from "@/hooks/useScanData"
+import { emptyStateFor } from "@/lib/coverage-reason"
 import type { MotionFinding } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -228,7 +229,7 @@ export function MotionPage() {
           Email Protocols
         </h2>
         {emailFindings.length === 0 ? (
-          <EmptyStateCard message="No email endpoints scanned in this session — enable the email scanner in your config or scan a mail server." />
+          <EmptyStateCard message={emptyStateFor(data?.coverage, ["email_scanning"], "No email endpoints scanned in this session — enable the email scanner in your config or scan a mail server.")} />
         ) : (
           <EmailTable findings={emailFindings} />
         )}
@@ -243,7 +244,7 @@ export function MotionPage() {
           Message Brokers
         </h2>
         {brokerFindings.length === 0 ? (
-          <EmptyStateCard message="No broker endpoints scanned in this session — enable the broker scanner in your config or scan a message broker host." />
+          <EmptyStateCard message={emptyStateFor(data?.coverage, ["broker_scanning"], "No broker endpoints scanned in this session — enable the broker scanner in your config or scan a message broker host.")} />
         ) : (
           <BrokerGroupedSections findings={brokerFindings} />
         )}
