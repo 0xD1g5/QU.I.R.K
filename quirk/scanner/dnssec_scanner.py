@@ -304,7 +304,18 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver
         ns_ips = _resolve_ns(domain, timeout, resolver=resolver, diag=diag)
         kind = diag.get("kind", OUTCOME_ANSWERED if ns_ips else OUTCOME_UNREACHABLE)
         detail = diag.get("detail", "" if kind == OUTCOME_ANSWERED else "ns-resolution-failed")
-        outcomes.record(domain, kind, detail)
+        if not ns_ips:
+            if kind == OUTCOME_ANSWERED and detail not in ("nxdomain", "no-ns-answer"):
+                # 235.3 review A-WR-06: the NS RRset came back but no NS name
+                # resolved to an address, so no authoritative server was asked.
+                kind = OUTCOME_UNREACHABLE
+                detail = "authoritative nameserver addresses did not resolve"
+            # NXDOMAIN / no-NS stays answered: a protocol answer about the
+            # domain (D-03, deliberate plan-07 design).
+            outcomes.record(domain, kind, detail)
+        # With NS IPs the outcome is recorded after the DNSKEY query below:
+        # the DNSSEC data comes from the authoritative server, not the
+        # recursive resolver that returned the NS RRset.
     if not ns_ips:
         if logger:
             logger.warning("DNSSEC: could not resolve NS for %s", domain)
@@ -314,6 +325,22 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver
 
     # Query DNSKEY (use resolver_port when a custom resolver is configured)
     dnskey_response = _query_rrset(domain, dns.rdatatype.DNSKEY, ns_ip, timeout, ns_port=resolver_port)
+
+    if outcomes is not None:
+        if dnskey_response is None:
+            # 235.3 review A-WR-06: a silent authoritative server (timeout,
+            # UDP/TCP 53 egress blocked) is not an answer, and an
+            # ``unsigned-zone`` row here would be a false negative.
+            outcomes.record(
+                domain, OUTCOME_UNREACHABLE,
+                f"authoritative nameserver {ns_ip} did not answer the DNSKEY query",
+            )
+            if logger:
+                logger.warning(
+                    "DNSSEC: authoritative NS %s did not answer for %s", ns_ip, domain,
+                )
+            return []
+        outcomes.record(domain, OUTCOME_ANSWERED)
 
     # Find DNSKEY rrset in answer section
     dnskey_rrset = None

@@ -632,3 +632,59 @@ def test_outcome_label_contract_violation_propagates():
          patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
         with pytest.raises(TargetOutcomeContractError):
             scan_dnssec_targets(["dead.example.com"], outcomes=sink)
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-WR-06 (silent-authoritative half): NS answered but the
+# authoritative server never did must not read answered / unsigned-zone.
+# ---------------------------------------------------------------------------
+
+def _ns_ok_resolve(a_ok=True):
+    ns_answer = MagicMock()
+    ns_answer.__iter__ = MagicMock(return_value=iter([_mock_ns_answer()]))
+    a_answer = MagicMock()
+    a_answer.__iter__ = MagicMock(return_value=iter([_mock_a_answer()]))
+
+    def resolve_side_effect(qname, rdtype, **kwargs):
+        if rdtype == "NS":
+            return ns_answer
+        if not a_ok:
+            raise TimeoutError("A lookup timed out")
+        return a_answer
+    return resolve_side_effect
+
+
+def test_outcome_silent_authoritative_is_unreachable_no_unsigned_row():
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_UNREACHABLE
+    sink = TargetOutcomes(["quiet.example.com"])
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve",
+               side_effect=_ns_ok_resolve()), \
+         patch("quirk.scanner.dnssec_scanner.dns.query.udp_with_fallback",
+               side_effect=TimeoutError("udp/53 egress blocked")), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        result = scan_dnssec_targets(["quiet.example.com"], outcomes=sink)
+    assert result == []
+    (o,) = sink.resolved()
+    assert o.kind == OUTCOME_UNREACHABLE and "did not answer" in o.detail
+
+
+def test_outcome_silent_authoritative_none_sink_unchanged():
+    """outcomes=None keeps the pre-235.3 behaviour (an unsigned-zone row)."""
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve",
+               side_effect=_ns_ok_resolve()), \
+         patch("quirk.scanner.dnssec_scanner.dns.query.udp_with_fallback",
+               side_effect=TimeoutError("udp/53 egress blocked")), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        result = scan_dnssec_targets(["quiet.example.com"])
+    assert len(result) == 1 and result[0].service_detail == "unsigned-zone"
+
+
+def test_outcome_ns_names_unresolvable_is_unreachable():
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_UNREACHABLE
+    sink = TargetOutcomes(["noglue.example.com"])
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve",
+               side_effect=_ns_ok_resolve(a_ok=False)), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        assert scan_dnssec_targets(["noglue.example.com"], outcomes=sink) == []
+    (o,) = sink.resolved()
+    assert o.kind == OUTCOME_UNREACHABLE
