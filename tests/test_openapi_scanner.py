@@ -352,6 +352,9 @@ from quirk.scanner.target_outcome import TargetOutcomeContractError, TargetOutco
 
 
 def test_openapi_outcome_loopback_refused_then_raises():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     url = "http://localhost:20001/openapi.json"
     sink = TargetOutcomes([url])
     with pytest.raises(_SPE):
@@ -362,6 +365,9 @@ def test_openapi_outcome_loopback_refused_then_raises():
 
 
 def test_openapi_outcome_closed_port_unreachable_then_raises():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     with _socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
@@ -373,6 +379,9 @@ def test_openapi_outcome_closed_port_unreachable_then_raises():
 
 
 def test_openapi_outcome_local_file_answered(tmp_path):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     spec = tmp_path / "spec.json"
     spec.write_text(json.dumps({"openapi": "3.0.0", "info": {"title": "t", "version": "1"}, "paths": {}}))
     sink = TargetOutcomes([str(spec)])
@@ -381,6 +390,9 @@ def test_openapi_outcome_local_file_answered(tmp_path):
 
 
 def test_openapi_outcome_none_sink_unchanged():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     with pytest.raises(_SPE):
         _scan_spec("http://localhost:20001/openapi.json", cfg_targets=["localhost"])
 
@@ -418,6 +430,9 @@ def _ok_guard():
 
 @pytest.mark.parametrize("status", [404, 500, 401, 403])
 def test_openapi_url_http_error_does_not_record_answered(status):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     sink = TargetOutcomes([_SPEC_URL])
     with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
                return_value=_fake_http_resp(status)):
@@ -430,6 +445,9 @@ def test_openapi_url_http_error_does_not_record_answered(status):
 
 
 def test_openapi_url_oversize_does_not_record_answered():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     from quirk.scanner import openapi_scanner as _mod
     sink = TargetOutcomes([_SPEC_URL])
     big = b"x" * (_mod.MAX_SPEC_BYTES + 1)
@@ -444,6 +462,9 @@ def test_openapi_url_oversize_does_not_record_answered():
 
 @pytest.mark.parametrize("body", [b"::: not: [valid", b"[1, 2, 3]"])
 def test_openapi_url_invalid_spec_does_not_record_answered(body):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     sink = TargetOutcomes([_SPEC_URL])
     with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
                return_value=_fake_http_resp(200, body)):
@@ -453,6 +474,9 @@ def test_openapi_url_invalid_spec_does_not_record_answered(body):
 
 
 def test_openapi_url_external_ref_does_not_record_answered():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     spec = {"openapi": "3.0.0", "info": {"title": "t", "version": "1"},
             "paths": {"/a": {"$ref": "https://evil.example.net/x.yaml"}}}
     sink = TargetOutcomes([_SPEC_URL])
@@ -464,6 +488,9 @@ def test_openapi_url_external_ref_does_not_record_answered():
 
 
 def test_openapi_file_external_ref_does_not_record_answered(tmp_path):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     spec = tmp_path / "spec.json"
     spec.write_text(json.dumps({
         "openapi": "3.0.0", "info": {"title": "t", "version": "1"},
@@ -476,6 +503,9 @@ def test_openapi_file_external_ref_does_not_record_answered(tmp_path):
 
 
 def test_openapi_url_valid_spec_records_answered():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
     spec = {"openapi": "3.0.0", "info": {"title": "t", "version": "1"}, "paths": {}}
     sink = TargetOutcomes([_SPEC_URL])
     with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
