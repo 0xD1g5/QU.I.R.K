@@ -361,22 +361,62 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
         return []
 
 
-def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endpoints) -> None:
+def _emit_missing_extra_advisory(
+    scanner_name: str, extra_group: str, error_endpoints, message: Optional[str] = None,
+) -> None:
     """Phase 41 / D-12 — Phase 68 UX-02: emit QRK-INSTALL-001 stderr advisory + record CryptoEndpoint row.
 
     Invoked when an optional-extra-gated scanner is enabled but its underlying
     package is not installed. Emits format_error("INSTALL-001") to stderr and
     appends a CryptoEndpoint with scan_error_category='missing_extra' so
-    trends.py can exclude it from regression counts (D-15).
+    trends.py can exclude it from regression counts (D-15). *message*
+    replaces the default "optional extra [<group>] not installed" text when
+    the missing package is not an optional extra (a broken core install).
     """
     print(format_error("INSTALL-001"), file=sys.stderr)
     error_endpoints.append(CryptoEndpoint(
         host=scanner_name,
         port=0,
         protocol="ADVISORY",
-        scan_error=f"optional extra [{extra_group}] not installed",
+        scan_error=message or f"optional extra [{extra_group}] not installed",
         scan_error_category="missing_extra",
     ))
+
+
+def _module_available(name: str) -> bool:
+    """find_spec without importing; a missing parent package counts as absent."""
+    import importlib.util
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _missing_extra_skip(
+    cfg, recorder, scanner_label: str, module: str, extra_group: str,
+    detail: str, error_endpoints, message: Optional[str] = None,
+):
+    """Phase 235.3 review B-CR-01/B-CR-02/A-WR-03: the one missing-extra
+    skip shape for connector closures.
+
+    The missing extra is counted exactly once: when probe_missing_extras
+    already emitted a row covering *module* (an enabled REGISTRY entry), no
+    second row is added; otherwise this emits the single advisory. Returns
+    recorder.skip("missing-extra", detail).
+    """
+    _missing_extra_note(cfg, scanner_label, module, extra_group, error_endpoints, message)
+    return recorder.skip("missing-extra", detail)
+
+
+def _missing_extra_note(
+    cfg, scanner_label: str, module: str, extra_group: str, error_endpoints,
+    message: Optional[str] = None,
+) -> None:
+    """Counted-once missing-extra signal for a leg that is skipped while the
+    phase itself goes on (see `_missing_extra_skip`)."""
+    from quirk.util.optional_extra import probe_reports_module
+    if not probe_reports_module(cfg, module):
+        _emit_missing_extra_advisory(scanner_label, extra_group, error_endpoints, message)
 
 
 def _emit_missing_binary_advisory(scanner_name: str, binary: str, error_code: str, error_endpoints) -> None:
@@ -3944,13 +3984,23 @@ def main():
             # emits its inaccessible row in-band). Read that as missing_extra,
             # not as a misleading "did not answer". Post-scan on purpose: the
             # WR-03 design above keeps K8S-03's in-band rows, so no pre-gate.
+            # Review B-CR-01: kubernetes ships in [cloud], and
+            # probe_missing_extras already counts it, so _missing_extra_*
+            # adds no second row.
             if not K8S_AVAILABLE and not _outcomes.items.get(_k8s_label):
-                _emit_missing_extra_advisory("k8s_connector", "k8s", error_endpoints)
+                if any(o.kind == OUTCOME_ANSWERED for o in _outcomes.resolved()):
+                    # EKS answered via boto3: its rows are real evidence, so
+                    # the phase ran. The path-B row stays in-band in eps.
+                    _missing_extra_note(
+                        cfg, "k8s_connector", "kubernetes", "cloud", error_endpoints,
+                    )
+                    return eps
                 error_endpoints.extend(
                     e for e in eps if getattr(e, "scan_error", None)
                 )
-                return _recorder.skip(
-                    "missing-extra", "kubernetes SDK not installed (extras: k8s)",
+                return _missing_extra_skip(
+                    cfg, _recorder, "k8s_connector", "kubernetes", "cloud",
+                    "kubernetes SDK not installed (extras: cloud)", error_endpoints,
                 )
             return _classify_connector_outcomes(
                 "k8s_connector", _outcomes, eps, error_endpoints, _recorder,
