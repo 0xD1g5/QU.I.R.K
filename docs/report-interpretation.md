@@ -1955,18 +1955,42 @@ all, which is what this section discloses.
 The heading is followed by a `{N} ran / {M} skipped` summary line, then one row per phase: ran
 rows show the phase's wall-clock duration; skipped rows show the skip reason plus a short,
 non-secret detail string (e.g. `connectors.vault_token / VAULT_TOKEN not set`). There are exactly
-six skip reasons, each implying a specific operator action:
+eight skip reasons, each implying a specific operator action:
 
 | Skip reason | What it means | What to do |
 |---|---|---|
 | `disabled-by-config` | The connector/scanner is turned off in your config. | Enable it (flip the relevant `connectors.enable_*` or scanner toggle) if you want that domain assessed. |
 | `missing-extra` | The scanner needs an optional Python package that isn't installed. | Install the optional extra that provides the named package (see `docs/operators-guide.md` §2.2, Optional extras matrix). The extra named in some skip details does not exist: `(extras: vault)` means `[cloud]`, which carries hvac, and `(extras: aws)` names no extra (boto3 is a core dependency). |
 | `no-eligible-targets` | The scanner is enabled, but no targets were configured for it. | Add hosts/addresses to the named config key (e.g. `connectors.vault_targets`). |
-| `missing-credentials` | The scanner is enabled and has targets, but the credential it needs to authenticate is not set. Today only the Vault phase makes this check, when the phase starts during the scan (`connectors.vault_token` / `VAULT_TOKEN`); a dashboard submit does not check it. | Supply the named config key or environment variable — see the Effective config panel (`docs/operators-guide.md` §3.1.2) to check credential status before submitting a scan; the panel shows each credential as set or not set and never shows a value. |
+| `missing-credentials` | The scanner is enabled and has targets, but the credential it needs to authenticate is not set. The Vault phase checks this before it starts (`connectors.vault_token` / `VAULT_TOKEN`); the S3, AWS, Azure and GCP phases are classified after the attempt, when no usable credential was found; a dashboard submit does not check it. | Supply the named config key or environment variable — see the Effective config panel (`docs/operators-guide.md` §3.1.2) to check credential status before submitting a scan; the panel shows each credential as set or not set and never shows a value. |
 | `missing-binary` | A required external tool (semgrep for source code, syft for container images) is not installed. The domain is Not assessed and the missing tool is counted as a scan error. | Install the tool and re-scan; run `quirk doctor` to see which binary is missing. |
+| `internal-target-refused` | Every target of the connector is an internal address that server policy refuses to scan (for example an internal IdP on a `10.x` address). Nothing was attempted against it. | Run the scan from a host whose policy allows internal targets, or change the server's internal-target policy; the New Scan page warns about this before you submit. |
+| `auth-failed` | Every target answered but rejected the credentials. The domain is Not assessed and the skip counts as a scan error. | Renew or replace the credential (for example after an expired SSO session) and re-scan. |
 | `failed` | The phase started and aborted with an error. | Check the error rows / logs for that phase; this is not a configuration gap, it is a runtime failure. |
 
 In 5.28.0, when Semgrep is installed, source code scanning records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. When Semgrep is not installed and `source_targets` is set (or Syft is not installed and `container_targets` is set), the phase is recorded as skipped with reason `missing-binary` (5.28.1), the domain reads *Not assessed*, and the missing tool counts as a scan error. Before 5.28.1 that case was recorded as ran with no findings. The ruleset-unavailable case is a known defect, not a configuration gap, and no config change fixes it.
+
+A connector reads `ran` only if at least one of its targets answered. A target that answers with
+nothing (an empty bucket, a JWT endpoint with no tokens) still counts as answering. Each coverage
+skip counts as one scan error and lowers the score; against an answered-empty connector in a
+one-endpoint TLSv1.3 fixture the headline moved from 84 to 81. A source scan where every target
+fails is recorded `failed` (with a counted error row), not `skipped`, unchanged from 5.28.1, while
+other connectors with no answering target read `skipped` with a named reason.
+
+#### When a connector reads skipped
+
+- **An internal IdP on a `10.x` address, refused by server policy:** the phase reads
+  `internal-target-refused`; Scan Coverage and the dashboard empty state show that reason.
+- **`quirk serve` started under an expired SSO session:** the cloud phase reads `missing-credentials`
+  (or `auth-failed` if the service rejected the credential).
+- **A database target that fails to connect:** the Data at Rest page shows a failed row (for example
+  "PostgreSQL connection failed") for that target, and the phase reads `failed` or `auth-failed`
+  when no target answered.
+
+**Partial runs.** When some targets answer and others do not, the phase reads `ran` and each target
+that did not answer adds one scan-error row (category `target_unanswered`), so a partial result is
+visible as such. **Empty states.** Dashboard pages that have no data for a domain (Data at Rest,
+Identity, Motion) state the reason recorded in Scan Coverage rather than a generic "no data" line.
 
 ### A skipped phase never fabricates a zero
 
@@ -2018,8 +2042,8 @@ login as the configured user (default `root`):
 - **`missing-credentials`** — the connector is on, the code to run it is installed, but no
   credential was available when the Vault phase started (blank dashboard field and no environment-variable
   fallback set). Of these three reasons, this is the one where re-running the *identical* scan with only a credential
-  added will change the outcome — nothing else about the target or config needs to change. Today
-  only the Vault token is checked this way.
+  added will change the outcome — nothing else about the target or config needs to change. The Vault
+  token is checked before the phase starts; S3, AWS, Azure and GCP are classified after the attempt.
 
 ## 23. Exposure Map (Phase 195, MAP-02/MAP-03)
 
