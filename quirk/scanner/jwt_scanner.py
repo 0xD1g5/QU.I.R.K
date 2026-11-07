@@ -28,6 +28,7 @@ from quirk.util.outbound_fetch import fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.scanner.target_outcome import (
     OUTCOME_ANSWERED,
+    OUTCOME_AUTH_FAILED,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
     outcome_for_url_guard,
@@ -340,7 +341,21 @@ def _fetch_jwks(
             # validate_external_url() runs on every probe URL above and every jwks_uri below.
             resp = _get(url)
             if probe_log is not None:
-                probe_log.append((OUTCOME_ANSWERED, ""))
+                # 235.3 review A-WR-05 (D-06): a 401/403 to a request that
+                # carried the configured credentials is "credentials present
+                # but rejected". With no credentials configured the server
+                # still responded, so it stays answered.
+                if (
+                    _has_creds
+                    and _norm_origin(url) == _base_origin
+                    and resp.status_code in (401, 403)
+                ):
+                    probe_log.append((
+                        OUTCOME_AUTH_FAILED,
+                        f"HTTP {resp.status_code}: configured credentials rejected",
+                    ))
+                else:
+                    probe_log.append((OUTCOME_ANSWERED, ""))
             if resp.status_code != 200:
                 continue
 

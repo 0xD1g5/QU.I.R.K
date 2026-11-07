@@ -496,3 +496,79 @@ def test_jwt_outcome_label_redacts_userinfo():
     res = sink.resolved()
     assert "s3cret" not in res[0].target and "zzz" not in res[0].target
     assert "s3cret" not in res[0].detail
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-WR-05: 401/403 with configured credentials is auth_failed
+# ---------------------------------------------------------------------------
+
+@contextlib.contextmanager
+def _status_server(status: int, ok_routes: dict = None):
+    """Every path returns ``status`` except ``ok_routes`` (path -> JSON, 200)."""
+    ok_routes = ok_routes or {}
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            body = ok_routes.get(self.path)
+            if body is None:
+                self.send_response(status)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            raw = json.dumps(body).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def log_message(self, *a):  # noqa: D401
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        yield srv.server_port
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def _bearer_ctx():
+    from types import SimpleNamespace
+    return SimpleNamespace(
+        as_headers=lambda: {"Authorization": "Bearer expired-token"},
+        query_param=lambda: None,
+    )
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_jwt_outcome_401_403_with_credentials_is_auth_failed(status):
+    with _status_server(status) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        assert scan_jwt_targets([target], timeout=2, allow_internal=True,
+                                cred_ctx=_bearer_ctx(), outcomes=sink) == []
+        (o,) = sink.resolved()
+        assert o.kind == "auth_failed" and f"HTTP {status}" in o.detail
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_jwt_outcome_401_403_without_credentials_is_answered(status):
+    """No credentials configured: the server still responded (D-06 auth_failed
+    needs credentials present), so the target answered."""
+    with _status_server(status) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink)
+        assert [r.kind for r in sink.resolved()] == ["answered"]
+
+
+def test_jwt_outcome_401_on_one_path_200_on_another_with_credentials_is_answered():
+    with _status_server(401, {"/.well-known/jwks.json": {"keys": []}}) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True,
+                         cred_ctx=_bearer_ctx(), outcomes=sink)
+        assert [r.kind for r in sink.resolved()] == ["answered"]
