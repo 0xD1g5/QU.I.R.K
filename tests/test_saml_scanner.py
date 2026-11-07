@@ -422,3 +422,75 @@ def test_saml_session_start_stamps_all_endpoints():
     for ep in result:
         assert ep.scanned_at == expected_naive, \
             f"Expected scanned_at={expected_naive!r}, got {ep.scanned_at!r}"
+
+
+# ---------------------------------------------------------------------------
+# 235.3-03 D-05: per-target outcome recording
+# ---------------------------------------------------------------------------
+import socket as _socket
+
+from quirk.scanner.target_outcome import TargetOutcomeContractError, TargetOutcomes
+
+
+def _fake_resp(status, content=b""):
+    r = MagicMock()
+    r.status_code = status
+    r.content = content
+    r.headers = {}
+    return r
+
+
+def test_saml_outcome_loopback_refused_no_network():
+    target = "http://localhost:20001/simplesaml/saml2/idp/metadata.php"
+    sink = TargetOutcomes([target])
+    assert scan_saml_targets([target], allow_internal_targets=False, outcomes=sink) == []
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["refused"]
+    assert "loopback" in res[0].detail
+
+
+def test_saml_outcome_metadata_service_unreachable_always_blocked():
+    target = "http://169.254.169.254/metadata.xml"
+    sink = TargetOutcomes([target])
+    scan_saml_targets([target], allow_internal_targets=False, outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["unreachable"]
+    assert "always blocked" in res[0].detail
+
+
+def test_saml_outcome_non_200_is_answered():
+    target = "https://idp.example.com/metadata"
+    sink = TargetOutcomes([target])
+    with patch("quirk.scanner.saml_scanner.httpx.get", return_value=_fake_resp(404)), \
+         patch("quirk.util.url_allowlist.socket.getaddrinfo",
+               return_value=[(2, 1, 6, "", ("93.184.216.34", 0))]):
+        assert scan_saml_targets([target], outcomes=sink) == []
+    assert [r.kind for r in sink.resolved()] == ["answered"]
+
+
+def test_saml_outcome_closed_port_unreachable():
+    with _socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    target = f"http://127.0.0.1:{port}/metadata"
+    sink = TargetOutcomes([target])
+    scan_saml_targets([target], timeout=2, allow_internal_targets=True, outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_saml_outcome_one_per_target():
+    t1 = "http://10.1.2.3/a"
+    t2 = "http://10.1.2.4/b"
+    sink = TargetOutcomes([t1, t2])
+    scan_saml_targets([t1, t2], allow_internal_targets=False, outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["refused", "refused"]
+
+
+def test_saml_outcome_none_sink_unchanged():
+    assert scan_saml_targets(["http://localhost:20001/m"], allow_internal_targets=False) == []
+
+
+def test_saml_outcome_contract_violation_propagates():
+    sink = TargetOutcomes(["not-this-target"])
+    with pytest.raises(TargetOutcomeContractError):
+        scan_saml_targets(["http://10.1.2.3/a"], allow_internal_targets=False, outcomes=sink)

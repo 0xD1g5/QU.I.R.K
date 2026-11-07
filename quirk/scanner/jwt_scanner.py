@@ -26,6 +26,12 @@ except ImportError:
 from quirk.models import CryptoEndpoint
 from quirk.util.outbound_fetch import fetch_validated
 from quirk.util.safe_exc import safe_str
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+    outcome_for_url_guard,
+)
 from quirk.util.url_allowlist import validate_external_url
 
 logger = logging.getLogger(__name__)
@@ -228,6 +234,7 @@ def _fetch_jwks(
     auth_headers: Optional[dict] = None,
     auth_query: Optional[tuple] = None,
     allow_internal: bool = False,
+    probe_log: Optional[list] = None,
 ) -> tuple[Optional[list], Optional[str], list[str]]:
     """Probe JWKS paths against base_url.
 
@@ -246,6 +253,10 @@ def _fetch_jwks(
       When either is set, requests are made via a short-lived httpx.Client; the
       credential is sent intact and only logged URLs are redacted (logging.Filter).
       D-12: auth is attached to this existing fetch only — no new probe targets.
+
+    235.3 D-05: when ``probe_log`` is a list, every probe appends one
+    ``(outcome_kind, detail)`` tuple (guard refusal, any HTTP response, or a
+    fetch exception). The caller folds them into the shared TargetOutcomes sink.
 
     230-REVIEW CR-01: credentials (headers AND the query-param key) are attached
     only to URLs with the same origin (scheme, host, port) as ``base_url``. A
@@ -312,6 +323,8 @@ def _fetch_jwks(
         # OIDC-followed jwks_uri was validated, leaving the base probe URLs unchecked.
         _vr_base = validate_external_url(url, allow_internal=allow_internal)
         if not _vr_base.ok:
+            if probe_log is not None:
+                probe_log.append(outcome_for_url_guard(_vr_base.reason))
             continue
         try:
             fetched_urls.append(url)
@@ -326,6 +339,8 @@ def _fetch_jwks(
             # each fetched URL when allow_insecure_jwks is true (Phase 57 HARDEN-SCAN-01).
             # validate_external_url() runs on every probe URL above and every jwks_uri below.
             resp = _get(url)
+            if probe_log is not None:
+                probe_log.append((OUTCOME_ANSWERED, ""))
             if resp.status_code != 200:
                 continue
 
@@ -338,6 +353,8 @@ def _fetch_jwks(
                     continue
                 _vr = validate_external_url(jwks_uri, allow_internal=allow_internal)
                 if not _vr.ok:
+                    if probe_log is not None:
+                        probe_log.append(outcome_for_url_guard(_vr.reason))
                     continue
                 fetched_urls.append(jwks_uri)
                 # WHY: same verify=verify_tls rationale as above — passive inventory
@@ -353,7 +370,9 @@ def _fetch_jwks(
             if keys:
                 return keys, path, fetched_urls
 
-        except Exception:
+        except Exception as exc:
+            if probe_log is not None:
+                probe_log.append((OUTCOME_UNREACHABLE, safe_str(exc)))
             continue
 
     return None, None, fetched_urls
@@ -367,6 +386,7 @@ def scan_jwt_endpoint(
     allow_insecure_jwks: bool = False,
     cred_ctx=None,
     allow_internal: bool = False,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Fetch JWKS from base_url and return one CryptoEndpoint per key.
 
@@ -391,13 +411,19 @@ def scan_jwt_endpoint(
     _auth_query = cred_ctx.query_param() if cred_ctx is not None else None
 
     verify_tls = not allow_insecure_jwks
+    _probe_log: Optional[list] = [] if outcomes is not None else None
     keys, jwks_path, fetched_urls = _fetch_jwks(
         base_url, timeout,
         verify_tls=verify_tls,
         auth_headers=_auth_headers if _auth_headers else None,
         auth_query=_auth_query,
         allow_internal=allow_internal,
+        probe_log=_probe_log,
     )
+    if outcomes is not None:
+        # 235.3 D-05: the sink resolves precedence (answered wins over failures).
+        for _kind, _detail in _probe_log or []:
+            outcomes.record(base_url, _kind, _detail)
     if not keys:
         if allow_insecure_jwks and fetched_urls:
             # Emit advisories even when no keys found (fetch was attempted with verify_tls=False)
@@ -470,6 +496,7 @@ def scan_jwt_targets(
     allow_insecure_jwks: bool = False,
     cred_ctx=None,
     allow_internal: bool = False,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Scan a list of JWT API base URLs and return all CryptoEndpoints found.
 
@@ -496,9 +523,14 @@ def scan_jwt_targets(
                 allow_insecure_jwks=allow_insecure_jwks,
                 cred_ctx=cred_ctx,
                 allow_internal=allow_internal,
+                outcomes=outcomes,
             )
             results.extend(eps)
+        except TargetOutcomeContractError:
+            raise
         except Exception as exc:
+            if outcomes is not None and str(base_url) not in outcomes.items:
+                outcomes.record(base_url, OUTCOME_UNREACHABLE, safe_str(exc))
             if logger:
                 # CR-02: scrub before logging — an httpx exception commonly embeds the
                 # ?api_key=<secret> fetch URL; the LEAK-03 AST gate does not inspect logger.* calls.
