@@ -192,3 +192,89 @@ def test_cloud_sql_service_detail_contains_description():
     assert "Production-primary-DB" in detail, (
         f"expected slash-suffix-encoded instance description in service_detail, got {detail!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 (COVTRUTH-01): per-target outcome recording
+# ---------------------------------------------------------------------------
+
+from quirk.scanner import gcp_connector  # noqa: E402
+from quirk.scanner.gcp_connector import gcp_target_label, scan_gcp_targets  # noqa: E402
+from quirk.scanner.target_outcome import (  # noqa: E402
+    TargetOutcomeContractError,
+    TargetOutcomes,
+)
+
+
+class DefaultCredentialsError(Exception):
+    """Stub carrying the exact class name the outcome classifier matches."""
+
+
+def _empty_services():
+    kms = _make_kms_service(pages=1)
+    sql = MagicMock()
+    req = MagicMock()
+    req.execute.return_value = {"items": []}
+    sql.instances.return_value.list.return_value = req
+    sql.instances.return_value.list_next.return_value = None
+    gcs = MagicMock()
+    greq = MagicMock()
+    greq.execute.return_value = {"items": []}
+    gcs.buckets.return_value.list.return_value = greq
+    gcs.buckets.return_value.list_next.return_value = None
+    return {"cloudkms": kms, "sqladmin": sql, "storage": gcs}
+
+
+def _run_scan(monkeypatch, sink, *, adc_error=None, build=None):
+    monkeypatch.setattr(gcp_connector, "GCP_AVAILABLE", True)
+    if adc_error is not None:
+        def _default(*a, **k):
+            raise adc_error
+    else:
+        def _default(*a, **k):
+            return MagicMock(), "p"
+    monkeypatch.setattr(gcp_connector.google.auth, "default", _default)
+    services = _empty_services()
+    monkeypatch.setattr(
+        gcp_connector, "_gcp_build",
+        build or (lambda name, ver, credentials=None: services[name]),
+    )
+    return scan_gcp_targets("proj-x", None, outcomes=sink)
+
+
+def test_gcp_outcome_no_adc_keeps_row_and_records_missing_credentials(monkeypatch):
+    sink = TargetOutcomes([gcp_target_label("proj-x")])
+    rows = _run_scan(monkeypatch, sink, adc_error=DefaultCredentialsError("no ADC"))
+    assert len(rows) == 1 and rows[0].scan_error.startswith("gcp-credentials-unavailable")
+    (o,) = sink.resolved()
+    assert o.kind == "missing_credentials" and o.row_emitted is True
+
+
+def test_gcp_outcome_zero_keyrings_answered_exact_label(monkeypatch):
+    sink = TargetOutcomes([gcp_target_label("proj-x")])
+    _run_scan(monkeypatch, sink)
+    out = sink.resolved()
+    assert len(out) == 1 and out[0].kind == "answered"
+
+
+def test_gcp_outcome_service_build_transport_error_unreachable(monkeypatch):
+    sink = TargetOutcomes([gcp_target_label("proj-x")])
+
+    def _boom(name, ver, credentials=None):
+        raise ConnectionError("transport down")
+
+    _run_scan(monkeypatch, sink, build=_boom)
+    assert sink.resolved()[0].kind == "unreachable"
+
+
+def test_gcp_outcome_none_sink_unchanged(monkeypatch):
+    rows = _run_scan(monkeypatch, None)
+    # Only the pre-existing GCS sentinel row; no behaviour change without a sink.
+    assert [r.cert_pubkey_alg for r in rows] == ["GCS-SUMMARY"]
+
+
+def test_gcp_outcome_contract_violation_propagates(monkeypatch):
+    # sole_target() needs exactly one expected target; a two-target sink violates it.
+    sink = TargetOutcomes(["a", "b"])
+    with pytest.raises(TargetOutcomeContractError):
+        _run_scan(monkeypatch, sink)
