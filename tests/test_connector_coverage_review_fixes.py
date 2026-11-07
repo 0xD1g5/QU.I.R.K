@@ -296,3 +296,34 @@ def test_skip_detail_counts_only_the_chosen_kind():
     d = rec._pending_detail
     assert d.startswith("1 of 3 targets were refused by the internal-target guard")
     assert "2 more did not answer for other reasons" in d
+
+
+# ------------------------------------------------------------------ B-WR-03
+
+def test_codesign_tls_eku_rows_with_ldap_unanswered_is_ran_without_skip_advisory(
+    tmp_path, monkeypatch,
+):
+    import quirk.scanner.codesign_scanner as cs
+
+    tls_row = CryptoEndpoint(host="eku-harness", port=443, protocol="CODE_SIGNING")
+
+    def fake_ldap(targets, timeout=10, logger=None, session_start=None, *,
+                  search_base=None, outcomes=None):
+        for t in targets:
+            outcomes.record(t, OUTCOME_UNREACHABLE, "harness down")
+        return []
+
+    monkeypatch.setattr(cs, "scan_codesign_from_ldap", fake_ldap)
+    monkeypatch.setattr(cs, "scan_codesign_from_tls_endpoints", lambda *a, **kw: [tls_row])
+    phases, eps = _scan(
+        tmp_path, monkeypatch,
+        {"connectors": {"codesign_targets": ["ldap://127.0.0.1:1"]}},
+        extra_argv=("--inventory-code-signing",),
+    )
+    assert phases["codesign_scanning"]["status"] == "ran"
+    assert not [
+        e for e in eps
+        if e["host"] == "codesign_scanner" and e["category"] == "targets_unreachable"
+    ]
+    assert [e for e in eps if e["category"] == "target_unanswered"]
+    assert [e for e in eps if e["host"] == "eku-harness"]

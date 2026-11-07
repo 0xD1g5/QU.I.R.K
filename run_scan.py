@@ -4290,14 +4290,17 @@ def main():
                 return _recorder.skip("missing-extra", _ldap_missing)
             if _outcomes is None:
                 return ldap_eps + tls_eps
+            if tls_eps:
+                # Review B-WR-03: in-process TLS-EKU results are real evidence,
+                # so the phase ran (D-03). Count them as an answered leg so the
+                # classifier takes its ran path: one target_unanswered row per
+                # silent LDAP target, never a skip advisory for a ran phase.
+                _outcomes.record("tls-eku", OUTCOME_ANSWERED, extra=True)
             _classified = _classify_connector_outcomes(
                 "codesign_scanner", _outcomes, ldap_eps, error_endpoints, _recorder,
             )
             if _classified is _PHASE_SKIPPED:
-                # No LDAP target answered. In-process TLS-EKU results are real
-                # evidence, so keep them and let the phase read ran (the
-                # classifier's advisory row still reports the LDAP failure).
-                return tls_eps if tls_eps else _classified
+                return _classified
             return _classified + tls_eps
         codesign_endpoints = _wrapped_phase(
             run_stats, "codesign_scanning", "codesign_scanner",
