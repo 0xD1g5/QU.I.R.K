@@ -308,3 +308,44 @@ def test_scan_coverage_requires_auth(tmp_path, monkeypatch):
         headers={"X-API-Key": "test-token"},
     )
     assert resp_ok.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review C-WR-04: the dashboard tells the two "failed" writers apart
+# ---------------------------------------------------------------------------
+
+def _dashboard_no_target_answered_regex():
+    import pathlib
+    import re as _re
+
+    src = (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "src" / "dashboard" / "src" / "lib" / "coverage-reason.ts"
+    ).read_text(encoding="utf-8")
+    m = _re.search(r"export const NO_TARGET_ANSWERED_DETAIL = /(.+)/\n", src)
+    assert m, "NO_TARGET_ANSWERED_DETAIL regex not found in coverage-reason.ts"
+    return _re.compile(m.group(1))
+
+
+def test_dashboard_failed_detail_regex_matches_the_real_unreachable_detail():
+    """C-WR-04 contract: coverage-reason.ts reads a "failed" row as "no target
+    answered" only when its detail has the shape run_scan writes for the
+    every-target-unreachable path; a record_failed exception text must not
+    match, or a scanner crash would point the operator at the network."""
+    import run_scan
+    from quirk.scanner.target_outcome import OUTCOME_UNREACHABLE, TargetOutcomes
+
+    pattern = _dashboard_no_target_answered_regex()
+
+    outcomes = TargetOutcomes(["db1:5432", "db2:5432"])
+    for t in outcomes.expected:
+        outcomes.record(t, OUTCOME_UNREACHABLE, "timed out")
+    rec = run_scan._PhaseRecorder()
+    run_scan._classify_connector_outcomes("db_scanner", outcomes, [], [], rec)
+    assert rec._pending_reason == "failed"
+    assert pattern.search(rec._pending_detail), rec._pending_detail
+
+    rec.record_failed("db_scanning", "ModuleNotFoundError: No module named 'psycopg2'")
+    crash = rec.rows()[-1]
+    assert crash["reason"] == "failed"
+    assert not pattern.search(crash["detail"])

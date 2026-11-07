@@ -74,6 +74,33 @@ describe("emptyStateFor", () => {
     expect(emptyStateFor(cov([phase({})]), ["db_scanning"], "F")).toBe("Ran, 0 results (Database)")
   })
 
+  it("names a phase that raised as failed, never as no target answered", () => {
+    // C-WR-04: PhaseRecorder.record_failed writes reason "failed" with the
+    // exception text when the phase itself raised.
+    const c = cov([
+      phase({ status: "skipped", reason: "failed", detail: "ModuleNotFoundError: No module named 'psycopg2'" }),
+    ])
+    const text = emptyStateFor(c, ["db_scanning"], "F")
+    expect(text).toBe(
+      "Failed: the scanner stopped with an error (Database) — ModuleNotFoundError: No module named 'psycopg2'",
+    )
+    expect(text).not.toContain("no target answered")
+    expect(text).not.toContain("Skipped")
+  })
+
+  it("keeps no target answered for the every-target-unreachable failed row", () => {
+    const c = cov([
+      phase({
+        status: "skipped",
+        reason: "failed",
+        detail: "2 of 2 targets did not answer: db1:5432 (unreachable: timed out), db2:5432 (unreachable)",
+      }),
+    ])
+    expect(emptyStateFor(c, ["db_scanning"], "F")).toBe(
+      "Skipped: no target answered (Database) — 2 of 2 targets did not answer: db1:5432 (unreachable: timed out), db2:5432 (unreachable)",
+    )
+  })
+
   it("returns the fallback when a listed phase is absent from the record", () => {
     expect(emptyStateFor(cov([phase({})]), ["db_scanning", "vault_scanning"], "FALLBACK")).toBe("FALLBACK")
   })
@@ -81,7 +108,9 @@ describe("emptyStateFor", () => {
 
 describe("humanSkipReason", () => {
   it("maps the four reasons with bespoke wording and keeps the rest", () => {
-    expect(humanSkipReason("failed")).toBe("no target answered")
+    // Without the detail the two "failed" writers cannot be told apart, so the
+    // bare wording claims no cause (C-WR-04).
+    expect(humanSkipReason("failed")).toBe("failed or no target answered")
     expect(humanSkipReason("auth-failed")).toBe("credentials rejected")
     expect(humanSkipReason("missing-extra")).toBe("missing-extra")
     expect(humanSkipReason(null)).toBe("unclassified")
