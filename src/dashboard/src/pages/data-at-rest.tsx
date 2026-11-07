@@ -62,6 +62,13 @@ function SeverityBadge({ severity }: { severity: string }) {
   )
 }
 
+// C-CR-01: db_connector prefixes a failed connection with "connection-error:".
+// Any other scan_error (e.g. insufficient-privilege) came from a server that
+// answered, so it reads Incomplete, never Failed.
+function isConnectionError(scanError: string) {
+  return scanError.startsWith("connection-error")
+}
+
 function DatabaseTable({ findings }: { findings: DarFinding[] }) {
   const rows = sortBySev(findings)
   return (
@@ -92,7 +99,11 @@ function DatabaseTable({ findings }: { findings: DarFinding[] }) {
                 <TableCell className="text-sm">
                   {f.scan_error ? (
                     <>
-                      <Badge aria-label="status: Failed" className="bg-[hsl(var(--status-critical))] text-white text-xs">Failed</Badge>
+                      {isConnectionError(f.scan_error) ? (
+                        <Badge aria-label="status: Failed" className="bg-[hsl(var(--status-critical))] text-white text-xs">Failed</Badge>
+                      ) : (
+                        <Badge aria-label="status: Incomplete" className="bg-[hsl(var(--status-neutral))] text-white text-xs">Incomplete</Badge>
+                      )}
                       <span className="ml-2">{f.scan_error}</span>
                     </>
                   ) : (

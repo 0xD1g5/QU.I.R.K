@@ -56,9 +56,25 @@ describe("DataAtRestPage empty states (COVTRUTH-04)", () => {
       encryption_at_rest: scan_error ? null : true, tls_in_transit: scan_error ? null : true,
       quantum_risk: null, remediation: null, scan_error,
     })
-    await renderPage({ ...EMPTY, dar_findings: [row("a", null), row("b", "connection refused"), row("c", "timed out")] })
+    await renderPage({ ...EMPTY, dar_findings: [row("a", null), row("b", "connection-error: connection refused"), row("c", "connection-error: timed out")] })
     expect(screen.getAllByRole("row").length).toBe(4)
     expect(screen.getAllByLabelText("status: Failed").length).toBe(2)
-    expect(screen.getByText("connection refused")).toBeInTheDocument()
+    expect(screen.getByText("connection-error: connection refused")).toBeInTheDocument()
+  })
+
+  it("database table shows insufficient privilege as incomplete, not failed", async () => {
+    await renderPage({
+      ...EMPTY,
+      dar_findings: [{
+        category: "database", protocol: "POSTGRESQL", host: "priv.db", port: 5432, severity: "INFO",
+        title: "POSTGRESQL posture incomplete", encryption_at_rest: null, tls_in_transit: null,
+        quantum_risk: null, remediation: "Remediation: GRANT pg_read_all_stats TO <scanner_user>",
+        scan_error: "insufficient-privilege",
+      }],
+    })
+    expect(screen.queryByLabelText("status: Failed")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("status: Incomplete")).toBeInTheDocument()
+    expect(screen.getByText("insufficient-privilege")).toBeInTheDocument()
+    expect(screen.getByText(/GRANT pg_read_all_stats/)).toBeInTheDocument()
   })
 })

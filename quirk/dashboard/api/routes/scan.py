@@ -673,7 +673,9 @@ def _derive_dar_findings(endpoints) -> list[DarFinding]:
     Mirrors _derive_motion_findings (Phase 36). Per-protocol dispatch handles
     scanner shape variance: POSTGRESQL/MYSQL/RDS use service_detail; S3, AZURE_BLOB,
     KUBERNETES, VAULT use dat_scan_json. POSTGRESQL/MYSQL endpoints with
-    scan_error come back as INFO "<PROTO> connection failed" rows (235.3 D-10);
+    scan_error come back as INFO rows (235.3 D-10): "<PROTO> connection failed"
+    for a "connection-error:" scan_error, "<PROTO> posture incomplete" (with the
+    service_detail remediation) for any other, e.g. insufficient-privilege;
     other protocols with scan_error are skipped.
     Malformed dat_scan_json is tolerated via try/except (V5).
     """
@@ -685,14 +687,24 @@ def _derive_dar_findings(endpoints) -> list[DarFinding]:
         scan_err = getattr(ep, "scan_error", None)
         if scan_err:
             if proto in {"POSTGRESQL", "MYSQL"}:
+                # C-CR-01: only db_connector's "connection-error:" rows are
+                # failed connections. "insufficient-privilege" is written
+                # AFTER a successful connection (SHOW ssl = on) when the role
+                # lacks pg_read_all_stats; its service_detail carries the
+                # GRANT remediation, which must reach the operator.
+                err = str(scan_err)
+                connected = not err.startswith("connection-error")
                 results.append(DarFinding(
                     host=getattr(ep, "host", "") or "",
                     port=getattr(ep, "port", 0) or 0,
                     severity="INFO",
-                    title=f"{proto} connection failed",
+                    title=(f"{proto} posture incomplete" if connected
+                           else f"{proto} connection failed"),
                     protocol=proto, category="database",
                     encryption_at_rest=None, tls_in_transit=None,
-                    source="database", scan_error=str(scan_err),
+                    remediation=(getattr(ep, "service_detail", None) or None)
+                    if connected else None,
+                    source="database", scan_error=err,
                 ))
             continue
 

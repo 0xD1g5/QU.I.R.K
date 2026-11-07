@@ -120,8 +120,27 @@ def test_derive_dar_db_scan_error_failed_row():
 def test_derive_dar_mysql_scan_error_failed_row():
     from quirk.dashboard.api.routes.scan import _derive_dar_findings
     out = _derive_dar_findings([_ep(host="m", port=3306, protocol="MYSQL",
-                                    scan_error="boom")])
+                                    scan_error="connection-error: boom")])
     assert [f.title for f in out] == ["MYSQL connection failed"]
+
+
+def test_derive_dar_insufficient_privilege_is_not_a_connection_failure():
+    """C-CR-01: db_connector writes scan_error="insufficient-privilege" AFTER a
+    successful connection with SHOW ssl = on, when the role lacks
+    pg_read_all_stats. That server answered; it must not read as a failed
+    connection, and the GRANT remediation must survive.
+    """
+    from quirk.dashboard.api.routes.scan import _derive_dar_findings
+    ep = _ep(host="db.test", port=5432, protocol="POSTGRESQL", severity="INFO",
+             scan_error="insufficient-privilege",
+             service_detail="Remediation: GRANT pg_read_all_stats TO <scanner_user>")
+    out = _derive_dar_findings([ep])
+    assert len(out) == 1
+    f = out[0]
+    assert "connection failed" not in f.title
+    assert f.title == "POSTGRESQL posture incomplete"
+    assert f.remediation == "Remediation: GRANT pg_read_all_stats TO <scanner_user>"
+    assert f.scan_error == "insufficient-privilege"
 
 
 def test_derive_dar_non_db_scan_error_still_excluded():
@@ -135,12 +154,14 @@ def test_derive_dar_three_postgres_two_failed_scan_error():
     from quirk.dashboard.api.routes.scan import _derive_dar_findings
     eps = [
         _ep(host="a", port=5432, protocol="POSTGRESQL", service_detail="ssl-enforced"),
-        _ep(host="b", port=5432, protocol="POSTGRESQL", scan_error="x"),
-        _ep(host="c", port=5432, protocol="POSTGRESQL", scan_error="y"),
+        _ep(host="b", port=5432, protocol="POSTGRESQL", scan_error="connection-error: x"),
+        _ep(host="c", port=5432, protocol="POSTGRESQL", scan_error="connection-error: y"),
     ]
     out = _derive_dar_findings(eps)
     assert len(out) == 3
-    assert sorted(f.scan_error for f in out if f.scan_error) == ["x", "y"]
+    assert sorted(f.scan_error for f in out if f.scan_error) == [
+        "connection-error: x", "connection-error: y",
+    ]
     assert [f.scan_error for f in out if "failed" not in f.title] == [None]
 
 
@@ -164,3 +185,60 @@ def test_api_dar_findings_empty(dashboard_client):
         data = resp.json()
         assert "dar_findings" in data
         assert isinstance(data["dar_findings"], list)
+
+
+def _dar_api_client(tmp_path, monkeypatch, endpoints):
+    from datetime import datetime
+
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+    from quirk.dashboard.api.routes import scan as scan_routes
+    from quirk.db import get_session, init_db
+    from quirk.models import CryptoEndpoint
+
+    run_id = "2026-11-06T10:00:00"
+    ts = datetime.fromisoformat(run_id)
+    db_path = str(tmp_path / "dar-api.db")
+    init_db(db_path)
+    with get_session(db_path) as session:
+        for kw in endpoints:
+            session.add(CryptoEndpoint(scanned_at=ts, scan_run_id=run_id, **kw))
+        session.commit()
+    engine = create_engine(f"sqlite:///{db_path}",
+                           connect_args={"check_same_thread": False})
+    TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_get_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    monkeypatch.setattr(scan_routes, "_default_db_path", lambda: db_path)
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    return TestClient(app, headers={"X-Quirk-Request": "1"})
+
+
+def test_api_dar_insufficient_privilege_vs_connection_error(tmp_path, monkeypatch):
+    """C-CR-01 at the API boundary: only a connection-error: scan_error is a
+    failed connection; insufficient-privilege keeps its GRANT remediation."""
+    client = _dar_api_client(tmp_path, monkeypatch, [
+        dict(host="priv.db", port=5432, protocol="POSTGRESQL", severity="INFO",
+             scan_error="insufficient-privilege",
+             service_detail="Remediation: GRANT pg_read_all_stats TO <scanner_user>"),
+        dict(host="down.db", port=5432, protocol="POSTGRESQL", severity="INFO",
+             scan_error="connection-error: could not connect"),
+    ])
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200, resp.text
+    by_host = {f["host"]: f for f in resp.json()["dar_findings"]}
+    assert by_host["priv.db"]["title"] == "POSTGRESQL posture incomplete"
+    assert "GRANT pg_read_all_stats" in by_host["priv.db"]["remediation"]
+    assert by_host["down.db"]["title"] == "POSTGRESQL connection failed"
+    assert by_host["down.db"]["remediation"] is None
