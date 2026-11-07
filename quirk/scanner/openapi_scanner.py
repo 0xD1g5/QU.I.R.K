@@ -39,6 +39,12 @@ except ImportError:
     OPENAPI_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+    outcome_for_url_guard,
+)
 from quirk.util.outbound_fetch import OutboundFetchRejected, fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import _redact_url_preview, validate_external_url
@@ -124,7 +130,14 @@ def _load_spec_bytes_from_file(path: str) -> bytes:
     return raw
 
 
-def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: bool = False) -> bytes:
+def _fetch_spec_bytes_from_url(
+    url: str,
+    cfg_targets: list,
+    *,
+    allow_internal: bool = False,
+    outcomes=None,
+    outcome_target=None,
+) -> bytes:
     """Fetch raw spec bytes from URL — ONLY when within configured scan-target scope.
 
     Scope gate (SPEC-02): the URL's HOST must match one of cfg_targets (T-94-06).
@@ -136,8 +149,18 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
     blocks private/loopback unless allow_internal. Raises SpecParsingError on not-ok.
 
     Finally fetches with httpx and applies the 10 MB gate on response content.
+
+    235.3 D-05: when ``outcomes`` is given, the outcome is recorded against
+    ``outcome_target`` BEFORE the SpecParsingError is raised (guard refusal ->
+    outcome_for_url_guard; any HTTP response -> answered; other failure ->
+    unreachable), so the caller can classify it.
     """
     import httpx
+
+    def _rec(kind: str, detail: str = "") -> None:
+        if outcomes is not None:
+            outcomes.record(outcome_target, kind, detail)
+
     from urllib.parse import urlparse
 
     # CR-01 fix: compare the URL HOST against target FQDNs, not a string-prefix of the
@@ -149,6 +172,7 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
     }
     # Scope gate — reject before any network request (SPEC-02, T-94-06)
     if not url_host or url_host not in allowed_hosts:
+        _rec(OUTCOME_UNREACHABLE, "spec URL outside configured scan-target scope")
         raise SpecParsingError(
             f"OpenAPI spec URL is outside configured scan-target scope — "
             f"URL fetch is only permitted for URLs whose host is in the targets list: "
@@ -159,6 +183,7 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
     # only permitted when allow_internal is set (WR-01: thread --allow-internal-targets).
     vr = validate_external_url(url, allow_internal=allow_internal)
     if not vr.ok:
+        _rec(*outcome_for_url_guard(vr.reason))
         raise SpecParsingError(
             f"OpenAPI spec URL rejected ({vr.reason}): {vr.redacted_preview!r}"
         )
@@ -166,6 +191,7 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
     def _in_scope(hop_url: str) -> None:
         host = (urlparse(hop_url).hostname or "").lower()
         if not host or host not in allowed_hosts:
+            _rec(OUTCOME_UNREACHABLE, "redirect target outside configured scan-target scope")
             raise SpecParsingError(
                 f"OpenAPI spec URL is outside configured scan-target scope — "
                 f"URL fetch is only permitted for URLs whose host is in the targets list: "
@@ -179,10 +205,12 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
             allow_internal=allow_internal,
             extra_check=_in_scope,
         )
+        _rec(OUTCOME_ANSWERED)
         resp.raise_for_status()
-    except SpecParsingError:
+    except (SpecParsingError, TargetOutcomeContractError):
         raise
     except OutboundFetchRejected as exc:
+        _rec(*outcome_for_url_guard(exc.reason))
         raise SpecParsingError(
             f"OpenAPI spec URL rejected ({exc.reason}): {exc.preview!r}"
         ) from exc
@@ -190,6 +218,8 @@ def _fetch_spec_bytes_from_url(url: str, cfg_targets: list, *, allow_internal: b
         detail = type(exc).__name__
         if isinstance(exc, httpx.HTTPStatusError):
             detail += f" HTTP {exc.response.status_code}"
+        else:
+            _rec(OUTCOME_UNREACHABLE, safe_str(exc))
         raise SpecParsingError(
             f"Failed to fetch OpenAPI spec URL ({detail}): {_redact_url_preview(url)!r}"
         ) from exc
@@ -363,6 +393,7 @@ def scan_openapi_spec(
     *,
     cfg_targets: Optional[list] = None,
     allow_internal: bool = False,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Parse an OpenAPI spec from a local file or scope-gated URL and return findings.
 
@@ -385,6 +416,8 @@ def scan_openapi_spec(
         - SpecParsingError messages use _redact_url_preview() — never raw URL/ref values
     """
     _targets = cfg_targets or []
+    # 235.3 D-05: the single target is the spec location (label contract).
+    _outcome_target = outcomes.sole_target() if outcomes is not None else None
 
     # Determine if input is a URL or a local file path
     is_url = bool(path_or_url) and (
@@ -411,11 +444,21 @@ def scan_openapi_spec(
         )]
 
     if is_url:
-        raw_bytes = _fetch_spec_bytes_from_url(path_or_url, _targets, allow_internal=allow_internal)
+        raw_bytes = _fetch_spec_bytes_from_url(
+            path_or_url, _targets, allow_internal=allow_internal,
+            outcomes=outcomes, outcome_target=_outcome_target,
+        )
     else:
-        raw_bytes = _load_spec_bytes_from_file(path_or_url)
+        try:
+            raw_bytes = _load_spec_bytes_from_file(path_or_url)
+        except SpecParsingError as exc:
+            if outcomes is not None:
+                outcomes.record(_outcome_target, OUTCOME_UNREACHABLE, safe_str(exc))
+            raise
 
     spec_dict = _parse_spec_dict(raw_bytes)
+    if outcomes is not None and not is_url:
+        outcomes.record(_outcome_target, OUTCOME_ANSWERED)
 
     # CRITICAL ORDER: assert_no_external_refs BEFORE _oas_validate (T-94-05 SSRF guard)
     _assert_no_external_refs(spec_dict)

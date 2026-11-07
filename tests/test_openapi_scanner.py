@@ -340,3 +340,56 @@ def test_url_scope_accepts_bare_fqdn_target():
         except SpecParsingError as exc:
             assert "scope" not in str(exc).lower(), f"scope gate wrongly rejected in-scope host: {exc}"
         mock_get.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# 235.3-03 D-05: spec outcome recording
+# ---------------------------------------------------------------------------
+import socket as _socket
+
+from quirk.scanner.openapi_scanner import SpecParsingError as _SPE, scan_openapi_spec as _scan_spec
+from quirk.scanner.target_outcome import TargetOutcomeContractError, TargetOutcomes
+
+
+def test_openapi_outcome_loopback_refused_then_raises():
+    url = "http://localhost:20001/openapi.json"
+    sink = TargetOutcomes([url])
+    with pytest.raises(_SPE):
+        _scan_spec(url, cfg_targets=["localhost"], allow_internal=False, outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["refused"]
+    assert "loopback" in res[0].detail
+
+
+def test_openapi_outcome_closed_port_unreachable_then_raises():
+    with _socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    url = f"http://127.0.0.1:{port}/openapi.json"
+    sink = TargetOutcomes([url])
+    with pytest.raises(_SPE):
+        _scan_spec(url, cfg_targets=["127.0.0.1"], allow_internal=True, outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_outcome_local_file_answered(tmp_path):
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps({"openapi": "3.0.0", "info": {"title": "t", "version": "1"}, "paths": {}}))
+    sink = TargetOutcomes([str(spec)])
+    _scan_spec(str(spec), outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["answered"]
+
+
+def test_openapi_outcome_none_sink_unchanged():
+    with pytest.raises(_SPE):
+        _scan_spec("http://localhost:20001/openapi.json", cfg_targets=["localhost"])
+
+
+def test_openapi_outcome_contract_violation_propagates():
+    # The spec is a single-target phase: a sink with any other shape (here two
+    # expected targets) is a label-contract violation and must not be swallowed.
+    sink = TargetOutcomes(["not-this-target", "nor-this-one"])
+    with pytest.raises(TargetOutcomeContractError):
+        _scan_spec(
+            "http://localhost:20001/openapi.json", cfg_targets=["localhost"], outcomes=sink
+        )
