@@ -218,18 +218,27 @@ cannot run is recorded as skipped or failed with a reason (§3.1.3); it is never
    `skipped` / `missing-credentials`, or `auth-failed` if the service rejected the credential.
 3. **Zero results are unverified.** Treat any enabled connector with zero results as unverified
    until Scan Coverage (§3.1.3) shows that it `ran`. A database that fails to connect shows a
-   failed row on Data at Rest, and the phase reads `failed` (or `auth-failed`) when no target
-   answered.
+   failed row (a red Failed badge) on Data at Rest, and the phase reads `failed` (or
+   `auth-failed`) when no target answered. A Postgres server that answered but whose scanner role
+   lacks `pg_read_all_stats` shows a neutral Incomplete row with the `GRANT` remediation instead.
+   An empty state that says "Failed: the scanner stopped with an error" means the phase itself
+   raised; look at the scanner, not the network.
 
-**New Scan warning.** When the Targets field or a connector URL field holds a value the server
-policy would refuse, the New Scan form shows a non-blocking notice (`role="status"`) above Run
-Scan. It lists each refused value with its field and reason, says those connectors will be
-skipped, names `security.allow_internal_targets` in the server's `config.yaml` as the policy, and
-states that TLS and SSH scanning are unaffected. Run Scan stays enabled. The form fills it from the
-auth-gated, read-only `GET /api/config/internal-target-check` (query: `targets`, `connectors`),
-which answers `{allow_internal_targets, config_error, internal: [{field, preview, reason}],
-truncated}`; previews are redacted and at most 64 values are checked. There is no
-`docs/api-reference.md` yet, so this endpoint is documented here.
+**New Scan warning.** When a JWT or SAML connector URL field holds a value the server policy
+would refuse, the New Scan form shows a non-blocking notice (`role="status"`) above Run Scan.
+Those two lists are the only form values `security.allow_internal_targets` gates, so plain
+Targets (TLS and SSH) are never checked. The notice lists each refused value with its field and
+reason, says those targets will not be scanned, names `security.allow_internal_targets` in the
+server's `config.yaml` as the policy, and states that TLS and SSH scanning are unaffected. When
+the check could not cover every value it says so. When the server's `config.yaml` cannot be read
+it says scans will be refused until it is fixed (`POST /api/jobs` answers 503 DASHBOARD-014). Run
+Scan stays enabled. The form fills it from the auth-gated, CSRF-protected, read-only
+`POST /api/config/internal-target-check` (JSON body `{"connectors": {"jwt_targets": [...],
+"saml_targets": [...]}}`, with the `X-Quirk-Request: 1` header), which answers
+`{allow_internal_targets, config_error, internal: [{field, preview, reason}], truncated}`. It only
+resolves names (DNS, never a connection): previews are redacted, at most 32 values and 16
+hostnames are checked, lookups stop after 3 seconds, and a half-typed hostname is not resolved.
+There is no `docs/api-reference.md` yet, so this endpoint is documented here.
 
 1. Start the dashboard with `quirk serve`. It listens on `127.0.0.1:8512`, and it refuses a
    non-loopback `--host` unless a dashboard token is set or `--insecure` is passed. Open
