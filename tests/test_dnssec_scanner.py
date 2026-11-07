@@ -558,3 +558,77 @@ def test_dnssec_session_start_stamps_all_endpoints():
     for ep in result:
         assert ep.scanned_at == expected_naive, \
             f"Expected scanned_at={expected_naive!r}, got {ep.scanned_at!r}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-05: per-domain outcomes
+# ---------------------------------------------------------------------------
+
+def _outcome_kinds(sink, target):
+    return [k for (k, _d, _r) in sink.items.get(target, [])]
+
+
+def test_outcome_ns_resolution_timeout_is_unreachable():
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_UNREACHABLE
+    sink = TargetOutcomes(["dead.example.com"])
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=TimeoutError("timed out")), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        result = scan_dnssec_targets(["dead.example.com"], outcomes=sink)
+    assert result == []
+    assert _outcome_kinds(sink, "dead.example.com") == [OUTCOME_UNREACHABLE]
+
+
+def test_outcome_nxdomain_is_answered():
+    import dns.resolver
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_ANSWERED
+    sink = TargetOutcomes(["gone.example.com"])
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=dns.resolver.NXDOMAIN()), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        result = scan_dnssec_targets(["gone.example.com"], outcomes=sink)
+    assert result == []
+    assert sink.items["gone.example.com"][0][0] == OUTCOME_ANSWERED
+    assert sink.items["gone.example.com"][0][1] == "nxdomain"
+
+
+def test_outcome_no_dnskey_is_answered_findings_unchanged():
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_ANSWERED
+    ns_answer = MagicMock()
+    ns_answer.__iter__ = MagicMock(return_value=iter([_mock_ns_answer()]))
+    a_answer = MagicMock()
+    a_answer.__iter__ = MagicMock(return_value=iter([_mock_a_answer()]))
+
+    def resolve_side_effect(qname, rdtype, **kwargs):
+        return ns_answer if rdtype == "NS" else a_answer
+
+    sink = TargetOutcomes(["unsigned.example.com"])
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=resolve_side_effect), \
+         patch("quirk.scanner.dnssec_scanner.dns.query.udp_with_fallback",
+               return_value=_mock_dns_response(answer_rrsets=[])), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        result = scan_dnssec_targets(["unsigned.example.com"], outcomes=sink)
+    assert len(result) == 1 and result[0].service_detail == "unsigned-zone"
+    assert _outcome_kinds(sink, "unsigned.example.com") == [OUTCOME_ANSWERED]
+
+
+def test_outcome_outer_exception_is_unreachable():
+    from quirk.scanner.target_outcome import TargetOutcomes, OUTCOME_UNREACHABLE
+    sink = TargetOutcomes(["boom.example.com"])
+    with patch("quirk.scanner.dnssec_scanner._scan_domain", side_effect=RuntimeError("boom")), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        assert scan_dnssec_targets(["boom.example.com"], outcomes=sink) == []
+    assert _outcome_kinds(sink, "boom.example.com") == [OUTCOME_UNREACHABLE]
+
+
+def test_outcome_none_sink_unchanged():
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=TimeoutError("t")), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        assert scan_dnssec_targets(["dead.example.com"]) == []
+
+
+def test_outcome_label_contract_violation_propagates():
+    from quirk.scanner.target_outcome import TargetOutcomes, TargetOutcomeContractError
+    sink = TargetOutcomes(["not-this-target"])
+    with patch("quirk.scanner.dnssec_scanner.dns.resolver.resolve", side_effect=TimeoutError("t")), \
+         patch("quirk.scanner.dnssec_scanner.DNSPYTHON_AVAILABLE", True):
+        with pytest.raises(TargetOutcomeContractError):
+            scan_dnssec_targets(["dead.example.com"], outcomes=sink)
