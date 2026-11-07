@@ -83,7 +83,10 @@ export function InternalTargetWarning(props: InternalTargetWarningProps) {
   if (!result) return null
   const internal = Array.isArray(result.internal) ? result.internal : []
   const configError = typeof result.config_error === "string" && result.config_error !== ""
-  if (!configError && (result.allow_internal_targets || internal.length === 0)) return null
+  const truncated = result.truncated === true
+  // C-WR-02: a truncated answer with no hits still renders, so a capped or
+  // timed-out check never reads as "nothing internal".
+  if (!configError && (result.allow_internal_targets || (internal.length === 0 && !truncated))) return null
 
   return (
     <div
@@ -99,6 +102,11 @@ export function InternalTargetWarning(props: InternalTargetWarningProps) {
         <p className="font-semibold">
           Server policy could not be read, so internal JWT and SAML URLs may be skipped.
         </p>
+      ) : internal.length === 0 ? (
+        <p className="font-semibold">
+          Not every value was checked against the server&apos;s internal-target policy (too many values,
+          or name lookups took too long). Internal JWT or SAML URLs among them will not be scanned.
+        </p>
       ) : (
         <>
           <p className="font-semibold">
@@ -111,7 +119,11 @@ export function InternalTargetWarning(props: InternalTargetWarningProps) {
               </li>
             ))}
           </ul>
-          {result.truncated && <p className="text-xs mt-1">and more not listed</p>}
+          {truncated && (
+            <p className="text-xs mt-1">
+              Not every value was checked (too many values, or name lookups took too long), so others may be refused too.
+            </p>
+          )}
           <p className="text-xs mt-1">
             Set security.allow_internal_targets: true in the server&apos;s config.yaml to scan them.
             That is server policy and cannot be changed from this form. TLS and SSH scanning is not affected.

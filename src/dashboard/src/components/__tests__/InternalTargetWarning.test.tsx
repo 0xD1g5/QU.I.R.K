@@ -81,4 +81,23 @@ describe("InternalTargetWarning", () => {
     expect(checkCalls().length).toBe(1)
     expect(sentText()).not.toContain("openapi_spec_path")
   })
+
+  it("internal target warning says not every value was checked when truncated with no hits", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse({
+      allow_internal_targets: false, config_error: null, truncated: true, internal: [],
+    }))
+    await renderAndWait({ jwt_targets: ["https://a.corp.example"] })
+
+    expect(screen.getByRole("status")).toHaveTextContent("Not every value was checked")
+  })
+
+  it("internal target warning notes unchecked values alongside hits", async () => {
+    mockFetchApi.mockResolvedValue(jsonResponse({
+      allow_internal_targets: false, config_error: null, truncated: true,
+      internal: [{ field: "jwt_targets", preview: "http://10.0.0.1/", reason: "internal_ip" }],
+    }))
+    await renderAndWait({ jwt_targets: ["http://10.0.0.1"] })
+
+    expect(screen.getByRole("status")).toHaveTextContent("Not every value was checked")
+  })
 })

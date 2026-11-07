@@ -237,3 +237,19 @@ def test_route_not_on_unauthenticated_router():
     assert not any(
         getattr(r, "path", "").endswith("internal-target-check") for r in m.router.routes
     )
+
+
+def test_one_long_field_never_starves_the_other(client, monkeypatch):
+    """C-WR-02: a long jwt_targets list must not use up the value or DNS
+    budget before saml_targets is classified."""
+    _fake_resolver(monkeypatch)
+    r = _post(
+        client,
+        jwt_targets=[f"https://h{i}.corp.example/" for i in range(40)]
+        + [f"http://10.0.2.{i}/" for i in range(40)],
+        saml_targets=["https://idp.corp.example/md", "http://10.9.9.9/md"],
+    )
+    body = r.json()
+    assert body["truncated"] is True
+    saml = [e["preview"] for e in body["internal"] if e["field"] == "saml_targets"]
+    assert saml == ["https://idp.corp.example/md", "http://10.9.9.9/md"]

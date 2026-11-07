@@ -433,12 +433,19 @@ def classify_internal_targets(
     """
     if deadline is None:
         deadline = _INTERNAL_CHECK_DEADLINE_S
-    planned: List[Tuple[str, str, bool]] = []
+    # C-WR-02: take values round-robin across fields so one long list cannot
+    # use up the value or DNS budget before another field is looked at.
+    # Each plan carries (field position, value position) for display order.
+    planned: List[Tuple[Tuple[int, int], str, str, bool]] = []
     truncated = False
     dns_count = 0
-    for field, values in values_by_field.items():
-        for value in values:
-            plan = _checked_url_for(value)
+    fields = list(values_by_field.items())
+    depth = max((len(vals) for _f, vals in fields), default=0)
+    for pos in range(depth):
+        for f_pos, (field, values) in enumerate(fields):
+            if pos >= len(values):
+                continue
+            plan = _checked_url_for(values[pos])
             if plan is None:
                 continue
             url, needs_dns = plan
@@ -446,11 +453,12 @@ def classify_internal_targets(
                 truncated = True
                 continue
             dns_count += int(needs_dns)
-            planned.append((field, url, needs_dns))
+            planned.append(((f_pos, pos), field, url, needs_dns))
+    planned.sort(key=lambda p: p[0])
 
     reasons: Dict[int, Optional[str]] = {}
     futures = {}
-    for idx, (_field, url, needs_dns) in enumerate(planned):
+    for idx, (_order, _field, url, needs_dns) in enumerate(planned):
         if needs_dns:
             futures[_dns_executor().submit(_internal_reason_for, url)] = idx
         else:
@@ -464,7 +472,7 @@ def classify_internal_targets(
             reasons[futures[fut]] = fut.result()
 
     entries: List[InternalTargetEntry] = []
-    for idx, (field, url, _needs_dns) in enumerate(planned):
+    for idx, (_order, field, url, _needs_dns) in enumerate(planned):
         reason = reasons.get(idx)
         if reason:
             entries.append(
