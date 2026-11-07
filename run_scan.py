@@ -3397,7 +3397,8 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_jwt is false")
             if not cfg.connectors.jwt_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.jwt_targets is empty")
-            return scan_jwt_targets(
+            _outcomes = TargetOutcomes(cfg.connectors.jwt_targets)
+            _rows = scan_jwt_targets(
                 cfg.connectors.jwt_targets,
                 timeout=cfg.scan.timeouts.jwt_seconds,
                 logger=logger,
@@ -3409,6 +3410,10 @@ def main():
                 # profile at http://localhost:2000x. Threaded here to match how every other
                 # internal-capable scanner consumes the same operator opt-in.
                 allow_internal=cfg.security.allow_internal_targets,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "jwt_scanner", _outcomes, _rows, error_endpoints, _recorder,
             )
         jwt_endpoints = _wrapped_phase(
             run_stats, "jwt_scanning", "jwt_scanner",
@@ -3471,15 +3476,20 @@ def main():
             _target_list = []
             if hasattr(cfg, "targets") and cfg.targets is not None:
                 _target_list = list(getattr(cfg.targets, "fqdns", []) or [])
+            _outcomes = TargetOutcomes([_spec_path])
             try:
-                return scan_openapi_spec(
+                _rows = scan_openapi_spec(
                     _spec_path,
                     cfg_targets=_target_list,
                     allow_internal=cfg.security.allow_internal_targets,
+                    outcomes=_outcomes,
                 )
             except SpecParsingError as exc:
                 logger.error(f"OpenAPI spec parse error: {safe_str(exc)}")
-                return []
+                _rows = []
+            return _classify_connector_outcomes(
+                "openapi_scanner", _outcomes, _rows, error_endpoints, _recorder,
+            )
         openapi_endpoints = _wrapped_phase(
             run_stats, "openapi_scanning", "openapi_scanner",
             _run_openapi_phase, error_endpoints, logger,
@@ -3488,6 +3498,7 @@ def main():
         # ==============================
         # REST fuzz scan phase (Phase 96 FUZZ-01/02/03/04)
         # ==============================
+        # 235.3 P-03: fuzz_scanning is interactive-only (--fuzz, not a cfg.connectors flag); exempt from the D-03 ran-vs-skipped rule
         def _run_fuzz_phase():
             _recorder = run_stats["phase_records"]
             # Guard: --fuzz must be set and openapi_endpoints must exist (no spec → no fuzz)
@@ -3578,15 +3589,22 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_aws:
                 return _recorder.skip("disabled-by-config", "enable_aws is false")
-            from quirk.scanner.aws_connector import BOTO3_AVAILABLE
+            from quirk.scanner.aws_connector import BOTO3_AVAILABLE, aws_target_label
             if not BOTO3_AVAILABLE:
                 return _recorder.skip("missing-extra", "boto3 not installed (extras: aws)")
             if not cfg.connectors.aws_region:
                 return _recorder.skip("no-eligible-targets", "connectors.aws_region is empty")
-            return scan_aws_targets(
+            _outcomes = TargetOutcomes(
+                [aws_target_label("aws", cfg.connectors.aws_region, None)]
+            )
+            _rows = scan_aws_targets(
                 region=cfg.connectors.aws_region,
                 profile=cfg.connectors.aws_profile,
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "aws_connector", _outcomes, _rows, error_endpoints, _recorder,
             )
         aws_endpoints = _wrapped_phase(
             run_stats, "aws_scanning", "aws_connector",
@@ -3608,10 +3626,18 @@ def main():
                     "no-eligible-targets",
                     "connectors.azure_subscription_id and connectors.azure_keyvault_urls are both empty",
                 )
-            return scan_azure_targets(
+            _expected = list(cfg.connectors.azure_keyvault_urls or [])
+            if cfg.connectors.azure_subscription_id:
+                _expected.append(cfg.connectors.azure_subscription_id)
+            _outcomes = TargetOutcomes(_expected)
+            _rows = scan_azure_targets(
                 subscription_id=cfg.connectors.azure_subscription_id or "",
                 keyvault_urls=cfg.connectors.azure_keyvault_urls,
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "azure_connector", _outcomes, _rows, error_endpoints, _recorder,
             )
         azure_endpoints = _wrapped_phase(
             run_stats, "azure_scanning", "azure_connector",
@@ -3625,14 +3651,19 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_gcp:
                 return _recorder.skip("disabled-by-config", "enable_gcp is false")
-            from quirk.scanner.gcp_connector import GCP_AVAILABLE
+            from quirk.scanner.gcp_connector import GCP_AVAILABLE, gcp_target_label
             if not GCP_AVAILABLE:
                 return _recorder.skip("missing-extra", "google-api-python-client not installed (extras: cloud)")
             if not cfg.connectors.gcp_project_id:
                 return _recorder.skip("no-eligible-targets", "connectors.gcp_project_id is empty")
-            return scan_gcp_targets(
+            _outcomes = TargetOutcomes([gcp_target_label(cfg.connectors.gcp_project_id)])
+            _rows = scan_gcp_targets(
                 project_id=cfg.connectors.gcp_project_id or "",
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "gcp_connector", _outcomes, _rows, error_endpoints, _recorder,
             )
         gcp_endpoints = _wrapped_phase(
             run_stats, "gcp_scanning", "gcp_connector",
@@ -3753,7 +3784,7 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_s3:
                 return _recorder.skip("disabled-by-config", "enable_s3 is false")
-            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
+            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE, aws_target_label
             if not BOTO3_AVAILABLE:
                 logger.v("boto3 not installed — S3 scanning skipped")
                 return _recorder.skip("missing-extra", "boto3 not installed")
@@ -3762,14 +3793,21 @@ def main():
                 region_name=cfg.connectors.aws_region,
                 profile_name=cfg.connectors.aws_profile,
             )
+            _s3_endpoint = cfg.connectors.aws_endpoint_url or None
+            _outcomes = TargetOutcomes(
+                [aws_target_label("s3", cfg.connectors.aws_region, _s3_endpoint)]
+            )
             eps = _scan_s3_encryption(
                 session=s3_session,
                 logger=logger,
                 session_start=session_start,
-                endpoint_url=cfg.connectors.aws_endpoint_url or None,
+                endpoint_url=_s3_endpoint,
+                outcomes=_outcomes,
             )
             logger.info(f"S3 scan: {len(eps)} bucket endpoints")
-            return eps
+            return _classify_connector_outcomes(
+                "s3_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         s3_endpoints = _wrapped_phase(
             run_stats, "s3_scanning", "s3_connector",
             _run_s3_phase, error_endpoints, logger,
@@ -3791,14 +3829,18 @@ def main():
                 return _recorder.skip(
                     "no-eligible-targets", "connectors.azure_subscription_id is empty",
                 )
+            _outcomes = TargetOutcomes([cfg.connectors.azure_subscription_id])
             eps = _scan_blob_encryption(
                 credential=DefaultAzureCredential(),
                 subscription_id=cfg.connectors.azure_subscription_id,
                 logger=logger,
                 session_start=session_start,
+                outcomes=_outcomes,
             )
             logger.info(f"Azure Blob scan: {len(eps)} container endpoints")
-            return eps
+            return _classify_connector_outcomes(
+                "azure_blob_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         blob_endpoints = _wrapped_phase(
             run_stats, "blob_scanning", "azure_blob_connector",
             _run_blob_phase, error_endpoints, logger,
@@ -3897,16 +3939,20 @@ def main():
             if not cfg.connectors.saml_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.saml_targets is empty")
             from quirk.scanner.saml_scanner import scan_saml_targets
+            _outcomes = TargetOutcomes(cfg.connectors.saml_targets)
             eps = scan_saml_targets(
                 targets=cfg.connectors.saml_targets,
                 timeout=getattr(cfg.connectors, "saml_timeout", 10),
                 logger=logger,
                 session_start=session_start,
                 allow_internal_targets=cfg.security.allow_internal_targets,
+                outcomes=_outcomes,
             )
             logger.info("SAML scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.saml_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "saml_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         saml_endpoints = _wrapped_phase(
             run_stats, "saml_scanning", "saml_scanner",
             _run_saml_phase, error_endpoints, logger,
