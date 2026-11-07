@@ -3982,7 +3982,9 @@ def main():
             # findings, trends, and scoring evidence. A pre-flight skip would
             # silently delete those previously-emitted signals; the phase
             # honestly records "ran" because the connector did run and emit.
-            from quirk.scanner.k8s_connector import scan_k8s_targets, K8S_AVAILABLE
+            from quirk.scanner.k8s_connector import (
+                K8S_AVAILABLE, SUPPORTED_PROVIDERS, scan_k8s_targets,
+            )
             # 235.3 D-05: single-target connector, so the scanner records
             # against outcomes.sole_target(). EKS is recorded below with
             # extra=True so sole_target() stays unambiguous.
@@ -4037,6 +4039,17 @@ def main():
                         OUTCOME_UNREACHABLE, safe_str(exc), extra=True,
                     )
             logger.info(f"K8S scan: {len(eps)} cluster endpoints")
+            if (cfg.connectors.k8s_provider or "").strip().lower() not in SUPPORTED_PROVIDERS:
+                # Review B-WR-04: K8S-03 path A is a configuration gap, not
+                # missing credentials. Keep its in-band inaccessible row.
+                error_endpoints.extend(
+                    e for e in eps if getattr(e, "scan_error", None)
+                )
+                return _recorder.skip(
+                    "no-eligible-targets",
+                    "connectors.k8s_provider is unset or unsupported "
+                    "(supported: eks, gke, aks)",
+                )
             # 235.3: a missing kubernetes SDK records no outcome (K8S-03 path B
             # emits its inaccessible row in-band). Read that as missing_extra,
             # not as a misleading "did not answer". Post-scan on purpose: the

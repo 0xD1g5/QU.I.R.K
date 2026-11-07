@@ -327,3 +327,18 @@ def test_codesign_tls_eku_rows_with_ldap_unanswered_is_ran_without_skip_advisory
     ]
     assert [e for e in eps if e["category"] == "target_unanswered"]
     assert [e for e in eps if e["host"] == "eku-harness"]
+
+
+# ------------------------------------------------------------------ B-WR-04
+
+def test_k8s_unset_provider_is_not_missing_credentials(tmp_path, monkeypatch):
+    phases, eps = _scan(tmp_path, monkeypatch, {"connectors": {
+        "enable_k8s": True, "k8s_provider": "",
+    }})
+    row = phases["k8s_scanning"]
+    assert row["status"] == "skipped"
+    assert row["reason"] == "no-eligible-targets"
+    assert "k8s_provider" in row["detail"]
+    assert not [e for e in eps if e["category"] == "missing_credentials"]
+    # The K8S-03 path A inaccessible row is still persisted.
+    assert [e for e in eps if e["error"] == "encryption-config-inaccessible"]
