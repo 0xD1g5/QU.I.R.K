@@ -26,6 +26,18 @@ from quirk.config import load_config, _parse_host_port
 from quirk.config_redaction import credential_is_set  # Phase 192 / OBS-01 / D-05
 from quirk.util.safe_exc import safe_str
 from quirk.util.scanner_binaries import SCANNER_BINARIES  # Phase 235.1 D-05
+from quirk.scanner.target_outcome import (  # Phase 235.3 D-05
+    OUTCOME_ANSWERED,
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_REFUSED,
+    OUTCOME_TO_SKIP_REASON,
+    OUTCOME_UNREACHABLE,
+    PER_TARGET_ERROR_CATEGORY,
+    SKIP_REASON_TO_ADVISORY_CATEGORY,
+    TargetOutcome,
+    TargetOutcomes,
+)
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
@@ -397,6 +409,88 @@ def _missing_binary_detail(binary: str, error_endpoints) -> Optional[str]:
         spec.scanner_label, binary, spec.error_code, error_endpoints
     )
     return f"{binary} is not installed (QRK-{spec.error_code})"
+
+
+def _emit_coverage_skip_advisory(scanner_label: str, reason: str, detail: str, error_endpoints) -> None:
+    """Phase 235.3 D-07: one counted ADVISORY row for a connector phase that saw nothing.
+
+    Mirrors `_emit_missing_binary_advisory`'s row shape. Deliberately prints no
+    format_error code: no QRK code applies and a new one would trip the
+    docs/error-codes.md generator gate.
+    """
+    error_endpoints.append(CryptoEndpoint(
+        host=scanner_label,
+        port=0,
+        protocol="ADVISORY",
+        scan_error=detail,
+        scan_error_category=SKIP_REASON_TO_ADVISORY_CATEGORY[reason],
+    ))
+
+
+def _per_target_error_row(scanner_label: str, outcome: TargetOutcome) -> CryptoEndpoint:
+    """Phase 235.3 D-03/P-14: a real scan-error row for one target that did not answer."""
+    return CryptoEndpoint(
+        host=outcome.target,
+        port=0,
+        protocol="ERROR",
+        scan_error=f"{scanner_label}: {outcome.kind}: {outcome.detail}",
+        scan_error_category=PER_TARGET_ERROR_CATEGORY,
+    )
+
+
+_COVERAGE_PHRASE = {
+    "internal-target-refused": "were refused by the internal-target guard",
+    "auth-failed": "failed authentication",
+    "missing-credentials": "had no usable credentials",
+    "failed": "did not answer",
+}
+_COVERAGE_PRIORITY = (
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_REFUSED,
+    OUTCOME_UNREACHABLE,
+)
+
+
+def _classify_connector_outcomes(scanner_label, outcomes, rows, error_endpoints, recorder):
+    """Phase 235.3 D-03/D-05/D-07: turn per-target outcomes into `ran` or a named `skipped`.
+
+    At least one target answered -> the phase ran: return *rows* unchanged
+    (zero rows is fine, answered-with-nothing stays ran) after appending one
+    target_unanswered ERROR row per non-answering target without an in-band row.
+    No target answered -> append one ADVISORY row and return
+    recorder.skip(reason, detail). Fail-closed: an expected target with no
+    recorded outcome counts as not answered. In-band rows are never deleted
+    (P-08); reason priority is P-06.
+    """
+    resolved = outcomes.resolved()
+    failures = [o for o in resolved if o.kind != OUTCOME_ANSWERED]
+    if any(o.kind == OUTCOME_ANSWERED for o in resolved):
+        for o in failures:
+            if not o.row_emitted:
+                error_endpoints.append(_per_target_error_row(scanner_label, o))
+        return rows
+    kinds = {o.kind for o in failures}
+    kind = next((k for k in _COVERAGE_PRIORITY if k in kinds), OUTCOME_UNREACHABLE)
+    reason = OUTCOME_TO_SKIP_REASON[kind]
+    names = ", ".join(
+        f"{o.target} ({o.kind}: {o.detail})" if o.detail else f"{o.target} ({o.kind})"
+        for o in failures[:5]
+    )
+    if len(failures) > 5:
+        names += f", and {len(failures) - 5} more"
+    detail = (
+        f"{len(failures)} of {len(resolved)} targets {_COVERAGE_PHRASE[reason]}: {names}"
+    )
+    if not failures:
+        detail = "no targets were configured to answer"
+    if reason == "internal-target-refused":
+        detail += (
+            "; security.allow_internal_targets is false - it is server policy, "
+            "set it in the server's config.yaml"
+        )
+    _emit_coverage_skip_advisory(scanner_label, reason, detail, error_endpoints)
+    return recorder.skip(reason, detail)
 
 
 def _broker_missing_extra(enable_broker: bool, error_endpoints) -> bool:
