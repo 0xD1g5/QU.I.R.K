@@ -256,3 +256,180 @@ def test_coverage_skip_advisory_lowers_score_through_real_pipeline(reason, capsy
             f"({s0['score']} -> {s1['score']}); endpoint-only delta {d_without}; "
             f"expected subscore delta {expected:.3f}"
         )
+
+
+# ---------------------------------------------------------------------------
+# SC3 / D-07: paired real scans -- JWT skipped vs JWT answered-empty
+# ---------------------------------------------------------------------------
+
+import glob  # noqa: E402
+import os  # noqa: E402
+import re  # noqa: E402
+
+from tests import connector_coverage_harness as _h  # noqa: E402
+
+
+def _paired_scan(root, tls_port, jwt_url, allow_internal):
+    """One in-process scan; the TLS stub is the only TLS target in both scans."""
+    root.mkdir()
+    cfg_path = _h.build_config(root, {
+        "targets": {"include_ips": ["127.0.0.1"]},
+        "scan": {"ports_tls": [tls_port]},
+        "connectors": {
+            "enable_jwt": True, "jwt_targets": [jwt_url],
+            "enable_container": False, "enable_source": False,
+            "enable_saml": False, "enable_dnssec": False,
+            "enable_email": False, "enable_broker": False,
+        },
+        "security": {"allow_internal_targets": allow_internal},
+    })
+    from quirk.config import load_config
+
+    db = load_config(cfg_path).output.db_path
+    before = _h.quirk_output_snapshot()
+    _h.run_scan_in_process(cfg_path, db)
+    assert _h.quirk_output_snapshot() == before, "scan wrote into repo quirk-output/"
+    rows = {r["phase_name"]: r for r in _h.phase_rows(db)}
+    return {
+        "root": root, "db": db, "out": root / "out", "rows": rows,
+        "scan_run_id": rows["jwt_scanning"]["scan_run_id"],
+    }
+
+
+@pytest.fixture(scope="module")
+def answered_empty_pair(tmp_path_factory):
+    """Baseline is ANSWERED-EMPTY (RESEARCH Pitfall 7): scan B's JWKS stub
+    answers {"keys": []}; scan A's identical URL is refused by policy."""
+    base = tmp_path_factory.mktemp("answered_empty_pair")
+    mp = pytest.MonkeyPatch()
+    try:
+        _h.scrub_cloud_env(mp)
+        with _h.tls_stub(base) as tls_port, _h.jwks_stub('{"keys": []}') as jwt_url:
+            a = _paired_scan(base / "a_skipped", tls_port, jwt_url, False)
+            b = _paired_scan(base / "b_answered", tls_port, jwt_url, True)
+    finally:
+        mp.undo()
+    return {"a": a, "b": b, "tls_port": tls_port}
+
+
+def _tls_set_and_evidence(db, scan_run_id):
+    from quirk.db import get_session
+    from quirk.intelligence.evidence import build_evidence_summary
+    from quirk.intelligence.scoring import compute_readiness_score
+    from quirk.models import CryptoEndpoint as Row
+
+    with get_session(db) as s:
+        eps = s.query(Row).filter_by(scan_run_id=scan_run_id).all()
+        tls = sorted(
+            (e.host, e.port, e.tls_version, e.cipher_suite)
+            for e in eps if e.protocol == "TLS"
+        )
+        errs = [e for e in eps if e.scan_error]
+        ev = build_evidence_summary(eps)
+        score = compute_readiness_score(ev)
+    return tls, len(errs), ev, score
+
+
+@pytest.mark.slow
+def test_answered_empty_baseline_estate_identical_and_assessed(answered_empty_pair):
+    a, b = answered_empty_pair["a"], answered_empty_pair["b"]
+    tls_a, _, _, _ = _tls_set_and_evidence(a["db"], a["scan_run_id"])
+    tls_b, _, ev_b, score_b = _tls_set_and_evidence(b["db"], b["scan_run_id"])
+    assert tls_a == tls_b and tls_a, "baseline TLS estate must be identical and non-empty"
+    assert score_b["score"] is not None
+    assert a["rows"]["jwt_scanning"]["status"] == "skipped"
+    assert a["rows"]["jwt_scanning"]["reason"] == "internal-target-refused"
+    assert b["rows"]["jwt_scanning"]["status"] == "ran"
+
+
+@pytest.mark.slow
+def test_answered_empty_intel_score_skipped_lower(answered_empty_pair):
+    a, b = answered_empty_pair["a"], answered_empty_pair["b"]
+    _, err_a, _, score_a = _tls_set_and_evidence(a["db"], a["scan_run_id"])
+    _, err_b, _, score_b = _tls_set_and_evidence(b["db"], b["scan_run_id"])
+    assert err_a == err_b + 1
+    assert score_a["score"] < score_b["score"], (score_a["score"], score_b["score"])
+
+
+def _html_score(out):
+    htmls = glob.glob(str(out / "report-*.html"))
+    assert len(htmls) == 1
+    html = open(htmls[0], encoding="utf-8").read()
+    return html
+
+
+@pytest.mark.slow
+def test_answered_empty_html_report_score_and_coverage_row(answered_empty_pair):
+    a, b = answered_empty_pair["a"], answered_empty_pair["b"]
+    html_a, html_b = _html_score(a["out"]), _html_score(b["out"])
+    assert "Scan Coverage" in html_a
+    assert "JWT</td><td>skipped</td><td>internal-target-refused (" in html_a
+    assert "JWT</td><td>ran</td>" in html_b
+    assert "internal-target-refused (" not in html_b
+
+    def _score(html):
+        m = re.search(r'<div class="score-value">(\d+)</div>', html)
+        assert m, "no score in HTML report"
+        return int(m.group(1))
+
+    assert _score(html_a) < _score(html_b)
+
+
+def _api_client(monkeypatch, db, scan_run_id):
+    import datetime
+
+    from sqlalchemy.orm import sessionmaker
+    from fastapi.testclient import TestClient
+
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+    from quirk.db import get_engine
+    from quirk.models import ScanJob
+
+    Session = sessionmaker(bind=get_engine(db), autoflush=False, autocommit=False)
+    with Session() as s:
+        s.add(ScanJob(
+            job_id="job-" + scan_run_id[:8], status="completed", target="127.0.0.1",
+            profile="standard", calibration="balanced", scan_run_id=scan_run_id,
+            completed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
+        ))
+        s.commit()
+
+    def _override():
+        s = Session()
+        try:
+            yield s
+        finally:
+            s.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override
+    monkeypatch.setattr("quirk.dashboard.api.routes.scan._default_db_path", lambda: db)
+    return TestClient(app, headers={"X-Quirk-Request": "1"})
+
+
+@pytest.mark.slow
+def test_answered_empty_api_scan_latest_score_and_coverage(answered_empty_pair, monkeypatch):
+    a, b = answered_empty_pair["a"], answered_empty_pair["b"]
+    out = {}
+    for key, m in (("a", a), ("b", b)):
+        client = _api_client(monkeypatch, m["db"], m["scan_run_id"])
+        latest = client.get("/api/scan/latest")
+        assert latest.status_code == 200
+        body = latest.json()
+        cov = client.get(f"/api/scans/{m['scan_run_id']}/coverage").json()
+        out[key] = (body, cov)
+
+    body_a, cov_a = out["a"]
+    body_b, cov_b = out["b"]
+    assert body_a["score"]["score"] is not None
+    assert body_a["score"]["score"] < body_b["score"]["score"]
+    jwt_a = next(p for p in cov_a["phases"] if p["phase_name"] == "jwt_scanning")
+    assert jwt_a["status"] == "skipped" and jwt_a["reason"] == "internal-target-refused"
+    assert "security.allow_internal_targets" in jwt_a["detail"]
+    latest_jwt = next(
+        p for p in body_a["coverage"]["phases"] if p["phase_name"] == "jwt_scanning"
+    )
+    assert latest_jwt["reason"] == jwt_a["reason"] and latest_jwt["detail"] == jwt_a["detail"]
+    jwt_b = next(p for p in body_b["coverage"]["phases"] if p["phase_name"] == "jwt_scanning")
+    assert jwt_b["status"] == "ran"
