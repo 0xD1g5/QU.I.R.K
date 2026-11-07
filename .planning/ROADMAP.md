@@ -242,7 +242,18 @@ Plans:
   2. A clean PyPI install of 5.28.2 passes the release smoke test on macOS, Linux 3.10, Linux 3.11, contributor and the 3.15 unpinned leg, and the attestations verify.
   3. The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No enabled connector reads `ran` with 0 rows unless a target answered, every skip names its true cause, and the score moves in the right direction when a connector is skipped.
   4. The announcement draft is re-checked sentence by sentence against 5.28.2 (claim table, leak grep, false-capability grep), and the operator's go/no-go is recorded. No agent posts anything.
-**Plans**: TBD
+**Plans**: 9 plans in 8 waves. Every outward-facing step (merge, tag push, PR #69 close, go/no-go) is its own operator checkpoint (D-12). D-11's tree-equality check is made concrete as: `git diff --name-only C M` touches no packaged path, plus a post-publish candidate-vs-PyPI wheel RECORD compare.
+
+Plans:
+- [ ] 235.4-01-PLAN.md — Version bump to 5.28.2 (hit set re-derived), README pins/title/5.28.2 paragraph, doc-claim ledger, UAT-1-02 SKIP DEFERRED; commit C (D-13)
+- [ ] 235.4-02-PLAN.md — Operator Docker/network checkpoint; candidate built from C with release.yml's command; clean venv; full lab via lab-up.sh; Pass A/B scratch envs (D-07, D-11, D-16)
+- [ ] 235.4-03-PLAN.md — Walkthrough Pass A (2026-11-05 replay, operator-led) + DB cross-check + computed-score direction (D-05, D-06)
+- [ ] 235.4-04-PLAN.md — Walkthrough Pass B (operators-guide §3.0 setup, operator-led) + combined WALKTHROUGH verdict (D-05, D-06)
+- [ ] 235.4-05-PLAN.md — UAT-235.3-13 PASS, CHANGELOG date, branch CI green, PR, operator merge, main green at M, D-11 path check, release.yml dry run (D-04, D-09, D-10)
+- [ ] 235.4-06-PLAN.md — Announcement draft for 5.28.2 + pre-publish checks with negative controls (D-03, D-08, D-15)
+- [ ] 235.4-07-PLAN.md — Operator tag push; publish; PyPI, RECORD compare, attestations, links; five smoke legs; UAT-1-02 PASS (D-01, D-14)
+- [ ] 235.4-08-PLAN.md — Post-publish re-check of the announcement; operator go/no-go recorded verbatim (D-02)
+- [ ] 235.4-09-PLAN.md — Operator closes PR #69 as included; vault sync; lab down; CI observed green at final HEAD, no commit after (CITRUTH-03)
 
 ## Next Milestone Candidates (v5.29)
 
