@@ -35018,7 +35018,7 @@ gh release view v5.28.0 --json body -q .body
 
 **Pass Criteria:** All nodes pass over the re-derived set (25 sites; 4 non-connector, 3 exempt, 18 connectors).
 
-**Result:** - [x] PASS (2026-11-06 8 passed (full file: 21 passed) -- covered by `tests/test_connector_phase_backstop.py::test_enumeration_and_both_way_classification` and `tests/test_connector_phase_backstop.py::test_scanner_callees_accept_and_receive_outcomes` and `tests/test_connector_phase_backstop.py::test_no_exercised_connector_reads_ran` and `tests/test_connector_phase_backstop.py::test_leg_made_no_non_loopback_connect`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-11-06 8 passed, full file 21 passed -- covered by `tests/test_connector_phase_backstop.py::test_enumeration_and_both_way_classification` and `tests/test_connector_phase_backstop.py::test_scanner_callees_accept_and_receive_outcomes` and `tests/test_connector_phase_backstop.py::test_no_exercised_connector_reads_ran` and `tests/test_connector_phase_backstop.py::test_leg_made_no_non_loopback_connect`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-11-06  **Tester:** Automated (Phase 235.3 plan 19)
 **Notes:** Plan 235.3-15. Pre-fix baseline (b6896416 worktree): 3 failed, naming 16 phases that read `ran`; recorded in the 235.3-15 SUMMARY.
 
@@ -35078,7 +35078,7 @@ cd src/dashboard && npx vitest run src/lib/__tests__/coverage-reason.test.ts src
 
 **Pass Criteria:** All nodes pass; the route needs a token, ignores a client-supplied allow-internal query, redacts previews; Run Scan stays enabled.
 
-**Result:** - [x] PASS (2026-11-06 4 pytest passed (12 in the route file); both vitest nodes passed in the 26-test vitest run -- covered by `tests/test_internal_target_preflight.py::test_401_without_token_200_with_token` and `tests/test_internal_target_preflight.py::test_policy_false_reports_three_fields` and `tests/test_internal_target_preflight.py::test_client_allow_internal_query_ignored` and `tests/test_internal_target_preflight.py::test_preview_is_redacted` and `src/dashboard/src/pages/__tests__/scan-new-internal-target-warning.test.tsx::"new scan warns when server policy refuses an internal jwt url"` and `src/dashboard/src/pages/__tests__/scan-new-internal-target-warning.test.tsx::"new scan keeps run scan enabled while the internal target warning shows"`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-11-06 4 pytest passed, 12 in the route file; both vitest nodes passed in the 26-test vitest run -- covered by `tests/test_internal_target_preflight.py::test_401_without_token_200_with_token` and `tests/test_internal_target_preflight.py::test_policy_false_reports_three_fields` and `tests/test_internal_target_preflight.py::test_client_allow_internal_query_ignored` and `tests/test_internal_target_preflight.py::test_preview_is_redacted` and `src/dashboard/src/pages/__tests__/scan-new-internal-target-warning.test.tsx::"new scan warns when server policy refuses an internal jwt url"` and `src/dashboard/src/pages/__tests__/scan-new-internal-target-warning.test.tsx::"new scan keeps run scan enabled while the internal target warning shows"`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-11-06  **Tester:** Automated (Phase 235.3 plan 19)
 **Notes:** Plans 235.3-13 and 235.3-16.
 

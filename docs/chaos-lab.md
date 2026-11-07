@@ -582,7 +582,7 @@ The `storage-s3` profile (introduced in Phase 28) ships an S3-compatible object 
 | 29000 | minio         | encrypted-bucket    | SSE-S3   | `S3/sse-s3`          | (none)   |
 | 29000 | minio         | unencrypted-bucket  | None     | `S3/unencrypted`     | HIGH     |
 
-Credentials: access key `minioadmin`, secret key `minioadmin` (historical MinIO-era values, kept so the seed and the scanner configs need no edit). Export them (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell that runs `quirk scan` or `quirk serve`: without a usable credential the S3 phase of a dashboard scan reads `skipped` / `missing-credentials` rather than `ran` with zero rows.
+Credentials: access key `minioadmin`, secret key `minioadmin` (historical MinIO-era values, kept so the seed and the scanner configs need no edit). Export them (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`) in the shell that runs the CLI scan (`quirk --config <file>.yaml`) or `quirk serve`: without a usable credential the S3 phase of a dashboard scan reads `skipped` / `missing-credentials` rather than `ran` with zero rows.
 
 **Start:**
 

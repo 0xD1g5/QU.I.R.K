@@ -262,7 +262,7 @@ Outputs land in `output.directory` (`./quirk-output` in the starter config): an 
 DOCX report, a PDF (when Playwright's Chromium is installed), `executive-summary-<ts>.md`,
 `technical-findings-<ts>.md`, `scorecard-<ts>.md`, `roadmap-<ts>.md`, `findings-<ts>.json`,
 `intelligence-<ts>.json`, `run-stats-<ts>.json`, and the CycloneDX CBOM as both
-`cbom-<ts>.cdx.json` and `cbom-<ts>.cdx.xml`. The SQLite database is `output.db_path`. `quirk scan` uses the same phase recorder as the dashboard, so the same
+`cbom-<ts>.cdx.json` and `cbom-<ts>.cdx.xml`. The SQLite database is `output.db_path`. A CLI scan (`quirk --config <file>.yaml`) uses the same phase recorder as the dashboard, so the same
 Scan Coverage reasons (§3.1.3) appear for CLI runs.
 
 ### 3.1 Interpreting Results
