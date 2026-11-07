@@ -264,10 +264,15 @@ def test_outcome_bind_failure_unreachable_row_kept():
     assert o.kind == "unreachable" and o.row_emitted is True
 
 
-def test_outcome_invalid_credentials_auth_failed():
-    exc = codesign_scanner._BindRejected("anonymous bind rejected", 49)
+@pytest.mark.parametrize("code", [8, 13, 48, 49, 53])
+def test_outcome_anonymous_bind_refused_is_missing_credentials(code):
+    """235.3 review A-WR-04: the server answered and refused the anonymous
+    bind; the scanner presents no credentials, so this is missing credentials
+    (D-06), never auth_failed and never unreachable."""
+    exc = codesign_scanner._BindRejected("anonymous bind rejected", code)
     eps, (o,) = _outcome_run({"side_effect": exc})
-    assert eps == [] and o.kind == "auth_failed" and o.row_emitted is False
+    assert eps == []
+    assert o.kind == "missing_credentials" and o.row_emitted is False
 
 
 def test_outcome_zero_certs_answered():

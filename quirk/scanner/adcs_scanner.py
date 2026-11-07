@@ -30,6 +30,7 @@ from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.safe_exc import safe_str
 from quirk.scanner.target_outcome import (
     OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
 )
@@ -236,16 +237,33 @@ def _classify_template_escs(entry: dict) -> "list[tuple[str, str, list[str]]]":
     return findings
 
 
-def _ldap_failure_outcome(exc) -> "tuple[str, str]":
-    """Classify an LDAP bind/connect failure (235.3 D-06): result code 49 /
-    invalidCredentials -> auth_failed, anything else -> unreachable."""
+# 235.3 review A-WR-04: LDAP result codes meaning "the server answered and
+# refused this bind" (strongerAuthRequired 8, confidentialityRequired 13,
+# inappropriateAuthentication 48, invalidCredentials 49,
+# insufficientAccessRights 50, unwillingToPerform 53, authMethodNotSupported 7).
+_LDAP_AUTH_CODES = frozenset({7, 8, 13, 48, 49, 50, 53})
+
+
+def _ldap_failure_outcome(exc, *, have_creds: bool = False) -> "tuple[str, str]":
+    """Classify an LDAP bind/connect failure (235.3 D-06).
+
+    A bind the server refused (``_LDAP_AUTH_CODES`` / invalidCredentials) is
+    ``auth_failed`` when credentials were presented and
+    ``missing_credentials`` for an anonymous bind; anything else is
+    ``unreachable``.
+    """
     code = getattr(exc, "result_code", None)
     if code is None:
         res = getattr(exc, "result", None)
         if isinstance(res, dict):
             code = res.get("result")
-    if code == 49 or "invalidcredentials" in str(exc).lower():
-        return OUTCOME_AUTH_FAILED, safe_str(exc)
+    if code in _LDAP_AUTH_CODES or "invalidcredentials" in str(exc).lower():
+        if have_creds:
+            return OUTCOME_AUTH_FAILED, safe_str(exc)
+        return (
+            OUTCOME_MISSING_CREDENTIALS,
+            f"server refused anonymous bind (LDAP result {code}): {safe_str(exc)}",
+        )
     return OUTCOME_UNREACHABLE, safe_str(exc)
 
 
@@ -337,7 +355,10 @@ def scan_adcs_targets(
             log.warning("ADCS: bind failed for %s:%d: %s",
                         host, port, safe_str(exc))
             if outcomes is not None:
-                kind, why = _ldap_failure_outcome(exc)
+                # _bind_and_query only binds SIMPLE when both are set.
+                kind, why = _ldap_failure_outcome(
+                    exc, have_creds=bool(t_user and t_pass),
+                )
                 outcomes.record(target, kind, why, row_emitted=True)
             results.append(CryptoEndpoint(
                 host=host,
@@ -355,12 +376,11 @@ def scan_adcs_targets(
             config_base = f"CN=Configuration,{base_dn}" if base_dn else None
         if not config_base:
             log.warning("ADCS: no configurationNamingContext for %s (no realm; pass search_base)", host)
+            # 235.3 review A-WR-04: the bind succeeded, so the server answered;
+            # the gap is configuration (search_base / realm), carried by the
+            # in-band ``no-config-naming-context`` row below, not reachability.
             if outcomes is not None:
-                outcomes.record(
-                    target, OUTCOME_UNREACHABLE,
-                    "no configurationNamingContext (no realm; pass search_base)",
-                    row_emitted=True,
-                )
+                outcomes.answered(target)
             results.append(CryptoEndpoint(
                 host=host,
                 port=port,
