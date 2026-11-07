@@ -264,3 +264,21 @@ def test_broker_skip_forwards_driver_in_band_error_rows(tmp_path, monkeypatch):
     phases, eps = _scan(tmp_path, monkeypatch, _BROKER_CFG)
     assert phases["broker_scanning"]["status"] == "skipped"
     assert [e for e in eps if e["error"] == "harness-redis-error"], "driver error row dropped"
+
+
+# ------------------------------------------------------------------ B-WR-01
+
+def test_broker_config_advisory_does_not_count_as_answered(tmp_path, monkeypatch):
+    from quirk.scanner.broker_scanner import ADVISORY_BROKER_CLEARTEXT
+
+    adv = CryptoEndpoint(
+        host="127.0.0.1", port=15672, protocol="ADVISORY",
+        service_detail=ADVISORY_BROKER_CLEARTEXT, severity="HIGH",
+        scan_error_category="config",
+    )
+    _patch_broker(monkeypatch, rabbit=[adv])
+    phases, eps = _scan(tmp_path, monkeypatch, _BROKER_CFG)
+    row = phases["broker_scanning"]
+    assert row["status"] == "skipped" and row["reason"] == "failed"
+    # The HIGH config advisory itself is still persisted.
+    assert [e for e in eps if e["detail"] == ADVISORY_BROKER_CLEARTEXT]

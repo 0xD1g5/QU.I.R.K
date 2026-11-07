@@ -4512,10 +4512,14 @@ def main():
             # 235.3 P-03: D-03 applies only to explicit broker_targets pairs;
             # with none configured the phase keeps today's behaviour.
             if explicit_reachable_pairs:
+                # Review B-WR-01: config-only ADVISORY rows (cleartext /
+                # credential-probe) are emitted whether or not the broker
+                # responded, so they are not evidence that it answered.
                 _reached = {
                     (ep.host, ep.port)
                     for ep in (k + r + rd)
-                    if not ep.scan_error or ep.tls_version or ep.cipher_suite
+                    if ep.protocol != "ADVISORY"
+                    and (not ep.scan_error or ep.tls_version or ep.cipher_suite)
                 }
                 _outcomes = TargetOutcomes(
                     [f"{h}:{p}" for h, p in explicit_reachable_pairs]
@@ -4541,6 +4545,12 @@ def main():
                     # P-08: the unreached-target advisories are in-band rows
                     # and must still reach error_endpoints / the database.
                     error_endpoints.extend(unreached)
+                    # Those config advisories carry no scan_error, so the
+                    # classifier does not forward them; keep the findings.
+                    error_endpoints.extend(
+                        ep for ep in (k + r + rd)
+                        if ep.protocol == "ADVISORY" and not ep.scan_error
+                    )
                     return _classified
             r = r + unreached
             return (k, r, rd)
