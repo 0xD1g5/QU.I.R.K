@@ -527,9 +527,13 @@ def _classify_connector_outcomes(scanner_label, outcomes, rows, error_endpoints,
     )
     if len(failures) > 5:
         names += f", and {len(failures) - 5} more"
-    detail = (
-        f"{len(failures)} of {len(resolved)} targets {_COVERAGE_PHRASE[reason]}: {names}"
-    )
+    # Review B-WR-02: count only the targets with the chosen kind; the rest
+    # are named separately so the phrase never overstates its count.
+    n_kind = sum(1 for o in failures if o.kind == kind)
+    detail = f"{n_kind} of {len(resolved)} targets {_COVERAGE_PHRASE[reason]}"
+    if len(failures) > n_kind:
+        detail += f" ({len(failures) - n_kind} more did not answer for other reasons)"
+    detail += f": {names}"
     if reason == "internal-target-refused":
         detail += (
             "; security.allow_internal_targets is false - it is server policy, "

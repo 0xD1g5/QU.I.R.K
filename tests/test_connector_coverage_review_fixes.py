@@ -282,3 +282,17 @@ def test_broker_config_advisory_does_not_count_as_answered(tmp_path, monkeypatch
     assert row["status"] == "skipped" and row["reason"] == "failed"
     # The HIGH config advisory itself is still persisted.
     assert [e for e in eps if e["detail"] == ADVISORY_BROKER_CLEARTEXT]
+
+
+# ------------------------------------------------------------------ B-WR-02
+
+def test_skip_detail_counts_only_the_chosen_kind():
+    o = TargetOutcomes(["a", "b", "c"])
+    o.record("a", OUTCOME_REFUSED, "loopback")
+    o.record("b", OUTCOME_UNREACHABLE, "ConnectError")
+    o.record("c", OUTCOME_UNREACHABLE, "ConnectError")
+    rec = run_scan._PhaseRecorder()
+    run_scan._classify_connector_outcomes("x_scanner", o, [], [], rec)
+    d = rec._pending_detail
+    assert d.startswith("1 of 3 targets were refused by the internal-target guard")
+    assert "2 more did not answer for other reasons" in d
