@@ -765,3 +765,53 @@ def test_k8s_contract_error_propagates():
     with pytest.raises(TargetOutcomeContractError):
         _enumerate_secret_types(v1, "default", None, outcomes=TargetOutcomes(["not-this-target"]),
                                 outcome_target="ctx-1")
+
+
+def test_k8s_gke_rows_survive_secret_enumeration_config_exception():
+    """235.3 review A-CR-01: real GKE posture rows plus a later kubeconfig
+    ConfigException must still resolve ``answered`` (else the classifier skips
+    the phase and the GKE rows are discarded)."""
+    from quirk.scanner.k8s_connector import scan_k8s_targets
+    from quirk.scanner.target_outcome import TargetOutcomes
+
+    class ConfigException(Exception):
+        pass
+
+    gke_row = MagicMock(scan_error=None, service_detail="GKE/unencrypted")
+    sink = TargetOutcomes(["ctx-1"])
+    with patch("quirk.scanner.k8s_connector._scan_gke_encryption",
+               return_value=[gke_row]), \
+         patch("quirk.scanner.k8s_connector.k8s_config") as cfg, \
+         patch("quirk.scanner.k8s_connector.k8s_client"):
+        cfg.load_kube_config.side_effect = ConfigException("no kubeconfig")
+        res = scan_k8s_targets(
+            provider="gke", cluster_name="ctx-1", gcp_project_id="p",
+            gke_clusters=[{"name": "c", "location": "l"}], outcomes=sink,
+        )
+    assert gke_row in res
+    assert sink.resolved()[0].kind == "answered"
+
+
+def test_k8s_aks_rows_survive_secret_enumeration_api_error():
+    """235.3 review A-CR-01 (AKS leg): a non-403 ApiException on secret
+    enumeration must not hide answered AKS posture rows."""
+    from quirk.scanner.k8s_connector import scan_k8s_targets
+    from quirk.scanner.target_outcome import TargetOutcomes
+
+    aks_row = MagicMock(scan_error=None, service_detail="AKS/kv-kms")
+    v1 = MagicMock()
+    v1.list_namespaced_secret.side_effect = _FakeApiExc(500)
+    sink = TargetOutcomes(["ctx-1"])
+    with patch("azure.identity.DefaultAzureCredential", create=True,
+               return_value=MagicMock()), \
+         patch("quirk.scanner.k8s_connector._scan_aks_encryption",
+               return_value=[aks_row]), \
+         patch("quirk.scanner.k8s_connector.k8s_config"), \
+         patch("quirk.scanner.k8s_connector.k8s_client") as cl:
+        cl.CoreV1Api.return_value = v1
+        res = scan_k8s_targets(
+            provider="aks", cluster_name="ctx-1", azure_subscription_id="s",
+            aks_clusters=[{"name": "a", "resource_group": "r"}], outcomes=sink,
+        )
+    assert aks_row in res
+    assert sink.resolved()[0].kind == "answered"

@@ -622,10 +622,14 @@ def scan_k8s_targets(
     # If somehow no results were produced for a supported provider (e.g., empty
     # cluster_configs with no cluster_name), emit an inaccessible finding rather
     # than silently returning [].
-    if outcomes is not None and not outcomes.items.get(target) and any(
+    # 235.3 review A-CR-01: record ``answered`` whenever any non-error row came
+    # back, even if the later secret-enumeration leg already recorded a failure
+    # (kubeconfig ConfigException, non-403 ApiException). The sink lets
+    # ``answered`` win, so real GKE/AKS posture rows are never discarded by a
+    # skipped phase.
+    if outcomes is not None and any(
         not getattr(r, "scan_error", None) for r in results
     ):
-        # GKE/AKS encryption posture answered without a secret-enumeration record.
         outcomes.record(target, OUTCOME_ANSWERED)
 
     if not results:
