@@ -8,6 +8,57 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
+## [5.28.2] - 2026-11-06
+
+This release makes the Scan Coverage section tell the truth about connectors. Before it, a connector
+(JWT, S3, Vault, database, Kubernetes, GCP and others) read as having run whenever its phase merely
+started, even when every one of its targets was refused or unreachable and nothing was assessed. A
+connector now reads `ran` only if at least one of its targets actually answered. It changes no
+scoring model: `SCORING_VERSION` stays 4.0.
+
+**Upgrade notes:**
+
+- **Scores can go down on upgrade.** Estates whose connectors were silently unscanned used to score
+  too high, because the missing coverage cost nothing. Each connector that now reads `skipped`
+  counts as one scan error and lowers the score. Measured against an answered-empty connector in a
+  fixture with one TLSv1.3 endpoint, one coverage skip moved the headline score from 84 to 81 (a
+  difference of 3 points); the effect is smaller the more domains a scan assesses. This applies to
+  all-failed database, Vault and GCP targets and to a Vault scan with no token, which previously
+  read as scanned.
+- **Merged sensor scores do not see these skips yet.** A score merged from sensor reports does not
+  include the new coverage skips; it is a known limitation of this release.
+
+### Fixed
+
+- **A connector reads `ran` only if a target answered.** Eighteen connector phases now classify by
+  the outcome of each target. A phase where no target answered reads `skipped` with a named reason
+  instead of `ran`. A target that answers but returns nothing (an empty bucket, a JWT endpoint with
+  no tokens) still reads `ran`. Fuzzing and email keep their own handling. A source scan where every
+  target fails is recorded `failed` (with a counted error row), not `skipped`, unchanged from 5.28.1,
+  while the other connectors with no answering target read `skipped` with a named reason.
+- **Two new skip reasons, and two reused ones.** `internal-target-refused` is recorded when server
+  policy refuses every target because it is an internal address; `auth-failed` is recorded when
+  every target rejected the credentials. `missing-credentials` now also covers S3, AWS, Azure and GCP
+  connectors that find no usable credential when they try (Vault still checks before it starts), and
+  `failed` covers a phase whose targets all errored. There are now eight skip reasons in total.
+- **Partial runs show what was missed.** When some targets of a connector answer and others do not,
+  the phase reads `ran` and each target that did not answer adds one scan error row, so a partial
+  result is no longer indistinguishable from a complete one.
+- **Failed database targets appear as rows.** A PostgreSQL or MySQL target that cannot be reached or
+  authenticated now shows on the Data at Rest page as a failed row (for example "PostgreSQL
+  connection failed") instead of vanishing.
+- **Empty states give the recorded reason.** Dashboard pages that used to say a domain had no data
+  now say why the connector was skipped, using the same reason Scan Coverage records.
+- **Vault network errors are no longer reported as authentication failures.** A Vault that cannot be
+  reached is now `vault-unreachable`; `vault-auth-failed` is kept for rejected credentials.
+- **Credentials in target addresses are no longer shown.** Display labels strip user information
+  from target addresses, including scheme-less `user:pass@host` forms.
+
+### Added
+
+- **New Scan warns before you submit.** When server policy would refuse an internal target, the New
+  Scan page now says so before the scan starts rather than after it has recorded a skip.
+
 ## [5.28.1] - 2026-11-05
 
 This is a fix release for 5.28.0. It closes an install trap on Python 3.15, makes a scan that
