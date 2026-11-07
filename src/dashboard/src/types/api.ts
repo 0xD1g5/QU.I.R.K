@@ -781,3 +781,19 @@ export interface ExposureMapResponse {
   // (never presented as a positive "zero verified exposure" assertion).
   unavailable_reason?: string | null
 }
+
+// Phase 235.3 (D-11): GET /api/config/internal-target-check. Names the New
+// Scan form values the server's internal-target policy will refuse, so the
+// operator sees it before submit. Warning only; the policy stays server-side.
+export interface InternalTargetCheckItem {
+  field: string
+  preview: string
+  reason: string
+}
+
+export interface InternalTargetCheckResponse {
+  allow_internal_targets: boolean
+  config_error: string | null
+  internal: InternalTargetCheckItem[]
+  truncated: boolean
+}

@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import type { AdvancedScanFields, ConnectorOverlayValue, ScanSubmitRequest } from "@/types/api"
 import { useVertical } from "@/context/vertical-context"
 import { EffectiveConfigPanel } from "@/components/EffectiveConfigPanel"
+import { InternalTargetWarning } from "@/components/InternalTargetWarning"
 import { ConnectorsPanel } from "@/components/ConnectorsPanel"
 import { AdvancedPanel } from "@/components/AdvancedPanel"
 
@@ -409,6 +410,8 @@ export function ScanNewPage() {
           advanced={advanced}
           credentialKeys={Object.keys(credentials).filter((k) => credentials[k])}
         />
+
+        <InternalTargetWarning targets={targets} connectors={connectors} />
 
         {rejectionBanner && (
           <div
