@@ -672,15 +672,28 @@ def _derive_dar_findings(endpoints) -> list[DarFinding]:
 
     Mirrors _derive_motion_findings (Phase 36). Per-protocol dispatch handles
     scanner shape variance: POSTGRESQL/MYSQL/RDS use service_detail; S3, AZURE_BLOB,
-    KUBERNETES, VAULT use dat_scan_json. Endpoints with scan_error are skipped.
+    KUBERNETES, VAULT use dat_scan_json. POSTGRESQL/MYSQL endpoints with
+    scan_error come back as INFO "<PROTO> connection failed" rows (235.3 D-10);
+    other protocols with scan_error are skipped.
     Malformed dat_scan_json is tolerated via try/except (V5).
     """
     results: list[DarFinding] = []
     for ep in endpoints:
-        if getattr(ep, "scan_error", None):
-            continue
         proto = (getattr(ep, "protocol", None) or "").upper()
         if proto not in DAR_PROTOCOLS:
+            continue
+        scan_err = getattr(ep, "scan_error", None)
+        if scan_err:
+            if proto in {"POSTGRESQL", "MYSQL"}:
+                results.append(DarFinding(
+                    host=getattr(ep, "host", "") or "",
+                    port=getattr(ep, "port", 0) or 0,
+                    severity="INFO",
+                    title=f"{proto} connection failed",
+                    protocol=proto, category="database",
+                    encryption_at_rest=None, tls_in_transit=None,
+                    source="database", scan_error=str(scan_err),
+                ))
             continue
 
         host = getattr(ep, "host", "") or ""

@@ -99,13 +99,49 @@ def test_derive_dar_vault_dispatch():
         assert f.auto_unseal is None
 
 
-def test_derive_dar_scan_error_excluded():
-    """Endpoints with scan_error are excluded from dar_findings."""
+def test_derive_dar_db_scan_error_failed_row():
+    """235.3 D-10: a failed DB target is a failed row, not dropped.
+
+    Replaces test_derive_dar_scan_error_excluded, which pinned DB + scan_error
+    -> [] (the 2026-11-05 vanishing-Postgres-targets bug).
+    """
     from quirk.dashboard.api.routes.scan import _derive_dar_findings
     ep = _ep(host="db.test", port=5432, protocol="POSTGRESQL",
-             scan_error="permission denied")
+             scan_error="connection-error: could not connect")
     out = _derive_dar_findings([ep])
-    assert out == []
+    assert len(out) == 1
+    f = out[0]
+    assert f.protocol == "POSTGRESQL" and f.category == "database"
+    assert f.severity == "INFO"
+    assert f.title == "POSTGRESQL connection failed"
+    assert f.scan_error == "connection-error: could not connect"
+
+
+def test_derive_dar_mysql_scan_error_failed_row():
+    from quirk.dashboard.api.routes.scan import _derive_dar_findings
+    out = _derive_dar_findings([_ep(host="m", port=3306, protocol="MYSQL",
+                                    scan_error="boom")])
+    assert [f.title for f in out] == ["MYSQL connection failed"]
+
+
+def test_derive_dar_non_db_scan_error_still_excluded():
+    """P-11: non-database DAR protocols with scan_error stay excluded."""
+    from quirk.dashboard.api.routes.scan import _derive_dar_findings
+    ep = _ep(host="b", port=443, protocol="S3", scan_error="denied")
+    assert _derive_dar_findings([ep]) == []
+
+
+def test_derive_dar_three_postgres_two_failed_scan_error():
+    from quirk.dashboard.api.routes.scan import _derive_dar_findings
+    eps = [
+        _ep(host="a", port=5432, protocol="POSTGRESQL", service_detail="ssl-enforced"),
+        _ep(host="b", port=5432, protocol="POSTGRESQL", scan_error="x"),
+        _ep(host="c", port=5432, protocol="POSTGRESQL", scan_error="y"),
+    ]
+    out = _derive_dar_findings(eps)
+    assert len(out) == 3
+    assert sorted(f.scan_error for f in out if f.scan_error) == ["x", "y"]
+    assert [f.scan_error for f in out if "failed" not in f.title] == [None]
 
 
 # ---- Integration tests: API contract ----
