@@ -27,4 +27,19 @@ describe("ScannerStatusCard skip classification", () => {
     render(<ScannerStatusCard failures={[entry("missing_extra")]} />)
     expect(screen.getByLabelText("status: Skipped")).toBeInTheDocument()
   })
+
+  it("labels each 235.3 advisory category Skipped and never Partial", () => {
+    for (const cat of ["internal_target_refused", "auth_failed", "missing_credentials", "targets_unreachable"]) {
+      const { unmount } = render(<ScannerStatusCard failures={[entry(cat)]} />)
+      expect(screen.getByLabelText("status: Skipped")).toBeInTheDocument()
+      expect(screen.queryByLabelText("status: Partial")).not.toBeInTheDocument()
+      unmount()
+    }
+  })
+
+  it("does not label a target_unanswered failure Skipped", () => {
+    render(<ScannerStatusCard failures={[entry("target_unanswered")]} />)
+    expect(screen.queryByLabelText("status: Skipped")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("status: Partial")).toBeInTheDocument()
+  })
 })
