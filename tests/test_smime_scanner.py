@@ -203,8 +203,8 @@ def test_outcome_socket_failure_unreachable_row_kept():
 def test_outcome_invalid_credentials_auth_failed():
     exc = smime_scanner._BindRejected("anonymous bind rejected", 49)
     eps, (o,) = _smime_outcome_run({"side_effect": exc})
-    assert len(eps) == 1
-    assert o.kind == "auth_failed" and o.row_emitted is True
+    assert eps == []
+    assert o.kind == "auth_failed" and o.row_emitted is False
 
 
 def test_outcome_bind_ok_zero_certs_answered():

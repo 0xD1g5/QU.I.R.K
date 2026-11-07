@@ -261,6 +261,12 @@ def scan_smime_targets(
             entries = _bind_and_search(host, port, base_dn, timeout)
         except TargetOutcomeContractError:
             raise
+        except _BindRejected as exc:
+            # Rejected bind: historically no row; keep that, record the outcome.
+            if outcomes is not None:
+                kind, why = _ldap_failure_outcome(exc)
+                outcomes.record(target, kind, why, row_emitted=False)
+            continue
         except Exception as exc:
             log.warning("SMIME: bind/search failed for %s:%d: %s", host, port, safe_str(exc))
             if outcomes is not None:

@@ -267,7 +267,7 @@ def test_outcome_bind_failure_unreachable_row_kept():
 def test_outcome_invalid_credentials_auth_failed():
     exc = codesign_scanner._BindRejected("anonymous bind rejected", 49)
     eps, (o,) = _outcome_run({"side_effect": exc})
-    assert len(eps) == 1 and o.kind == "auth_failed" and o.row_emitted is True
+    assert eps == [] and o.kind == "auth_failed" and o.row_emitted is False
 
 
 def test_outcome_zero_certs_answered():

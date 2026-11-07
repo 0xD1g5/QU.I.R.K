@@ -373,6 +373,12 @@ def scan_codesign_from_ldap(
             entries = _bind_and_search_codesign(host, port, base_dn, timeout)
         except TargetOutcomeContractError:
             raise
+        except _BindRejected as exc:
+            # Rejected bind: historically no row; keep that, record the outcome.
+            if outcomes is not None:
+                kind, why = _ldap_failure_outcome(exc)
+                outcomes.record(target, kind, why, row_emitted=False)
+            continue
         except Exception as exc:
             if outcomes is not None:
                 kind, why = _ldap_failure_outcome(exc)
