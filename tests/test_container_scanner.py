@@ -72,3 +72,91 @@ def test_syft_json_parse_error():
          patch("subprocess.run", return_value=mock_proc):
         endpoints = scan_container_image("bad-image", timeout=60)
         assert endpoints == []
+
+
+# --- 235.3 P-15: per-image outcomes -----------------------------------------
+import subprocess
+
+from quirk.scanner.target_outcome import (
+    TargetOutcomeContractError,
+    TargetOutcomes,
+)
+
+
+def _proc(stdout, rc=0):
+    p = MagicMock()
+    p.stdout = stdout
+    p.returncode = rc
+    return p
+
+
+def _run_one(image, proc=None, side_effect=None):
+    sink = TargetOutcomes([image])
+    kw = {"side_effect": side_effect} if side_effect else {"return_value": proc}
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", **kw):
+        rows = scan_container_targets([image], outcomes=sink)
+    return rows, sink.resolved()[0]
+
+
+def test_outcome_answered_with_artifacts():
+    rows, o = _run_one("img:1", _proc(json.dumps(SAMPLE_SYFT_OUTPUT)))
+    assert o.kind == "answered" and rows
+
+
+def test_outcome_answered_zero_artifacts():
+    rows, o = _run_one("img:1", _proc(json.dumps({"artifacts": []})))
+    assert o.kind == "answered" and rows == []
+
+
+def test_outcome_unreachable_nonzero_exit_non_json():
+    rows, o = _run_one("img:1", _proc("boom", rc=1))
+    assert o.kind == "unreachable" and rows == [] and not o.row_emitted
+
+
+def test_outcome_unreachable_timeout():
+    rows, o = _run_one("img:1", side_effect=subprocess.TimeoutExpired("syft", 1))
+    assert o.kind == "unreachable" and rows == []
+
+
+def test_outcome_unreachable_when_image_scan_raises():
+    sink = TargetOutcomes(["img:1"])
+    with patch("quirk.scanner.container_scanner.scan_container_image",
+               side_effect=RuntimeError("pull failed")):
+        rows = scan_container_targets(["img:1"], outcomes=sink)
+    assert rows == []
+    o = sink.resolved()[0]
+    assert o.kind == "unreachable" and "pull failed" in o.detail
+
+
+def test_outcome_mixed_two_images():
+    sink = TargetOutcomes(["good:1", "bad:1"])
+    procs = [_proc(json.dumps({"artifacts": []})), _proc("nope", rc=1)]
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", side_effect=procs):
+        scan_container_targets(["good:1", "bad:1"], outcomes=sink)
+    assert [o.kind for o in sink.resolved()] == ["answered", "unreachable"]
+
+
+def test_outcome_credentials_redacted_in_resolved():
+    ref = "docker://user:pass@registry.example.com/img:1"
+    sink = TargetOutcomes([ref])
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", return_value=_proc("x", rc=1)):
+        scan_container_targets([ref], outcomes=sink)
+    assert "user:pass" not in repr(sink.resolved())
+
+
+def test_outcome_contract_violation_propagates():
+    sink = TargetOutcomes(["not-this-target"])
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", return_value=_proc(json.dumps({"artifacts": []}))):
+        with pytest.raises(TargetOutcomeContractError):
+            scan_container_targets(["img:1"], outcomes=sink)
+
+
+def test_outcomes_none_unchanged():
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", return_value=_proc(json.dumps(SAMPLE_SYFT_OUTPUT))):
+        rows = scan_container_targets(["img:1"])
+    assert len(rows) == 3

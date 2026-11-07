@@ -16,6 +16,12 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+)
+from quirk.util.safe_exc import safe_str
 from quirk.util.subprocess_input import validate_image_ref
 
 _LOG = logging.getLogger(__name__)
@@ -55,18 +61,29 @@ def scan_container_image(
     image_ref: str,
     timeout: int = 120,
     logger=None,
+    *,
+    _status=None,
 ) -> List[CryptoEndpoint]:
     """Scan a container image with syft and return CryptoEndpoints for crypto libraries.
 
     Returns empty list if syft is absent, subprocess fails, or JSON is invalid.
     Rejected inputs (argv injection, invalid OCI refs, etc.) return a single
     CryptoEndpoint with scan_error_category="invalid_input" and no subprocess call.
+
+    ``_status`` (235.3 P-15, private): optional ``callable(kind, detail)`` told
+    whether syft actually scanned the image (``answered``) or not
+    (``unreachable``). Public return type is unchanged.
     """
+    def _report(kind: str, detail: str = "") -> None:
+        if _status is not None:
+            _status(kind, detail)
+
     # Phase 57 / CR-03: reject argv-injection inputs before subprocess.run.
     _validation = validate_image_ref(image_ref)
     if not _validation.ok:
         if logger:
             logger.v(f"CONTAINER rejected {_validation.redacted_preview!r}: {_validation.reason}")
+        _report(OUTCOME_UNREACHABLE, safe_str(_validation.reason))
         return [CryptoEndpoint(
             host=_validation.redacted_preview,
             port=0,
@@ -83,6 +100,7 @@ def scan_container_image(
                 "syft is not installed — pip install 'quirk-scanner[cbom]' and "
                 "`brew install syft` to enable container scanning"
             )
+        _report(OUTCOME_UNREACHABLE, "syft is not installed")
         return []
 
     try:
@@ -93,6 +111,8 @@ def scan_container_image(
             timeout=timeout,
         )
         data = json.loads(proc.stdout)
+        if not isinstance(data, dict):
+            raise json.JSONDecodeError("syft output is not an object", "", 0)
     except (
         subprocess.TimeoutExpired,
         subprocess.CalledProcessError,
@@ -103,7 +123,13 @@ def scan_container_image(
         _LOG.warning(
             "subprocess failed in scan_container_image for %r: %s", image_ref, e
         )
+        _report(OUTCOME_UNREACHABLE, safe_str(e))
         return []
+
+    if proc.returncode != 0:
+        _report(OUTCOME_UNREACHABLE, f"syft exited with status {proc.returncode}")
+    else:
+        _report(OUTCOME_ANSWERED)
 
     endpoints: List[CryptoEndpoint] = []
     artifacts = data.get("artifacts", [])
@@ -134,14 +160,35 @@ def scan_container_targets(
     targets: list,
     timeout: int = 120,
     logger=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
-    """Scan a list of container image references and return all CryptoEndpoints found."""
+    """Scan a list of container image references and return all CryptoEndpoints found.
+
+    235.3 P-15 / D-05: when ``outcomes`` (a TargetOutcomes sink) is supplied,
+    one outcome is recorded per image against the raw image ref.
+    """
     results: List[CryptoEndpoint] = []
     for image_ref in targets:
+        status: list = []
         try:
-            eps = scan_container_image(image_ref, timeout=timeout, logger=logger)
+            eps = scan_container_image(
+                image_ref, timeout=timeout, logger=logger,
+                _status=(lambda k, d="": status.append((k, d))),
+            )
             results.extend(eps)
+        except TargetOutcomeContractError:
+            raise
         except Exception as exc:
             if logger:
-                logger.v(f"Container scan error for {image_ref}: {exc}")
+                logger.v(f"Container scan error for {image_ref}: {safe_str(exc)}")
+            if outcomes is not None:
+                outcomes.record(image_ref, OUTCOME_UNREACHABLE, safe_str(exc))
+            continue
+        if outcomes is not None:
+            kind, detail = status[-1] if status else (OUTCOME_UNREACHABLE, "no status")
+            outcomes.record(
+                image_ref, kind, detail,
+                row_emitted=bool(kind == OUTCOME_UNREACHABLE and eps),
+            )
     return results
