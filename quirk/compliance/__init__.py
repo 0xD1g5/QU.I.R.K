@@ -259,6 +259,10 @@ TITLE_IDENTITY_CLASS: Dict[str, str] = {
     # routes/scan.py _derive_dar_findings (235.3-02) — proto IS the resource
     # identifier, host:port carries identity; same shape as the line above.
     " connection failed": "NOT_IDENTITY_RELEVANT",
+    # routes/scan.py _derive_dar_findings (235.3 review C-CR-01) — the
+    # connected-but-incomplete sibling of the line above (insufficient-
+    # privilege); proto IS the resource identifier, host:port carries identity.
+    " posture incomplete": "NOT_IDENTITY_RELEVANT",
     # scan.py:666 — bucket name IS the identity.
     "S3 bucket ": "NOT_IDENTITY_RELEVANT",
     # scan.py:686 — account/container ARE the identity.

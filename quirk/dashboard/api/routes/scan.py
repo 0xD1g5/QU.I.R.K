@@ -692,20 +692,28 @@ def _derive_dar_findings(endpoints) -> list[DarFinding]:
                 # AFTER a successful connection (SHOW ssl = on) when the role
                 # lacks pg_read_all_stats; its service_detail carries the
                 # GRANT remediation, which must reach the operator.
+                # Two literal title= f-strings (not one conditional) so the
+                # TITLE_IDENTITY_CLASS AST walker sees both templates.
                 err = str(scan_err)
-                connected = not err.startswith("connection-error")
-                results.append(DarFinding(
-                    host=getattr(ep, "host", "") or "",
-                    port=getattr(ep, "port", 0) or 0,
-                    severity="INFO",
-                    title=(f"{proto} posture incomplete" if connected
-                           else f"{proto} connection failed"),
-                    protocol=proto, category="database",
-                    encryption_at_rest=None, tls_in_transit=None,
-                    remediation=(getattr(ep, "service_detail", None) or None)
-                    if connected else None,
-                    source="database", scan_error=err,
-                ))
+                ep_host = getattr(ep, "host", "") or ""
+                ep_port = getattr(ep, "port", 0) or 0
+                if err.startswith("connection-error"):
+                    results.append(DarFinding(
+                        host=ep_host, port=ep_port, severity="INFO",
+                        title=f"{proto} connection failed",
+                        protocol=proto, category="database",
+                        encryption_at_rest=None, tls_in_transit=None,
+                        source="database", scan_error=err,
+                    ))
+                else:
+                    results.append(DarFinding(
+                        host=ep_host, port=ep_port, severity="INFO",
+                        title=f"{proto} posture incomplete",
+                        protocol=proto, category="database",
+                        encryption_at_rest=None, tls_in_transit=None,
+                        remediation=getattr(ep, "service_detail", None) or None,
+                        source="database", scan_error=err,
+                    ))
             continue
 
         host = getattr(ep, "host", "") or ""

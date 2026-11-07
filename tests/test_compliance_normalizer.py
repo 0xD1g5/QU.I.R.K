@@ -58,6 +58,9 @@ def test_same_identity_bearing_title_still_collapses_under_compliance_policy():
 
 
 def test_title_identity_class_is_exhaustive_and_closed_vocabulary():
+    # 26 since 2026-11-06: " posture incomplete" (235.3 review C-CR-01, the
+    # insufficient-privilege PostgreSQL Data at Rest row title).
+    #
     # 25 since 2026-11-06: " connection failed" (Phase 235.3-02, the failed
     # PostgreSQL/MySQL Data at Rest row title; classified in 24348d12).
     #
@@ -74,7 +77,7 @@ def test_title_identity_class_is_exhaustive_and_closed_vocabulary():
     # is, and it regenerates its occurrence set from the source AST on every run
     # (in both directions: unclassified AND stale). Bumping this number without
     # that gate passing proves nothing.
-    assert len(TITLE_IDENTITY_CLASS) == 25
+    assert len(TITLE_IDENTITY_CLASS) == 26
     assert set(TITLE_IDENTITY_CLASS.values()) <= {
         "NORMALIZE",
         "PRESERVE_IDENTITY",
