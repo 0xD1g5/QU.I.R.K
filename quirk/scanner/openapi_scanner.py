@@ -152,8 +152,9 @@ def _fetch_spec_bytes_from_url(
 
     235.3 D-05: when ``outcomes`` is given, the outcome is recorded against
     ``outcome_target`` BEFORE the SpecParsingError is raised (guard refusal ->
-    outcome_for_url_guard; any HTTP response -> answered; other failure ->
-    unreachable), so the caller can classify it.
+    outcome_for_url_guard; non-2xx, oversize or other failure -> unreachable),
+    so the caller can classify it. ``answered`` is recorded by
+    ``scan_openapi_spec`` only after the spec parses (235.3 review A-CR-02).
     """
     import httpx
 
@@ -205,7 +206,6 @@ def _fetch_spec_bytes_from_url(
             allow_internal=allow_internal,
             extra_check=_in_scope,
         )
-        _rec(OUTCOME_ANSWERED)
         resp.raise_for_status()
     except (SpecParsingError, TargetOutcomeContractError):
         raise
@@ -217,7 +217,21 @@ def _fetch_spec_bytes_from_url(
     except Exception as exc:
         detail = type(exc).__name__
         if isinstance(exc, httpx.HTTPStatusError):
-            detail += f" HTTP {exc.response.status_code}"
+            # 235.3 review A-CR-02: a non-2xx response is not "the target
+            # answered" for a single-document phase -- the spec was never
+            # read. The OpenAPI connector has no credential option, so a
+            # 401/403 is not ``auth_failed`` (D-06: credentials present but
+            # rejected); it is recorded unreachable with the status named.
+            code = exc.response.status_code
+            detail += f" HTTP {code}"
+            if code in (401, 403):
+                _rec(
+                    OUTCOME_UNREACHABLE,
+                    f"HTTP {code}: spec URL requires authentication, which the "
+                    "OpenAPI connector cannot supply",
+                )
+            else:
+                _rec(OUTCOME_UNREACHABLE, f"HTTP {code}: spec could not be fetched")
         else:
             _rec(OUTCOME_UNREACHABLE, safe_str(exc))
         raise SpecParsingError(
@@ -226,6 +240,7 @@ def _fetch_spec_bytes_from_url(
 
     content = resp.content
     if len(content) > MAX_SPEC_BYTES:
+        _rec(OUTCOME_UNREACHABLE, "fetched spec content exceeds 10 MB limit")
         raise SpecParsingError("Fetched spec content exceeds 10 MB limit.")
     return content
 
@@ -456,12 +471,20 @@ def scan_openapi_spec(
                 outcomes.record(_outcome_target, OUTCOME_UNREACHABLE, safe_str(exc))
             raise
 
-    spec_dict = _parse_spec_dict(raw_bytes)
-    if outcomes is not None and not is_url:
+    # 235.3 review A-CR-02: ``answered`` only once the spec parsed and passed
+    # the external-ref guard, on both the URL and the file path; any
+    # SpecParsingError here records a failure first so the phase is never
+    # ``ran`` with 0 rows and no error row.
+    try:
+        spec_dict = _parse_spec_dict(raw_bytes)
+        # CRITICAL ORDER: assert_no_external_refs BEFORE _oas_validate (T-94-05 SSRF guard)
+        _assert_no_external_refs(spec_dict)
+    except SpecParsingError as exc:
+        if outcomes is not None:
+            outcomes.record(_outcome_target, OUTCOME_UNREACHABLE, safe_str(exc))
+        raise
+    if outcomes is not None:
         outcomes.record(_outcome_target, OUTCOME_ANSWERED)
-
-    # CRITICAL ORDER: assert_no_external_refs BEFORE _oas_validate (T-94-05 SSRF guard)
-    _assert_no_external_refs(spec_dict)
 
     # Lenient structural validation (warns but does not block on ValidationError)
     _validate_spec_lenient(spec_dict)

@@ -393,3 +393,92 @@ def test_openapi_outcome_contract_violation_propagates():
         _scan_spec(
             "http://localhost:20001/openapi.json", cfg_targets=["localhost"], outcomes=sink
         )
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-CR-02 / A-WR-05: answered only once the spec is parsed
+# ---------------------------------------------------------------------------
+
+def _fake_http_resp(status, content=b""):
+    import httpx
+    req = httpx.Request("GET", "https://api.example.com/openapi.json")
+    return httpx.Response(status, content=content, request=req)
+
+
+_SPEC_URL = "https://api.example.com/openapi.json"
+
+
+def _ok_guard():
+    """Bypass the DNS-resolving SSRF guard so the fetch leg is exercised offline."""
+    return patch(
+        "quirk.scanner.openapi_scanner.validate_external_url",
+        return_value=MagicMock(ok=True),
+    )
+
+
+@pytest.mark.parametrize("status", [404, 500, 401, 403])
+def test_openapi_url_http_error_does_not_record_answered(status):
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(status)):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["unreachable"]
+    assert f"HTTP {status}" in res[0].detail
+    assert res[0].detail != "no outcome recorded by scanner"
+
+
+def test_openapi_url_oversize_does_not_record_answered():
+    from quirk.scanner import openapi_scanner as _mod
+    sink = TargetOutcomes([_SPEC_URL])
+    big = b"x" * (_mod.MAX_SPEC_BYTES + 1)
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, big)):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["unreachable"]
+    assert "10 MB" in res[0].detail
+
+
+@pytest.mark.parametrize("body", [b"::: not: [valid", b"[1, 2, 3]"])
+def test_openapi_url_invalid_spec_does_not_record_answered(body):
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, body)):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_url_external_ref_does_not_record_answered():
+    spec = {"openapi": "3.0.0", "info": {"title": "t", "version": "1"},
+            "paths": {"/a": {"$ref": "https://evil.example.net/x.yaml"}}}
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, json.dumps(spec).encode())):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_file_external_ref_does_not_record_answered(tmp_path):
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps({
+        "openapi": "3.0.0", "info": {"title": "t", "version": "1"},
+        "paths": {"/a": {"$ref": "https://evil.example.net/x.yaml"}},
+    }))
+    sink = TargetOutcomes([str(spec)])
+    with pytest.raises(_SPE):
+        _scan_spec(str(spec), outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_url_valid_spec_records_answered():
+    spec = {"openapi": "3.0.0", "info": {"title": "t", "version": "1"}, "paths": {}}
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, json.dumps(spec).encode())):
+        _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["answered"]
