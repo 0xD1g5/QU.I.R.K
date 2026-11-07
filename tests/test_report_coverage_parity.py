@@ -653,6 +653,85 @@ class TestFourSurfaceCoverageParity:
             assert detail in surface_text, surface_name
             assert "Source Code" in surface_text, surface_name
 
+    @pytest.mark.parametrize(
+        "which", ["internal_target", "auth_failed"], ids=["internal_target", "auth_failed"]
+    )
+    def test_new_reason_skip_matches_across_four_surfaces(self, tmp_path, which):
+        """Phase 235.3 D-06: internal-target-refused and auth-failed skipped rows show
+        reason and detail identically on technical md, executive md, HTML and DOCX."""
+        from docx import Document
+
+        from quirk.reports.docx_renderer import render_docx_report
+        from quirk.reports.executive import build_exec_markdown
+        from quirk.reports.html_renderer import render_html_report
+        from quirk.reports.technical import build_tech_markdown
+
+        jwt_detail = (
+            "1 of 1 targets were refused by the internal-target guard: "
+            "http://localhost:20001 (refused: loopback); "
+            "security.allow_internal_targets is false"
+        )
+        s3_detail = "https://s3.example.com (auth_failed: InvalidAccessKeyId)"
+        coverage = _coverage(
+            ran=1,
+            skipped=2,
+            phases=[
+                {
+                    "phase_name": "tls_scanning", "label": "TLS", "status": "ran",
+                    "reason": None, "detail": None, "duration_sec": 1.0,
+                },
+                {
+                    "phase_name": "jwt_scanning", "label": "JWT", "status": "skipped",
+                    "reason": "internal-target-refused", "detail": jwt_detail,
+                    "duration_sec": None,
+                },
+                {
+                    "phase_name": "s3_scanning", "label": "S3", "status": "skipped",
+                    "reason": "auth-failed", "detail": s3_detail, "duration_sec": None,
+                },
+            ],
+        )
+        reason, detail, label = {
+            "internal_target": ("internal-target-refused", jwt_detail, "JWT"),
+            "auth_failed": ("auth-failed", s3_detail, "S3"),
+        }[which]
+
+        tech_md = build_tech_markdown(_make_minimal_cfg(), [], [], coverage=coverage)
+        exec_md = build_exec_markdown(
+            _make_minimal_cfg_with_intelligence(), [], [], coverage=coverage
+        )
+        html_path = str(tmp_path / "newreason.html")
+        render_html_report(
+            path=html_path,
+            cfg=_make_minimal_cfg(str(tmp_path)),
+            endpoints=[],
+            findings=[],
+            score={"score": 70, "rating": "FAIR", "subscores": {}, "drivers": []},
+            conf={"confidence": 0},
+            roadmap_items=[],
+            exec_content=_exec_content(coverage=coverage),
+        )
+        with open(html_path, encoding="utf-8") as f:
+            html = f.read()
+        docx_path = str(tmp_path / "newreason.docx")
+        render_docx_report(
+            path=docx_path,
+            cfg=_make_minimal_cfg(str(tmp_path)),
+            findings=[],
+            exec_content=_exec_content(coverage=coverage),
+        )
+        docx_text = _docx_full_text(Document(docx_path))
+
+        for surface_name, surface_text in [
+            ("technical", tech_md),
+            ("executive", exec_md),
+            ("html", html),
+            ("docx", docx_text),
+        ]:
+            assert reason in surface_text, surface_name
+            assert detail in surface_text, surface_name
+            assert label in surface_text, surface_name
+
     def test_absence_parity_no_data_row_anywhere(self, tmp_path):
         from docx import Document
 

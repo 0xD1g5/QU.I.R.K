@@ -125,6 +125,123 @@ def test_scan_coverage_serves_missing_binary_skip_verbatim(tmp_path, monkeypatch
     assert "QRK-INSTALL-007" in ctr["detail"]
 
 
+def _latest_client(monkeypatch, db_path, scan_run_id):
+    """TestClient whose get_db is bound to the seeded file DB, with a completed
+    ScanJob so /api/scan/latest resolves *scan_run_id*."""
+    from quirk.db import get_engine
+
+    Session = sessionmaker(bind=get_engine(db_path), autoflush=False, autocommit=False)
+    with Session() as s:
+        s.add(ScanJob(
+            job_id="job-" + scan_run_id, status="completed", target="127.0.0.1",
+            profile="standard", calibration="balanced", scan_run_id=scan_run_id,
+            completed_at=_now(),
+        ))
+        s.commit()
+
+    def override_get_db():
+        db = Session()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = override_get_db
+    monkeypatch.setattr("quirk.dashboard.api.routes.scan._default_db_path", lambda: db_path)
+    return TestClient(app, headers={"X-Quirk-Request": "1"})
+
+
+def test_scan_coverage_serves_internal_target_and_auth_failed_verbatim(tmp_path, monkeypatch):
+    """Phase 235.3 D-09: the two new skip reasons are served as-is by the coverage
+    route and carried identically on /api/scan/latest.coverage."""
+    from quirk.models import CryptoEndpoint
+
+    scan_run_id = "run-cov-new"
+    db_path = str(tmp_path / "coverage_new.db")
+    init_db(db_path)
+    jwt_detail = (
+        "1 of 1 targets were refused by the internal-target guard: "
+        "http://localhost:20001 (refused: loopback); "
+        "security.allow_internal_targets is false"
+    )
+    s3_detail = "https://s3.example.com (auth_failed: InvalidAccessKeyId)"
+    with get_session(db_path) as session:
+        session.add_all([
+            ScanPhaseRecord(
+                scan_run_id=scan_run_id, phase_name="tls_scanning", status="ran",
+                duration_sec=1.0, recorded_at=_now(),
+            ),
+            ScanPhaseRecord(
+                scan_run_id=scan_run_id, phase_name="jwt_scanning", status="skipped",
+                reason="internal-target-refused", detail=jwt_detail, recorded_at=_now(),
+            ),
+            ScanPhaseRecord(
+                scan_run_id=scan_run_id, phase_name="s3_scanning", status="skipped",
+                reason="auth-failed", detail=s3_detail, recorded_at=_now(),
+            ),
+            CryptoEndpoint(
+                host="10.0.0.5", port=443, protocol="TLS", tls_version="TLSv1.3",
+                scan_run_id=scan_run_id,
+            ),
+        ])
+        session.commit()
+    client = _latest_client(monkeypatch, db_path, scan_run_id)
+
+    resp = client.get(f"/api/scans/{scan_run_id}/coverage")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["skipped"] == 2 and data["ran"] == 1
+    by_name = {p["phase_name"]: p for p in data["phases"]}
+    assert by_name["jwt_scanning"]["reason"] == "internal-target-refused"
+    assert by_name["jwt_scanning"]["detail"] == jwt_detail
+    assert by_name["s3_scanning"]["reason"] == "auth-failed"
+    assert by_name["s3_scanning"]["detail"] == s3_detail
+
+    latest = client.get("/api/scan/latest")
+    assert latest.status_code == 200
+    lat = {p["phase_name"]: p for p in latest.json()["coverage"]["phases"]}
+    for name in ("jwt_scanning", "s3_scanning"):
+        assert lat[name]["reason"] == by_name[name]["reason"]
+        assert lat[name]["detail"] == by_name[name]["detail"]
+
+
+def test_scan_latest_failed_db_rows_two_failed_one_healthy(tmp_path, monkeypatch):
+    """Phase 235.3 D-10: two failed + one healthy Postgres target -> three
+    database DarFindings on /api/scan/latest, two carrying scan_error."""
+    from quirk.models import CryptoEndpoint
+
+    scan_run_id = "run-cov-db"
+    db_path = str(tmp_path / "coverage_db.db")
+    init_db(db_path)
+    with get_session(db_path) as session:
+        session.add_all([
+            CryptoEndpoint(
+                host="pg-ok.test", port=5432, protocol="POSTGRESQL",
+                service_detail="PostgreSQL/ssl-enforced", scan_run_id=scan_run_id,
+            ),
+            CryptoEndpoint(
+                host="pg-bad1.test", port=5432, protocol="POSTGRESQL",
+                scan_error="connection-error: could not connect", scan_run_id=scan_run_id,
+            ),
+            CryptoEndpoint(
+                host="pg-bad2.test", port=5432, protocol="POSTGRESQL",
+                scan_error="connection-error: timed out", scan_run_id=scan_run_id,
+            ),
+        ])
+        session.commit()
+    client = _latest_client(monkeypatch, db_path, scan_run_id)
+
+    resp = client.get("/api/scan/latest")
+    assert resp.status_code == 200
+    dar = [f for f in resp.json()["dar_findings"] if f["category"] == "database"]
+    assert len(dar) == 3, dar
+    failed = [f for f in dar if f.get("scan_error")]
+    assert len(failed) == 2
+    assert {f["host"] for f in failed} == {"pg-bad1.test", "pg-bad2.test"}
+    assert all(f["title"] == "POSTGRESQL connection failed" for f in failed)
+
+
 def test_scan_coverage_no_rows_returns_200_not_404(tmp_path, monkeypatch):
     db_path = str(tmp_path / "empty.db")
     init_db(db_path)
