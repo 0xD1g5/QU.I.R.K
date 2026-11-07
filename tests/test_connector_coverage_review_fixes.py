@@ -239,3 +239,28 @@ def test_blob_without_storage_sdk_is_missing_extra(tmp_path, monkeypatch):
     assert row["status"] == "skipped" and row["reason"] == "missing-extra"
     assert "extras: cloud" in row["detail"]
     assert len(_missing_extra(eps)) == 1, _missing_extra(eps)
+
+
+# ------------------------------------------------------------------ B-CR-03
+
+def _patch_broker(monkeypatch, kafka=(), rabbit=(), redis=()):
+    import quirk.scanner.broker_scanner as bs
+
+    for flag in ("SSLYZE_AVAILABLE", "KAFKA_AVAILABLE", "REDIS_AVAILABLE"):
+        monkeypatch.setattr(bs, flag, True)
+    monkeypatch.setattr(run_scan, "scan_kafka_targets", lambda **kw: list(kafka))
+    monkeypatch.setattr(run_scan, "scan_rabbitmq_targets", lambda **kw: list(rabbit))
+    monkeypatch.setattr(run_scan, "scan_redis_targets", lambda **kw: list(redis))
+
+
+_BROKER_CFG = {"connectors": {"enable_broker": True, "broker_targets": ["127.0.0.1:9092"]}}
+
+
+def test_broker_skip_forwards_driver_in_band_error_rows(tmp_path, monkeypatch):
+    err = CryptoEndpoint(
+        host="127.0.0.1", port=6380, protocol="REDIS", scan_error="harness-redis-error",
+    )
+    _patch_broker(monkeypatch, redis=[err])
+    phases, eps = _scan(tmp_path, monkeypatch, _BROKER_CFG)
+    assert phases["broker_scanning"]["status"] == "skipped"
+    assert [e for e in eps if e["error"] == "harness-redis-error"], "driver error row dropped"

@@ -4531,8 +4531,11 @@ def main():
                 _explicit = {(h, p) for h, p in explicit_reachable_pairs}
                 if any(key not in _explicit for key in _reached):
                     _outcomes.record("derived-hosts", OUTCOME_ANSWERED, extra=True)
+                # Review B-CR-03: pass the drivers' rows so the classifier's
+                # P-08 forwarding keeps their in-band error rows on skip; a
+                # full failure must never score fewer errors than a partial.
                 _classified = _classify_connector_outcomes(
-                    "broker_scanner", _outcomes, None, error_endpoints, _recorder,
+                    "broker_scanner", _outcomes, k + r + rd, error_endpoints, _recorder,
                 )
                 if _classified is _PHASE_SKIPPED:
                     # P-08: the unreached-target advisories are in-band rows
