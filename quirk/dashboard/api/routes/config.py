@@ -429,9 +429,8 @@ def get_internal_target_check(
         field: [v for v in (overlay.get(field) or []) if isinstance(v, str)]
         for field in _POLICY_GATED_FIELDS
     }
-    spec = overlay.get("openapi_spec_path")
-    if isinstance(spec, str) and re.match(r"https?://", spec.strip(), re.I):
-        values["openapi_spec_path"] = [spec.strip()]
+    # C-WR-03: openapi_spec_path is a ScanCfg field, not a connector overlay
+    # key; validate_connectors_overlay rejects it, so it is never checked here.
     internal, truncated = classify_internal_targets(values)
     return InternalTargetCheckResponse(
         allow_internal_targets=False, internal=internal, truncated=truncated

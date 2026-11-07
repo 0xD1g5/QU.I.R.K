@@ -14,7 +14,17 @@ import type { ConnectorOverlayValue, InternalTargetCheckResponse } from "@/types
  */
 
 const DEBOUNCE_MS = 500
-const CHECKED_KEYS = ["jwt_targets", "saml_targets", "openapi_spec_path"] as const
+// C-WR-03: the connector URL lists the server policy gates. openapi_spec_path
+// is a ScanCfg field the form cannot set (the overlay rejects it with a 422),
+// so it is never sent.
+const CHECKED_KEYS = ["jwt_targets", "saml_targets"] as const
+const FIELD_LABELS: Record<string, string> = { jwt_targets: "JWT", saml_targets: "SAML" }
+
+/** Connector names derived from the entries the server actually returned. */
+function connectorNames(fields: string[]): string {
+  const names = [...new Set(fields.map((f) => FIELD_LABELS[f] ?? f))]
+  return names.join(" and ")
+}
 
 interface InternalTargetWarningProps {
   connectors?: Record<string, ConnectorOverlayValue>
@@ -81,12 +91,12 @@ export function InternalTargetWarning(props: InternalTargetWarningProps) {
     >
       {configError ? (
         <p className="font-semibold">
-          Server policy could not be read, so internal URLs for JWT, SAML and OpenAPI may be skipped.
+          Server policy could not be read, so internal JWT and SAML URLs may be skipped.
         </p>
       ) : (
         <>
           <p className="font-semibold">
-            Server policy refuses internal URLs for JWT, SAML and OpenAPI. These connectors will be skipped.
+            Server policy refuses internal URLs, so these {connectorNames(internal.map((item) => item.field))} targets will not be scanned:
           </p>
           <ul className="text-xs mt-1 list-disc pl-5">
             {internal.map((item, i) => (
