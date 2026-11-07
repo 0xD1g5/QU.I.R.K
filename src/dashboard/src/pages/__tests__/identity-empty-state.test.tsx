@@ -64,7 +64,7 @@ describe("IdentityPage — protocol summary cards, no scan data (UAT-7-34)", () 
     scanDataReturn = { data: { ...FIXTURE, coverage: { recorded: true, ran: 0, skipped: 3, phases: ["kerberos_scanning", "saml_scanning", "dnssec_scanning"].map(phase) } }, loading: false, error: null }
     const { IdentityPage } = await import("@/pages/identity")
     render(<IdentityPage />)
-    expect(screen.getByText(/internal targets refused by server policy/)).toBeInTheDocument()
+    expect(screen.getAllByText(/internal targets refused by server policy/).length).toBeGreaterThan(0)
   })
 
   it("identity empty state shows ran with zero results", async () => {
@@ -73,5 +73,61 @@ describe("IdentityPage — protocol summary cards, no scan data (UAT-7-34)", () 
     const { IdentityPage } = await import("@/pages/identity")
     render(<IdentityPage />)
     expect(screen.getByText(/Ran, 0 results/)).toBeInTheDocument()
+  })
+
+  it("identity summary cards read the coverage record, not Not Scanned", async () => {
+    // C-WR-08: the cards above the empty state must agree with it.
+    scanDataReturn = {
+      data: {
+        ...FIXTURE,
+        coverage: {
+          recorded: true, ran: 1, skipped: 2,
+          phases: [
+            { phase_name: "kerberos_scanning", label: "Kerberos", status: "skipped", reason: "internal-target-refused", detail: null, duration_sec: null },
+            { phase_name: "saml_scanning", label: "SAML", status: "ran", reason: null, detail: null, duration_sec: 1 },
+            { phase_name: "dnssec_scanning", label: "DNSSEC", status: "skipped", reason: "disabled-by-config", detail: null, duration_sec: null },
+          ],
+        },
+      },
+      loading: false, error: null,
+    }
+    const { IdentityPage } = await import("@/pages/identity")
+    render(<IdentityPage />)
+
+    const cardFor = (label: string) => {
+      const heading = screen.getByText(label, { selector: "[data-slot='card-title'], h3, div" })
+      return (heading.closest('[class*="rounded-xl"]') ?? heading.parentElement?.parentElement) as HTMLElement
+    }
+    const saml = cardFor("SAML/OIDC")
+    expect(within(saml).getByText("Ran")).toBeInTheDocument()
+    expect(within(saml).queryByText("Not Scanned")).not.toBeInTheDocument()
+
+    const kerberos = cardFor("Kerberos")
+    expect(within(kerberos).getByText("Skipped")).toBeInTheDocument()
+    expect(within(kerberos).getByText(/internal targets refused by server policy/)).toBeInTheDocument()
+
+    expect(within(cardFor("DNSSEC")).getByText("Not Scanned")).toBeInTheDocument()
+    expect(screen.getAllByText("Not Scanned").length).toBe(1)
+  })
+
+  it("identity summary card shows Failed for a phase that raised", async () => {
+    scanDataReturn = {
+      data: {
+        ...FIXTURE,
+        coverage: {
+          recorded: true, ran: 0, skipped: 1,
+          phases: [
+            { phase_name: "kerberos_scanning", label: "Kerberos", status: "skipped", reason: "failed", detail: "RuntimeError: boom", duration_sec: null },
+          ],
+        },
+      },
+      loading: false, error: null,
+    }
+    const { IdentityPage } = await import("@/pages/identity")
+    render(<IdentityPage />)
+
+    expect(screen.getByText("Failed")).toBeInTheDocument()
+    expect(screen.getByText("the scanner stopped with an error")).toBeInTheDocument()
+    expect(screen.getAllByText("Not Scanned").length).toBe(2)
   })
 })
