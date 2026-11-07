@@ -330,9 +330,13 @@ The dashboard availability gate rejects the whole submission at `POST /api/jobs`
 naming the module flag (e.g. `quirk.scanner.email_scanner.SSLYZE_AVAILABLE is False`). It checks
 a fixed set of module flags (or a binary) per enabled connector, so some partial installs pass the gate and
 the scan degrades instead: Kubernetes without the GKE or AKS SDK (an inaccessible finding), Blob
-without `azure-mgmt-storage` and App Gateway without `azure-mgmt-network` (no results, verbose log
-only), and the database connector with one of its two drivers missing (that engine returns
-nothing). The probe
+without `azure-mgmt-storage` (the Blob phase is skipped `missing-extra`, with an advisory row
+naming the `cloud` extra), App Gateway without `azure-mgmt-network`, which is a core dependency
+(an advisory row says to reinstall quirk-scanner; the subscription leg is dropped, any Key Vault
+URLs are still scanned, and with no Key Vault URLs the Azure phase is skipped `missing-extra`),
+and the database connector with a driver missing (that engine's targets are not scanned
+and a `missing_extra` advisory names the `db` extra; with no configured engine's driver installed,
+the phase is skipped `missing-extra`). The probe
 is re-run fresh on every call, but module-level flags are evaluated at **import** time — so a
 package installed after the server started still reads as missing until `quirk serve` restarts.
 
