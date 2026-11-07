@@ -160,3 +160,39 @@ def test_outcomes_none_unchanged():
          patch("subprocess.run", return_value=_proc(json.dumps(SAMPLE_SYFT_OUTPUT))):
         rows = scan_container_targets(["img:1"])
     assert len(rows) == 3
+
+
+# --- 235.3 review A-WR-07: syft non-zero exit with parseable JSON -----------
+
+def test_outcome_nonzero_exit_with_valid_json_keeps_findings_answered():
+    rows, o = _run_one("img:1", _proc(json.dumps(SAMPLE_SYFT_OUTPUT), rc=1))
+    assert len(rows) == 3 and all(not r.scan_error for r in rows)
+    assert o.kind == "answered" and o.row_emitted is False
+
+
+def test_outcome_nonzero_exit_json_without_artifacts_is_unreachable_no_row():
+    rows, o = _run_one("img:1", _proc(json.dumps({"errors": ["pull failed"]}), rc=1))
+    assert rows == []
+    assert o.kind == "unreachable" and o.row_emitted is False
+    assert "status 1" in o.detail
+
+
+def test_outcome_nonzero_exit_findings_survive_alongside_answered_image():
+    """The failing image's findings must not be flagged row_emitted (which
+    would suppress its target_unanswered row) -- it answered, so no row."""
+    sink = TargetOutcomes(["good:1", "partial:1"])
+    procs = [_proc(json.dumps({"artifacts": []})),
+             _proc(json.dumps(SAMPLE_SYFT_OUTPUT), rc=2)]
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", side_effect=procs):
+        rows = scan_container_targets(["good:1", "partial:1"], outcomes=sink)
+    assert len(rows) == 3
+    assert [o.kind for o in sink.resolved()] == ["answered", "answered"]
+
+
+def test_outcome_invalid_input_is_row_emitted():
+    sink = TargetOutcomes(["--privileged"])
+    rows = scan_container_targets(["--privileged"], outcomes=sink)
+    assert len(rows) == 1 and rows[0].scan_error_category == "invalid_input"
+    o = sink.resolved()[0]
+    assert o.kind == "unreachable" and o.row_emitted is True

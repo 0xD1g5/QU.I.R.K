@@ -70,20 +70,21 @@ def scan_container_image(
     Rejected inputs (argv injection, invalid OCI refs, etc.) return a single
     CryptoEndpoint with scan_error_category="invalid_input" and no subprocess call.
 
-    ``_status`` (235.3 P-15, private): optional ``callable(kind, detail)`` told
-    whether syft actually scanned the image (``answered``) or not
-    (``unreachable``). Public return type is unchanged.
+    ``_status`` (235.3 P-15, private): optional
+    ``callable(kind, detail, row_emitted)`` told whether syft actually scanned
+    the image (``answered``) or not (``unreachable``), and whether this call
+    returned an in-band error row for it. Public return type is unchanged.
     """
-    def _report(kind: str, detail: str = "") -> None:
+    def _report(kind: str, detail: str = "", row_emitted: bool = False) -> None:
         if _status is not None:
-            _status(kind, detail)
+            _status(kind, detail, row_emitted)
 
     # Phase 57 / CR-03: reject argv-injection inputs before subprocess.run.
     _validation = validate_image_ref(image_ref)
     if not _validation.ok:
         if logger:
             logger.v(f"CONTAINER rejected {_validation.redacted_preview!r}: {_validation.reason}")
-        _report(OUTCOME_UNREACHABLE, safe_str(_validation.reason))
+        _report(OUTCOME_UNREACHABLE, safe_str(_validation.reason), row_emitted=True)
         return [CryptoEndpoint(
             host=_validation.redacted_preview,
             port=0,
@@ -127,9 +128,22 @@ def scan_container_image(
         return []
 
     if proc.returncode != 0:
-        _report(OUTCOME_UNREACHABLE, f"syft exited with status {proc.returncode}")
-    else:
-        _report(OUTCOME_ANSWERED)
+        # 235.3 review A-WR-07: a non-zero exit that still produced a parseable
+        # SBOM (an ``artifacts`` list) scanned the image; keep the findings and
+        # count it answered. Without artifacts there is nothing to return, so
+        # never return findings under an ``unreachable`` outcome.
+        if not isinstance(data.get("artifacts"), list):
+            _LOG.warning(
+                "syft exited with status %s for %r and produced no artifacts",
+                proc.returncode, image_ref,
+            )
+            _report(OUTCOME_UNREACHABLE, f"syft exited with status {proc.returncode}")
+            return []
+        _LOG.warning(
+            "syft exited with status %s for %r but produced a parseable SBOM; "
+            "keeping its artifacts", proc.returncode, image_ref,
+        )
+    _report(OUTCOME_ANSWERED)
 
     endpoints: List[CryptoEndpoint] = []
     artifacts = data.get("artifacts", [])
@@ -174,7 +188,7 @@ def scan_container_targets(
         try:
             eps = scan_container_image(
                 image_ref, timeout=timeout, logger=logger,
-                _status=(lambda k, d="": status.append((k, d))),
+                _status=(lambda k, d="", r=False: status.append((k, d, r))),
             )
             results.extend(eps)
         except TargetOutcomeContractError:
@@ -186,9 +200,8 @@ def scan_container_targets(
                 outcomes.record(image_ref, OUTCOME_UNREACHABLE, safe_str(exc))
             continue
         if outcomes is not None:
-            kind, detail = status[-1] if status else (OUTCOME_UNREACHABLE, "no status")
-            outcomes.record(
-                image_ref, kind, detail,
-                row_emitted=bool(kind == OUTCOME_UNREACHABLE and eps),
+            kind, detail, row_emitted = (
+                status[-1] if status else (OUTCOME_UNREACHABLE, "no status", False)
             )
+            outcomes.record(image_ref, kind, detail, row_emitted=row_emitted)
     return results
