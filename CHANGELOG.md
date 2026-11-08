@@ -8,7 +8,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
-## [5.28.2] - 2026-11-06
+## [5.28.2] - 2026-11-08
 
 This release makes the Scan Coverage section tell the truth about connectors. Before it, a connector
 (JWT, S3, Vault, database, Kubernetes, GCP and others) read as having run whenever its phase merely
