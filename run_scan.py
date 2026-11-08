@@ -26,6 +26,20 @@ from quirk.config import load_config, _parse_host_port
 from quirk.config_redaction import credential_is_set  # Phase 192 / OBS-01 / D-05
 from quirk.util.safe_exc import safe_str
 from quirk.util.scanner_binaries import SCANNER_BINARIES  # Phase 235.1 D-05
+from quirk.scanner.target_outcome import (  # Phase 235.3 D-05
+    OUTCOME_ANSWERED,
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_REFUSED,
+    OUTCOME_TO_SKIP_REASON,
+    OUTCOME_UNREACHABLE,
+    PER_TARGET_ERROR_CATEGORY,
+    SKIP_REASON_TO_ADVISORY_CATEGORY,
+    TargetOutcome,
+    TargetOutcomeContractError,
+    TargetOutcomes,
+    outcome_for_cloud_exception,
+)
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER  # Phase 230 DETECT-05
 from quirk.interactive import interactive_config
 from quirk.db import init_db, get_session
@@ -348,22 +362,62 @@ def _wrapped_phase(run_stats, phase_name, scanner_label, fn, error_endpoints, lo
         return []
 
 
-def _emit_missing_extra_advisory(scanner_name: str, extra_group: str, error_endpoints) -> None:
+def _emit_missing_extra_advisory(
+    scanner_name: str, extra_group: str, error_endpoints, message: Optional[str] = None,
+) -> None:
     """Phase 41 / D-12 — Phase 68 UX-02: emit QRK-INSTALL-001 stderr advisory + record CryptoEndpoint row.
 
     Invoked when an optional-extra-gated scanner is enabled but its underlying
     package is not installed. Emits format_error("INSTALL-001") to stderr and
     appends a CryptoEndpoint with scan_error_category='missing_extra' so
-    trends.py can exclude it from regression counts (D-15).
+    trends.py can exclude it from regression counts (D-15). *message*
+    replaces the default "optional extra [<group>] not installed" text when
+    the missing package is not an optional extra (a broken core install).
     """
     print(format_error("INSTALL-001"), file=sys.stderr)
     error_endpoints.append(CryptoEndpoint(
         host=scanner_name,
         port=0,
         protocol="ADVISORY",
-        scan_error=f"optional extra [{extra_group}] not installed",
+        scan_error=message or f"optional extra [{extra_group}] not installed",
         scan_error_category="missing_extra",
     ))
+
+
+def _module_available(name: str) -> bool:
+    """find_spec without importing; a missing parent package counts as absent."""
+    import importlib.util
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _missing_extra_skip(
+    cfg, recorder, scanner_label: str, module: str, extra_group: str,
+    detail: str, error_endpoints, message: Optional[str] = None,
+):
+    """Phase 235.3 review B-CR-01/B-CR-02/A-WR-03: the one missing-extra
+    skip shape for connector closures.
+
+    The missing extra is counted exactly once: when probe_missing_extras
+    already emitted a row covering *module* (an enabled REGISTRY entry), no
+    second row is added; otherwise this emits the single advisory. Returns
+    recorder.skip("missing-extra", detail).
+    """
+    _missing_extra_note(cfg, scanner_label, module, extra_group, error_endpoints, message)
+    return recorder.skip("missing-extra", detail)
+
+
+def _missing_extra_note(
+    cfg, scanner_label: str, module: str, extra_group: str, error_endpoints,
+    message: Optional[str] = None,
+) -> None:
+    """Counted-once missing-extra signal for a leg that is skipped while the
+    phase itself goes on (see `_missing_extra_skip`)."""
+    from quirk.util.optional_extra import probe_reports_module
+    if not probe_reports_module(cfg, module):
+        _emit_missing_extra_advisory(scanner_label, extra_group, error_endpoints, message)
 
 
 def _emit_missing_binary_advisory(scanner_name: str, binary: str, error_code: str, error_endpoints) -> None:
@@ -397,6 +451,103 @@ def _missing_binary_detail(binary: str, error_endpoints) -> Optional[str]:
         spec.scanner_label, binary, spec.error_code, error_endpoints
     )
     return f"{binary} is not installed (QRK-{spec.error_code})"
+
+
+def _emit_coverage_skip_advisory(scanner_label: str, reason: str, detail: str, error_endpoints) -> None:
+    """Phase 235.3 D-07: one counted ADVISORY row for a connector phase that saw nothing.
+
+    Mirrors `_emit_missing_binary_advisory`'s row shape. Deliberately prints no
+    format_error code: no QRK code applies and a new one would trip the
+    docs/error-codes.md generator gate.
+    """
+    error_endpoints.append(CryptoEndpoint(
+        host=scanner_label,
+        port=0,
+        protocol="ADVISORY",
+        scan_error=detail,
+        scan_error_category=SKIP_REASON_TO_ADVISORY_CATEGORY[reason],
+    ))
+
+
+def _per_target_error_row(scanner_label: str, outcome: TargetOutcome) -> CryptoEndpoint:
+    """Phase 235.3 D-03/P-14: a real scan-error row for one target that did not answer."""
+    return CryptoEndpoint(
+        host=outcome.target,
+        port=0,
+        protocol="ERROR",
+        scan_error=f"{scanner_label}: {outcome.kind}: {outcome.detail}",
+        scan_error_category=PER_TARGET_ERROR_CATEGORY,
+    )
+
+
+_COVERAGE_PHRASE = {
+    "internal-target-refused": "were refused by the internal-target guard",
+    "auth-failed": "failed authentication",
+    "missing-credentials": "had no usable credentials",
+    "failed": "did not answer",
+}
+_COVERAGE_PRIORITY = (
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_REFUSED,
+    OUTCOME_UNREACHABLE,
+)
+
+
+def _classify_connector_outcomes(scanner_label, outcomes, rows, error_endpoints, recorder):
+    """Phase 235.3 D-03/D-05/D-07: turn per-target outcomes into `ran` or a named `skipped`.
+
+    At least one target answered -> the phase ran: return *rows* unchanged
+    (zero rows is fine, answered-with-nothing stays ran) after appending one
+    target_unanswered ERROR row per non-answering target without an in-band row.
+    No target answered -> append one ADVISORY row and return
+    recorder.skip(reason, detail). Fail-closed: an expected target with no
+    recorded outcome counts as not answered. In-band rows are never deleted
+    (P-08); reason priority is P-06.
+    """
+    resolved = outcomes.resolved()
+    if not resolved:
+        # Review B-CR-02: nothing was eligible to answer, which is not a
+        # network failure. Closures pre-gate this; never invent "failed".
+        error_endpoints.extend(
+            r for r in (rows or []) if getattr(r, "scan_error", None)
+        )
+        return recorder.skip("no-eligible-targets", "no targets were eligible to scan")
+    failures = [o for o in resolved if o.kind != OUTCOME_ANSWERED]
+    if any(o.kind == OUTCOME_ANSWERED for o in resolved):
+        for o in failures:
+            if not o.row_emitted:
+                error_endpoints.append(_per_target_error_row(scanner_label, o))
+        return rows
+    kinds = {o.kind for o in failures}
+    kind = next((k for k in _COVERAGE_PRIORITY if k in kinds), OUTCOME_UNREACHABLE)
+    reason = OUTCOME_TO_SKIP_REASON[kind]
+    names = ", ".join(
+        f"{o.target} ({o.kind}: {o.detail})" if o.detail else f"{o.target} ({o.kind})"
+        for o in failures[:5]
+    )
+    if len(failures) > 5:
+        names += f", and {len(failures) - 5} more"
+    # Review B-WR-02: count only the targets with the chosen kind; the rest
+    # are named separately so the phrase never overstates its count.
+    n_kind = sum(1 for o in failures if o.kind == kind)
+    detail = f"{n_kind} of {len(resolved)} targets {_COVERAGE_PHRASE[reason]}"
+    if len(failures) > n_kind:
+        detail += f" ({len(failures) - n_kind} more did not answer for other reasons)"
+    detail += f": {names}"
+    if reason == "internal-target-refused":
+        detail += (
+            "; security.allow_internal_targets is false - it is server policy, "
+            "set it in the server's config.yaml"
+        )
+    _emit_coverage_skip_advisory(scanner_label, reason, detail, error_endpoints)
+    # P-08: a skipped phase's return value is discarded by _wrapped_phase, so
+    # its in-band error rows (connection-error, no-ADC, inaccessible, ...) must
+    # be forwarded or the skip would delete evidence the scanner emitted.
+    error_endpoints.extend(
+        r for r in (rows or []) if getattr(r, "scan_error", None)
+    )
+    return recorder.skip(reason, detail)
 
 
 def _broker_missing_extra(enable_broker: bool, error_endpoints) -> bool:
@@ -3303,7 +3454,8 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_jwt is false")
             if not cfg.connectors.jwt_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.jwt_targets is empty")
-            return scan_jwt_targets(
+            _outcomes = TargetOutcomes(cfg.connectors.jwt_targets)
+            _rows = scan_jwt_targets(
                 cfg.connectors.jwt_targets,
                 timeout=cfg.scan.timeouts.jwt_seconds,
                 logger=logger,
@@ -3315,6 +3467,10 @@ def main():
                 # profile at http://localhost:2000x. Threaded here to match how every other
                 # internal-capable scanner consumes the same operator opt-in.
                 allow_internal=cfg.security.allow_internal_targets,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "jwt_scanner", _outcomes, _rows, error_endpoints, _recorder,
             )
         jwt_endpoints = _wrapped_phase(
             run_stats, "jwt_scanning", "jwt_scanner",
@@ -3333,10 +3489,15 @@ def main():
             _missing = _missing_binary_detail("syft", error_endpoints)
             if _missing is not None:
                 return _recorder.skip("missing-binary", _missing)
-            return scan_container_targets(
+            _outcomes = TargetOutcomes(cfg.connectors.container_targets)
+            _rows = scan_container_targets(
                 cfg.connectors.container_targets,
                 timeout=cfg.scan.timeouts.container_seconds,
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "container_scanner", _outcomes, _rows, error_endpoints, _recorder,
             )
         container_endpoints = _wrapped_phase(
             run_stats, "container_scanning", "container_scanner",
@@ -3346,6 +3507,7 @@ def main():
         # ==============================
         # Source code scan phase
         # ==============================
+        # 235.3 P-15: source_scanning is exempt — scan_source_targets raises when every target fails (235.1 SRCSCAN-03), so _wrapped_phase records it failed with a counted ERROR row; partial failures already emit one row per target
         def _run_source_phase():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_source:
@@ -3373,19 +3535,33 @@ def main():
             _spec_path = getattr(getattr(cfg, "scan", None), "openapi_spec_path", None)
             if not _spec_path:
                 return _recorder.skip("no-eligible-targets", "scan.openapi_spec_path is not set")
-            from quirk.scanner.openapi_scanner import scan_openapi_spec, SpecParsingError
+            from quirk.scanner.openapi_scanner import (
+                OPENAPI_AVAILABLE, scan_openapi_spec, SpecParsingError,
+            )
+            if not OPENAPI_AVAILABLE:
+                # Review B-CR-02: the degraded row carries no scan_error and no
+                # outcome, so the phase would read "failed / did not answer".
+                return _missing_extra_skip(
+                    cfg, _recorder, "openapi_scanner", "openapi_spec_validator", "api",
+                    "openapi-spec-validator not installed (extras: api)", error_endpoints,
+                )
             _target_list = []
             if hasattr(cfg, "targets") and cfg.targets is not None:
                 _target_list = list(getattr(cfg.targets, "fqdns", []) or [])
+            _outcomes = TargetOutcomes([_spec_path])
             try:
-                return scan_openapi_spec(
+                _rows = scan_openapi_spec(
                     _spec_path,
                     cfg_targets=_target_list,
                     allow_internal=cfg.security.allow_internal_targets,
+                    outcomes=_outcomes,
                 )
             except SpecParsingError as exc:
                 logger.error(f"OpenAPI spec parse error: {safe_str(exc)}")
-                return []
+                _rows = []
+            return _classify_connector_outcomes(
+                "openapi_scanner", _outcomes, _rows, error_endpoints, _recorder,
+            )
         openapi_endpoints = _wrapped_phase(
             run_stats, "openapi_scanning", "openapi_scanner",
             _run_openapi_phase, error_endpoints, logger,
@@ -3394,6 +3570,7 @@ def main():
         # ==============================
         # REST fuzz scan phase (Phase 96 FUZZ-01/02/03/04)
         # ==============================
+        # 235.3 P-03: fuzz_scanning is interactive-only (--fuzz, not a cfg.connectors flag); exempt from the D-03 ran-vs-skipped rule
         def _run_fuzz_phase():
             _recorder = run_stats["phase_records"]
             # Guard: --fuzz must be set and openapi_endpoints must exist (no spec → no fuzz)
@@ -3484,15 +3661,22 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_aws:
                 return _recorder.skip("disabled-by-config", "enable_aws is false")
-            from quirk.scanner.aws_connector import BOTO3_AVAILABLE
+            from quirk.scanner.aws_connector import BOTO3_AVAILABLE, aws_target_label
             if not BOTO3_AVAILABLE:
                 return _recorder.skip("missing-extra", "boto3 not installed (extras: aws)")
             if not cfg.connectors.aws_region:
                 return _recorder.skip("no-eligible-targets", "connectors.aws_region is empty")
-            return scan_aws_targets(
+            _outcomes = TargetOutcomes(
+                [aws_target_label("aws", cfg.connectors.aws_region, None)]
+            )
+            _rows = scan_aws_targets(
                 region=cfg.connectors.aws_region,
                 profile=cfg.connectors.aws_profile,
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "aws_connector", _outcomes, _rows, error_endpoints, _recorder,
             )
         aws_endpoints = _wrapped_phase(
             run_stats, "aws_scanning", "aws_connector",
@@ -3514,10 +3698,37 @@ def main():
                     "no-eligible-targets",
                     "connectors.azure_subscription_id and connectors.azure_keyvault_urls are both empty",
                 )
-            return scan_azure_targets(
-                subscription_id=cfg.connectors.azure_subscription_id or "",
+            # Review A-WR-03: the App Gateway leg imports azure-mgmt-network
+            # lazily and records nothing when it is absent, so the
+            # subscription would read "did not answer". Gate that leg here.
+            _sub_id = cfg.connectors.azure_subscription_id or ""
+            if _sub_id and not _module_available("azure.mgmt.network"):
+                _net_msg = (
+                    "azure-mgmt-network not installed (a core dependency; "
+                    "reinstall quirk-scanner)"
+                )
+                if not cfg.connectors.azure_keyvault_urls:
+                    return _missing_extra_skip(
+                        cfg, _recorder, "azure_connector", "azure.mgmt.network", "core",
+                        _net_msg, error_endpoints, message=_net_msg,
+                    )
+                _missing_extra_note(
+                    cfg, "azure_connector", "azure.mgmt.network", "core",
+                    error_endpoints, message=_net_msg,
+                )
+                _sub_id = ""
+            _expected = list(cfg.connectors.azure_keyvault_urls or [])
+            if _sub_id:
+                _expected.append(_sub_id)
+            _outcomes = TargetOutcomes(_expected)
+            _rows = scan_azure_targets(
+                subscription_id=_sub_id,
                 keyvault_urls=cfg.connectors.azure_keyvault_urls,
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "azure_connector", _outcomes, _rows, error_endpoints, _recorder,
             )
         azure_endpoints = _wrapped_phase(
             run_stats, "azure_scanning", "azure_connector",
@@ -3531,14 +3742,19 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_gcp:
                 return _recorder.skip("disabled-by-config", "enable_gcp is false")
-            from quirk.scanner.gcp_connector import GCP_AVAILABLE
+            from quirk.scanner.gcp_connector import GCP_AVAILABLE, gcp_target_label
             if not GCP_AVAILABLE:
                 return _recorder.skip("missing-extra", "google-api-python-client not installed (extras: cloud)")
             if not cfg.connectors.gcp_project_id:
                 return _recorder.skip("no-eligible-targets", "connectors.gcp_project_id is empty")
-            return scan_gcp_targets(
+            _outcomes = TargetOutcomes([gcp_target_label(cfg.connectors.gcp_project_id)])
+            _rows = scan_gcp_targets(
                 project_id=cfg.connectors.gcp_project_id or "",
                 logger=logger,
+                outcomes=_outcomes,
+            )
+            return _classify_connector_outcomes(
+                "gcp_connector", _outcomes, _rows, error_endpoints, _recorder,
             )
         gcp_endpoints = _wrapped_phase(
             run_stats, "gcp_scanning", "gcp_connector",
@@ -3574,6 +3790,27 @@ def main():
             # "postgres" / "root". A config-field truthiness gate would
             # silently disable those documented auth paths, so the
             # connectors report their own auth failures instead.
+            # 235.3 D-05: one sink over both lists; a driver that is not
+            # installed never attempts its targets, so they are not expected.
+            _expected = []
+            if PSYCOPG2_AVAILABLE:
+                _expected.extend(cfg.connectors.pg_targets or [])
+            if PYMYSQL_AVAILABLE:
+                _expected.extend(cfg.connectors.mysql_targets or [])
+            if not _expected:
+                # Review B-CR-02: every configured engine lacks its driver.
+                _missing = []
+                if cfg.connectors.pg_targets:
+                    _missing.append("psycopg2 (connectors.pg_targets)")
+                if cfg.connectors.mysql_targets:
+                    _missing.append("PyMySQL (connectors.mysql_targets)")
+                return _missing_extra_skip(
+                    cfg, _recorder, "db_connector",
+                    "psycopg2" if cfg.connectors.pg_targets else "pymysql", "db",
+                    f"{' and '.join(_missing)} not installed (extras: db)",
+                    error_endpoints,
+                )
+            _outcomes = TargetOutcomes(_expected)
             result = []
             if cfg.connectors.pg_targets:
                 result.extend(scan_pg_targets(
@@ -3586,6 +3823,7 @@ def main():
                     logger=logger,
                     session_start=session_start,
                     cfg=cfg,
+                    outcomes=_outcomes,
                 ))
             if cfg.connectors.mysql_targets:
                 result.extend(scan_mysql_targets(
@@ -3598,8 +3836,11 @@ def main():
                     logger=logger,
                     session_start=session_start,
                     cfg=cfg,
+                    outcomes=_outcomes,
                 ))
-            return result
+            return _classify_connector_outcomes(
+                "db_connector", _outcomes, result, error_endpoints, _recorder,
+            )
         db_endpoints = _wrapped_phase(
             run_stats, "db_scanning", "db_connector",
             _run_db_phase, error_endpoints, logger,
@@ -3659,23 +3900,41 @@ def main():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_s3:
                 return _recorder.skip("disabled-by-config", "enable_s3 is false")
-            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE
+            from quirk.scanner.aws_connector import _scan_s3_encryption, BOTO3_AVAILABLE, aws_target_label
             if not BOTO3_AVAILABLE:
                 logger.v("boto3 not installed — S3 scanning skipped")
                 return _recorder.skip("missing-extra", "boto3 not installed")
             import boto3
-            s3_session = boto3.Session(
-                region_name=cfg.connectors.aws_region,
-                profile_name=cfg.connectors.aws_profile,
+            _s3_endpoint = cfg.connectors.aws_endpoint_url or None
+            _outcomes = TargetOutcomes(
+                [aws_target_label("s3", cfg.connectors.aws_region, _s3_endpoint)]
             )
+            # Review B-WR-05: a bad aws_profile raises ProfileNotFound here;
+            # classify it like scan_aws_targets does (missing-credentials)
+            # instead of letting _wrapped_phase record "failed".
+            try:
+                s3_session = boto3.Session(
+                    region_name=cfg.connectors.aws_region,
+                    profile_name=cfg.connectors.aws_profile,
+                )
+            except Exception as exc:
+                _outcomes.record(
+                    _outcomes.sole_target(), *outcome_for_cloud_exception(exc),
+                )
+                return _classify_connector_outcomes(
+                    "s3_connector", _outcomes, [], error_endpoints, _recorder,
+                )
             eps = _scan_s3_encryption(
                 session=s3_session,
                 logger=logger,
                 session_start=session_start,
-                endpoint_url=cfg.connectors.aws_endpoint_url or None,
+                endpoint_url=_s3_endpoint,
+                outcomes=_outcomes,
             )
             logger.info(f"S3 scan: {len(eps)} bucket endpoints")
-            return eps
+            return _classify_connector_outcomes(
+                "s3_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         s3_endpoints = _wrapped_phase(
             run_stats, "s3_scanning", "s3_connector",
             _run_s3_phase, error_endpoints, logger,
@@ -3692,19 +3951,30 @@ def main():
             if not AZURE_AVAILABLE:
                 logger.v("azure SDK not installed — Azure Blob scanning skipped")
                 return _recorder.skip("missing-extra", "azure SDK not installed")
+            if not _module_available("azure.mgmt.storage"):
+                # Review A-WR-03: _scan_blob_encryption returns [] and records
+                # nothing without azure-mgmt-storage ("did not answer").
+                return _missing_extra_skip(
+                    cfg, _recorder, "azure_blob_connector", "azure.mgmt.storage", "cloud",
+                    "azure-mgmt-storage not installed (extras: cloud)", error_endpoints,
+                )
             if not (cfg.connectors.azure_subscription_id or "").strip():
                 logger.v("azure_subscription_id not set — Azure Blob scanning skipped")
                 return _recorder.skip(
                     "no-eligible-targets", "connectors.azure_subscription_id is empty",
                 )
+            _outcomes = TargetOutcomes([cfg.connectors.azure_subscription_id])
             eps = _scan_blob_encryption(
                 credential=DefaultAzureCredential(),
                 subscription_id=cfg.connectors.azure_subscription_id,
                 logger=logger,
                 session_start=session_start,
+                outcomes=_outcomes,
             )
             logger.info(f"Azure Blob scan: {len(eps)} container endpoints")
-            return eps
+            return _classify_connector_outcomes(
+                "azure_blob_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         blob_endpoints = _wrapped_phase(
             run_stats, "blob_scanning", "azure_blob_connector",
             _run_blob_phase, error_endpoints, logger,
@@ -3724,7 +3994,17 @@ def main():
             # findings, trends, and scoring evidence. A pre-flight skip would
             # silently delete those previously-emitted signals; the phase
             # honestly records "ran" because the connector did run and emit.
-            from quirk.scanner.k8s_connector import scan_k8s_targets
+            from quirk.scanner.k8s_connector import (
+                K8S_AVAILABLE, SUPPORTED_PROVIDERS, scan_k8s_targets,
+            )
+            # 235.3 D-05: single-target connector, so the scanner records
+            # against outcomes.sole_target(). EKS is recorded below with
+            # extra=True so sole_target() stays unambiguous.
+            _k8s_label = (
+                f"k8s:{(cfg.connectors.k8s_provider or '(unset)').lower()}:"
+                f"{cfg.connectors.k8s_cluster_name or '-'}"
+            )
+            _outcomes = TargetOutcomes([_k8s_label])
             eps = scan_k8s_targets(
                 provider=cfg.connectors.k8s_provider or "",
                 cluster_name=cfg.connectors.k8s_cluster_name or "",
@@ -3737,6 +4017,7 @@ def main():
                 aks_clusters=cfg.connectors.aks_clusters or [],
                 logger=logger,
                 session_start=session_start,
+                outcomes=_outcomes,
             )
             # EKS path uses boto3 (NOT kubernetes Python client). Run alongside
             # GKE/AKS/secret enumeration when k8s_provider == "eks".
@@ -3752,13 +4033,62 @@ def main():
                             region_name=getattr(cfg.connectors, "aws_region", None) or None,
                             profile_name=getattr(cfg.connectors, "aws_profile", None) or None,
                         )
-                        eps.extend(_scan_eks_encryption(
+                        _eks_eps = _scan_eks_encryption(
                             _eks_session, logger, session_start=session_start,
-                        ))
+                        )
+                        eps.extend(_eks_eps)
+                        if any(not getattr(e, "scan_error", None) for e in _eks_eps):
+                            _outcomes.record(
+                                f"eks:{cfg.connectors.k8s_cluster_name or '-'}",
+                                OUTCOME_ANSWERED, extra=True,
+                            )
+                except TargetOutcomeContractError:
+                    raise
                 except Exception as exc:
                     logger.v(f"EKS encryption scan unavailable: {exc}")
+                    # Review B-WR-05: classify (ProfileNotFound and
+                    # NoCredentialsError are missing-credentials, not unreachable).
+                    _outcomes.record(
+                        f"eks:{cfg.connectors.k8s_cluster_name or '-'}",
+                        *outcome_for_cloud_exception(exc), extra=True,
+                    )
             logger.info(f"K8S scan: {len(eps)} cluster endpoints")
-            return eps
+            if (cfg.connectors.k8s_provider or "").strip().lower() not in SUPPORTED_PROVIDERS:
+                # Review B-WR-04: K8S-03 path A is a configuration gap, not
+                # missing credentials. Keep its in-band inaccessible row.
+                error_endpoints.extend(
+                    e for e in eps if getattr(e, "scan_error", None)
+                )
+                return _recorder.skip(
+                    "no-eligible-targets",
+                    "connectors.k8s_provider is unset or unsupported "
+                    "(supported: eks, gke, aks)",
+                )
+            # 235.3: a missing kubernetes SDK records no outcome (K8S-03 path B
+            # emits its inaccessible row in-band). Read that as missing_extra,
+            # not as a misleading "did not answer". Post-scan on purpose: the
+            # WR-03 design above keeps K8S-03's in-band rows, so no pre-gate.
+            # Review B-CR-01: kubernetes ships in [cloud], and
+            # probe_missing_extras already counts it, so _missing_extra_*
+            # adds no second row.
+            if not K8S_AVAILABLE and not _outcomes.items.get(_k8s_label):
+                if any(o.kind == OUTCOME_ANSWERED for o in _outcomes.resolved()):
+                    # EKS answered via boto3: its rows are real evidence, so
+                    # the phase ran. The path-B row stays in-band in eps.
+                    _missing_extra_note(
+                        cfg, "k8s_connector", "kubernetes", "cloud", error_endpoints,
+                    )
+                    return eps
+                error_endpoints.extend(
+                    e for e in eps if getattr(e, "scan_error", None)
+                )
+                return _missing_extra_skip(
+                    cfg, _recorder, "k8s_connector", "kubernetes", "cloud",
+                    "kubernetes SDK not installed (extras: cloud)", error_endpoints,
+                )
+            return _classify_connector_outcomes(
+                "k8s_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         k8s_endpoints = _wrapped_phase(
             run_stats, "k8s_scanning", "k8s_connector",
             _run_k8s_phase, error_endpoints, logger,
@@ -3780,16 +4110,20 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_dnssec is false")
             if not cfg.connectors.dnssec_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.dnssec_targets is empty")
+            _outcomes = TargetOutcomes(cfg.connectors.dnssec_targets)
             eps = scan_dnssec_targets(
                 targets=cfg.connectors.dnssec_targets,
                 timeout=getattr(cfg.connectors, "dnssec_timeout", 10),
                 logger=logger,
                 session_start=session_start,
                 resolver=getattr(cfg.connectors, "dnssec_resolver", None),
+                outcomes=_outcomes,
             )
             logger.info("DNSSEC scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.dnssec_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "dnssec_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         dnssec_endpoints = _wrapped_phase(
             run_stats, "dnssec_scanning", "dnssec_scanner",
             _run_dnssec_phase, error_endpoints, logger,
@@ -3803,16 +4137,20 @@ def main():
             if not cfg.connectors.saml_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.saml_targets is empty")
             from quirk.scanner.saml_scanner import scan_saml_targets
+            _outcomes = TargetOutcomes(cfg.connectors.saml_targets)
             eps = scan_saml_targets(
                 targets=cfg.connectors.saml_targets,
                 timeout=getattr(cfg.connectors, "saml_timeout", 10),
                 logger=logger,
                 session_start=session_start,
                 allow_internal_targets=cfg.security.allow_internal_targets,
+                outcomes=_outcomes,
             )
             logger.info("SAML scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.saml_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "saml_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         saml_endpoints = _wrapped_phase(
             run_stats, "saml_scanning", "saml_scanner",
             _run_saml_phase, error_endpoints, logger,
@@ -3825,17 +4163,28 @@ def main():
                 return _recorder.skip("disabled-by-config", "enable_kerberos is false")
             if not cfg.connectors.kerberos_targets:
                 return _recorder.skip("no-eligible-targets", "connectors.kerberos_targets is empty")
-            from quirk.scanner.kerberos_scanner import scan_kerberos_targets
+            from quirk.scanner.kerberos_scanner import scan_kerberos_targets, IMPACKET_AVAILABLE
+            if not IMPACKET_AVAILABLE:
+                # Review B-CR-02: the scanner returns [] and records nothing,
+                # which would read "failed / did not answer".
+                return _missing_extra_skip(
+                    cfg, _recorder, "kerberos_scanner", "impacket", "identity",
+                    "impacket not installed (extras: identity)", error_endpoints,
+                )
+            _outcomes = TargetOutcomes(cfg.connectors.kerberos_targets)
             eps = scan_kerberos_targets(
                 targets=cfg.connectors.kerberos_targets,
                 timeout=getattr(cfg.connectors, "kerberos_timeout", 10),
                 principal=cfg.connectors.kerberos_probe_principal,
                 logger=logger,
                 session_start=session_start,
+                outcomes=_outcomes,
             )
             logger.info("Kerberos scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.kerberos_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "kerberos_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         kerberos_endpoints = _wrapped_phase(
             run_stats, "kerberos_scanning", "kerberos_scanner",
             _run_kerberos_phase, error_endpoints, logger,
@@ -3859,16 +4208,20 @@ def main():
             if not getattr(cfg.connectors, "smime_targets", None):
                 return _recorder.skip("no-eligible-targets", "connectors.smime_targets is empty")
             from quirk.scanner.smime_scanner import scan_smime_targets
+            _outcomes = TargetOutcomes(cfg.connectors.smime_targets)
             eps = scan_smime_targets(
                 targets=cfg.connectors.smime_targets,
                 timeout=getattr(cfg.connectors, "smime_timeout", 10),
                 logger=logger,
                 session_start=session_start,
                 search_base=getattr(cfg.connectors, "smime_search_base", None),
+                outcomes=_outcomes,
             )
             logger.info("SMIME scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.smime_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "smime_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         smime_endpoints = _wrapped_phase(
             run_stats, "smime_scanning", "smime_scanner",
             _run_smime_phase, error_endpoints, logger,
@@ -3892,6 +4245,7 @@ def main():
             if not getattr(cfg.connectors, "adcs_targets", None):
                 return _recorder.skip("no-eligible-targets", "connectors.adcs_targets is empty")
             from quirk.scanner.adcs_scanner import scan_adcs_targets
+            _outcomes = TargetOutcomes(cfg.connectors.adcs_targets)
             eps = scan_adcs_targets(
                 targets=cfg.connectors.adcs_targets,
                 timeout=getattr(cfg.connectors, "adcs_timeout", 10),
@@ -3903,10 +4257,13 @@ def main():
                     getattr(cfg.connectors, "adcs_password", None)
                     or os.environ.get("QUIRK_ADCS_PASSWORD", None)
                 ),
+                outcomes=_outcomes,
             )
             logger.info("ADCS scan: %d endpoints from %d targets",
                         len(eps), len(cfg.connectors.adcs_targets))
-            return eps
+            return _classify_connector_outcomes(
+                "adcs_scanner", _outcomes, eps, error_endpoints, _recorder,
+            )
         adcs_endpoints = _wrapped_phase(
             run_stats, "adcs_scanning", "adcs_scanner",
             _run_adcs_phase, error_endpoints, logger,
@@ -3920,17 +4277,31 @@ def main():
             if not getattr(args, "inventory_code_signing", False):
                 return _recorder.skip("disabled-by-config", "--inventory-code-signing not set")
             from quirk.scanner.codesign_scanner import (
+                LDAP3_AVAILABLE,
                 scan_codesign_from_ldap,
                 scan_codesign_from_tls_endpoints,
             )
             ldap_eps = []
-            if getattr(cfg.connectors, "codesign_targets", None):
+            _outcomes = None
+            _ldap_missing = None
+            if getattr(cfg.connectors, "codesign_targets", None) and not LDAP3_AVAILABLE:
+                # Review B-CR-02: without ldap3 the LDAP scanner returns [] and
+                # records nothing; signal the missing extra instead of "failed".
+                _ldap_missing = "ldap3 not installed (extras: adcs)"
+                _missing_extra_note(
+                    cfg, "codesign_scanner", "ldap3", "adcs", error_endpoints,
+                )
+            elif getattr(cfg.connectors, "codesign_targets", None):
+                # 235.3 D-03: sink only for the LDAP path. The TLS-EKU path below
+                # is in-process and exempt (P-03): it records no outcomes.
+                _outcomes = TargetOutcomes(cfg.connectors.codesign_targets)
                 ldap_eps = scan_codesign_from_ldap(
                     targets=cfg.connectors.codesign_targets,
                     timeout=getattr(cfg.connectors, "codesign_timeout", 10),
                     logger=logger,
                     session_start=session_start,
                     search_base=getattr(cfg.connectors, "codesign_search_base", None),
+                    outcomes=_outcomes,
                 )
                 logger.info("CODE_SIGNING LDAP scan: %d endpoints from %d targets",
                             len(ldap_eps), len(cfg.connectors.codesign_targets))
@@ -3942,7 +4313,22 @@ def main():
             )
             logger.info("CODE_SIGNING TLS-EKU check: %d CODE_SIGNING endpoints from %d TLS endpoints",
                         len(tls_eps), len(tls_endpoints))
-            return ldap_eps + tls_eps
+            if _ldap_missing is not None and not tls_eps:
+                return _recorder.skip("missing-extra", _ldap_missing)
+            if _outcomes is None:
+                return ldap_eps + tls_eps
+            if tls_eps:
+                # Review B-WR-03: in-process TLS-EKU results are real evidence,
+                # so the phase ran (D-03). Count them as an answered leg so the
+                # classifier takes its ran path: one target_unanswered row per
+                # silent LDAP target, never a skip advisory for a ran phase.
+                _outcomes.record("tls-eku", OUTCOME_ANSWERED, extra=True)
+            _classified = _classify_connector_outcomes(
+                "codesign_scanner", _outcomes, ldap_eps, error_endpoints, _recorder,
+            )
+            if _classified is _PHASE_SKIPPED:
+                return _classified
+            return _classified + tls_eps
         codesign_endpoints = _wrapped_phase(
             run_stats, "codesign_scanning", "codesign_scanner",
             _run_codesign_phase, error_endpoints, logger,
@@ -3974,6 +4360,12 @@ def main():
                 "connectors", "vault_token", cfg.connectors.vault_token,
             ):
                 logger.v("vault_token not set -- Vault scanning skipped")
+                # 235.3 P-01: count this skip in the score like every other
+                # missing-credentials skip.
+                _emit_coverage_skip_advisory(
+                    "vault_connector", "missing-credentials",
+                    "connectors.vault_token / VAULT_TOKEN not set", error_endpoints,
+                )
                 return _recorder.skip(
                     "missing-credentials",
                     "connectors.vault_token / VAULT_TOKEN not set",
@@ -3982,18 +4374,23 @@ def main():
             # env fallback inside vault_connector). Source the token here at the caller
             # boundary — config takes precedence; VAULT_TOKEN env is the operator override.
             _vault_token = cfg.connectors.vault_token or os.environ.get("VAULT_TOKEN", "")
+            _vault_addr = (cfg.connectors.vault_addr
+                           or os.environ.get("VAULT_ADDR", ""))
+            _outcomes = TargetOutcomes([_vault_addr])
             eps = scan_vault_targets(
-                vault_addr=(cfg.connectors.vault_addr
-                            or os.environ.get("VAULT_ADDR", "")),
+                vault_addr=_vault_addr,
                 token=_vault_token,
                 transit_mount=cfg.connectors.vault_transit_mount or "transit",
                 tls_verify=cfg.connectors.vault_tls_verify,
                 logger=logger,
                 session_start=session_start,
                 cfg=cfg,
+                outcomes=_outcomes,
             )
             logger.info("Vault scan: %d endpoints", len(eps))
-            return eps
+            return _classify_connector_outcomes(
+                "vault_connector", _outcomes, eps, error_endpoints, _recorder,
+            )
         vault_endpoints = _wrapped_phase(
             run_stats, "vault_scanning", "vault_connector",
             _run_vault_phase, error_endpoints, logger,
@@ -4044,6 +4441,7 @@ def main():
         # Phase 67 / D-04: email phase now uses _wrapped_phase for uniform error capture.
         # cfg_email_skip and _emit_missing_extra_advisory() call above remain before the
         # _run_email_phase def — correct ordering preserved.
+        # 235.3 P-03: email_scanning probes speculative default ports on hosts derived from TLS targets; exempt from the D-03 ran-vs-skipped rule
         def _run_email_phase():
             _recorder = run_stats["phase_records"]
             if not cfg.connectors.enable_email:
@@ -4145,6 +4543,49 @@ def main():
                 f"Broker scan: kafka={len(k)} rabbit={len(r)} redis={len(rd)} "
                 f"advisories={len(unreached)}"
             )
+            # 235.3 P-03: D-03 applies only to explicit broker_targets pairs;
+            # with none configured the phase keeps today's behaviour.
+            if explicit_reachable_pairs:
+                # Review B-WR-01: config-only ADVISORY rows (cleartext /
+                # credential-probe) are emitted whether or not the broker
+                # responded, so they are not evidence that it answered.
+                _reached = {
+                    (ep.host, ep.port)
+                    for ep in (k + r + rd)
+                    if ep.protocol != "ADVISORY"
+                    and (not ep.scan_error or ep.tls_version or ep.cipher_suite)
+                }
+                _outcomes = TargetOutcomes(
+                    [f"{h}:{p}" for h, p in explicit_reachable_pairs]
+                )
+                for _h, _p in explicit_reachable_pairs:
+                    if (_h, _p) in _reached:
+                        _outcomes.answered(f"{_h}:{_p}")
+                    else:
+                        _outcomes.record(
+                            f"{_h}:{_p}", OUTCOME_UNREACHABLE,
+                            "did not respond to any probe", row_emitted=True,
+                        )
+                _explicit = {(h, p) for h, p in explicit_reachable_pairs}
+                if any(key not in _explicit for key in _reached):
+                    _outcomes.record("derived-hosts", OUTCOME_ANSWERED, extra=True)
+                # Review B-CR-03: pass the drivers' rows so the classifier's
+                # P-08 forwarding keeps their in-band error rows on skip; a
+                # full failure must never score fewer errors than a partial.
+                _classified = _classify_connector_outcomes(
+                    "broker_scanner", _outcomes, k + r + rd, error_endpoints, _recorder,
+                )
+                if _classified is _PHASE_SKIPPED:
+                    # P-08: the unreached-target advisories are in-band rows
+                    # and must still reach error_endpoints / the database.
+                    error_endpoints.extend(unreached)
+                    # Those config advisories carry no scan_error, so the
+                    # classifier does not forward them; keep the findings.
+                    error_endpoints.extend(
+                        ep for ep in (k + r + rd)
+                        if ep.protocol == "ADVISORY" and not ep.scan_error
+                    )
+                    return _classified
             r = r + unreached
             return (k, r, rd)
         _broker_result = _wrapped_phase(

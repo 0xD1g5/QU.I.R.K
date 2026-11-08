@@ -132,4 +132,43 @@ describe("ScanCoverageChip", () => {
     expect(cell.className).toContain("--ds-high")
     expect(cell.className).not.toContain("--ds-medium")
   })
+
+  it("colours internal-target-refused and auth-failed skips with --ds-high", async () => {
+    mockFetchApi.mockResolvedValue(
+      jsonResponse({
+        recorded: true,
+        ran: 0,
+        skipped: 2,
+        phases: [
+          { phase_name: "jwt_scanning", label: "JWT", status: "skipped", reason: "internal-target-refused", detail: "policy", duration_sec: null },
+          { phase_name: "blob_scanning", label: "Blob", status: "skipped", reason: "auth-failed", detail: "rejected", duration_sec: null },
+        ],
+      }),
+    )
+    render(<ScanCoverageChip scanRunId="run-1" />)
+    fireEvent.click(await screen.findByText("Show detail"))
+
+    for (const text of ["skipped: internal-target-refused", "skipped: auth-failed"]) {
+      const cell = await screen.findByText(text)
+      expect(cell.className).toContain("--ds-high")
+      expect(cell.className).not.toContain("--ds-medium")
+    }
+  })
+
+  it("still falls back to the medium colour for an unknown skip reason", async () => {
+    mockFetchApi.mockResolvedValue(
+      jsonResponse({
+        recorded: true,
+        ran: 0,
+        skipped: 1,
+        phases: [
+          { phase_name: "x", label: "X", status: "skipped", reason: "brand-new-reason", detail: null, duration_sec: null },
+        ],
+      }),
+    )
+    render(<ScanCoverageChip scanRunId="run-1" />)
+    fireEvent.click(await screen.findByText("Show detail"))
+    const cell = await screen.findByText("skipped: brand-new-reason")
+    expect(cell.className).toContain("--ds-medium")
+  })
 })

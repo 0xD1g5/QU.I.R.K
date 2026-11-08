@@ -90,6 +90,16 @@ ALLOWED_SKIPS = [
 
     # Phase 149 D-04: registered pre-existing drift
     ("test_aws_connector.py", "test_scan_s3_propagates_build_endpoint_exception", "optional_extra", "boto3 not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_exception_real_botocore", "optional_extra", "boto3 not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_gcp_http_error_401_403_is_auth_failed", "optional_extra", "google-api-python-client / httplib2 not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_gcp_http_error_500_stays_unreachable", "optional_extra", "google-api-python-client / httplib2 not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_gcp_refresh_error_is_auth_failed", "optional_extra", "google-auth not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_azure_permission_denial_is_auth_failed", "optional_extra", "azure-core not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_aws_unauthorized_operation_is_auth_failed", "optional_extra", "boto3 not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_azure_default_credential_empty_env_is_missing", "optional_extra", "azure-identity not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_azure_chain_with_real_rejection_is_auth_failed", "optional_extra", "azure-core not installed"),
+    ("test_target_outcome.py", "test_outcome_cloud_azure_401_client_auth_error_stays_auth_failed", "optional_extra", "azure-core not installed"),
+    ("test_target_outcome.py", "test_outcome_db_real_psycopg2_no_password", "optional_extra", "psycopg2 not installed"),
     ("test_cbom_vault_consistency.py", "test_regenerate_vault_golden", "live_infra", "Fixture regen guard (REGEN_CBOM_FIXTURES=1)"),
     ("test_chaos_lab_idempotency.py", "test_profile_re_up_is_idempotent", "live_infra", "macOS *:88 collides with system KDC; requires LAB_INCLUDE_KERBEROS=1 (BACK-89); registry pull refusal naming the image AND anonymous control probe on the same registry returns 200 (Phase 220 D-04, tests/chaos_registry_probe.py) — never on a generic non-zero exit"),
     ("test_cmvp_refresh.py", "<module>", "optional_extra", 'bs4 not installed; httpx not installed'),

@@ -43,7 +43,10 @@ def test_heading_dated_and_above_5280() -> None:
 
 def test_unreleased_stays_empty() -> None:
     text = _text()
-    body = text.split("## [Unreleased]", 1)[1].split("## [5.28.1]", 1)[0]
+    # Split on the first release heading after [Unreleased], not a hard-coded
+    # version, so a newer section (5.28.2) sitting above 5.28.1 does not break this.
+    after = text.split("## [Unreleased]", 1)[1]
+    body = re.split(r"^## \[", after, maxsplit=1, flags=re.MULTILINE)[0]
     assert body.strip() == "", "[Unreleased] must stay empty"
 
 

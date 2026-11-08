@@ -42,6 +42,12 @@ from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.log_text import strip_control_chars
 from quirk.util.safe_exc import safe_str
+from quirk.scanner.target_outcome import (
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+)
 
 # Module-level logger (mirror smime_scanner / adcs_scanner pattern)
 logger = logging.getLogger(__name__)
@@ -253,6 +259,44 @@ def _parse_target(target) -> "tuple[str, int, str | None]":
     return host, port, realm
 
 
+# 235.3 review A-WR-04: LDAP result codes meaning "the server answered and
+# refused this bind" (strongerAuthRequired 8, confidentialityRequired 13,
+# inappropriateAuthentication 48, invalidCredentials 49,
+# insufficientAccessRights 50, unwillingToPerform 53, authMethodNotSupported 7).
+_LDAP_AUTH_CODES = frozenset({7, 8, 13, 48, 49, 50, 53})
+
+
+def _ldap_failure_outcome(exc, *, have_creds: bool = False) -> "tuple[str, str]":
+    """Classify an LDAP bind/connect failure (235.3 D-06).
+
+    A bind the server refused (``_LDAP_AUTH_CODES`` / invalidCredentials) is
+    ``auth_failed`` when credentials were presented and
+    ``missing_credentials`` for an anonymous bind; anything else is
+    ``unreachable``.
+    """
+    code = getattr(exc, "result_code", None)
+    if code is None:
+        res = getattr(exc, "result", None)
+        if isinstance(res, dict):
+            code = res.get("result")
+    if code in _LDAP_AUTH_CODES or "invalidcredentials" in str(exc).lower():
+        if have_creds:
+            return OUTCOME_AUTH_FAILED, safe_str(exc)
+        return (
+            OUTCOME_MISSING_CREDENTIALS,
+            f"server refused anonymous bind (LDAP result {code}): {safe_str(exc)}",
+        )
+    return OUTCOME_UNREACHABLE, safe_str(exc)
+
+
+class _BindRejected(Exception):
+    """Anonymous bind returned False; carries the LDAP result code."""
+
+    def __init__(self, message: str, result_code=None):
+        super().__init__(message)
+        self.result_code = result_code
+
+
 def _bind_and_search_codesign(host: str, port: int, base_dn: str, timeout: int):
     """Anonymous LDAP bind + paged search for userCertificate entries.
 
@@ -273,7 +317,11 @@ def _bind_and_search_codesign(host: str, port: int, base_dn: str, timeout: int):
     )
     if not conn.bind():
         logger.warning("CODESIGN: anonymous bind rejected on %s:%d", host, port)
-        return []
+        res = getattr(conn, "result", None)
+        raise _BindRejected(
+            "anonymous bind rejected",
+            res.get("result") if isinstance(res, dict) else None,
+        )
     return conn.extend.standard.paged_search(
         search_base=base_dn,
         search_filter="(userCertificate=*)",
@@ -295,6 +343,7 @@ def scan_codesign_from_ldap(
     session_start=None,
     *,
     search_base: "str | None" = None,
+    outcomes=None,
 ) -> list:
     """Scan LDAP targets for code-signing certificates (CSIGN-01).
 
@@ -309,6 +358,11 @@ def scan_codesign_from_ldap(
 
     All logging of LDAP-derived strings and exceptions routes through
     ``safe_str()`` (T-95-03 / information-disclosure mitigation).
+
+    ``outcomes`` (235.3 D-05) is an optional per-target outcome sink, keyed by
+    the raw configured target. Only this LDAP path records outcomes: the
+    TLS-EKU sub-path (``scan_codesign_from_tls_endpoints``) does no I/O, so per
+    235.3 P-03 it records none.
     """
     log = logger or logging.getLogger(__name__)
     if not LDAP3_AVAILABLE:
@@ -322,6 +376,11 @@ def scan_codesign_from_ldap(
         host, port, realm = _parse_target(target)
         base_dn = search_base or _realm_to_base_dn(realm or "")
         if not base_dn:
+            if outcomes is not None:
+                outcomes.record(
+                    target, OUTCOME_UNREACHABLE,
+                    "no search base (realm) configured", row_emitted=False,
+                )
             log.warning(
                 "CODESIGN: no search base for target %s (no realm; pass search_base=)",
                 strip_control_chars(host),
@@ -330,7 +389,18 @@ def scan_codesign_from_ldap(
 
         try:
             entries = _bind_and_search_codesign(host, port, base_dn, timeout)
+        except TargetOutcomeContractError:
+            raise
+        except _BindRejected as exc:
+            # Rejected bind: historically no row; keep that, record the outcome.
+            if outcomes is not None:
+                kind, why = _ldap_failure_outcome(exc)
+                outcomes.record(target, kind, why, row_emitted=False)
+            continue
         except Exception as exc:
+            if outcomes is not None:
+                kind, why = _ldap_failure_outcome(exc)
+                outcomes.record(target, kind, why, row_emitted=True)
             log.warning(
                 "CODESIGN: bind/search failed for %s:%d: %s",
                 strip_control_chars(host),
@@ -348,6 +418,9 @@ def scan_codesign_from_ldap(
             )
             results.append(err_ep)
             continue
+
+        if outcomes is not None:
+            outcomes.answered(target)
 
         for entry in entries:
             # Filter to searchResEntry only — paged_search may yield refs/controls

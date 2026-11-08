@@ -321,3 +321,103 @@ def test_threadpool_executor_imported_at_module_scope():
     head = "\n".join(src.splitlines()[:50])
     assert "from concurrent.futures import ThreadPoolExecutor" in head
     assert "as_completed" in head
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-05: AWS rolls up to one account outcome (MagicMock sessions only)
+# ---------------------------------------------------------------------------
+
+
+def _aws_session(per_service):
+    """per_service: dict name -> exception to raise from get_paginator, or pages list."""
+    session = MagicMock()
+
+    def _client(name, **kw):
+        client = MagicMock()
+        spec = per_service[name]
+        if isinstance(spec, BaseException):
+            client.get_paginator.side_effect = spec
+        else:
+            client.get_paginator.return_value = _paginator_pages(spec)
+        return client
+
+    session.client.side_effect = _client
+    return session
+
+
+def _run_aws(per_service, label="aws:closure-label", expected=None):
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(expected or [label])
+    with patch.object(aws_connector, "BOTO3_AVAILABLE", True), \
+            patch.object(aws_connector, "boto3") as b3:
+        b3.Session.return_value = _aws_session(per_service)
+        rows = aws_connector.scan_aws_targets("us-east-1", outcomes=sink)
+    return rows, sink
+
+
+_ALL = ("kms", "cloudfront", "elbv2", "acm", "rds")
+
+
+def test_aws_outcome_all_no_credentials_is_missing_credentials():
+    from botocore.exceptions import NoCredentialsError
+    rows, sink = _run_aws({n: NoCredentialsError() for n in _ALL})
+    assert rows == []
+    res = sink.resolved()
+    assert [(o.target, o.kind) for o in res] == [("aws:closure-label", "missing_credentials")]
+
+
+def test_aws_outcome_all_expired_token_is_auth_failed():
+    from botocore.exceptions import ClientError
+    err = ClientError({"Error": {"Code": "ExpiredToken"}}, "Op")
+    rows, sink = _run_aws({n: err for n in _ALL})
+    assert sink.resolved()[0].kind == "auth_failed"
+
+
+def test_aws_outcome_any_answered_wins_and_iam_row_kept():
+    from botocore.exceptions import ClientError
+    denied = ClientError({"Error": {"Code": "AccessDenied"}}, "ListKeys")
+    spec = {n: denied for n in _ALL}
+    spec["cloudfront"] = [{"DistributionList": {"Items": []}}]
+    rows, sink = _run_aws(spec)
+    assert sink.resolved()[0].kind == "answered"
+    assert any("aws-iam-denied:kms" in (r.scan_error or "") for r in rows)
+
+
+def test_aws_outcome_mixed_failures_priority_missing_credentials():
+    from botocore.exceptions import EndpointConnectionError, NoCredentialsError
+    spec = {n: EndpointConnectionError(endpoint_url="http://x") for n in _ALL}
+    spec["acm"] = NoCredentialsError()
+    rows, sink = _run_aws(spec)
+    assert sink.resolved()[0].kind == "missing_credentials"
+
+
+def test_aws_outcome_all_empty_answers_once_with_closure_label():
+    spec = {
+        "kms": [{"Keys": []}],
+        "cloudfront": [{"DistributionList": {}}],
+        "elbv2": [{"LoadBalancers": []}],
+        "acm": [{"CertificateSummaryList": []}],
+        "rds": [{"DBInstances": []}],
+    }
+    rows, sink = _run_aws(spec)
+    assert rows == []
+    assert [(o.target, o.kind) for o in sink.resolved()] == [("aws:closure-label", "answered")]
+
+
+def test_aws_outcome_none_sink_unchanged():
+    from botocore.exceptions import NoCredentialsError
+    with patch.object(aws_connector, "BOTO3_AVAILABLE", True), \
+            patch.object(aws_connector, "boto3") as b3:
+        b3.Session.return_value = _aws_session({n: NoCredentialsError() for n in _ALL})
+        assert aws_connector.scan_aws_targets("us-east-1") == []
+
+
+def test_aws_outcome_contract_violation_propagates():
+    from quirk.scanner.target_outcome import TargetOutcomeContractError
+    spec = {
+        "kms": [{"Keys": []}], "cloudfront": [{"DistributionList": {}}],
+        "elbv2": [{"LoadBalancers": []}], "acm": [{"CertificateSummaryList": []}],
+        "rds": [{"DBInstances": []}],
+    }
+    with pytest.raises(TargetOutcomeContractError):
+        _run_aws(spec, expected=["not-this", "target"])

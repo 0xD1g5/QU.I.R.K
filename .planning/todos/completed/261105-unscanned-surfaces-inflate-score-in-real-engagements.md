@@ -5,8 +5,9 @@ title: Unscanned surfaces read as covered and inflate the score in real engageme
 source: operator review of the 2026-11-05 full chaos-lab GUI scans (5.28.1)
 priority: critical
 area: quirk/reports/coverage.py, quirk/scanner/*, quirk/intelligence/scoring*, src/dashboard/src/pages/*, docs/operators-guide.md
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-11-07
+resolves_phase: "235.3"
 owner: null
 release_target: "5.28.2 (before the dashboard-first social launch leans on GUI scans)"
 ---
@@ -53,3 +54,21 @@ Detailed evidence and per-connector analysis: `261105-connector-phase-ran-with-z
 `minioadmin` -> the two oracle buckets) and the Data at Rest omissions (`scan.py:680`). **Effort M** overall:
 the skip-reason machinery exists (`missing-binary`, `missing-credentials`), so the work is a per-connector audit
 plus the scoring tie-in, the empty-state text, tests, UAT and docs. The interim doc item is **S** and can land on its own.
+
+## Resolution
+
+**Resolved by Phase 235.3 (verified `passed` 6/6 at `dc055f3b`, 2026-11-07; COVTRUTH-01..06 Complete).** Closed at the
+phase close. CI at that sha: `branch_ci_state.py --compare-main` exit 0 (Python CI 42344555900, Dashboard Quality
+42344557789). Evidence: `.planning/phases/235.3-connector-coverage-truth-fixes-inserted/235.3-VERIFICATION.md`.
+
+- Every acceptance criterion above maps to COVTRUTH-01..06 and was verified there.
+- A connector phase reads `ran` only if a target answered (`quirk/scanner/target_outcome.py` sink, fail-closed
+  `_classify_connector_outcomes` in `run_scan.py`). Otherwise `skipped` with `internal-target-refused`, `auth-failed`,
+  `missing-credentials` or `failed`, plus an ADVISORY scan-error row that counts in the score (paired-scan proof
+  across intel, HTML, API and coverage).
+- The run-time backstop enumerates connectors from source and is red on the pre-fix `b6896416` (16 connectors).
+- Scan Coverage chips, the Data at Rest / Identity / Motion empty states and the reports show the recorded reason;
+  failed DB targets appear as failed rows. `docs/operators-guide.md` §3.0 has the "Before a client scan" checklist.
+
+Not covered here, by design: the live chaos-lab GUI walkthrough on 5.28.2 is Phase 235.4 LAUNCH-10. Follow-ups found
+during the phase are separate todos (`261106-*`, `261107-*`).

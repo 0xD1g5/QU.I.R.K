@@ -4,7 +4,7 @@ created: 2026-10-30
 source: Phase 235 post-GO code review (CR-01, IN-01), .planning/phases/235-release-launch-gate/235-REVIEW.md
 priority: high
 area: pyproject.toml, quirk/cli/doctor_cmd.py, scripts/release_smoke_inner.sh
-status: pending
+status: completed
 resolves_phase: "235.2"
 owner: "999.129"
 target_release: "5.28.1"
@@ -74,3 +74,16 @@ hard refusal. Confirm that is the intended behaviour (it is the only way to stop
 ## Retargeted (2026-11-05, Phase 235.1 close)
 
 235.1 delivered the detection half: the 3.15 leg's unpinned N2 check (`scripts/pip_unpinned_verdict.py`, now bounded by `Q_CMD_TIMEOUT`) and the yank list in `235.1-YANK-PREP.md`. The fix itself is the operator's yank of 4.10.0-5.21.0 (INSTALL-07), verified by re-running N2 against live PyPI in 235.2. It printed `FAIL: unpinned resolve selected older quirk-scanner 5.21.0` on 2026-11-05, as designed before the yank.
+
+## Resolution
+
+**Resolved by Phase 235.2 (verified `passed` 4/4 at 139ed513, 2026-11-06); v5.28.1 on PyPI.** Closed 2026-11-06
+during Phase 235.3 execution, when `tests/test_backlog_reconciliation_gate.py::test_no_pending_todo_points_at_a_closed_owner`
+flagged this todo's owner (Phase 235.2) as closed.
+
+Evidence (`.planning/phases/235.2-release-5281-announcement-recheck-inserted/235.2-VERIFICATION.md`, criterion 2 and
+INSTALL-07): the operator yanked 4.10.0–5.21.0 and additionally 5.25.0 and 5.27.0 (both uncapped, which 3.15-slim
+selected on the first live run). Against live PyPI the `linux-3.15-neg` leg's N2 check (`scripts/pip_unpinned_verdict.py`)
+then passed: "unpinned resolve finds no candidate (every release excluded by Requires-Python)". A 3.15 user now gets a
+loud Requires-Python refusal and nothing installed, not a silent older release. The pre-yank FAIL transcript is kept as
+`235.2-evidence/smoke-pypi/linux-3.15-neg.pre-yank-FAIL.txt`.

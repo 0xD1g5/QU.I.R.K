@@ -572,7 +572,8 @@ def _run_local_scan(
 def _read_scan_endpoints(db_path: str) -> list:
     """Open the scan SQLite DB produced by the local scan and return non-advisory CryptoEndpoint rows.
 
-    STAB-04: filters out advisory sentinel rows with scan_error_category in ('missing_extra', 'missing_binary').
+    STAB-04: filters out advisory sentinel rows with scan_error_category in COVERAGE_SKIP_ADVISORY_CATEGORIES
+    (missing_extra, missing_binary and the 235.3 coverage-skip categories).
     These rows are written by run_scan._emit_missing_extra_advisory when an optional
     scanner extra (e.g. [motion]) is absent, or _emit_missing_binary_advisory when
     semgrep/syft is absent (235.1 D-06).  They carry host=<scanner_name>, port=0,
@@ -587,13 +588,14 @@ def _read_scan_endpoints(db_path: str) -> list:
     from sqlalchemy.orm import Session
 
     from quirk.models import CryptoEndpoint
+    from quirk.scanner.target_outcome import COVERAGE_SKIP_ADVISORY_CATEGORIES
 
     engine = create_engine(f"sqlite:///{db_path}")
     with Session(engine) as session:
         return (
             session.query(CryptoEndpoint)
             .filter(
-                (CryptoEndpoint.scan_error_category.notin_(("missing_extra", "missing_binary")))
+                (CryptoEndpoint.scan_error_category.notin_(tuple(sorted(COVERAGE_SKIP_ADVISORY_CATEGORIES))))
                 | CryptoEndpoint.scan_error_category.is_(None)
             )
             .all()

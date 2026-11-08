@@ -38,6 +38,13 @@ connectors:
   vault_tls_verify: true   # http URL — verification not exercised
 ```
 
+## Failure wording
+
+If the token is rejected or Vault is sealed, the scan returns one `VAULT` endpoint whose scan error
+begins `vault-auth-failed:` and Scan Coverage reads the phase as `auth-failed`. If Vault cannot be reached
+at all (connection refused, timeout), the scan error begins `vault-unreachable:` and the phase reads
+`failed` (no target answered). The oracle below applies only when Vault answers.
+
 ## Expected Scan Output
 
 5 `protocol="VAULT"` CryptoEndpoint rows are produced:

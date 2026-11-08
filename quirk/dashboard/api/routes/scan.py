@@ -672,15 +672,48 @@ def _derive_dar_findings(endpoints) -> list[DarFinding]:
 
     Mirrors _derive_motion_findings (Phase 36). Per-protocol dispatch handles
     scanner shape variance: POSTGRESQL/MYSQL/RDS use service_detail; S3, AZURE_BLOB,
-    KUBERNETES, VAULT use dat_scan_json. Endpoints with scan_error are skipped.
+    KUBERNETES, VAULT use dat_scan_json. POSTGRESQL/MYSQL endpoints with
+    scan_error come back as INFO rows (235.3 D-10): "<PROTO> connection failed"
+    for a "connection-error:" scan_error, "<PROTO> posture incomplete" (with the
+    service_detail remediation) for any other, e.g. insufficient-privilege;
+    other protocols with scan_error are skipped.
     Malformed dat_scan_json is tolerated via try/except (V5).
     """
     results: list[DarFinding] = []
     for ep in endpoints:
-        if getattr(ep, "scan_error", None):
-            continue
         proto = (getattr(ep, "protocol", None) or "").upper()
         if proto not in DAR_PROTOCOLS:
+            continue
+        scan_err = getattr(ep, "scan_error", None)
+        if scan_err:
+            if proto in {"POSTGRESQL", "MYSQL"}:
+                # C-CR-01: only db_connector's "connection-error:" rows are
+                # failed connections. "insufficient-privilege" is written
+                # AFTER a successful connection (SHOW ssl = on) when the role
+                # lacks pg_read_all_stats; its service_detail carries the
+                # GRANT remediation, which must reach the operator.
+                # Two literal title= f-strings (not one conditional) so the
+                # TITLE_IDENTITY_CLASS AST walker sees both templates.
+                err = str(scan_err)
+                ep_host = getattr(ep, "host", "") or ""
+                ep_port = getattr(ep, "port", 0) or 0
+                if err.startswith("connection-error"):
+                    results.append(DarFinding(
+                        host=ep_host, port=ep_port, severity="INFO",
+                        title=f"{proto} connection failed",
+                        protocol=proto, category="database",
+                        encryption_at_rest=None, tls_in_transit=None,
+                        source="database", scan_error=err,
+                    ))
+                else:
+                    results.append(DarFinding(
+                        host=ep_host, port=ep_port, severity="INFO",
+                        title=f"{proto} posture incomplete",
+                        protocol=proto, category="database",
+                        encryption_at_rest=None, tls_in_transit=None,
+                        remediation=getattr(ep, "service_detail", None) or None,
+                        source="database", scan_error=err,
+                    ))
             continue
 
         host = getattr(ep, "host", "") or ""
@@ -1744,7 +1777,9 @@ def get_latest_scan(
     `lift_context_for_scan`'s docstring for the remaining legacy-NULL case,
     which is unchanged by this fix.
     """
+    _coverage_run_id: Optional[str] = None
     if scan_id is not None:
+        _coverage_run_id = scan_id
         try:
             target_ts = datetime.fromisoformat(scan_id)
         except ValueError:
@@ -1821,6 +1856,7 @@ def get_latest_scan(
                 detail=format_error("DASHBOARD-006"),
             )
         latest_ts, latest_scan_run_id = latest_row
+        _coverage_run_id = latest_scan_run_id
         if latest_scan_run_id is not None:
             # Exact resolution — no time window participates. Do NOT AND this
             # with the scanned_at window: a real scan's endpoints can span
@@ -2053,6 +2089,7 @@ def get_latest_scan(
         partial_failures=partial_failures,                     # Phase 67 RESUME-02
         burndown=_derive_closure_burndown(db, response_scan_id),  # Phase 181 SURF-03
         excluded_cert_count=excluded_cert_count,                # Phase 194 DASH-09/D-13
+        coverage=_coverage_for(_coverage_run_id),  # Phase 235.3 D-09
         projected_score=projected_score,                        # Phase 201 LIFT-05
     )
 
@@ -2282,6 +2319,28 @@ def get_job_result_summary(job_id: str, db: Session = Depends(get_db)) -> dict:
     return {"endpoint_count": count}
 
 
+def _coverage_response(db_path, scan_run_id) -> ScanCoverageResponse:
+    payload = load_scan_coverage(db_path, scan_run_id)
+    return ScanCoverageResponse(
+        recorded=payload["recorded"],
+        ran=payload["ran"],
+        skipped=payload["skipped"],
+        phases=[ScanCoveragePhase(**entry) for entry in payload["phases"]],
+    )
+
+
+def _coverage_for(scan_run_id: Optional[str]) -> Optional[ScanCoverageResponse]:
+    """Phase 235.3 D-09: coverage block for /scan/latest; None on any failure
+    (the page must still render) or when no scan_run_id was resolved."""
+    if not scan_run_id:
+        return None
+    try:
+        return _coverage_response(_default_db_path(), scan_run_id)
+    except Exception as exc:  # noqa: BLE001 - degrade to None, never 500
+        logger.debug("coverage load skipped: %s", safe_str(exc))
+        return None
+
+
 @router.get("/scans/{scan_run_id}/coverage", response_model=ScanCoverageResponse)
 def get_scan_coverage(scan_run_id: str) -> ScanCoverageResponse:
     """GET /api/scans/{scan_run_id}/coverage — OBS-02 / Phase 192 Plan 09.
@@ -2298,13 +2357,7 @@ def get_scan_coverage(scan_run_id: str) -> ScanCoverageResponse:
     Auth: inherited from router-level require_auth (do NOT add per-route).
     """
     db_path = _default_db_path()
-    payload = load_scan_coverage(db_path, scan_run_id)
-    return ScanCoverageResponse(
-        recorded=payload["recorded"],
-        ran=payload["ran"],
-        skipped=payload["skipped"],
-        phases=[ScanCoveragePhase(**entry) for entry in payload["phases"]],
-    )
+    return _coverage_response(db_path, scan_run_id)
 
 
 @router.get("/jobs/{job_id}/coverage", response_model=ScanCoverageResponse)
@@ -2319,10 +2372,4 @@ def get_job_coverage(job_id: str, db: Session = Depends(get_db)) -> ScanCoverage
     if row is None:
         raise HTTPException(status_code=404, detail=format_error("DASHBOARD-008"))
     db_path = _default_db_path()
-    payload = load_scan_coverage(db_path, row.scan_run_id)
-    return ScanCoverageResponse(
-        recorded=payload["recorded"],
-        ran=payload["ran"],
-        skipped=payload["skipped"],
-        phases=[ScanCoveragePhase(**entry) for entry in payload["phases"]],
-    )
+    return _coverage_response(db_path, row.scan_run_id)

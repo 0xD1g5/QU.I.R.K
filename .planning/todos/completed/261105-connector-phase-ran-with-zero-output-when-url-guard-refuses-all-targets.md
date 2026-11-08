@@ -5,8 +5,9 @@ title: Connector phase reads "ran" with zero output when the URL guard refuses e
 source: 2026-11-05 full chaos-lab GUI scan (5.28.1), reproduced by direct call
 priority: high
 area: quirk/scanner/jwt_scanner.py, quirk/scanner/saml_scanner.py, quirk/util/url_allowlist.py, quirk/reports/coverage.py, quirk/dashboard/api/routes/jobs.py
-status: pending
-resolves_phase: null
+status: completed
+completed: 2026-11-07
+resolves_phase: "235.3"
 owner: null
 ---
 
@@ -88,3 +89,21 @@ the connector's `scan_phase_records` row and say "skipped: missing credentials (
 results", the same rule as the per-connector report sections in `261105-report-sections-per-enabled-connector.md`.
 Also: database rows with `scan_error` are dropped from the Database Encryption table (`scan.py:680`), so a
 target that failed to connect (2 of 3 Postgres targets that night) simply disappears from the page.
+
+## Resolution
+
+**Resolved by Phase 235.3 (verified `passed` 6/6 at `dc055f3b`, 2026-11-07; COVTRUTH-01..06 Complete).** Closed at the
+phase close. CI at that sha: `branch_ci_state.py --compare-main` exit 0 (Python CI 42344555900, Dashboard Quality
+42344557789). Evidence: `.planning/phases/235.3-connector-coverage-truth-fixes-inserted/235.3-VERIFICATION.md`.
+
+- JWT/SAML with every URL refused now record `skipped / internal-target-refused`; S3 with no credentials records `skipped / missing-credentials`. The 2026-11-05 repros are pinned by a slow in-process e2e. The New Scan form warns before submit (operator-approved live UAT, 2026-11-07).
+- A connector phase reads `ran` only if a target answered (`quirk/scanner/target_outcome.py` sink, fail-closed
+  `_classify_connector_outcomes` in `run_scan.py`). Otherwise `skipped` with `internal-target-refused`, `auth-failed`,
+  `missing-credentials` or `failed`, plus an ADVISORY scan-error row that counts in the score (paired-scan proof
+  across intel, HTML, API and coverage).
+- The run-time backstop enumerates connectors from source and is red on the pre-fix `b6896416` (16 connectors).
+- Scan Coverage chips, the Data at Rest / Identity / Motion empty states and the reports show the recorded reason;
+  failed DB targets appear as failed rows. `docs/operators-guide.md` §3.0 has the "Before a client scan" checklist.
+
+Not covered here, by design: the live chaos-lab GUI walkthrough on 5.28.2 is Phase 235.4 LAUNCH-10. Follow-ups found
+during the phase are separate todos (`261106-*`, `261107-*`).

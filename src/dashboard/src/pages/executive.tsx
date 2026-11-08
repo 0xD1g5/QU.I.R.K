@@ -1,6 +1,7 @@
 import { useScanData } from "@/hooks/useScanData"
 import { formatInstantDate } from "@/lib/datetime"
 import { fetchApi } from "@/lib/api"
+import { COVERAGE_SKIP_ADVISORY_CATEGORIES } from "@/lib/coverage-reason"
 import { ScoreGauge } from "@/components/gauges/ScoreGauge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -122,8 +123,8 @@ export function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[
   function badgeElement(entry: PartialFailureEntry) {
     const cat = entry.error_category
     // Derive status from error_category per UI-SPEC:
-    // missing_extra / missing_binary -> Skipped (gray), exception -> Failed (red), partial -> Partial (amber)
-    if (cat === "missing_extra" || cat === "missing_binary") {
+    // COVERAGE_SKIP_ADVISORY_CATEGORIES (235.3 D-07) -> Skipped (gray), exception -> Failed (red), partial -> Partial (amber)
+    if (COVERAGE_SKIP_ADVISORY_CATEGORIES.includes(cat)) {
       return (
         <Badge variant="secondary" aria-label="status: Skipped">
           Skipped

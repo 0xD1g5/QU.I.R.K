@@ -12,6 +12,11 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    TargetOutcomeContractError,
+    outcome_for_cloud_exception,
+)
 from quirk.util.safe_exc import safe_str
 
 # Phase 72 D-08: KMS key states that cannot encrypt new data — skip during scan.
@@ -47,7 +52,31 @@ KMS_KEY_SPEC_MAP = {
 }
 
 
-def _scan_acm(session, logger) -> List[CryptoEndpoint]:
+def aws_target_label(service: str, region: str, endpoint_url: Optional[str]) -> str:
+    """Label-contract helper (Phase 235.3 D-05): pure, builds the target label.
+
+    ONLY the scan closure calls this, to build ``TargetOutcomes`` expected. The
+    scanners here record against ``outcomes.sole_target()`` and never recompute a
+    label, so an empty account cannot produce a phantom ``target_unanswered`` row.
+    """
+    if service == "s3":
+        return f"s3:{endpoint_url or region}"
+    return f"{service}:{region}"
+
+
+def _note_answered(note) -> None:
+    if note is not None:
+        note(OUTCOME_ANSWERED, "", False)
+
+
+def _note_failure(note, exc, row_emitted: bool = False) -> None:
+    if note is not None:
+        kind, detail = outcome_for_cloud_exception(exc)
+        note(kind, detail, row_emitted)
+
+
+
+def _scan_acm(session, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate ACM certificates using paginator (pitfall: must use paginator, not list_certificates directly)."""
     results: List[CryptoEndpoint] = []
     try:
@@ -76,14 +105,18 @@ def _scan_acm(session, logger) -> List[CryptoEndpoint]:
                     results.append(ep)
                 except Exception as exc:
                     if logger:
-                        logger.v(f"ACM describe_certificate failed for {arn}: {exc}")
+                        logger.v(f"ACM describe_certificate failed for {arn}: {safe_str(exc)}")
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
+        _note_failure(_note, exc)
         if logger:
-            logger.v(f"ACM scan error: {exc}")
+            logger.v(f"ACM scan error: {safe_str(exc)}")
     return results
 
 
-def _scan_rds_encryption(session, logger) -> List[CryptoEndpoint]:
+def _scan_rds_encryption(session, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Detect RDS instance encryption-at-rest posture (DB-03).
 
     Derives service_detail from StorageEncrypted + KmsKeyId fields
@@ -132,11 +165,14 @@ def _scan_rds_encryption(session, logger) -> List[CryptoEndpoint]:
 
                 except Exception as exc:
                     if logger:
-                        logger.v(f"RDS instance scan error for {db_id}: {exc}")
-
+                        logger.v(f"RDS instance scan error for {db_id}: {safe_str(exc)}")
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
+        _note_failure(_note, exc)
         if logger:
-            logger.v(f"RDS scan error: {exc}")
+            logger.v(f"RDS scan error: {safe_str(exc)}")
     return results
 
 
@@ -229,6 +265,8 @@ def _scan_s3_encryption(
     logger,
     session_start=None,
     endpoint_url=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Detect S3 bucket encryption posture per bucket (STOR-01).
 
@@ -248,6 +286,8 @@ def _scan_s3_encryption(
         logger: optional logger with .v() method.
         session_start: timezone-aware datetime; falls back to now() when absent (ISSUE-3).
         endpoint_url: optional MinIO/LocalStack endpoint override (D-08, Phase 28 chaos lab).
+        outcomes: optional TargetOutcomes sink (Phase 235.3 D-05); one outcome is recorded
+            against ``outcomes.sole_target()``. None keeps the previous behaviour.
     """
     # Phase 72 D-11 (WR-19): ThreadPoolExecutor / as_completed now imported at module scope.
     from botocore.exceptions import ClientError
@@ -259,6 +299,7 @@ def _scan_s3_encryption(
 
     results: List[CryptoEndpoint] = []
     ts = (session_start or datetime.now(timezone.utc)).replace(tzinfo=None)
+    recorded = False
 
     try:
         client_kwargs = {}
@@ -268,6 +309,11 @@ def _scan_s3_encryption(
 
         # list_buckets is NOT a paginator — calling get_paginator() raises OperationNotPageableError.
         buckets = client.list_buckets().get("Buckets", []) or []
+        # D-03: list_buckets answered (even with zero buckets); per-bucket errors below
+        # are inside an answered account and are never reclassified.
+        if outcomes is not None:
+            outcomes.answered(outcomes.sole_target())
+            recorded = True
 
         def _classify(bucket_name: str):
             """Returns dict {service_detail, severity} or None to skip the bucket."""
@@ -341,14 +387,19 @@ def _scan_s3_encryption(
                 if ep is not None:
                     results.append(ep)
 
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
+        if outcomes is not None and not recorded:
+            kind, detail = outcome_for_cloud_exception(exc)
+            outcomes.record(outcomes.sole_target(), kind, detail)
         if logger:
-            logger.v(f"S3 scan error: {exc}")
+            logger.v(f"S3 scan error: {safe_str(exc)}")
 
     return results
 
 
-def _scan_kms(session, logger) -> List[CryptoEndpoint]:
+def _scan_kms(session, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate KMS keys and map their KeySpec to algorithm/size."""
     results: List[CryptoEndpoint] = []
     try:
@@ -382,13 +433,17 @@ def _scan_kms(session, logger) -> List[CryptoEndpoint]:
                     results.append(ep)
                 except Exception as exc:
                     if logger:
-                        logger.v(f"KMS describe_key failed for {key_id}: {exc}")
+                        logger.v(f"KMS describe_key failed for {key_id}: {safe_str(exc)}")
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         try:
             from botocore.exceptions import ClientError as _BotoClientError
             _IAM_CODES = frozenset({"AccessDeniedException", "AccessDenied", "UnauthorizedOperation"})
             if isinstance(exc, _BotoClientError) and exc.response["Error"]["Code"] in _IAM_CODES:
                 err_msg = f"aws-iam-denied:kms:{safe_str(exc)}"
+                _note_failure(_note, exc, row_emitted=True)
                 if logger:
                     logger.v(err_msg)
                 results.append(CryptoEndpoint(
@@ -397,15 +452,18 @@ def _scan_kms(session, logger) -> List[CryptoEndpoint]:
                     protocol="AWS",
                     scan_error=err_msg,
                 ))
-            elif logger:
-                logger.v(f"KMS scan error: {exc}")
+            else:
+                _note_failure(_note, exc)
+                if logger:
+                    logger.v(f"KMS scan error: {safe_str(exc)}")
         except ImportError:
+            _note_failure(_note, exc)
             if logger:
-                logger.v(f"KMS scan error: {exc}")
+                logger.v(f"KMS scan error: {safe_str(exc)}")
     return results
 
 
-def _scan_cloudfront(session, logger) -> List[CryptoEndpoint]:
+def _scan_cloudfront(session, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate CloudFront distributions and capture minimum TLS protocol version."""
     results: List[CryptoEndpoint] = []
     try:
@@ -431,13 +489,17 @@ def _scan_cloudfront(session, logger) -> List[CryptoEndpoint]:
                     service_detail="CloudFront",
                 )
                 results.append(ep)
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
+        _note_failure(_note, exc)
         if logger:
-            logger.v(f"CloudFront scan error: {exc}")
+            logger.v(f"CloudFront scan error: {safe_str(exc)}")
     return results
 
 
-def _scan_elbv2(session, logger) -> List[CryptoEndpoint]:
+def _scan_elbv2(session, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate ELBv2 load balancers and their HTTPS listener SSL policies."""
     results: List[CryptoEndpoint] = []
     try:
@@ -465,10 +527,14 @@ def _scan_elbv2(session, logger) -> List[CryptoEndpoint]:
                         results.append(ep)
                 except Exception as exc:
                     if logger:
-                        logger.v(f"ELBv2 describe_listeners failed for {lb_arn}: {exc}")
+                        logger.v(f"ELBv2 describe_listeners failed for {lb_arn}: {safe_str(exc)}")
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
+        _note_failure(_note, exc)
         if logger:
-            logger.v(f"ELBv2 scan error: {exc}")
+            logger.v(f"ELBv2 scan error: {safe_str(exc)}")
     return results
 
 
@@ -476,6 +542,8 @@ def scan_aws_targets(
     region: str,
     profile: Optional[str] = None,
     logger=None,
+    *,
+    outcomes=None,
 ) -> List[CryptoEndpoint]:
     """Enumerate AWS cryptographic resources and return as CryptoEndpoint list.
 
@@ -485,6 +553,9 @@ def scan_aws_targets(
         region: AWS region name (e.g. "us-east-1").
         profile: Optional AWS named profile from ~/.aws/credentials.
         logger: Optional logger with .v() method.
+        outcomes: optional TargetOutcomes sink (Phase 235.3 D-05). AWS is ONE target:
+            answered if any sub-service answered, otherwise the highest-priority
+            failure. Recorded against ``outcomes.sole_target()``. None = unchanged.
 
     Returns:
         List of CryptoEndpoint instances. Empty list if boto3 not installed.
@@ -493,11 +564,31 @@ def scan_aws_targets(
         if logger:
             logger.v("boto3 not installed — AWS scanning unavailable")
         return []
-    session = boto3.Session(region_name=region, profile_name=profile)
+    notes: list = []
+
+    def _note(kind, detail="", row_emitted=False):
+        notes.append((kind, detail, row_emitted))
+
+    try:
+        session = boto3.Session(region_name=region, profile_name=profile)
+    except Exception as exc:
+        if outcomes is None:
+            raise
+        kind, detail = outcome_for_cloud_exception(exc)
+        outcomes.record(outcomes.sole_target(), kind, detail)
+        return []
+    collector = _note if outcomes is not None else None
     results: List[CryptoEndpoint] = []
-    results.extend(_scan_kms(session, logger))
-    results.extend(_scan_cloudfront(session, logger))
-    results.extend(_scan_elbv2(session, logger))
-    results.extend(_scan_acm(session, logger))
-    results.extend(_scan_rds_encryption(session, logger))
+    results.extend(_scan_kms(session, logger, _note=collector))
+    results.extend(_scan_cloudfront(session, logger, _note=collector))
+    results.extend(_scan_elbv2(session, logger, _note=collector))
+    results.extend(_scan_acm(session, logger, _note=collector))
+    results.extend(_scan_rds_encryption(session, logger, _note=collector))
+    if outcomes is not None:
+        target = outcomes.sole_target()
+        if any(k == OUTCOME_ANSWERED for k, _d, _r in notes):
+            outcomes.answered(target)
+        else:
+            for kind, detail, row_emitted in notes:
+                outcomes.record(target, kind, detail, row_emitted=row_emitted)
     return results

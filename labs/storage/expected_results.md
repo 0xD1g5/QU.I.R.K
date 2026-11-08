@@ -38,6 +38,10 @@ export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
 ```
 
+These must be in the environment of the process that scans (for the dashboard, the shell that started
+`quirk serve`, because jobs inherit its environment). Without them a dashboard scan reads
+`s3_scanning` as `skipped` / `missing-credentials` in Scan Coverage, not `ran` with 0 rows.
+
 ## Expected Scan Output
 
 ```

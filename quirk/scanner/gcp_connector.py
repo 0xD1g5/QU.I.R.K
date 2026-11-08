@@ -15,6 +15,11 @@ import json
 from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    TargetOutcomeContractError,
+    outcome_for_cloud_exception,
+)
 from quirk.util.safe_exc import safe_str
 
 # ---------------------------------------------------------------------------
@@ -134,7 +139,26 @@ _GCP_KMS_SKIP_ALGORITHMS = frozenset({
 })
 
 
-def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
+def gcp_target_label(project_id: str) -> str:
+    """Label-contract helper (Phase 235.3 D-05): pure; ONLY the scan closure calls it.
+
+    Scanners record against ``outcomes.sole_target()`` and never recompute a label.
+    """
+    return f"gcp:{project_id}"
+
+
+def _note_answered(note) -> None:
+    if note is not None:
+        note(OUTCOME_ANSWERED, "", False)
+
+
+def _note_failure(note, exc, row_emitted: bool = False) -> None:
+    if note is not None:
+        kind, detail = outcome_for_cloud_exception(exc)
+        note(kind, detail, row_emitted)
+
+
+def _scan_kms(service, project_id: str, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate Cloud KMS keys with auto-location discovery and primary version algorithm mapping.
 
     Auto-discovers all KMS locations via projects.locations.list (D-05).
@@ -270,6 +294,9 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
             loc_request = service.projects().locations().list_next(
                 previous_request=loc_request, previous_response=loc_response
             )
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         iam_denied = (
             _GcpHttpError is not None
@@ -286,12 +313,15 @@ def _scan_kms(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 protocol="GCP",
                 scan_error=err_msg,
             ))
-        elif logger:
-            logger.v(f"Cloud KMS scan error: {exc}")
+            _note_failure(_note, exc, row_emitted=True)
+        else:
+            if logger:
+                logger.v(f"Cloud KMS scan error: {safe_str(exc)}")
+            _note_failure(_note, exc)
     return results
 
 
-def _scan_cloud_sql(service, project_id: str, logger) -> List[CryptoEndpoint]:
+def _scan_cloud_sql(service, project_id: str, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate Cloud SQL instances and produce TLS enforcement findings.
 
     Maps sslMode values per D-08. Missing/null/SSL_MODE_UNSPECIFIED treated as HIGH (Pitfall 7).
@@ -351,6 +381,9 @@ def _scan_cloud_sql(service, project_id: str, logger) -> List[CryptoEndpoint]:
             request = service.instances().list_next(
                 previous_request=request, previous_response=response
             )
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         iam_denied = (
             _GcpHttpError is not None
@@ -367,12 +400,15 @@ def _scan_cloud_sql(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 protocol="GCP",
                 scan_error=err_msg,
             ))
-        elif logger:
-            logger.v(f"Cloud SQL scan error: {exc}")
+            _note_failure(_note, exc, row_emitted=True)
+        else:
+            if logger:
+                logger.v(f"Cloud SQL scan error: {safe_str(exc)}")
+            _note_failure(_note, exc)
     return results
 
 
-def _scan_gcs(service, project_id: str, logger) -> List[CryptoEndpoint]:
+def _scan_gcs(service, project_id: str, logger, *, _note=None) -> List[CryptoEndpoint]:
     """Enumerate GCS buckets, detect CMEK vs Google-managed encryption.
 
     Creates one sentinel endpoint with gcs_scan_json for Phase 28 hand-off (D-03).
@@ -424,6 +460,9 @@ def _scan_gcs(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 if logger:
                     logger.v(f"GCS bucket scan error for {bucket_name}: {exc}")
 
+        _note_answered(_note)
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
         iam_denied = (
             _GcpHttpError is not None
@@ -440,12 +479,17 @@ def _scan_gcs(service, project_id: str, logger) -> List[CryptoEndpoint]:
                 protocol="GCP",
                 scan_error=err_msg,
             ))
-        elif logger:
-            logger.v(f"GCS scan error: {exc}")
+            _note_failure(_note, exc, row_emitted=True)
+        else:
+            if logger:
+                logger.v(f"GCS scan error: {safe_str(exc)}")
+            _note_failure(_note, exc)
     return results
 
 
-def scan_gcp_targets(project_id: str, logger=None) -> List[CryptoEndpoint]:
+def scan_gcp_targets(
+    project_id: str, logger=None, *, outcomes=None
+) -> List[CryptoEndpoint]:
     """Enumerate GCP cryptographic resources and return as CryptoEndpoint list.
 
     Scans: Cloud KMS key specs (GCP-01), Cloud SQL TLS enforcement (GCP-02),
@@ -457,6 +501,8 @@ def scan_gcp_targets(project_id: str, logger=None) -> List[CryptoEndpoint]:
     Args:
         project_id: GCP project ID string (e.g. "my-gcp-project").
         logger: Optional logger with .v() method.
+        outcomes: Optional TargetOutcomes sink (Phase 235.3); records against
+            ``outcomes.sole_target()`` (the project).
 
     Returns:
         List of CryptoEndpoint instances. Empty list if GCP SDK not installed or
@@ -484,6 +530,9 @@ def scan_gcp_targets(project_id: str, logger=None) -> List[CryptoEndpoint]:
         scan_error_msg = f"gcp-credentials-unavailable: {safe_str(exc)}"
         if logger:
             logger.v(scan_error_msg)
+        if outcomes is not None:
+            kind, detail = outcome_for_cloud_exception(exc)
+            outcomes.record(outcomes.sole_target(), kind, detail, row_emitted=True)
         return [
             CryptoEndpoint(
                 host=f"gcp://{project_id}",
@@ -493,37 +542,55 @@ def scan_gcp_targets(project_id: str, logger=None) -> List[CryptoEndpoint]:
             )
         ]
 
+    notes: list = []
+
+    def _note(kind, detail="", row_emitted=False):
+        notes.append((kind, detail, row_emitted))
+
+    collector = _note if outcomes is not None else None
+
     # Build one service object per GCP API (D-02)
     try:
         kms_service = _gcp_build("cloudkms", "v1", credentials=credentials)
     except Exception as exc:
         if logger:
-            logger.v(f"GCP cloudkms service build error: {exc}")
+            logger.v(f"GCP cloudkms service build error: {safe_str(exc)}")
+        _note_failure(collector, exc)
         kms_service = None
 
     try:
         sql_service = _gcp_build("sqladmin", "v1", credentials=credentials)
     except Exception as exc:
         if logger:
-            logger.v(f"GCP sqladmin service build error: {exc}")
+            logger.v(f"GCP sqladmin service build error: {safe_str(exc)}")
+        _note_failure(collector, exc)
         sql_service = None
 
     try:
         storage_service = _gcp_build("storage", "v1", credentials=credentials)
     except Exception as exc:
         if logger:
-            logger.v(f"GCP storage service build error: {exc}")
+            logger.v(f"GCP storage service build error: {safe_str(exc)}")
+        _note_failure(collector, exc)
         storage_service = None
 
     results: List[CryptoEndpoint] = []
 
     if kms_service is not None:
-        results.extend(_scan_kms(kms_service, project_id, logger))
+        results.extend(_scan_kms(kms_service, project_id, logger, _note=collector))
 
     if sql_service is not None:
-        results.extend(_scan_cloud_sql(sql_service, project_id, logger))
+        results.extend(_scan_cloud_sql(sql_service, project_id, logger, _note=collector))
 
     if storage_service is not None:
-        results.extend(_scan_gcs(storage_service, project_id, logger))
+        results.extend(_scan_gcs(storage_service, project_id, logger, _note=collector))
+
+    if outcomes is not None:
+        target = outcomes.sole_target()
+        if any(k == OUTCOME_ANSWERED for k, _d, _r in notes):
+            outcomes.answered(target)
+        else:
+            for kind, detail, row_emitted in notes:
+                outcomes.record(target, kind, detail, row_emitted=row_emitted)
 
     return results

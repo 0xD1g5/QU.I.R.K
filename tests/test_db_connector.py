@@ -407,3 +407,137 @@ def test_mysql_exception_uses_safe_str():
         assert leaky_token not in (ep.scan_error or ""), (
             f"safe_str must strip credentials; got: {ep.scan_error}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3-06: per-target outcomes (COVTRUTH-01)
+# ---------------------------------------------------------------------------
+
+def _pg_conn(ssl="on"):
+    cur = MagicMock()
+    cur.fetchone.return_value = (ssl,)
+    conn = MagicMock()
+    conn.__enter__ = MagicMock(return_value=conn)
+    conn.__exit__ = MagicMock(return_value=False)
+    conn.cursor.return_value.__enter__ = MagicMock(return_value=cur)
+    conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return conn
+
+
+def _run_pg(connect_effect, targets, **kw):
+    from quirk.scanner.db_connector import scan_pg_targets
+    mock_pg = MagicMock()
+    mock_pg.connect.side_effect = connect_effect
+    with patch("quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.psycopg2", mock_pg):
+        return scan_pg_targets(targets=targets, **kw)
+
+
+def _run_my(connect_effect, targets, **kw):
+    from quirk.scanner.db_connector import scan_mysql_targets
+    mock_my = MagicMock()
+    mock_my.connect.side_effect = connect_effect
+    with patch("quirk.scanner.db_connector.PYMYSQL_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.pymysql", mock_my):
+        return scan_mysql_targets(targets=targets, **kw)
+
+
+def test_pg_outcome_unreachable_keeps_row():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["127.0.0.1:1"])
+    res = _run_pg(OSError("connection refused"), ["127.0.0.1:1"], outcomes=sink)
+    assert len(res) == 1 and res[0].scan_error.startswith("connection-error:")
+    (o,) = sink.resolved()
+    assert o.kind == "unreachable" and o.row_emitted is True
+
+
+def test_pg_outcome_auth_failed():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["h:5432"])
+    res = _run_pg(
+        RuntimeError("FATAL: password authentication failed for user x"),
+        ["h:5432"], outcomes=sink,
+    )
+    assert res[0].scan_error.startswith("connection-error:")
+    (o,) = sink.resolved()
+    assert o.kind == "auth_failed" and o.row_emitted is True
+
+
+def test_mysql_outcome_auth_failed_1045():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["h:3306"])
+    res = _run_my(Exception(1045, "Access denied"), ["h:3306"], outcomes=sink)
+    assert res[0].scan_error.startswith("connection-error:")
+    (o,) = sink.resolved()
+    assert o.kind == "auth_failed" and o.row_emitted is True
+
+
+def test_pg_outcome_answered_with_no_findings_rows():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["h:5432"])
+    _run_pg([_pg_conn("on")], ["h:5432"], outcomes=sink)
+    (o,) = sink.resolved()
+    assert o.kind == "answered"
+
+
+def test_mysql_outcome_answered():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    cur = MagicMock()
+    cur.fetchone.return_value = ("Ssl_cipher", "")
+    conn = MagicMock()
+    conn.__enter__ = MagicMock(return_value=conn)
+    conn.__exit__ = MagicMock(return_value=False)
+    conn.cursor.return_value.__enter__ = MagicMock(return_value=cur)
+    conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    sink = TargetOutcomes(["h:3306"])
+    _run_my([conn], ["h:3306"], outcomes=sink)
+    assert sink.resolved()[0].kind == "answered"
+
+
+def test_pg_outcome_mixed_targets():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["a:5432", "b:5432"])
+    res = _run_pg([_pg_conn("off"), OSError("down")], ["a:5432", "b:5432"], outcomes=sink)
+    kinds = {o.target: o for o in sink.resolved()}
+    assert kinds["a:5432"].kind == "answered"
+    assert kinds["b:5432"].kind == "unreachable" and kinds["b:5432"].row_emitted
+    assert sum(1 for r in res if r.scan_error and "connection-error" in r.scan_error) == 1
+
+
+def test_db_outcomes_none_unchanged():
+    res = _run_pg(OSError("down"), ["h:5432"])
+    assert len(res) == 1 and res[0].scan_error.startswith("connection-error:")
+    res = _run_my(OSError("down"), ["h:3306"])
+    assert len(res) == 1 and res[0].scan_error.startswith("connection-error:")
+
+
+def test_db_outcome_no_credentials_still_attempts_connect():
+    """D-04: no credential pre-gate; connect is attempted with password omitted."""
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["h:5432"])
+    mock_pg = MagicMock()
+    mock_pg.connect.side_effect = OSError("down")
+    with patch("quirk.scanner.db_connector.PSYCOPG2_AVAILABLE", True), \
+         patch("quirk.scanner.db_connector.psycopg2", mock_pg):
+        from quirk.scanner.db_connector import scan_pg_targets
+        scan_pg_targets(targets=["h:5432"], outcomes=sink)
+    assert mock_pg.connect.call_count == 1
+
+
+def test_db_outcome_dsn_password_not_leaked_to_sink():
+    from quirk.scanner.target_outcome import TargetOutcomes
+    sink = TargetOutcomes(["h:3306"])
+    _run_my(RuntimeError("Access denied for postgres://u:hunter2pw@h/db"),
+            ["h:3306"], outcomes=sink)
+    (o,) = sink.resolved()
+    assert "hunter2pw" not in o.detail
+
+
+def test_db_contract_error_propagates():
+    from quirk.scanner.target_outcome import TargetOutcomes, TargetOutcomeContractError
+    with pytest.raises(TargetOutcomeContractError):
+        _run_pg([_pg_conn("on")], ["h:5432"], outcomes=TargetOutcomes(["not-this-target"]))
+    with pytest.raises(TargetOutcomeContractError):
+        _run_pg(OSError("down"), ["h:5432"], outcomes=TargetOutcomes(["not-this-target"]))
+    with pytest.raises(TargetOutcomeContractError):
+        _run_my(OSError("down"), ["h:3306"], outcomes=TargetOutcomes(["not-this-target"]))

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { fetchApi } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
+import type { ScanCoveragePhase, ScanCoverageResponse } from "@/types/api"
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible"
@@ -21,22 +22,6 @@ import {
  * fetch renders nothing that claims coverage, for the same reason.
  */
 
-interface ScanCoveragePhase {
-  phase_name: string
-  label: string
-  status: string
-  reason: string | null
-  detail: string | null
-  duration_sec: number | null
-}
-
-interface ScanCoverageResponse {
-  recorded: boolean
-  ran: number
-  skipped: number
-  phases: ScanCoveragePhase[]
-}
-
 // UI-SPEC §Color: skip-reason -> --ds-* token; ran rows always --ds-ok.
 const STATUS_COLOR_CLASS: Record<string, string> = {
   ran: "text-[var(--ds-ok)]",
@@ -46,6 +31,9 @@ const STATUS_COLOR_CLASS: Record<string, string> = {
   "missing-credentials": "text-[var(--ds-high)]",
   // 235.1 D-05: a missing tool is an actionable operator gap, same token as missing-credentials.
   "missing-binary": "text-[var(--ds-high)]",
+  // 235.3 D-06: both are actionable operator gaps, same token as missing-credentials (not the medium fallback).
+  "internal-target-refused": "text-[var(--ds-high)]",
+  "auth-failed": "text-[var(--ds-high)]",
   failed: "text-[var(--ds-critical)]",
 }
 

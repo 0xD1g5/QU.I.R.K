@@ -33,6 +33,12 @@ from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.log_text import strip_control_chars
 from quirk.util.safe_exc import safe_str
+from quirk.scanner.target_outcome import (
+    OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+)
 
 # Module-level logger (mirror saml_scanner / kerberos_scanner pattern)
 logger = logging.getLogger(__name__)
@@ -123,6 +129,44 @@ def _classify_severity(parsed: dict) -> "tuple[str | None, list[str]]":
     return None, reasons
 
 
+# 235.3 review A-WR-04: LDAP result codes meaning "the server answered and
+# refused this bind" (strongerAuthRequired 8, confidentialityRequired 13,
+# inappropriateAuthentication 48, invalidCredentials 49,
+# insufficientAccessRights 50, unwillingToPerform 53, authMethodNotSupported 7).
+_LDAP_AUTH_CODES = frozenset({7, 8, 13, 48, 49, 50, 53})
+
+
+def _ldap_failure_outcome(exc, *, have_creds: bool = False) -> "tuple[str, str]":
+    """Classify an LDAP bind/connect failure (235.3 D-06).
+
+    A bind the server refused (``_LDAP_AUTH_CODES`` / invalidCredentials) is
+    ``auth_failed`` when credentials were presented and
+    ``missing_credentials`` for an anonymous bind; anything else is
+    ``unreachable``.
+    """
+    code = getattr(exc, "result_code", None)
+    if code is None:
+        res = getattr(exc, "result", None)
+        if isinstance(res, dict):
+            code = res.get("result")
+    if code in _LDAP_AUTH_CODES or "invalidcredentials" in str(exc).lower():
+        if have_creds:
+            return OUTCOME_AUTH_FAILED, safe_str(exc)
+        return (
+            OUTCOME_MISSING_CREDENTIALS,
+            f"server refused anonymous bind (LDAP result {code}): {safe_str(exc)}",
+        )
+    return OUTCOME_UNREACHABLE, safe_str(exc)
+
+
+class _BindRejected(Exception):
+    """Anonymous bind returned False; carries the LDAP result code."""
+
+    def __init__(self, message: str, result_code=None):
+        super().__init__(message)
+        self.result_code = result_code
+
+
 def _bind_and_search(host: str, port: int, base_dn: str, timeout: int):
     """Anonymous LDAP bind + paged search. Returns a generator of entry
     dicts or an empty list on failure. All ldap3 exceptions are caught
@@ -137,7 +181,11 @@ def _bind_and_search(host: str, port: int, base_dn: str, timeout: int):
     )
     if not conn.bind():
         logger.warning("SMIME: anonymous bind rejected on %s:%d", host, port)
-        return []
+        res = getattr(conn, "result", None)
+        raise _BindRejected(
+            "anonymous bind rejected",
+            res.get("result") if isinstance(res, dict) else None,
+        )
     return conn.extend.standard.paged_search(
         search_base=base_dn,
         search_filter="(|(userCertificate=*)(userSMIMECertificate=*))",
@@ -191,6 +239,7 @@ def scan_smime_targets(
     session_start=None,
     *,
     search_base: "str | None" = None,
+    outcomes=None,
 ) -> list:
     """Scan LDAP targets for S/MIME signing certificates.
 
@@ -215,6 +264,11 @@ def scan_smime_targets(
         host, port, realm = _parse_target(target)
         base_dn = search_base or _realm_to_base_dn(realm or "")
         if not base_dn:
+            if outcomes is not None:
+                outcomes.record(
+                    target, OUTCOME_UNREACHABLE,
+                    "no search base (realm) configured", row_emitted=False,
+                )
             log.warning(
                 "SMIME: no search base for target %s (no realm; pass --smime-base)",
                 host,
@@ -223,8 +277,19 @@ def scan_smime_targets(
 
         try:
             entries = _bind_and_search(host, port, base_dn, timeout)
+        except TargetOutcomeContractError:
+            raise
+        except _BindRejected as exc:
+            # Rejected bind: historically no row; keep that, record the outcome.
+            if outcomes is not None:
+                kind, why = _ldap_failure_outcome(exc)
+                outcomes.record(target, kind, why, row_emitted=False)
+            continue
         except Exception as exc:
             log.warning("SMIME: bind/search failed for %s:%d: %s", host, port, safe_str(exc))
+            if outcomes is not None:
+                kind, why = _ldap_failure_outcome(exc)
+                outcomes.record(target, kind, why, row_emitted=True)
             err_ep = CryptoEndpoint(
                 host=host,
                 port=port,
@@ -236,6 +301,9 @@ def scan_smime_targets(
             )
             results.append(err_ep)
             continue
+
+        if outcomes is not None:
+            outcomes.answered(target)
 
         for entry in entries:
             # Filter to searchResEntry only — paged_search may yield refs/controls

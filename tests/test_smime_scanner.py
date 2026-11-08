@@ -162,3 +162,67 @@ def test_dn_control_chars_stripped_from_log_line(caplog):
     text = "\n".join(r.getMessage() for r in caplog.records)
     assert "cert parse failed" in text
     assert "\x1b" not in text and "ev\nil" not in text
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-05/D-06: per-target outcomes
+# ---------------------------------------------------------------------------
+
+from quirk.scanner.target_outcome import (  # noqa: E402
+    TargetOutcomeContractError,
+    TargetOutcomes,
+)
+
+
+def _smime_outcome_run(bind, targets=None, **kw):
+    targets = targets if targets is not None else [_target()]
+    sink = TargetOutcomes([str(t) for t in targets])
+    with patch.object(smime_scanner, "LDAP3_AVAILABLE", True), \
+         patch.object(smime_scanner, "_bind_and_search", **bind):
+        eps = scan_smime_targets(targets, timeout=5, outcomes=sink, **kw)
+    return eps, sink.resolved()
+
+
+def test_outcome_no_search_base_records_unreachable_without_row():
+    tgt = SimpleNamespace(host="127.0.0.1", port=1)
+    with patch.object(smime_scanner, "LDAP3_AVAILABLE", True):
+        sink = TargetOutcomes([str(tgt)])
+        eps = scan_smime_targets([tgt], timeout=1, outcomes=sink)
+    assert eps == []
+    (o,) = sink.resolved()
+    assert o.kind == "unreachable" and "no search base" in o.detail
+    assert o.row_emitted is False
+
+
+def test_outcome_socket_failure_unreachable_row_kept():
+    eps, (o,) = _smime_outcome_run({"side_effect": OSError("connect refused")})
+    assert len(eps) == 1 and eps[0].scan_error_category == "exception"
+    assert o.kind == "unreachable" and o.row_emitted is True
+
+
+@pytest.mark.parametrize("code", [8, 13, 48, 49, 53])
+def test_outcome_anonymous_bind_refused_is_missing_credentials(code):
+    """235.3 review A-WR-04: the server answered and refused the anonymous
+    bind; the scanner presents no credentials, so this is missing credentials
+    (D-06), never auth_failed and never unreachable."""
+    exc = smime_scanner._BindRejected("anonymous bind rejected", code)
+    eps, (o,) = _smime_outcome_run({"side_effect": exc})
+    assert eps == []
+    assert o.kind == "missing_credentials" and o.row_emitted is False
+
+
+def test_outcome_bind_ok_zero_certs_answered():
+    eps, (o,) = _smime_outcome_run({"return_value": iter([])})
+    assert eps == [] and o.kind == "answered"
+
+
+def test_outcome_none_sink_unchanged():
+    assert _run_with_entries([]) == []
+
+
+def test_outcome_contract_violation_propagates():
+    sink = TargetOutcomes(["not-this-target"])
+    with patch.object(smime_scanner, "LDAP3_AVAILABLE", True), \
+         patch.object(smime_scanner, "_bind_and_search", side_effect=OSError("x")):
+        with pytest.raises(TargetOutcomeContractError):
+            scan_smime_targets([_target()], timeout=5, outcomes=sink)

@@ -16,6 +16,12 @@ except ImportError:
     DNSPYTHON_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+)
+from quirk.util.safe_exc import safe_str
 
 # Module-level logger (Phase 71 WR-07)
 logger = logging.getLogger(__name__)
@@ -77,7 +83,7 @@ def _parse_resolver(resolver: str):
     return resolver, 53
 
 
-def _resolve_ns(domain: str, timeout: int, resolver: str = None) -> list:
+def _resolve_ns(domain: str, timeout: int, resolver: str = None, diag: dict = None) -> list:
     """Resolve authoritative nameserver IPs for a domain.
 
     When *resolver* is set (``host:port`` string), queries that specific
@@ -85,7 +91,13 @@ def _resolve_ns(domain: str, timeout: int, resolver: str = None) -> list:
     bind9 instances that listen on a non-standard port (e.g. 15353).
 
     Returns list of NS IP strings.  Returns [] on any failure.
+
+    *diag* (optional dict) is an out-parameter for outcome recording: it gets
+    ``kind`` (answered / unreachable) and ``detail`` describing whether any DNS
+    server actually replied.
     """
+    if diag is None:
+        diag = {}
     resolver_host, resolver_port = _parse_resolver(resolver)
     try:
         if resolver_host:
@@ -96,6 +108,7 @@ def _resolve_ns(domain: str, timeout: int, resolver: str = None) -> list:
             )
             if isinstance(result, tuple):
                 result = result[0]
+            diag["kind"] = OUTCOME_ANSWERED
             ns_names = []
             for rrset in result.answer:
                 if rrset.rdtype == dns.rdatatype.NS:
@@ -125,6 +138,7 @@ def _resolve_ns(domain: str, timeout: int, resolver: str = None) -> list:
             return ips
         else:
             ns_answer = dns.resolver.resolve(domain, "NS", lifetime=timeout)
+            diag["kind"] = OUTCOME_ANSWERED
             ips = []
             for rdata in ns_answer:
                 ns_name = str(rdata.target)
@@ -135,7 +149,14 @@ def _resolve_ns(domain: str, timeout: int, resolver: str = None) -> list:
                 except Exception:
                     pass
             return ips
-    except Exception:
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as exc:
+        # The resolver spoke: NXDOMAIN / no NS is a protocol answer (D-03).
+        diag["kind"] = OUTCOME_ANSWERED
+        diag["detail"] = "nxdomain" if isinstance(exc, dns.resolver.NXDOMAIN) else "no-ns-answer"
+        return []
+    except Exception as exc:
+        diag["kind"] = OUTCOME_UNREACHABLE
+        diag["detail"] = safe_str(exc)
         return []
 
 
@@ -265,7 +286,7 @@ def _detect_nsec_type(domain: str, ns_ip: str, timeout: int, ns_port: int = 53):
         return None
 
 
-def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver: str = None) -> list:
+def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver: str = None, outcomes=None) -> list:
     """Scan a single domain for DNSSEC posture.
 
     *resolver* is an optional ``host:port`` string.  When set, all DNS
@@ -276,7 +297,25 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver
     Returns list of CryptoEndpoint objects for this domain.
     """
     resolver_host, resolver_port = _parse_resolver(resolver)
-    ns_ips = _resolve_ns(domain, timeout, resolver=resolver)
+    if outcomes is None:
+        ns_ips = _resolve_ns(domain, timeout, resolver=resolver)
+    else:
+        diag: dict = {}
+        ns_ips = _resolve_ns(domain, timeout, resolver=resolver, diag=diag)
+        kind = diag.get("kind", OUTCOME_ANSWERED if ns_ips else OUTCOME_UNREACHABLE)
+        detail = diag.get("detail", "" if kind == OUTCOME_ANSWERED else "ns-resolution-failed")
+        if not ns_ips:
+            if kind == OUTCOME_ANSWERED and detail not in ("nxdomain", "no-ns-answer"):
+                # 235.3 review A-WR-06: the NS RRset came back but no NS name
+                # resolved to an address, so no authoritative server was asked.
+                kind = OUTCOME_UNREACHABLE
+                detail = "authoritative nameserver addresses did not resolve"
+            # NXDOMAIN / no-NS stays answered: a protocol answer about the
+            # domain (D-03, deliberate plan-07 design).
+            outcomes.record(domain, kind, detail)
+        # With NS IPs the outcome is recorded after the DNSKEY query below:
+        # the DNSSEC data comes from the authoritative server, not the
+        # recursive resolver that returned the NS RRset.
     if not ns_ips:
         if logger:
             logger.warning("DNSSEC: could not resolve NS for %s", domain)
@@ -286,6 +325,22 @@ def _scan_domain(domain: str, timeout: int, logger, session_start=None, resolver
 
     # Query DNSKEY (use resolver_port when a custom resolver is configured)
     dnskey_response = _query_rrset(domain, dns.rdatatype.DNSKEY, ns_ip, timeout, ns_port=resolver_port)
+
+    if outcomes is not None:
+        if dnskey_response is None:
+            # 235.3 review A-WR-06: a silent authoritative server (timeout,
+            # UDP/TCP 53 egress blocked) is not an answer, and an
+            # ``unsigned-zone`` row here would be a false negative.
+            outcomes.record(
+                domain, OUTCOME_UNREACHABLE,
+                f"authoritative nameserver {ns_ip} did not answer the DNSKEY query",
+            )
+            if logger:
+                logger.warning(
+                    "DNSSEC: authoritative NS %s did not answer for %s", ns_ip, domain,
+                )
+            return []
+        outcomes.record(domain, OUTCOME_ANSWERED)
 
     # Find DNSKEY rrset in answer section
     dnskey_rrset = None
@@ -418,6 +473,8 @@ def scan_dnssec_targets(
     logger=None,
     session_start=None,
     resolver: str = None,
+    *,
+    outcomes=None,
 ) -> list:
     """Scan DNSSEC posture for a list of domain targets.
 
@@ -440,9 +497,14 @@ def scan_dnssec_targets(
     for domain in targets:
         try:
             results.extend(
-                _scan_domain(domain, timeout, logger, session_start=session_start, resolver=resolver)
+                _scan_domain(domain, timeout, logger, session_start=session_start,
+                             resolver=resolver, outcomes=outcomes)
             )
+        except TargetOutcomeContractError:
+            raise
         except Exception as exc:
+            if outcomes is not None and str(domain) not in outcomes.items:
+                outcomes.record(domain, OUTCOME_UNREACHABLE, safe_str(exc), extra=True)
             if logger:
                 logger.warning("DNSSEC scan failed for %s: %s", domain, exc)
     return results

@@ -43,7 +43,8 @@
 - ✅ **v5.26 Accessibility & Instrument Truth** — Phases 215–221 (221 a gap-closure insert), 44 plans (development complete 2026-10-02; untagged; re-audit `tech_debt`, 15/15 requirements, integration 9/10 seams + 0 broken, Nyquist 7/7; merged to main via 11 PRs, #38–#50) → `.planning/milestones/v5.26-ROADMAP.md`
 - ✅ **v5.27 Launch Readiness** — Phases 222–226 incl. the inserts 222.1 and 225.1, 75 plans (**SHIPPED 2026-10-15 — tag `v5.27.0`, published to PyPI + GitHub Releases**, carrying the untagged v5.26 work; audit `tech_debt`, 20/20 requirements with DOC-04 accepted as scoped, integration 13/15, flows 3/3, Nyquist 7/7; launch gate satisfied; merged to main via PRs #46, #52–#61) → `.planning/milestones/v5.27-ROADMAP.md`
 - ✅ **v5.28 Score & Finding Truth** — Phases 227–235, 88 plans (**SHIPPED 2026-10-30 — tag `v5.28.0`, published to PyPI + GitHub Releases**; scoring 4.0; audit `tech_debt`, 29/29 requirements, phases 9/9, integration 24/28, flows 9/12, Nyquist 9/9; launch gate GO; merged to main via PRs #63–#64) → `.planning/milestones/v5.28-ROADMAP.md`
-- 🚧 **v5.28.1 Install & Source-Scan Truth** — Phases 235.1–235.2, patch release (opened 2026-11-03; ship by 2026-11-23) → Current Milestone below
+- ✅ **v5.28.1 Install & Source-Scan Truth** — Phases 235.1–235.2, patch release (**SHIPPED 2026-11-05 — tag `v5.28.1` on `68bbe62d`, published to PyPI + GitHub Releases**; 16/16 requirements; announcement NO-GO) → section below
+- 🚧 **v5.28.2 Connector Coverage Truth** — Phases 235.3–235.4, patch release (opened 2026-11-06; ship by 2026-11-23) → Current Milestone below
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -109,7 +110,7 @@ v4.10.1. Phases are numbered 235.1 and 235.2, inserted after Phase 235, so Phase
 candidate below. Requirements are in `.planning/REQUIREMENTS.md` (16).
 
 - [x] **Phase 235.1: Install & Source-Scan Truth Fixes** - An unpinned 3.15 install no longer backtracks to 5.27.0, a missing semgrep or syft reads as not assessed, doctor tells the truth, and the release-evidence scripts cannot pass falsely
-- [ ] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
+- [x] **Phase 235.2: Release 5.28.1 & Announcement Re-check** - `v5.28.1` is tagged, published and smoke-tested from PyPI, the hero is recaptured, and the announcement is re-checked against 5.28.1 with an operator go/no-go
 
 ### Phase 235.1: Install & Source-Scan Truth Fixes (INSERTED)
 **Goal**: The fixes 5.28.1 exists for are on `v5281-open` with tests: pip on Python 3.15 no longer silently installs an older release, a scan whose source or container tool is missing never reads as a clean scan, `quirk doctor` reports Python range, missing scanners and unusable DB paths truthfully, the release smoke and audit scripts cannot report a false pass, and the fixes for the four critical Dependabot alerts are on the branch (#83/#84 dismissed with the operator-approved reason; #3/#31 verified `fixed` after the 235.2 merge).
@@ -167,7 +168,92 @@ Cross-cutting constraints:
   2. The operator has yanked the pre-sslyze releases (4.10.0–5.21.0, list re-derived from PyPI at yank time), and an unpinned `pip install --dry-run quirk-scanner` on Python 3.15 against live PyPI fails `ResolutionImpossible` instead of selecting an old release. A clean PyPI install of 5.28.1 passes the release smoke test on macOS, Linux 3.10, Linux 3.11 and the contributor leg. The 3.15 leg's unpinned resolution check passes. Attestations verify, and the PyPI-rendered description's links all resolve.
   3. `docs/images/dashboard-hero.png` is recaptured from a 5.28.1 scan against a snapshot DB, its caption describes that image, and the operator has accepted it visually.
   4. The announcement draft is re-checked sentence by sentence against 5.28.1, with no leak-grep or false-capability-grep hits, and the operator's go/no-go is recorded. No agent posts anything.
-**Plans**: TBD
+**Plans**: none (release runbook run by hand; task record in the 2026-11-06 handoff)
+**Completed**: 2026-11-06. Verified `passed` 4/4 at `139ed513` (CITRUTH-03: `branch_ci_state.py --branch main --compare-main` exit 0; Python CI 42223519913, Dashboard Quality 42223519835). `v5.28.1` tagged on `68bbe62d` and published (release run 42154086272); all PyPI smoke legs PASS, including 3.15 N2 after the operator also yanked 5.25.0 and 5.27.0. Dependabot #3/#31 `fixed`. Announcement re-check clean; **operator decision NO-GO**, pending the 5.28.2 fix for connectors that report `ran` without scanning (todo `261105-unscanned-surfaces-inflate-score-in-real-engagements`).
+
+## Current Milestone: v5.28.2 Connector Coverage Truth (patch release, opened 2026-11-06)
+
+**Goal:** a dashboard or CLI scan never records a connector as `ran` when it could not look at
+anything, so an unscanned surface cannot raise the readiness score or read as covered. Then ship
+`v5.28.2` by **2026-11-23** (CMVP goes red 2026-11-24) and re-check the announcement against it. The
+5.28.1 announcement was NO-GO on 2026-11-05 for exactly this defect. Phases 235.3 and 235.4 are
+inserted after 235.2, so Phase 236 stays the v5.29 candidate. Requirements are in
+`.planning/REQUIREMENTS.md` (v5.28.2 section).
+
+- [x] **Phase 235.3: Connector Coverage Truth Fixes** - A connector that could not look at any target records a named skip that counts as a scan error, and every surface shows the reason
+- [ ] **Phase 235.4: Release 5.28.2 & Announcement Re-check** - `v5.28.2` is tagged, published and smoke-tested from PyPI, the full chaos-lab GUI walkthrough shows no silent `ran`/0, and the operator records a new go/no-go
+
+### Phase 235.3: Connector Coverage Truth Fixes (INSERTED)
+**Goal**: A connector phase reads `ran` only if at least one of its targets answered. If none did (every URL refused by the server's internal-target policy, missing or rejected credentials, every target unreachable), it reads `skipped` with a named reason, emits an ADVISORY scan-error row that counts in the score like 5.28.1's `missing-binary`, and Scan Coverage, the dashboard empty states and the reports all show that reason. A test that enumerates connectors from source at run time keeps any connector from regressing.
+**Depends on**: Phase 235.2
+**Requirements**: COVTRUTH-01, COVTRUTH-02, COVTRUTH-03, COVTRUTH-04, COVTRUTH-05, COVTRUTH-06
+**Success Criteria** (what must be TRUE):
+  1. JWT and SAML with every URL refused by `validate_external_url` record `skipped / internal-target-refused`. S3 with no credentials in the chain records `skipped / missing-credentials`, and S3 with rejected credentials records `skipped / auth-failed`. A connector whose targets are all unreachable records `skipped / failed`. The same three 2026-11-05 direct-call repros now produce those records, and a live endpoint that answers with nothing still records `ran` with 0 rows.
+  2. Partial refusal or partial failure records `ran`, plus one scan-error row per target that did not answer.
+  3. Each such skip emits an ADVISORY scan-error row. For an otherwise identical estate, the score is never higher with a skipped connector than it would be with that connector ran clean (the 235.1 D-07 rule), and this is proven across intel, HTML, API and coverage.
+  4. A test enumerates every connector phase from `run_scan.py` and the scanner modules at run time, with no hand list. It fails if any connector can return no rows from an exception or refusal path while its phase records `ran`. It goes red on the pre-fix code.
+  5. The Scan Coverage chips, the Data at Rest / Identity / Motion empty states and the reports show the recorded reason, not static "enable the connector" text. Database targets that failed to connect appear as failed rows instead of being dropped (`scan.py:680`). The New Scan form warns when a JWT or SAML connector URL is loopback or RFC1918 and the server's `security.allow_internal_targets` is false. *(Wording corrected 2026-11-07 at the phase close: the server policy never refuses plain TLS/SSH targets, so the warning checks only the JWT and SAML URL fields, review C-WR-01.)*
+  6. `docs/operators-guide.md` §3.0 has a "before a client scan" checklist, CHANGELOG has `[5.28.2]`, and the UAT series, coverage-gap artifact and vault are regenerated or synced.
+**Plans**: 21 plans in 7 waves (checker passed at iteration 3: 0 blockers, 0 warnings; decisions D-01..D-12 checked independently, because check.decision-coverage-plan skipped 0/0). Every code-committing plan first asserts the branch is `v5282-open`.
+**Completed**: 2026-11-07. 21/21 plans. Verified `passed` 6/6 at `dc055f3b` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0; Python CI 42344555900, Dashboard Quality 42344557789). Code review: 45 findings in three parts, 31 fixed with red-first tests (3 critical against the phase goal: dropped K8s/EKS/broker/container rows, OpenAPI read `ran` without reading, healthy Postgres shown as failed), 14 deferred with reasons in `235.3-REVIEW.md`. Human UAT (New Scan internal-target warning on a live `quirk serve` with `allow_internal_targets: false`) approved by the operator 2026-11-07. Live GUI leg of UAT-235.3-13 deferred to 235.4 LAUNCH-10 by design. Folded todos `261105-unscanned-surfaces-inflate-score-in-real-engagements` and `261105-connector-phase-ran-with-zero-output-when-url-guard-refuses-all-targets` closed.
+
+Plans:
+**Wave 1**
+- [x] 235.3-01-PLAN.md — Shared per-target outcome sink (`quirk/scanner/target_outcome.py`, keyed by raw target), 8 skip reasons, fail-closed `_classify_connector_outcomes`, advisory helper (D-03..D-07)
+- [x] 235.3-02-PLAN.md — Failed DB targets returned as failed rows (D-10); `coverage` block on `/api/scan/latest`
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 235.3-03-PLAN.md — JWT, SAML, OpenAPI record per-target outcomes (fuzz exempt, P-03)
+- [x] 235.3-04-PLAN.md — S3 + AWS sub-scanners: missing/rejected credentials, unreachable, answered; label contract
+- [x] 235.3-05-PLAN.md — Azure + GCP outcomes, label contract
+- [x] 235.3-06-PLAN.md — DB, Vault, K8s outcomes; Vault network error no longer labelled auth-failed
+- [x] 235.3-07-PLAN.md — DNSSEC + Kerberos outcomes
+- [x] 235.3-08-PLAN.md — S/MIME, AD CS, code-signing LDAP outcomes
+- [x] 235.3-09-PLAN.md — One shared advisory category set for trends, sensor push, findings_evaluator; real-pipeline score proof
+- [x] 235.3-10-PLAN.md — Dashboard `coverage-reason.ts`, chip colours, Executive Skipped badge
+- [x] 235.3-13-PLAN.md — `GET /api/config/internal-target-check` preflight route; folded + new todos
+- [x] 235.3-20-PLAN.md — Container scanner records an outcome per image (P-15; source exempt)
+
+**Wave 3** *(blocked on Wave 2)*
+- [x] 235.3-11-PLAN.md — Every non-exempt connector closure wired to the classifier; Vault pre-gate advisory (P-01); coverage test harness; full-suite checkpoint
+- [x] 235.3-12-PLAN.md — Data at Rest / Identity / Motion empty states show the recorded reason; failed DB rows
+
+**Wave 4** *(blocked on Wave 3)*
+- [x] 235.3-14-PLAN.md — Paired-scan proof: a skip never scores higher than ran-clean, across intel, HTML, API, coverage
+- [x] 235.3-15-PLAN.md — Backstop: connectors enumerated from source at run time, three legs, socket guard, red on `b6896416` (COVTRUTH-03)
+- [x] 235.3-16-PLAN.md — New Scan internal-target warning (non-blocking, D-11)
+- [x] 235.3-21-PLAN.md — Slow in-process e2e: 2026-11-05 repros skip with the right reason; answered-empty JWT and S3 stay `ran`
+
+**Wave 5** *(blocked on Wave 4)*
+- [x] 235.3-17-PLAN.md — CHANGELOG `[5.28.2]` (gated), report-interpretation, doc-claim ledger
+
+**Wave 6** *(blocked on Wave 5)*
+- [x] 235.3-18-PLAN.md — operators-guide §3.0 "Before a client scan" checklist, vault.md, master guide regenerated, labs oracles dispositioned, vault sync
+
+**Wave 7** *(blocked on Wave 6)*
+- [x] 235.3-19-PLAN.md — UAT Series 235.3, coverage gaps regenerated, Obsidian note, full suite, push, CI observed at HEAD (no commit after it)
+
+### Phase 235.4: Release 5.28.2 & Announcement Re-check (INSERTED)
+**Goal**: The version the announcement points at is 5.28.2, it installs and scans as the README says on every supported leg, the full chaos-lab GUI walkthrough on it shows every enabled connector either ran with results or skipped with a true reason, and the operator records a new go/no-go before anything is posted.
+**Depends on**: Phase 235.3
+**Requirements**: REL-11, REL-12, LAUNCH-10, LAUNCH-11
+**Success Criteria** (what must be TRUE):
+  1. The version reads 5.28.2 in every declaring file. `v5.28.2` is tagged on a `main` merge commit with `branch_ci_state.py` exit 0, `release.yml` publishes it, and PyPI lists it, all by 2026-11-23 (or after a hand re-verification of CMVP).
+  2. A clean PyPI install of 5.28.2 passes the release smoke test on macOS, Linux 3.10, Linux 3.11, contributor and the 3.15 unpinned leg, and the attestations verify.
+  3. The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No enabled connector reads `ran` with 0 rows unless a target answered, every skip names its true cause, and the score moves in the right direction when a connector is skipped.
+  4. The announcement draft is re-checked sentence by sentence against 5.28.2 (claim table, leak grep, false-capability grep), and the operator's go/no-go is recorded. No agent posts anything.
+**Plans**: 9 plans in 8 waves. Every outward-facing step (merge, tag push, PR #69 close, go/no-go) is its own operator checkpoint (D-12). D-11's tree-equality check is made concrete as: `git diff --name-only C M` touches no packaged path, plus a post-publish candidate-vs-PyPI wheel RECORD compare.
+
+Plans:
+- [ ] 235.4-01-PLAN.md — Version bump to 5.28.2 (hit set re-derived), README pins/title/5.28.2 paragraph, doc-claim ledger, UAT-1-02 SKIP DEFERRED; commit C (D-13)
+- [ ] 235.4-02-PLAN.md — Operator Docker/network checkpoint; candidate built from C with release.yml's command; clean venv; full lab via lab-up.sh; Pass A/B scratch envs (D-07, D-11, D-16)
+- [ ] 235.4-03-PLAN.md — Walkthrough Pass A (2026-11-05 replay, operator-led) + DB cross-check + computed-score direction (D-05, D-06)
+- [ ] 235.4-04-PLAN.md — Walkthrough Pass B (operators-guide §3.0 setup, operator-led) + combined WALKTHROUGH verdict (D-05, D-06)
+- [ ] 235.4-05-PLAN.md — UAT-235.3-13 PASS, CHANGELOG date, branch CI green, PR, operator merge, main green at M, D-11 path check, release.yml dry run (D-04, D-09, D-10)
+- [ ] 235.4-06-PLAN.md — Announcement draft for 5.28.2 + pre-publish checks with negative controls (D-03, D-08, D-15)
+- [ ] 235.4-07-PLAN.md — Operator tag push; publish; PyPI, RECORD compare, attestations, links; five smoke legs; UAT-1-02 PASS (D-01, D-14)
+- [ ] 235.4-08-PLAN.md — Post-publish re-check of the announcement; operator go/no-go recorded verbatim (D-02)
+- [ ] 235.4-09-PLAN.md — Operator closes PR #69 as included; vault sync; lab down; CI observed green at final HEAD, no commit after (CITRUTH-03)
 
 ## Next Milestone Candidates (v5.29)
 

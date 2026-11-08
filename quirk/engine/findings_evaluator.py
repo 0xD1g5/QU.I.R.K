@@ -19,6 +19,7 @@ from quirk.reports.content_model import (
 )
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
+from quirk.scanner.target_outcome import SKIP_REASON_TO_ADVISORY_CATEGORY
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 from quirk.util.weak_crypto import has_legacy_tls_versions_signal
@@ -522,6 +523,36 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 recommendation=(
                     "Install the missing tool (see `quirk doctor` for the exact "
                     "command) and re-run the scan to obtain coverage."
+                ),
+            )
+            adv["category"] = "coverage_gap"
+            findings.append(adv)
+            continue
+
+        # 235.3 D-07: a connector phase whose targets all went unanswered
+        # (refused / auth failed / no credentials / unreachable). One INFO
+        # coverage_gap; the row's scan_error counts in the readiness score via
+        # evidence.scan_error_count. `continue` avoids the generic duplicate.
+        if proto == "ADVISORY" and getattr(e, "scan_error_category", "") in set(
+            SKIP_REASON_TO_ADVISORY_CATEGORY.values()
+        ):
+            scan_err_msg = getattr(e, "scan_error", "") or ""
+            adv = _build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="Connector skipped — no target answered",
+                description=(
+                    "A QUIRK connector phase was skipped because none of its targets answered"
+                    + (f" ({scan_err_msg})" if scan_err_msg else "")
+                    + ". This surface was not assessed; the gap counts as a scan "
+                    "error in the readiness score."
+                ),
+                recommendation=(
+                    "Check the connector targets: for refused internal targets set "
+                    "security.allow_internal_targets in the server config.yaml; for "
+                    "credential failures start quirk serve with the right credentials; "
+                    "otherwise confirm the targets are reachable, then re-run the scan."
                 ),
             )
             adv["category"] = "coverage_gap"

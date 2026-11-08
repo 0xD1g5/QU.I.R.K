@@ -235,3 +235,55 @@ def test_dn_control_chars_stripped_from_log_line(caplog):
 def test_exception_sites_keep_safe_str():
     src = pathlib.Path(codesign_scanner.__file__).read_text(encoding="utf-8")
     assert src.count("safe_str(exc") >= 4
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-05/D-06: per-target outcomes (LDAP path only; P-03)
+# ---------------------------------------------------------------------------
+
+import pytest  # noqa: E402
+
+from quirk.scanner.target_outcome import (  # noqa: E402
+    TargetOutcomeContractError,
+    TargetOutcomes,
+)
+
+
+def _outcome_run(bind: dict, expected=None):
+    tgt = _target()
+    sink = TargetOutcomes(expected if expected is not None else [str(tgt)])
+    with patch.object(codesign_scanner, "LDAP3_AVAILABLE", True), \
+         patch.object(codesign_scanner, "_bind_and_search_codesign", **bind):
+        eps = scan_codesign_from_ldap([tgt], timeout=5, outcomes=sink)
+    return eps, sink.resolved()
+
+
+def test_outcome_bind_failure_unreachable_row_kept():
+    eps, (o,) = _outcome_run({"side_effect": OSError("refused")})
+    assert len(eps) == 1 and eps[0].scan_error_category == "exception"
+    assert o.kind == "unreachable" and o.row_emitted is True
+
+
+@pytest.mark.parametrize("code", [8, 13, 48, 49, 53])
+def test_outcome_anonymous_bind_refused_is_missing_credentials(code):
+    """235.3 review A-WR-04: the server answered and refused the anonymous
+    bind; the scanner presents no credentials, so this is missing credentials
+    (D-06), never auth_failed and never unreachable."""
+    exc = codesign_scanner._BindRejected("anonymous bind rejected", code)
+    eps, (o,) = _outcome_run({"side_effect": exc})
+    assert eps == []
+    assert o.kind == "missing_credentials" and o.row_emitted is False
+
+
+def test_outcome_zero_certs_answered():
+    eps, (o,) = _outcome_run({"return_value": iter([])})
+    assert eps == [] and o.kind == "answered"
+
+
+def test_outcome_none_sink_unchanged():
+    assert _run_with_entries([]) == []
+
+
+def test_outcome_contract_violation_propagates():
+    with pytest.raises(TargetOutcomeContractError):
+        _outcome_run({"side_effect": OSError("x")}, expected=["not-this-target"])

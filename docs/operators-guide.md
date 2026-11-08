@@ -199,6 +199,47 @@ the same scanner.
 
 ### 3.0 Start a scan from the dashboard
 
+**Before a client scan**
+
+Run this checklist before pointing a dashboard scan at a client environment. A connector that
+cannot run is recorded as skipped or failed with a reason (§3.1.3); it is never silently green.
+
+1. **Server policy for internal targets.** The server reads a `config.yaml` (`QUIRK_CONFIG_PATH`,
+   or `./config.yaml` in the directory `quirk serve` was started in). Set
+   `security.allow_internal_targets: true` there if the engagement includes internal IdPs or
+   APIs (for example an IdP at `sso.corp.internal` on a `10.x` address), and scope
+   `security.trusted_targets` to the engagement's hosts. Treat the flag as server policy for this
+   engagement, never a blanket default: a browser cannot set it, and only the JWT, SAML, OpenAPI
+   and REST fuzz scanners apply the guard (TLS and SSH scans are unaffected). Without it those
+   connectors read `skipped` / `internal-target-refused`.
+2. **Credentials in the server's shell.** Start `quirk serve` in a shell that already holds the
+   cloud credentials it should use (for example after a fresh `aws sso login`), because dashboard
+   jobs inherit the server's environment. Under an expired SSO session the cloud phase reads
+   `skipped` / `missing-credentials`, or `auth-failed` if the service rejected the credential.
+3. **Zero results are unverified.** Treat any enabled connector with zero results as unverified
+   until Scan Coverage (§3.1.3) shows that it `ran`. A database that fails to connect shows a
+   failed row (a red Failed badge) on Data at Rest, and the phase reads `failed` (or
+   `auth-failed`) when no target answered. A Postgres server that answered but whose scanner role
+   lacks `pg_read_all_stats` shows a neutral Incomplete row with the `GRANT` remediation instead.
+   An empty state that says "Failed: the scanner stopped with an error" means the phase itself
+   raised; look at the scanner, not the network.
+
+**New Scan warning.** When a JWT or SAML connector URL field holds a value the server policy
+would refuse, the New Scan form shows a non-blocking notice (`role="status"`) above Run Scan.
+Those two lists are the only form values `security.allow_internal_targets` gates, so plain
+Targets (TLS and SSH) are never checked. The notice lists each refused value with its field and
+reason, says those targets will not be scanned, names `security.allow_internal_targets` in the
+server's `config.yaml` as the policy, and states that TLS and SSH scanning are unaffected. When
+the check could not cover every value it says so. When the server's `config.yaml` cannot be read
+it says scans will be refused until it is fixed (`POST /api/jobs` answers 503 DASHBOARD-014). Run
+Scan stays enabled. The form fills it from the auth-gated, CSRF-protected, read-only
+`POST /api/config/internal-target-check` (JSON body `{"connectors": {"jwt_targets": [...],
+"saml_targets": [...]}}`, with the `X-Quirk-Request: 1` header), which answers
+`{allow_internal_targets, config_error, internal: [{field, preview, reason}], truncated}`. It only
+resolves names (DNS, never a connection): previews are redacted, at most 32 values and 16
+hostnames are checked, lookups stop after 3 seconds, and a half-typed hostname is not resolved.
+There is no `docs/api-reference.md` yet, so this endpoint is documented here.
+
 1. Start the dashboard with `quirk serve`. It listens on `127.0.0.1:8512`, and it refuses a
    non-loopback `--host` unless a dashboard token is set or `--insecure` is passed. Open
    `http://127.0.0.1:8512` in a browser.
@@ -230,7 +271,8 @@ Outputs land in `output.directory` (`./quirk-output` in the starter config): an 
 DOCX report, a PDF (when Playwright's Chromium is installed), `executive-summary-<ts>.md`,
 `technical-findings-<ts>.md`, `scorecard-<ts>.md`, `roadmap-<ts>.md`, `findings-<ts>.json`,
 `intelligence-<ts>.json`, `run-stats-<ts>.json`, and the CycloneDX CBOM as both
-`cbom-<ts>.cdx.json` and `cbom-<ts>.cdx.xml`. The SQLite database is `output.db_path`.
+`cbom-<ts>.cdx.json` and `cbom-<ts>.cdx.xml`. The SQLite database is `output.db_path`. A CLI scan (`quirk --config <file>.yaml`) uses the same phase recorder as the dashboard, so the same
+Scan Coverage reasons (§3.1.3) appear for CLI runs.
 
 ### 3.1 Interpreting Results
 
@@ -341,8 +383,16 @@ require the dashboard API token like every other `/api/scans`/`/api/jobs` route.
 
 Expanding "Show detail" reveals one row per scanner phase — ran rows show duration, skipped rows
 show the reason and detail exactly as described in `docs/report-interpretation.md` §22's skip-reason
-table, colored by severity (`missing-credentials` amber, `failed` red, `missing-binary` in the high-severity
-color, the other three skip reasons neutral, `ran` green). `missing-binary` (5.28.1) means a
+table, colored by severity (`ran` green; `missing-credentials`, `missing-binary`,
+`internal-target-refused` and `auth-failed` in the high-severity orange; `failed` red; the other
+three skip reasons `disabled-by-config`, `missing-extra` and `no-eligible-targets` neutral).
+`internal-target-refused` means every target of that connector is an internal address that server
+policy refuses (§3.0 checklist); `auth-failed` means every target answered but rejected the
+credentials (for example an expired SSO session or a rejected Vault token). A connector reads `ran`
+only if at least one target answered, and a source scan where every target fails reads `failed`,
+not `skipped`, as in 5.28.1. Dashboard pages with no data for a domain state the recorded reason
+instead of a generic empty line, and Data at Rest lists a database target that failed to connect as
+a failed row. `missing-binary` (5.28.1) means a
 configured container scan (or source scan) could not run because its required external
 binary is not on `PATH`:
 unlike the neutral reasons it is counted as a scan error, the domain reads Not assessed, and one

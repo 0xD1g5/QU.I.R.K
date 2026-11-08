@@ -34,7 +34,7 @@ class CryptoEndpoint(Base):
     cert_not_after = Column(DateTime, nullable=True)
 
     scan_error = Column(Text, nullable=True)
-    scan_error_category = Column(String(32), nullable=True)  # Phase 41 D-11 + Phase 57 D-06 + Phase 145 D-05: missing_extra|missing_binary|timeout|exception|config|invalid_input|liveness_skip|privilege_fallback
+    scan_error_category = Column(String(32), nullable=True)  # Phase 41 D-11 + Phase 57 D-06 + Phase 145 D-05: missing_extra|missing_binary|timeout|exception|config|invalid_input|liveness_skip|privilege_fallback|internal_target_refused|auth_failed|missing_credentials|targets_unreachable|target_unanswered (Phase 235.3)
     tls_blocker_reason = Column(String(64), nullable=True)
     service_detail = Column(Text, nullable=True)
 
@@ -291,6 +291,9 @@ SCAN_PHASE_SKIP_REASONS = frozenset({
     "missing-credentials",
     "missing-binary",
     "failed",
+    # Phase 235.3 D-06: set only by run_scan._classify_connector_outcomes
+    "internal-target-refused",
+    "auth-failed",
 })
 
 

@@ -31,6 +31,13 @@ from urllib.parse import urlparse
 from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from quirk.models import CryptoEndpoint
+from quirk.scanner.target_outcome import (
+    OUTCOME_ANSWERED,
+    OUTCOME_UNREACHABLE,
+    TargetOutcomeContractError,
+    outcome_for_url_guard,
+)
+from quirk.util.safe_exc import safe_str
 from quirk.util.outbound_fetch import OutboundFetchRejected, fetch_validated
 from quirk.util.url_allowlist import _redact_url_preview, validate_external_url
 from quirk.assessment.migration_advisor import _matches  # Phase 77 D-03 — word-boundary SHA1 detection
@@ -70,6 +77,7 @@ def _fetch_metadata(
     timeout: int,
     *,
     allow_internal: bool = False,
+    outcomes=None,
 ) -> "bytes | None":
     """Fetch raw content from a SAML metadata or OIDC discovery URL.
 
@@ -80,6 +88,10 @@ def _fetch_metadata(
     Follows redirects one hop at a time, validating each hop. Uses system CA bundle (verify=True) so a network-positioned
     attacker cannot serve a forged metadata document via a fake TLS connection.
     Returns raw bytes on success, None on any error.
+
+    235.3 D-05: when ``outcomes`` is given, the per-target outcome is recorded
+    against ``url`` (any HTTP response -> answered; guard refusal ->
+    outcome_for_url_guard; other exception -> unreachable).
     """
     try:
         response = fetch_validated(
@@ -89,6 +101,8 @@ def _fetch_metadata(
             ),
             allow_internal=allow_internal,
         )
+        if outcomes is not None:
+            outcomes.record(url, OUTCOME_ANSWERED)
         if response.status_code == 200:
             return response.content
         logging.getLogger(__name__).warning(
@@ -99,8 +113,14 @@ def _fetch_metadata(
         logging.getLogger(__name__).warning(
             "SAML: blocked fetch to %r (%s)", exc.preview, exc.reason
         )
+        if outcomes is not None:
+            outcomes.record(url, *outcome_for_url_guard(exc.reason))
         return None
+    except TargetOutcomeContractError:
+        raise
     except Exception as exc:
+        if outcomes is not None:
+            outcomes.record(url, OUTCOME_UNREACHABLE, safe_str(exc))
         logging.getLogger(__name__).warning(
             "SAML fetch failed for %r (%s)", _redact_url_preview(url), type(exc).__name__
         )
@@ -441,6 +461,7 @@ def scan_saml_targets(
     session_start=None,
     *,
     allow_internal_targets: bool = False,
+    outcomes=None,
 ) -> list:
     """Scan SAML IdP metadata and OIDC discovery endpoints.
 
@@ -462,7 +483,9 @@ def scan_saml_targets(
     all_endpoints = []
 
     for target_url in targets:
-        content = _fetch_metadata(target_url, timeout, allow_internal=allow_internal_targets)
+        content = _fetch_metadata(
+            target_url, timeout, allow_internal=allow_internal_targets, outcomes=outcomes
+        )
         if content is None:
             log.warning("SAML: no content fetched from %s, skipping", target_url)
             continue

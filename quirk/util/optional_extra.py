@@ -201,6 +201,34 @@ def select_nmap_port_list(cfg, nmap_available: bool) -> list:
     return getattr(cfg.scan, "ports_tls", None) or []
 
 
+def _entry_reports(entry: OptionalExtra, connectors) -> bool:
+    """True iff ``probe_missing_extras`` emits *entry*'s advisory row."""
+    # Gating check: silent if every gating flag is False.
+    if entry.enabled_attrs:
+        if not any(getattr(connectors, attr, False) for attr in entry.enabled_attrs):
+            return False
+    # Availability check: silent if every module is importable AND binary (if set) is found.
+    modules_ok = all(find_spec(m) is not None for m in entry.modules)
+    binary_ok = (entry.binary is None) or (shutil.which(entry.binary) is not None)
+    return not (modules_ok and binary_ok)
+
+
+def probe_reports_module(cfg, module: str) -> bool:
+    """Phase 235.3 review B-CR-01/B-CR-02: has ``probe_missing_extras`` already
+    emitted a ``missing_extra`` row that covers *module* for this *cfg*?
+
+    A connector closure that skips ``missing-extra`` calls this so the missing
+    extra is counted exactly once: it emits its own advisory only when the
+    probe did not. Same decision as the probe itself (``_entry_reports``), so
+    the two cannot drift.
+    """
+    connectors = getattr(cfg, "connectors", cfg)
+    return any(
+        module in entry.modules and _entry_reports(entry, connectors)
+        for entry in REGISTRY
+    )
+
+
 def probe_missing_extras(cfg, error_endpoints) -> None:
     """Walk REGISTRY; append one ADVISORY ``CryptoEndpoint`` per gap.
 
@@ -224,14 +252,7 @@ def probe_missing_extras(cfg, error_endpoints) -> None:
     connectors = getattr(cfg, "connectors", cfg)
 
     for entry in REGISTRY:
-        # Gating check: skip silently if every gating flag is False.
-        if entry.enabled_attrs:
-            if not any(getattr(connectors, attr, False) for attr in entry.enabled_attrs):
-                continue
-        # Availability check: skip if every module is importable AND binary (if set) is found.
-        modules_ok = all(find_spec(m) is not None for m in entry.modules)
-        binary_ok = (entry.binary is None) or (shutil.which(entry.binary) is not None)
-        if modules_ok and binary_ok:
+        if not _entry_reports(entry, connectors):
             continue
         # Enabled (or always-probe) AND missing → emit one advisory.
         print(format_error("INSTALL-001"), file=sys.stderr)

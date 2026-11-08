@@ -340,3 +340,175 @@ def test_url_scope_accepts_bare_fqdn_target():
         except SpecParsingError as exc:
             assert "scope" not in str(exc).lower(), f"scope gate wrongly rejected in-scope host: {exc}"
         mock_get.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# 235.3-03 D-05: spec outcome recording
+# ---------------------------------------------------------------------------
+import socket as _socket
+
+from quirk.scanner.openapi_scanner import SpecParsingError as _SPE, scan_openapi_spec as _scan_spec
+from quirk.scanner.target_outcome import TargetOutcomeContractError, TargetOutcomes
+
+
+def test_openapi_outcome_loopback_refused_then_raises():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    url = "http://localhost:20001/openapi.json"
+    sink = TargetOutcomes([url])
+    with pytest.raises(_SPE):
+        _scan_spec(url, cfg_targets=["localhost"], allow_internal=False, outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["refused"]
+    assert "loopback" in res[0].detail
+
+
+def test_openapi_outcome_closed_port_unreachable_then_raises():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    with _socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    url = f"http://127.0.0.1:{port}/openapi.json"
+    sink = TargetOutcomes([url])
+    with pytest.raises(_SPE):
+        _scan_spec(url, cfg_targets=["127.0.0.1"], allow_internal=True, outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_outcome_local_file_answered(tmp_path):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps({"openapi": "3.0.0", "info": {"title": "t", "version": "1"}, "paths": {}}))
+    sink = TargetOutcomes([str(spec)])
+    _scan_spec(str(spec), outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["answered"]
+
+
+def test_openapi_outcome_none_sink_unchanged():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    with pytest.raises(_SPE):
+        _scan_spec("http://localhost:20001/openapi.json", cfg_targets=["localhost"])
+
+
+def test_openapi_outcome_contract_violation_propagates():
+    # The spec is a single-target phase: a sink with any other shape (here two
+    # expected targets) is a label-contract violation and must not be swallowed.
+    sink = TargetOutcomes(["not-this-target", "nor-this-one"])
+    with pytest.raises(TargetOutcomeContractError):
+        _scan_spec(
+            "http://localhost:20001/openapi.json", cfg_targets=["localhost"], outcomes=sink
+        )
+
+
+# ---------------------------------------------------------------------------
+# 235.3 review A-CR-02 / A-WR-05: answered only once the spec is parsed
+# ---------------------------------------------------------------------------
+
+def _fake_http_resp(status, content=b""):
+    import httpx
+    req = httpx.Request("GET", "https://api.example.com/openapi.json")
+    return httpx.Response(status, content=content, request=req)
+
+
+_SPEC_URL = "https://api.example.com/openapi.json"
+
+
+def _ok_guard():
+    """Bypass the DNS-resolving SSRF guard so the fetch leg is exercised offline."""
+    return patch(
+        "quirk.scanner.openapi_scanner.validate_external_url",
+        return_value=MagicMock(ok=True),
+    )
+
+
+@pytest.mark.parametrize("status", [404, 500, 401, 403])
+def test_openapi_url_http_error_does_not_record_answered(status):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(status)):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["unreachable"]
+    assert f"HTTP {status}" in res[0].detail
+    assert res[0].detail != "no outcome recorded by scanner"
+
+
+def test_openapi_url_oversize_does_not_record_answered():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    from quirk.scanner import openapi_scanner as _mod
+    sink = TargetOutcomes([_SPEC_URL])
+    big = b"x" * (_mod.MAX_SPEC_BYTES + 1)
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, big)):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    res = sink.resolved()
+    assert [r.kind for r in res] == ["unreachable"]
+    assert "10 MB" in res[0].detail
+
+
+@pytest.mark.parametrize("body", [b"::: not: [valid", b"[1, 2, 3]"])
+def test_openapi_url_invalid_spec_does_not_record_answered(body):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, body)):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_url_external_ref_does_not_record_answered():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    spec = {"openapi": "3.0.0", "info": {"title": "t", "version": "1"},
+            "paths": {"/a": {"$ref": "https://evil.example.net/x.yaml"}}}
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, json.dumps(spec).encode())):
+        with pytest.raises(_SPE):
+            _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_file_external_ref_does_not_record_answered(tmp_path):
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps({
+        "openapi": "3.0.0", "info": {"title": "t", "version": "1"},
+        "paths": {"/a": {"$ref": "https://evil.example.net/x.yaml"}},
+    }))
+    sink = TargetOutcomes([str(spec)])
+    with pytest.raises(_SPE):
+        _scan_spec(str(spec), outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["unreachable"]
+
+
+def test_openapi_url_valid_spec_records_answered():
+    # [api] extra absent from CI .[all]: without it the scanner returns its
+    # missing_extra row before any fetch, so these outcome legs cannot run.
+    pytest.importorskip("openapi_spec_validator")
+    spec = {"openapi": "3.0.0", "info": {"title": "t", "version": "1"}, "paths": {}}
+    sink = TargetOutcomes([_SPEC_URL])
+    with _ok_guard(), patch("quirk.scanner.openapi_scanner.fetch_validated",
+               return_value=_fake_http_resp(200, json.dumps(spec).encode())):
+        _scan_spec(_SPEC_URL, cfg_targets=["api.example.com"], outcomes=sink)
+    assert [r.kind for r in sink.resolved()] == ["answered"]

@@ -50,6 +50,26 @@ class ConfigEffectiveResponse(BaseModel):
     redacted_field_count: int
 
 
+# 235.3 / D-11 / P-12: POST /api/config/internal-target-check shapes.
+class InternalTargetCheckRequest(BaseModel):
+    # Connector overlay values, validated by validate_connectors_overlay.
+    # C-WR-07: a POST body (CSRF-protected), not GET query parameters.
+    connectors: Optional[Dict[str, Any]] = None
+
+
+class InternalTargetEntry(BaseModel):
+    field: str      # "jwt_targets" | "saml_targets" (the policy-gated connector lists)
+    preview: str    # the classified URL, redacted via target_outcome.redact_target
+    reason: str     # "loopback" | "internal_ip" | "link_local"
+
+
+class InternalTargetCheckResponse(BaseModel):
+    allow_internal_targets: bool
+    config_error: Optional[str] = None
+    internal: List[InternalTargetEntry] = []
+    truncated: bool = False
+
+
 # Phase 193 / PARITY-02: GET /api/connectors/availability response shapes.
 # Frozen interfaces -- plan 04's route and plan 07's React panel consume
 # these shapes directly.
@@ -303,6 +323,10 @@ class DarFinding(BaseModel):
     # Kubernetes fields
     namespace: Optional[str] = None
     secret_type: Optional[str] = None
+
+    # Phase 235.3 D-10: safe scan_error text for a failed database target
+    # (title "<PROTO> connection failed"). None for every healthy finding.
+    scan_error: Optional[str] = None
     encryption_provider: Optional[str] = None
 
     # Vault fields
@@ -595,7 +619,10 @@ class PartialFailureEntry(BaseModel):
 
     Sourced from scan_checkpoints.error_summary JSON array.
     stage: inventory|tls|ssh|api|identity|data_at_rest|broker_email|reports
-    error_category: exception|missing_extra|missing_binary
+    error_category: exception|missing_extra|missing_binary|
+        the four 235.3 coverage-skip categories (internal_target_refused,
+        auth_failed, missing_credentials, targets_unreachable) and
+        target_unanswered
     """
     stage: str
     scanner: str
@@ -609,6 +636,26 @@ class ScanMeta(BaseModel):
     scanned_at: Optional[UTCDateTime] = None
     total_endpoints: int
     total_findings: int
+
+
+# ---- Scan Coverage (Phase 192 Plan 09 / OBS-02) ----
+# Mirrors quirk/reports/coverage.py::load_scan_coverage's frozen payload shape
+# verbatim — the dashboard and the report pipeline read the same loader.
+
+class ScanCoveragePhase(BaseModel):
+    phase_name: str
+    label: str
+    status: str
+    reason: Optional[str] = None
+    detail: Optional[str] = None
+    duration_sec: Optional[float] = None
+
+
+class ScanCoverageResponse(BaseModel):
+    recorded: bool
+    ran: int
+    skipped: int
+    phases: List[ScanCoveragePhase]
 
 
 class ScanLatestResponse(BaseModel):
@@ -633,6 +680,10 @@ class ScanLatestResponse(BaseModel):
     # honest reading for any caller/fixture that does not set it, mirroring
     # the Phase 188 coverage_disclosure additive-default precedent.
     excluded_cert_count: int = 0
+    # Phase 235.3 D-09: phase-coverage block for the scan served, so a page
+    # can read its connector's scan_phase_records row. Additive default None
+    # (excluded_cert_count precedent); older clients are unaffected.
+    coverage: Optional[ScanCoverageResponse] = None
     # Phase 201 LIFT-05: advisory simulation of the readiness score if every
     # modelable roadmap item were resolved. A top-level sibling of `roadmap`
     # — deliberately NOT a field of `ScoreData` — so the ADVISORY-02
@@ -1320,26 +1371,6 @@ class MergeLatestResponse(BaseModel):
     merge is null when no merge_run row exists yet (first-boot / no merges run).
     """
     merge: Optional[MergeLatestData] = None
-
-
-# ---- Scan Coverage (Phase 192 Plan 09 / OBS-02) ----
-# Mirrors quirk/reports/coverage.py::load_scan_coverage's frozen payload shape
-# verbatim — the dashboard and the report pipeline read the same loader.
-
-class ScanCoveragePhase(BaseModel):
-    phase_name: str
-    label: str
-    status: str
-    reason: Optional[str] = None
-    detail: Optional[str] = None
-    duration_sec: Optional[float] = None
-
-
-class ScanCoverageResponse(BaseModel):
-    recorded: bool
-    ran: int
-    skipped: int
-    phases: List[ScanCoveragePhase]
 
 
 # ---- Report Artifact Manifest (Phase 209 / DELIV-01) ----

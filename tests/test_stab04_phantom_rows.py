@@ -12,6 +12,7 @@ into the console DB (phantom endpoints in merged output).
 """
 from __future__ import annotations
 
+import pytest
 from datetime import datetime, timezone
 
 
@@ -142,4 +143,36 @@ def test_read_scan_endpoints_excludes_missing_binary_advisory(tmp_path):
 
     hosts = {r.host for r in _read_scan_endpoints(db_path)}
     assert "source_scanner" not in hosts
+    assert "repo/app.py" in hosts
+
+
+@pytest.mark.parametrize("category", [
+    "internal_target_refused", "auth_failed", "missing_credentials", "targets_unreachable",
+])
+def test_read_scan_endpoints_excludes_coverage_skip_advisory(tmp_path, category):
+    """235.3 D-07: the four coverage-skip advisory rows never enter the push
+    envelope; NULL-category rows stay (T-115-04 IS NULL clause)."""
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.cli.sensor_cmd import _read_scan_endpoints
+    from quirk.db import init_db
+    from quirk.models import CryptoEndpoint
+
+    db_path = str(tmp_path / "scan.db")
+    engine = init_db(db_path)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with sessionmaker(bind=engine)() as db:
+        db.add(CryptoEndpoint(
+            host="jwt_scanner", port=0, protocol="ADVISORY",
+            scan_error="1 of 1 targets skipped",
+            scan_error_category=category, scanned_at=None,
+        ))
+        db.add(CryptoEndpoint(
+            host="repo/app.py", port=0, protocol="SOURCE",
+            scan_error_category=None, scanned_at=now,
+        ))
+        db.commit()
+
+    hosts = {r.host for r in _read_scan_endpoints(db_path)}
+    assert "jwt_scanner" not in hosts
     assert "repo/app.py" in hosts

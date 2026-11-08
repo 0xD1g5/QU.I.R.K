@@ -239,3 +239,97 @@ def test_safe_only_input_yields_just_coverage_gaps() -> None:
     assert len(eps) == 4, f"expected 4 coverage-gap LOWs, got {len(eps)}"
     assert all(ep.severity == "LOW" for ep in eps)
     assert all((ep.service_detail or "").startswith("coverage-gap|") for ep in eps)
+
+
+# ---------------------------------------------------------------------------
+# Phase 235.3 D-05/D-06: per-target outcomes
+# ---------------------------------------------------------------------------
+
+from quirk.scanner.target_outcome import (  # noqa: E402
+    TargetOutcomeContractError,
+    TargetOutcomes,
+)
+
+
+def _adcs_outcome_run(bind_patch: dict, expected=None, **scan_kw):
+    tgt = _target()
+    sink = TargetOutcomes(expected if expected is not None else [str(tgt)])
+    with patch.object(adcs_scanner, "LDAP3_AVAILABLE", True), \
+         patch.object(adcs_scanner, "ldap3", _fake_ldap3_module(), create=True), \
+         patch.object(adcs_scanner, "_bind_and_query", **bind_patch):
+        eps = scan_adcs_targets([tgt], timeout=5, outcomes=sink, **scan_kw)
+    return eps, sink.resolved()
+
+
+def test_outcome_bind_failure_unreachable_row_kept() -> None:
+    eps, (o,) = _adcs_outcome_run({"side_effect": _FakeLDAPBindError("refused")})
+    assert len(eps) == 1 and eps[0].scan_error_category == "exception"
+    assert o.kind == "unreachable" and o.row_emitted is True
+
+
+def test_outcome_bind_invalid_credentials_auth_failed() -> None:
+    exc = _FakeLDAPBindError("bind-rejected")
+    exc.result_code = 49
+    eps, (o,) = _adcs_outcome_run(
+        {"side_effect": exc}, user="CN=svc,DC=quirk,DC=lab", password="pw",
+    )
+    assert len(eps) == 1
+    assert o.kind == "auth_failed" and o.row_emitted is True
+
+
+@pytest.mark.parametrize("code", [8, 13, 48, 49, 53])
+def test_outcome_anonymous_bind_refused_is_missing_credentials(code) -> None:
+    """235.3 review A-WR-04: a DC that answered and refused an anonymous bind
+    (strongerAuthRequired / inappropriateAuthentication / unwillingToPerform)
+    is missing credentials when no adcs_user is configured, not unreachable."""
+    exc = _FakeLDAPBindError("bind-rejected")
+    exc.result_code = code
+    eps, (o,) = _adcs_outcome_run({"side_effect": exc})
+    assert len(eps) == 1
+    assert o.kind == "missing_credentials" and o.row_emitted is True
+
+
+@pytest.mark.parametrize("code", [8, 48, 50, 53])
+def test_outcome_credentialed_bind_refused_is_auth_failed(code) -> None:
+    exc = _FakeLDAPBindError("bind-rejected")
+    exc.result_code = code
+    _eps, (o,) = _adcs_outcome_run(
+        {"side_effect": exc}, user="CN=svc,DC=quirk,DC=lab", password="pw",
+    )
+    assert o.kind == "auth_failed"
+
+
+def test_outcome_zero_templates_answered() -> None:
+    conn = _mock_conn_yielding([], [])
+    _eps, (o,) = _adcs_outcome_run(
+        {"return_value": (conn, "CN=Configuration,DC=quirk,DC=lab")}
+    )
+    assert o.kind == "answered"
+
+
+def test_outcome_no_config_context_answered_row_kept() -> None:
+    conn = _mock_conn_yielding([], [])
+    tgt = SimpleNamespace(host="h", port=1, realm=None)
+    sink = TargetOutcomes([str(tgt)])
+    with patch.object(adcs_scanner, "LDAP3_AVAILABLE", True), \
+         patch.object(adcs_scanner, "ldap3", _fake_ldap3_module(), create=True), \
+         patch.object(adcs_scanner, "_bind_and_query", return_value=(conn, None)):
+        eps = scan_adcs_targets([tgt], timeout=5, outcomes=sink)
+    (o,) = sink.resolved()
+    # 235.3 review A-WR-04: the bind succeeded, so the server answered; the
+    # missing naming context is a configuration gap carried by the in-band row.
+    assert len(eps) == 1 and eps[0].scan_error == "no-config-naming-context"
+    assert o.kind == "answered"
+
+
+def test_outcome_none_sink_unchanged() -> None:
+    conn = _mock_conn_yielding([], [])
+    eps = _run_scan_with_mock_conn(conn)
+    assert len(eps) == 4  # coverage gaps only
+
+
+def test_outcome_contract_violation_propagates() -> None:
+    with pytest.raises(TargetOutcomeContractError):
+        _adcs_outcome_run(
+            {"side_effect": _FakeLDAPBindError("x")}, expected=["not-this-target"]
+        )

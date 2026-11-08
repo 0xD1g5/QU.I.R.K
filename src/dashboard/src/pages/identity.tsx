@@ -10,7 +10,8 @@ import {
   type SortingState,
 } from "@tanstack/react-table"
 import { useScanData } from "@/hooks/useScanData"
-import type { IdentityFinding } from "@/types/api"
+import { emptyStateFor, humanSkipReason, isPhaseError } from "@/lib/coverage-reason"
+import type { IdentityFinding, ScanCoverageResponse } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,9 +33,40 @@ const SEVERITY_STYLES: Record<string, string> = {
 
 const PROTOCOLS = ["KERBEROS", "SAML", "DNSSEC"] as const
 
-function getProtocolStatus(findings: IdentityFinding[], protocol: string) {
+// C-WR-08: the scan_phase_records row behind each protocol card.
+const PROTOCOL_PHASES: Record<string, string> = {
+  KERBEROS: "kerberos_scanning",
+  SAML: "saml_scanning",
+  DNSSEC: "dnssec_scanning",
+}
+
+/**
+ * Card status for a protocol with no findings, read from the same coverage
+ * record as the empty state (C-WR-08): Ran for a phase that ran, Skipped /
+ * Failed with the recorded reason, Not Scanned only for disabled-by-config or
+ * no record at all.
+ */
+function noFindingStatus(coverage: ScanCoverageResponse | null | undefined, protocol: string) {
+  const notScanned = { count: 0, worst: null, label: "Not Scanned", note: null as string | null }
+  if (!coverage || !coverage.recorded) return notScanned
+  const p = coverage.phases.find((ph) => ph.phase_name === PROTOCOL_PHASES[protocol])
+  if (!p || (p.status !== "ran" && p.reason === "disabled-by-config")) return notScanned
+  if (p.status === "ran") return { ...notScanned, label: "Ran" }
+  if (isPhaseError(p)) return { ...notScanned, label: "Failed", note: "the scanner stopped with an error" }
+  return {
+    ...notScanned,
+    label: "Skipped",
+    note: p.reason === "failed" ? "no target answered" : humanSkipReason(p.reason),
+  }
+}
+
+function getProtocolStatus(
+  findings: IdentityFinding[],
+  protocol: string,
+  coverage?: ScanCoverageResponse | null,
+) {
   const pf = findings.filter((f) => f.protocol === protocol)
-  if (pf.length === 0) return { count: 0, worst: null, label: "Not Scanned" }
+  if (pf.length === 0) return noFindingStatus(coverage, protocol)
   const hasCritical = pf.some((f) => f.severity === "CRITICAL")
   const hasHigh = pf.some((f) => f.severity === "HIGH")
   const hasMedium = pf.some((f) => f.severity === "MEDIUM")
@@ -42,6 +74,7 @@ function getProtocolStatus(findings: IdentityFinding[], protocol: string) {
     count: pf.length,
     worst: hasCritical ? "CRITICAL" : hasHigh ? "HIGH" : hasMedium ? "MEDIUM" : "LOW",
     label: hasCritical ? "Critical" : hasHigh ? "At Risk" : "Clean",
+    note: null as string | null,
   }
 }
 
@@ -50,6 +83,9 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   "At Risk": "bg-[hsl(var(--risk-badge-high))] text-[hsl(var(--risk-badge-high-foreground))]",
   "Clean": "bg-[hsl(var(--qs-node-safe))] text-[hsl(var(--qs-node-safe-foreground))]",
   "Not Scanned": "bg-[hsl(var(--status-neutral))] text-white",
+  "Ran": "bg-[hsl(var(--status-neutral))] text-white",
+  "Skipped": "bg-[hsl(var(--status-neutral))] text-white",
+  "Failed": "bg-[hsl(var(--status-critical))] text-white",
 }
 
 const PROTOCOL_LABELS: Record<string, string> = {
@@ -112,7 +148,7 @@ export function IdentityPage() {
       {/* Per-protocol summary cards (D-10) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {PROTOCOLS.map((proto) => {
-          const status = getProtocolStatus(identityFindings, proto)
+          const status = getProtocolStatus(identityFindings, proto, data?.coverage)
           return (
             <Card key={proto}>
               <CardHeader className="pb-2">
@@ -130,6 +166,9 @@ export function IdentityPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   {status.count === 1 ? "finding" : "findings"}
                 </p>
+                {status.note && (
+                  <p className="text-xs text-muted-foreground mt-1">{status.note}</p>
+                )}
               </CardContent>
             </Card>
           )
@@ -138,7 +177,7 @@ export function IdentityPage() {
 
       {/* Identity findings table (D-11) */}
       {identityFindings.length === 0 ? (
-        <EmptyStateCard emptyFor="scan-latest" message="No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan." />
+        <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["kerberos_scanning", "saml_scanning", "dnssec_scanning"], "No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan.")} />
       ) : (
         <>
           <div className="flex gap-3 items-center">

@@ -102,7 +102,8 @@ def test_scan_phase_record_same_phase_different_scan_run_both_persist(tmp_path) 
 def test_scan_phase_skip_reasons_exact_membership() -> None:
     from quirk.models import SCAN_PHASE_SKIP_REASONS
 
-    assert len(SCAN_PHASE_SKIP_REASONS) == 6
+    # Phase 235.3 D-06: 6 -> 8 (internal-target-refused, auth-failed added).
+    assert len(SCAN_PHASE_SKIP_REASONS) == 8
     assert SCAN_PHASE_SKIP_REASONS == frozenset({
         "disabled-by-config",
         "missing-extra",
@@ -110,6 +111,8 @@ def test_scan_phase_skip_reasons_exact_membership() -> None:
         "missing-credentials",
         "missing-binary",
         "failed",
+        "internal-target-refused",
+        "auth-failed",
     })
 
 
@@ -784,8 +787,13 @@ def test_no_unclassified_phase_skip_sentinel_returns_remain() -> None:
 
 def test_every_recorder_skip_call_site_uses_a_reason_from_the_frozen_set() -> None:
     """Runtime source scan: every `_recorder.skip("...", ...)` / `recorder.skip("...", ...)`
-    call site in run_scan.py must pass one of the five frozen SCAN_PHASE_SKIP_REASONS —
-    catches a typo'd or invented reason string at the point it's introduced."""
+    call site in run_scan.py must pass a literal reason from the frozen SCAN_PHASE_SKIP_REASONS —
+    catches a typo'd or invented reason string at the point it's introduced.
+
+    Phase 235.3: the vocabulary has eight reasons; internal-target-refused and
+    auth-failed (and the reused failed/missing-credentials) are set only by
+    _classify_connector_outcomes via a VARIABLE, so this literal scan does not
+    see them."""
     import inspect
     import re
     import run_scan
@@ -799,8 +807,9 @@ def test_every_recorder_skip_call_site_uses_a_reason_from_the_frozen_set() -> No
     )
     for reason in reasons_used:
         assert reason in SCAN_PHASE_SKIP_REASONS, f"unknown skip reason literal: {reason!r}"
-    # `failed` is only ever emitted by _PhaseRecorder.record_failed(), never a
-    # guard-site skip() call — guards only ever use the other four reasons.
+    # `failed` is only ever emitted by _PhaseRecorder.record_failed() or by
+    # _classify_connector_outcomes via a variable, never a literal guard-site
+    # skip() call.
     assert "failed" not in reasons_used
 
 
