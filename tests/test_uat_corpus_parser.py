@@ -521,7 +521,7 @@ def test_iter_cases_total_matches_independent_heading_count():
     cases = list(uat_corpus.iter_cases(lines))
     assert len(cases) == independent_count
     # 205-06: the frozen literal pin that used to sit here is GONE, discharging
-    # .planning/todos/pending/uat-corpus-parser-test-pins-a-literal-count.md.
+    # .planning/todos/completed/uat-corpus-parser-test-pins-a-literal-count.md.
     #
     # It was hand-bumped 878 -> 882 -> 887 in a single day and would have needed a FOURTH bump to
     # 892 for Series 205 -- which is how it was found: it turned `Linux Full Suite` red on nothing

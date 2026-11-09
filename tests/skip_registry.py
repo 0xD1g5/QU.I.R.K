@@ -71,6 +71,8 @@ ALLOWED_SKIPS = [
     # branch and runs the assertions for real.
     ("test_scheduler_dispatch_profile.py", "_run_scan_argparse", "environment_subprocess_signal", 'macOS full-suite subprocess SIGSEGV; child never executed so there is no argparse result to assert. Runs for real on CI/Linux.'),
     ("test_backlog_reconciliation_gate.py", "test_full_corpus_local_only_leg", "environment_capability", "TRIAGE-09 RQ-2: the full-corpus 999.* leg needs untracked .planning/backlog/ + .planning/milestones/ sources that a fresh CI checkout cannot see; skips honestly naming the missing paths, runs for real on a full local working tree."),
+    ("test_ledger_completeness.py", "test_every_backlog_dir_has_a_ledger_row", "environment_capability", "2026-11-06 master ledger: the 999.* backlog-dir leg needs the mostly untracked .planning/backlog/ tree that a fresh CI checkout cannot see; skips naming the missing path, runs for real on a full local working tree."),
+    ("test_ledger_completeness.py", "test_ledger_names_no_embargoed_item", "environment_capability", "2026-11-06 master ledger: the embargo-leak leg needs the untracked .planning/security-embargo/ tree, which is never published; skips naming the missing path, runs for real on a full local working tree."),
     ("test_broker_scanner_kafka.py", "<module>", "optional_extra", "broker_scanner is [motion]; D-05"),
     ("test_broker_scanner_rabbitmq.py", "<module>", "optional_extra", "broker_scanner is [motion]; D-05"),
     ("test_broker_scanner_redis.py", "<module>", "optional_extra", "broker_scanner is [motion]; D-05"),

@@ -57,3 +57,11 @@ in 9.x, not at the substitute-proof logic being wrong.
 Phase 203's own verification is unaffected: the 10-test staleness gate is 87 passed / 1 failed,
 where that 1 is `test_hardware_matrix_not_stale` — a deliberate, recorded deferral (see
 `hardware-matrix-source-urls-broadly-rotted.md`), not this node.
+
+## Resolution
+
+**DONE — 2026-11-06 ledger consolidation** (re-verified against main 139ed513, confidence medium).
+
+test passes on main code (local run 2026-11-06: 1 passed); likely fixed in 205-06 (main 70362251)
+
+Ledger row:  § Closed.
