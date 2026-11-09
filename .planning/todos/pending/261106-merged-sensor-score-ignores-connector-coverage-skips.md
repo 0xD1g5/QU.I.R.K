@@ -27,3 +27,10 @@ Push `scan_phase_records` (or the coverage-skip advisory rows) with the sensor p
 
 Medium. Needs a sensor payload schema addition (versioned, backward compatible) plus merge-side scoring wiring;
 the scoring side already exists (235.3-09). Roughly 1 plan.
+
+## Confirmed and widened (v5.28.2 milestone audit, 2026-11-09)
+
+Confirmed in code: `quirk/cli/sensor_cmd.py:598` filters the coverage-skip advisory rows out of the push. Also,
+`scan_phase_records` are never pushed. A sensor-sourced scan therefore has no phase records on the server, so
+its Scan Coverage chips and its Data at Rest / Identity / Motion empty states fall back to the static text
+instead of the recorded skip reason. The fix should push the phase records as well as the advisory rows.
