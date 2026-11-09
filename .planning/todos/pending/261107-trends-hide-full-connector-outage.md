@@ -40,3 +40,9 @@ Small. One category set in `trends.py`, plus a parametrized test. Check `sensor_
 which share `COVERAGE_SKIP_ADVISORY_CATEGORIES`, so the change does not widen beyond trends.
 
 LEDGER row needed once `chore/master-ledger` merges (`.planning/LEDGER.md` is not on `v5282-open`).
+
+## Wider than recorded (v5.28.2 milestone audit, 2026-11-09)
+
+The same exclusion also silences **notify**. `quirk/notify/payload.py:273` takes `scan_errors_new_count` from
+`trends.py:449`, so a full JWT, SAML or DNSSEC outage raises no new-scan-error drift signal in notifications
+either. A fix in `trends.py` covers both. Add a notify-payload assertion to the four-of-four-down test.
