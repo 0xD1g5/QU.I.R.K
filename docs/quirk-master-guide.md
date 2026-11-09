@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,802 lines, in reading order.
+Five guides, 7,803 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -606,6 +606,7 @@ pip install semgrep          # source scanning: known defect since 5.28.0, rules
 | `zsh: no matches found: quirk-scanner[all]` | quotes dropped — use `'quirk-scanner[all]'` |
 | `command not found: quirk` | venv not active in this terminal — `source ~/quirk/.venv/bin/activate` |
 | `sudo playwright install-deps` reports `command not found` | sudo's `secure_path` drops `.venv/bin` — run `playwright install-deps chromium` without `sudo` |
+| any `playwright` command fails with `libatomic.so.1: cannot open shared object file` | Playwright 1.65.0 and later bundle a Node driver that needs `libatomic1`, which minimal images such as `python:3.11-slim` leave out — `sudo apt install -y libatomic1`, then retry |
 | `cryptography` / Rust build failure | upgrade pip first (`pip install --upgrade pip`), then install the build packages named under step 1 and retry |
 
 ---
