@@ -1966,9 +1966,9 @@ eight skip reasons, each implying a specific operator action:
 | `missing-binary` | A required external tool (semgrep for source code, syft for container images) is not installed. The domain is Not assessed and the missing tool is counted as a scan error. | Install the tool and re-scan; run `quirk doctor` to see which binary is missing. |
 | `internal-target-refused` | Every target of the connector is an internal address that server policy refuses to scan (for example an internal IdP on a `10.x` address). Nothing was attempted against it. | Run the scan from a host whose policy allows internal targets, or change the server's internal-target policy; the New Scan page warns about this before you submit. |
 | `auth-failed` | Every target answered but rejected the credentials. The domain is Not assessed and the skip counts as a scan error. | Renew or replace the credential (for example after an expired SSO session) and re-scan. |
-| `failed` | The phase started and aborted with an error. | Check the error rows / logs for that phase; this is not a configuration gap, it is a runtime failure. |
+| `failed` | Either the phase started and aborted with an error, or (5.28.2) none of its targets answered and no more specific reason applies. The detail tells them apart: a no-answer row reads `N of N targets did not answer`, and the dashboard empty state says "no target answered" rather than "the scanner stopped with an error". | For a no-answer row, check that the targets are reachable from the scanning host. For an aborted phase, check the error rows / logs for that phase; that case is a runtime failure, not a configuration gap. |
 
-In 5.28.0, when Semgrep is installed, source code scanning records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. When Semgrep is not installed and `source_targets` is set (or Syft is not installed and `container_targets` is set), the phase is recorded as skipped with reason `missing-binary` (5.28.1), the domain reads *Not assessed*, and the missing tool counts as a scan error. Before 5.28.1 that case was recorded as ran with no findings. The ruleset-unavailable case is a known defect, not a configuration gap, and no config change fixes it.
+Since 5.28.0, when Semgrep is installed, source code scanning records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. When Semgrep is not installed and `source_targets` is set (or Syft is not installed and `container_targets` is set), the phase is recorded as skipped with reason `missing-binary` (5.28.1), the domain reads *Not assessed*, and the missing tool counts as a scan error. Before 5.28.1 that case was recorded as ran with no findings. The ruleset-unavailable case is a known defect, not a configuration gap, and no config change fixes it.
 
 A connector reads `ran` only if at least one of its targets answered. A target that answers with
 nothing (an empty bucket, a JWT endpoint with no tokens) still counts as answering. Each coverage
@@ -1997,6 +1997,9 @@ other connectors with no answering target read `skipped` with a named reason.
 that did not answer adds one scan-error row (category `target_unanswered`), so a partial result is
 visible as such. **Empty states.** Dashboard pages that have no data for a domain (Data at Rest,
 Identity, Motion) state the reason recorded in Scan Coverage rather than a generic "no data" line.
+**In the report.** Each connector skipped this way also adds one INFO advisory, "Connector skipped
+— no target answered" (category `coverage_gap`), which the HTML and DOCX reports list under
+Coverage Gaps and keep out of the findings tables, the same way as a `missing_extra` row.
 
 ### A skipped phase never fabricates a zero
 
