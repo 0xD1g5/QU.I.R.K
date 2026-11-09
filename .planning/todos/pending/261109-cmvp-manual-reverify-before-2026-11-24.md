@@ -15,8 +15,7 @@ due: 2026-11-23
 
 Kind: human (dated)
 
-Ledger note: .planning/LEDGER.md is not on `main` yet. This item belongs in LEDGER.md (id
-`261109-cmvp-manual-reverify-before-2026-11-24`) when PR #74 lands.
+Ledger row: `261109-cmvp-manual-reverify-before-2026-11-24` in `.planning/LEDGER.md`.
 
 ## Observed
 

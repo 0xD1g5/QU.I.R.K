@@ -14,8 +14,7 @@ owner: null
 
 Kind: product
 
-Ledger note: .planning/LEDGER.md is not on `main` yet. This item belongs in LEDGER.md (id
-`261109-dashboard-export-pdf-omits-coverage-skip-reasons`) when PR #74 lands. Related: `999.132`
+Ledger row: `261109-dashboard-export-pdf-omits-coverage-skip-reasons` in `.planning/LEDGER.md`. Related: `999.132`
 (dashboard/report divergences, Phase 236 candidate).
 
 ## Observed

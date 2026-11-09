@@ -14,8 +14,7 @@ owner: null
 
 Kind: product (regression introduced in 5.28.2 / Phase 235.3)
 
-Ledger note: .planning/LEDGER.md is not on `main` yet. This item belongs in LEDGER.md (id
-`261109-executive-skipped-badge-drops-null-category-entries`) when PR #74 lands.
+Ledger row: `261109-executive-skipped-badge-drops-null-category-entries` in `.planning/LEDGER.md`.
 
 ## Observed
 
