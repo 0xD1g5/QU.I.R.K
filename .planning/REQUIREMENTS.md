@@ -179,18 +179,18 @@ deserved. Sources: todos `261105-unscanned-surfaces-inflate-score-in-real-engage
 
 ### Release (REL)
 
-- [ ] **REL-11**: The version is 5.28.2 in every declaring file. `v5.28.2` is tagged on a `main` merge
+- [x] **REL-11**: The version is 5.28.2 in every declaring file. `v5.28.2` is tagged on a `main` merge
   commit with green CI (`branch_ci_state.py` exit 0), `release.yml` publishes it, and PyPI lists it,
   by 2026-11-23 (or after a hand re-verification of CMVP).
-- [ ] **REL-12**: A clean PyPI install of 5.28.2 passes the release smoke test on macOS, Linux 3.10,
+- [x] **REL-12**: A clean PyPI install of 5.28.2 passes the release smoke test on macOS, Linux 3.10,
   Linux 3.11, contributor and the 3.15 unpinned leg. Attestations verify.
 
 ### Launch (LAUNCH)
 
-- [ ] **LAUNCH-10**: The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No
+- [x] **LAUNCH-10**: The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No
   enabled connector reads `ran` with 0 rows unless a target answered, and every skip names its true
   cause (operator, 2026-11-06: this is the GO evidence).
-- [ ] **LAUNCH-11**: The announcement draft is re-checked sentence by sentence against 5.28.2 (claim
+- [x] **LAUNCH-11**: The announcement draft is re-checked sentence by sentence against 5.28.2 (claim
   table, leak grep, false-capability grep). The operator's go/no-go is recorded. No agent posts anything.
 
 ### v5.28.2 Traceability
@@ -203,10 +203,10 @@ deserved. Sources: todos `261105-unscanned-surfaces-inflate-score-in-real-engage
 | COVTRUTH-04 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
 | COVTRUTH-05 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
 | COVTRUTH-06 | Phase 235.3 | Complete (2026-11-07, verified at dc055f3b) |
-| REL-11 | Phase 235.4 | Pending |
-| REL-12 | Phase 235.4 | Pending |
-| LAUNCH-10 | Phase 235.4 | Pending |
-| LAUNCH-11 | Phase 235.4 | Pending |
+| REL-11 | Phase 235.4 | Complete (2026-11-08, verified at 52e1b604) |
+| REL-12 | Phase 235.4 | Complete (2026-11-08, verified at 52e1b604) |
+| LAUNCH-10 | Phase 235.4 | Complete (2026-11-08, verified at 52e1b604) |
+| LAUNCH-11 | Phase 235.4 | Complete (2026-11-08, verified at 52e1b604) |
 
 **Coverage:** 10 requirements, 10 mapped, 0 unmapped.
 

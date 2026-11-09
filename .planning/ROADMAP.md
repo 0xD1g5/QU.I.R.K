@@ -181,7 +181,7 @@ inserted after 235.2, so Phase 236 stays the v5.29 candidate. Requirements are i
 `.planning/REQUIREMENTS.md` (v5.28.2 section).
 
 - [x] **Phase 235.3: Connector Coverage Truth Fixes** - A connector that could not look at any target records a named skip that counts as a scan error, and every surface shows the reason
-- [ ] **Phase 235.4: Release 5.28.2 & Announcement Re-check** - `v5.28.2` is tagged, published and smoke-tested from PyPI, the full chaos-lab GUI walkthrough shows no silent `ran`/0, and the operator records a new go/no-go
+- [x] **Phase 235.4: Release 5.28.2 & Announcement Re-check** - `v5.28.2` is tagged, published and smoke-tested from PyPI, the full chaos-lab GUI walkthrough shows no silent `ran`/0, and the operator records a new go/no-go
 
 ### Phase 235.3: Connector Coverage Truth Fixes (INSERTED)
 **Goal**: A connector phase reads `ran` only if at least one of its targets answered. If none did (every URL refused by the server's internal-target policy, missing or rejected credentials, every target unreachable), it reads `skipped` with a named reason, emits an ADVISORY scan-error row that counts in the score like 5.28.1's `missing-binary`, and Scan Coverage, the dashboard empty states and the reports all show that reason. A test that enumerates connectors from source at run time keeps any connector from regressing.
@@ -243,17 +243,18 @@ Plans:
   3. The 2026-11-05 full chaos-lab dashboard walkthrough is re-run on 5.28.2. No enabled connector reads `ran` with 0 rows unless a target answered, every skip names its true cause, and the score moves in the right direction when a connector is skipped.
   4. The announcement draft is re-checked sentence by sentence against 5.28.2 (claim table, leak grep, false-capability grep), and the operator's go/no-go is recorded. No agent posts anything.
 **Plans**: 9 plans in 8 waves. Every outward-facing step (merge, tag push, PR #69 close, go/no-go) is its own operator checkpoint (D-12). D-11's tree-equality check is made concrete as: `git diff --name-only C M` touches no packaged path, plus a post-publish candidate-vs-PyPI wheel RECORD compare.
+**Completed**: 2026-11-08. 9/9 plans. Verified `passed` 4/4 at `52e1b604` (CITRUTH-03: `branch_ci_state.py --compare-main` exit 0; Python CI 42533403195, Dashboard Quality 42530002785). `v5.28.2` tagged on `a8c7fc65` (PR #71 merge, main green) and published by release run 42525338154; PyPI wheel identical to the walked-through candidate member for member; attestations verify; five PyPI smoke legs PASS. Walkthrough Pass A and Pass B approved by the operator (LAUNCH-10 PASS). Announcement GO recorded verbatim with a SAML non-metadata-answer known issue added at the operator's request; nothing posted. 12 findings filed as todos; PR #72 open. PR #69 was auto-marked MERGED rather than closed (operator accepted).
 
 Plans:
-- [ ] 235.4-01-PLAN.md — Version bump to 5.28.2 (hit set re-derived), README pins/title/5.28.2 paragraph, doc-claim ledger, UAT-1-02 SKIP DEFERRED; commit C (D-13)
-- [ ] 235.4-02-PLAN.md — Operator Docker/network checkpoint; candidate built from C with release.yml's command; clean venv; full lab via lab-up.sh; Pass A/B scratch envs (D-07, D-11, D-16)
-- [ ] 235.4-03-PLAN.md — Walkthrough Pass A (2026-11-05 replay, operator-led) + DB cross-check + computed-score direction (D-05, D-06)
-- [ ] 235.4-04-PLAN.md — Walkthrough Pass B (operators-guide §3.0 setup, operator-led) + combined WALKTHROUGH verdict (D-05, D-06)
-- [ ] 235.4-05-PLAN.md — UAT-235.3-13 PASS, CHANGELOG date, branch CI green, PR, operator merge, main green at M, D-11 path check, release.yml dry run (D-04, D-09, D-10)
-- [ ] 235.4-06-PLAN.md — Announcement draft for 5.28.2 + pre-publish checks with negative controls (D-03, D-08, D-15)
-- [ ] 235.4-07-PLAN.md — Operator tag push; publish; PyPI, RECORD compare, attestations, links; five smoke legs; UAT-1-02 PASS (D-01, D-14)
-- [ ] 235.4-08-PLAN.md — Post-publish re-check of the announcement; operator go/no-go recorded verbatim (D-02)
-- [ ] 235.4-09-PLAN.md — Operator closes PR #69 as included; vault sync; lab down; CI observed green at final HEAD, no commit after (CITRUTH-03)
+- [x] 235.4-01-PLAN.md — Version bump to 5.28.2 (hit set re-derived), README pins/title/5.28.2 paragraph, doc-claim ledger, UAT-1-02 SKIP DEFERRED; commit C (D-13)
+- [x] 235.4-02-PLAN.md — Operator Docker/network checkpoint; candidate built from C with release.yml's command; clean venv; full lab via lab-up.sh; Pass A/B scratch envs (D-07, D-11, D-16)
+- [x] 235.4-03-PLAN.md — Walkthrough Pass A (2026-11-05 replay, operator-led) + DB cross-check + computed-score direction (D-05, D-06)
+- [x] 235.4-04-PLAN.md — Walkthrough Pass B (operators-guide §3.0 setup, operator-led) + combined WALKTHROUGH verdict (D-05, D-06)
+- [x] 235.4-05-PLAN.md — UAT-235.3-13 PASS, CHANGELOG date, branch CI green, PR, operator merge, main green at M, D-11 path check, release.yml dry run (D-04, D-09, D-10)
+- [x] 235.4-06-PLAN.md — Announcement draft for 5.28.2 + pre-publish checks with negative controls (D-03, D-08, D-15)
+- [x] 235.4-07-PLAN.md — Operator tag push; publish; PyPI, RECORD compare, attestations, links; five smoke legs; UAT-1-02 PASS (D-01, D-14)
+- [x] 235.4-08-PLAN.md — Post-publish re-check of the announcement; operator go/no-go recorded verbatim (D-02)
+- [x] 235.4-09-PLAN.md — Operator closes PR #69 as included; vault sync; lab down; CI observed green at final HEAD, no commit after (CITRUTH-03)
 
 ## Next Milestone Candidates (v5.29)
 
