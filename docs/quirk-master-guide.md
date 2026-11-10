@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,803 lines, in reading order.
+Five guides, 7,810 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -5265,13 +5265,17 @@ rejected with HTTP 403), and `--api-token` writes the token into `console_api_to
 quirk sensor enroll https://<console-host>:8512 \
   --segment <label> \
   --sensor-id <sensor_id-from-quirk-console-enroll> \
-  --api-token <per-sensor-token-from-quirk-console-enroll>
+  --api-token=<per-sensor-token-from-quirk-console-enroll>
 # e.g.:
 quirk sensor enroll https://console.corp:8512 \
   --segment segment-a \
   --sensor-id 022ca970-c50c-460e-9940-fdef9f29edce \
-  --api-token <per-sensor-token>
+  --api-token=<per-sensor-token>
 ```
+
+Write the token as `--api-token=<token>`, with `=`: a token that starts with `-` (about 1 in 64
+minted by 5.28.2 or earlier) is otherwise read as a new option, and enroll fails with
+`argument --api-token: expected one argument`.
 
 To keep the token out of shell history, omit `--api-token` and edit `console_api_token`
 into `sensor.yaml` by hand instead.
@@ -5406,7 +5410,7 @@ pip install "quirk-scanner[all]"
 quirk sensor enroll https://<console-host>:8512 `
   --segment segment-windows `
   --sensor-id <sensor_id-from-quirk-console-enroll> `
-  --api-token <per-sensor-token-from-quirk-console-enroll>
+  --api-token=<per-sensor-token-from-quirk-console-enroll>
 
 # sensor.yaml written to: $env:LOCALAPPDATA\quirk\quirk\sensor.yaml
 
@@ -7731,7 +7735,7 @@ segment label, the `sensor_id` and the bearer token from Step 1:
 quirk sensor enroll https://<console-host>:8512 \
   --segment <label> \
   --sensor-id <sensor-id-from-step-1> \
-  --api-token <bearer-token-from-step-1>
+  --api-token=<bearer-token-from-step-1>
 ```
 
 Use an `https://` console URL, with a TLS-terminating reverse proxy in front of `quirk serve`
@@ -7746,6 +7750,9 @@ console URL in an existing `sensor.yaml`; to change it, re-enroll with an `https
 The `--api-token` flag writes the console-minted token directly to the
 `console_api_token` field in `sensor.yaml`. If you omit `--api-token`, that field is
 written as empty and must be set manually before the sensor can push results.
+Write the token as `--api-token=<token>`, with `=`: a token that starts with `-` (about 1 in 64
+minted by 5.28.2 or earlier) is otherwise read as a new option, and enroll fails with
+`argument --api-token: expected one argument`.
 
 **On-prem and RFC1918 console URLs:** Pass `--allow-internal-console` when the console
 URL is a private or RFC1918 address:
@@ -7754,7 +7761,7 @@ URL is a private or RFC1918 address:
 quirk sensor enroll https://10.0.0.5:8512 \
   --segment segment-a \
   --sensor-id <sensor-id-from-step-1> \
-  --api-token <bearer-token-from-step-1> \
+  --api-token=<bearer-token-from-step-1> \
   --allow-internal-console
 ```
 
@@ -7831,7 +7838,7 @@ has three steps:
    quirk sensor enroll https://<console-host>:8512 \
      --segment <original-label> \
      --sensor-id <new-sensor-id> \
-     --api-token <new-bearer-token>
+     --api-token=<new-bearer-token>
    ```
    This overwrites `sensor.yaml` with the new `sensor_id` and `console_api_token`.
 

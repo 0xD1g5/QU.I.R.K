@@ -1863,13 +1863,17 @@ rejected with HTTP 403), and `--api-token` writes the token into `console_api_to
 quirk sensor enroll https://<console-host>:8512 \
   --segment <label> \
   --sensor-id <sensor_id-from-quirk-console-enroll> \
-  --api-token <per-sensor-token-from-quirk-console-enroll>
+  --api-token=<per-sensor-token-from-quirk-console-enroll>
 # e.g.:
 quirk sensor enroll https://console.corp:8512 \
   --segment segment-a \
   --sensor-id 022ca970-c50c-460e-9940-fdef9f29edce \
-  --api-token <per-sensor-token>
+  --api-token=<per-sensor-token>
 ```
+
+Write the token as `--api-token=<token>`, with `=`: a token that starts with `-` (about 1 in 64
+minted by 5.28.2 or earlier) is otherwise read as a new option, and enroll fails with
+`argument --api-token: expected one argument`.
 
 To keep the token out of shell history, omit `--api-token` and edit `console_api_token`
 into `sensor.yaml` by hand instead.
@@ -2004,7 +2008,7 @@ pip install "quirk-scanner[all]"
 quirk sensor enroll https://<console-host>:8512 `
   --segment segment-windows `
   --sensor-id <sensor_id-from-quirk-console-enroll> `
-  --api-token <per-sensor-token-from-quirk-console-enroll>
+  --api-token=<per-sensor-token-from-quirk-console-enroll>
 
 # sensor.yaml written to: $env:LOCALAPPDATA\quirk\quirk\sensor.yaml
 
