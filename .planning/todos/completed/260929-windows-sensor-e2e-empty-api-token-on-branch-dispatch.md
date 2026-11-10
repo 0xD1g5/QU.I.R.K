@@ -4,7 +4,7 @@
 **Priority:** P2 — a required-ish CI job, red on a phase branch, green on `main`
 **Owner:** 999.119 (HORIZON.md ledger row; backlog .planning/backlog/999.119-ci-and-chaos-lab-hygiene-carry-forward/).
 **Re-pointed:** 2026-10-01 by Phase 221 (INT-01). The previous owner phase closed without picking this up.
-**Status:** pending
+**Status:** completed 2026-11-09 (main 7af4bb98, PR #77)
 
 ## What happened
 
@@ -101,3 +101,22 @@ dash-led token and replaces the three `secrets.token_urlsafe(32)` call sites (`c
 genuinely empty `e2e_token.txt` (defect 1 above); the guides use the `=` form; and
 `scripts/branch_ci_state.py`'s `DISPATCH_ADVISORY_JOBS` exception is retired, so the job is
 required on dispatches again. Close the ledger row once that is on `main`.
+
+## Resolution
+
+Fixed on main in `7af4bb98` (PR #77, 2026-11-09). The token was never empty: about 1 minted
+token in 64 starts with "-", and argparse read `--api-token -Xyz...` as a new option. The
+"branch dispatch" pattern was a coincidence of small numbers.
+
+- `quirk/tokens.py` adds `mint_token()`, which redraws a "-"-led token. `console enroll`,
+  `sensor` and `token` minting all use it, and `tests/test_tokens.py` fails if production code
+  calls `secrets.token_urlsafe(` directly again.
+- `.github/workflows/python-ci.yml` and `packaging/windows/install.ps1` pass
+  `--api-token=<value>`, which works for any token, including ones minted before the fix. The
+  workflow step also fails with a clear message if the token file is empty.
+- The admin, operators and cloud-console guides show the `=` form and explain why.
+- `scripts/branch_ci_state.py`: `DISPATCH_ADVISORY_JOBS` is empty, so Windows Sensor E2E is
+  required on every event again.
+
+Follow-up for the next release's hand-written notes: tokens minted by 5.28.2 or earlier may
+start with "-" and need `--api-token=<token>`.
