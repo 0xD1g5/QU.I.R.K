@@ -1184,10 +1184,12 @@ def test_check_ci_truth_unclassified_job_failure_fails_closed(vpg, bcs):
 _WIN_E2E = "Windows Sensor E2E (frozen -> Linux-built console)"
 
 
-def test_check_ci_truth_windows_e2e_dispatch_failure_is_advisory(vpg, bcs):
+def test_check_ci_truth_windows_e2e_dispatch_failure_blocks(vpg, bcs):
+    # Todo 260929's dispatch exception is retired (branch_ci_state.DISPATCH_ADVISORY_JOBS).
     block = _green_ci_block(_HEAD, event="workflow_dispatch", bcs_module=bcs)
     _job(block, "Python CI", _WIN_E2E)["conclusion"] = "failure"
-    assert vpg.check_ci_truth("999", _fm(block), _HEAD) == []
+    reasons = vpg.check_ci_truth("999", _fm(block), _HEAD)
+    assert _WIN_E2E in _joined(reasons)
 
 
 def test_check_ci_truth_windows_e2e_pull_request_failure_blocks(vpg, bcs):

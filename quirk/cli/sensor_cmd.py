@@ -45,6 +45,7 @@ from platformdirs import user_config_dir, user_data_dir
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 import quirk
+from quirk.tokens import mint_token
 from quirk.util.hosts import is_loopback_host
 from quirk.util.no_redirect import _NoRedirectHandler          # STAB-02 prerequisite
 from quirk.util.url_allowlist import validate_external_url
@@ -306,7 +307,7 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
             pass  # Malformed sensor.yaml — fall through to fresh enroll
 
     # One-time enrollment token (T-108-05: raw token printed once, never stored)
-    raw_token = secrets.token_urlsafe(32)
+    raw_token = mint_token()
     # token_hash is available for context/logging only — console-side storage is Phase 109
     _token_hash = hashlib.sha256(raw_token.encode()).hexdigest()  # noqa: F841
 

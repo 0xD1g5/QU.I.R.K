@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import secrets
 import sys
 import tempfile
 
 import yaml
+
+from quirk.tokens import mint_token
 
 
 def _write_token_to_config(config_path: str, token: str) -> None:
@@ -100,7 +101,7 @@ def run_token(argv: list[str]) -> None:
     args = parser.parse_args(argv)
 
     if args.action in ("generate", "rotate"):
-        token = secrets.token_urlsafe(32)
+        token = mint_token()
         config_path = args.config
         _write_token_to_config(config_path, token)
         print(f"Token written to {config_path} (security.api_token):")
