@@ -89,11 +89,12 @@ ADVISORY_JOBS: dict[tuple[str, str], str] = {
 
 # Applies ONLY when the run's event == "workflow_dispatch"; the job's
 # conclusion is still reported.
-DISPATCH_ADVISORY_JOBS: dict[tuple[str, str], str] = {
-    ("Python CI", "Windows Sensor E2E (frozen -> Linux-built console)"):
-        "todo 260929: empty --api-token on branch workflow_dispatch; still "
-        "REQUIRED on pull_request/push; re-promote when 260929 closes",
-}
+#
+# Empty since 2026-11-09. It held Windows Sensor E2E for todo 260929, read as
+# "empty --api-token on branch workflow_dispatch". The real cause was a token
+# starting with "-" (about 1 in 64, on any event), fixed by quirk/tokens.py and
+# the workflow's --api-token=<value> form, so the job is required again.
+DISPATCH_ADVISORY_JOBS: dict[tuple[str, str], str] = {}
 
 # Documentation only: workflows deliberately not tracked by this script.
 NOT_TRACKED_WORKFLOWS: dict[str, str] = {

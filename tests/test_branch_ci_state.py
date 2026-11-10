@@ -305,16 +305,17 @@ def test_advisory_job_failure_does_not_gate(bcs, capsys):
     assert "continue-on-error" in be["advisory_reason"]
 
 
-def test_windows_e2e_failure_on_workflow_dispatch_is_advisory_260929(bcs, capsys):
+def test_windows_e2e_failure_on_workflow_dispatch_is_red_260929_closed(bcs, capsys):
+    # 260929's dispatch exception is retired: the failure was a "-"-led token on
+    # any event, not an empty one on dispatch, so a dispatch failure is red too.
     name = "Windows Sensor E2E (frozen -> Linux-built console)"
     gh = _green_gh(py_event="workflow_dispatch", py_overrides={name: "failure"})
     rc = _main(bcs, gh, _git())
     report = json.loads(capsys.readouterr().out)
-    assert rc == 0
+    assert rc == 1
     job = _job(_wf(report, "Python CI"), name)
-    assert job["required"] is False
-    assert job["conclusion"] == "failure"  # still reported
-    assert "260929" in job["advisory_reason"]
+    assert job["required"] is True
+    assert job["conclusion"] == "failure"
 
 
 def test_windows_e2e_failure_on_pull_request_is_red(bcs, capsys):
@@ -508,8 +509,7 @@ def test_job_gating_single_source_of_required_ness(bcs):
     e2e = "Windows Sensor E2E (frozen -> Linux-built console)"
     assert bcs.job_gating("Python CI", "Linux Full Suite", "push") == (True, None)
     assert bcs.job_gating("Python CI", e2e, "pull_request") == (True, None)
-    req, why = bcs.job_gating("Python CI", e2e, "workflow_dispatch")
-    assert req is False and "260929" in why
+    assert bcs.job_gating("Python CI", e2e, "workflow_dispatch") == (True, None)
     req, why = bcs.job_gating("Python CI", "Browser E2E", "pull_request")
     assert req is False and why
     req, why = bcs.job_gating("Dashboard Quality",

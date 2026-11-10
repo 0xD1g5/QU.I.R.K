@@ -325,6 +325,9 @@ jobs:
         run: |
           $raw_token  = Get-Content "$env:RUNNER_TEMP\e2e_token.txt"  -Raw | ForEach-Object { $_.Trim() }
           $sensor_id  = Get-Content "$env:RUNNER_TEMP\e2e_sensor_id.txt" -Raw | ForEach-Object { $_.Trim() }
+          if ([string]::IsNullOrWhiteSpace($raw_token)) {
+            Write-Error "e2e_token.txt is empty: the console enroll step wrote no token"; exit 1
+          }
           $sensor_cfg = "$env:RUNNER_TEMP\e2e-sensor.yaml"
           $scan_cfg   = "$env:RUNNER_TEMP\e2e-scan-config.yaml"
 
@@ -343,11 +346,14 @@ jobs:
           # Step 1: frozen sensor enroll (writes e2e-sensor.yaml with the token)
           # --allow-internal-console is REQUIRED because 127.0.0.1 is loopback/RFC1918;
           # without it the SSRF allowlist blocks the console URL (sensor_cmd.py url_allowlist).
+          # --api-token=<value>, not a separate argument: a token that starts with "-"
+          # (about 1 in 64 before quirk/tokens.py) reads to argparse as a new option and
+          # fails "expected one argument" (todo 260929).
           & "frozen\quirk.exe" sensor enroll `
             "http://127.0.0.1:8512" `
             --segment e2e `
             --sensor-id $sensor_id `
-            --api-token $raw_token `
+            "--api-token=$raw_token" `
             --config $sensor_cfg `
             --allow-internal-console
           if ($LASTEXITCODE -ne 0) {

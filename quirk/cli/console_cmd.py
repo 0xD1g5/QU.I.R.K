@@ -175,7 +175,6 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
       prevent at the application layer.
     """
     import hashlib
-    import secrets
     from datetime import datetime, timezone
 
     from sqlalchemy.exc import IntegrityError
@@ -184,6 +183,7 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     from quirk.dashboard.api.deps import _default_db_path
     from quirk.db import init_db
     from quirk.models import Sensor, SensorToken
+    from quirk.tokens import mint_token
 
     # Resolve sensor_id: use provided value or generate a UUID4
     sensor_id = args.sensor_id or str(uuid.uuid4())
@@ -196,7 +196,7 @@ def _cmd_enroll(args: argparse.Namespace) -> None:
     # Mint raw token; derive hash — raw token never persisted (T-109-01).
     # Minted before the session so the value is available for both the early-return
     # path (D-01) and the success output path without re-entering the session.
-    raw_token = secrets.token_urlsafe(32)
+    raw_token = mint_token()
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 

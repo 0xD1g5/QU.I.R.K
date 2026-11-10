@@ -76,3 +76,28 @@ run `36624566175`, job `109599195909`, 2m14s. Same code: RED under `workflow_dis
 NOT yet name the mechanism — the empty `e2e_token.txt` points at something dispatch-only
 (a secret/env not exposed to dispatch runs, or a conditional step). Next step: diff the
 job's `if:`/`env:` handling between the two event types in `python-ci.yml`.
+
+## Root cause found 2026-11-09 — the token was not empty, it started with "-"
+
+The trigger-type hypothesis above is **wrong**. Run
+[42612837583](https://github.com/0xD1g5/QU.I.R.K/actions/runs/42612837583) (PR #74) failed the
+identical way on a `pull_request` event, and its log shows the console-enroll step parsed and saved
+a token (`Console enroll OK — sensor_id=… token=[masked]`).
+
+`secrets.token_urlsafe(32)` draws from `A-Z a-z 0-9 - _`, so about 1 token in 64 starts with `-`.
+`--api-token $raw_token` then hands argparse `--api-token -Xyz…`, which it reads as a new option:
+`argument --api-token: expected one argument`. Reproduced locally with argparse and with the real
+`quirk sensor enroll`. The "one confirming data point" above was a 1-in-64 event that happened to
+land on a dispatch; five green push runs beside it are what a 63-in-64 pass rate looks like.
+
+It was not CI-only: `packaging/windows/install.ps1` passed `"--api-token", $EnrollmentToken` as
+two arguments, so a customer install failed the same way for about 1 token in 64, and the guides'
+`--api-token <token>` examples did too.
+
+**Fix (branch `fix/api-token-leading-dash`):** `quirk/tokens.py::mint_token()` never returns a
+dash-led token and replaces the three `secrets.token_urlsafe(32)` call sites (`console enroll`,
+`sensor enroll`, `token generate/rotate`), guarded by `tests/test_tokens.py`; the workflow and
+`install.ps1` pass `--api-token=<value>` as one argument; the workflow also fails fast on a
+genuinely empty `e2e_token.txt` (defect 1 above); the guides use the `=` form; and
+`scripts/branch_ci_state.py`'s `DISPATCH_ADVISORY_JOBS` exception is retired, so the job is
+required on dispatches again. Close the ledger row once that is on `main`.

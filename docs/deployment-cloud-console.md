@@ -220,7 +220,7 @@ pip install "quirk-scanner[all]"
 quirk sensor enroll https://your.domain --segment dmz --sensor-id <uuid-from-console-enroll>
 # Edit the sensor config (on Linux: ~/.config/quirk/sensor.yaml):
 #   console_api_token: <per-sensor-token-from-console-enroll>
-# (or pass --api-token <per-sensor-token> to `sensor enroll` to write it for you)
+# (or pass --api-token=<per-sensor-token> to `sensor enroll` to write it for you)
 quirk sensor push --scan-config /etc/quirk/sensor-scan.yaml
 ```
 

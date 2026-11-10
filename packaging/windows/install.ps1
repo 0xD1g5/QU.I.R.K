@@ -127,12 +127,16 @@ Copy-Item -Path $SourceBundle -Destination $BundleDir -Recurse -Force
 # Enroll the sensor
 # Runs: quirk.exe sensor enroll <ConsoleUrl>
 #           --segment <Segment>
-#           --api-token <EnrollmentToken>
+#           --api-token=<EnrollmentToken>
 #           --config <ConfigPath>
 #           [--allow-internal-console]
 #
 # T-118-CFG: $EnrollmentToken must never appear in Write-Host / Write-Output /
 # any log stream.  It is passed only as a direct argument to the subprocess.
+#
+# One argument, "--api-token=<token>", not two: a token that starts with "-"
+# (about 1 in 64 minted before quirk/tokens.py) reads to argparse as a new
+# option and fails "argument --api-token: expected one argument".
 # ---------------------------------------------------------------------------
 
 Write-Host "Enrolling sensor against $ConsoleUrl ..."
@@ -140,7 +144,7 @@ Write-Host "Enrolling sensor against $ConsoleUrl ..."
 $EnrollArgs = @(
     "sensor", "enroll", $ConsoleUrl,
     "--segment", $Segment,
-    "--api-token", $EnrollmentToken,
+    "--api-token=$EnrollmentToken",
     "--config", $ConfigPath
 )
 
