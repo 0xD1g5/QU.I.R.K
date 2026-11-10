@@ -1,6 +1,55 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-11-03)
+## Current State (updated 2026-11-09)
+
+**Between milestones.** v5.28.1 and v5.28.2, the two patch releases after v5.28, are CLOSED and
+ARCHIVED (2026-11-09). Next is `/gsd-new-milestone` for v5.29, after the PM review of the ledger
+and roadmap the operator asks for at every boundary. Phase 236 (score-divergence closure,
+`999.132`) is the carried candidate. `.planning/REQUIREMENTS.md` was removed on purpose; both patch
+milestones' requirements are archived in `.planning/milestones/v5.28.2-REQUIREMENTS.md`.
+
+**v5.28.2 Connector Coverage Truth SHIPPED 2026-11-08 as `v5.28.2`** (tag on `a8c7fc65`, the PR #71
+merge; release run 42525338154). 2 phases (235.3–235.4), 30 plans, **10/10 requirements**. Audit
+`tech_debt`: phases 2/2, integration 15/17, flows 2/4, Nyquist 2/2. **The announcement is GO**
+(operator, 2026-11-08), with the SAML non-metadata-answer known issue added. No agent has posted it.
+
+**v5.28.1 Install & Source-Scan Truth SHIPPED 2026-11-05 as `v5.28.1`** (tag on `68bbe62d`, the PR
+#66 merge). 2 phases (235.1–235.2), 15 plans, **16/16 requirements**. No milestone audit was run;
+each phase verified `passed`. Its announcement was NO-GO, which v5.28.2 resolved.
+
+**What shipped:**
+- **A connector reads `ran` only if a target answered (v5.28.2).** Otherwise it reads `skipped` with
+  a named reason (`internal-target-refused`, `auth-failed`, `missing-credentials`, `failed`), emits
+  an ADVISORY scan-error row that counts in the score, and Scan Coverage, the empty states and the
+  reports show why. A run-time backstop enumerates connectors from source and was red on the
+  pre-fix code. The New Scan form warns about internal JWT/SAML URLs.
+- **Install truth (v5.28.1).** An unpinned install on Python 3.15 fails loudly instead of
+  backtracking (4.10.0–5.21.0, 5.25.0 and 5.27.0 yanked). A missing `semgrep` or `syft` reads as
+  not assessed and counts as a scan error. `doctor` reports the Python range, missing scanners and
+  unusable DB paths truthfully.
+- **Release evidence that cannot pass falsely.** The smoke harness, audit and attribution scripts
+  and the Semgrep/CHANGELOG gates each have red-on-defect fixtures. 5.28.2 was released only after a
+  two-pass chaos-lab GUI walkthrough of the exact wheel that was then published.
+
+**What to carry forward:**
+- **F1 (P1, a 235.3 regression):** the Executive Skipped badge drops later skipped connectors after
+  a connector error row with no category. Score and Scan Coverage are unaffected. Todo
+  `261109-executive-skipped-badge-drops-null-category-entries`.
+- **F2:** the dashboard Export PDF shows a skip-lowered score with no reason. Todo
+  `261109-dashboard-export-pdf-omits-coverage-skip-reasons`.
+- Trends and notify hide a full JWT/SAML/DNSSEC outage (B-WR-07, wider than first recorded); a SAML
+  URL answering with a non-metadata page reads `ran`/0 (disclosed).
+- **Phase 236 (v5.29 candidate):** the four score-affecting dashboard/report divergences
+  (`999.132`). `999.131`, `999.139`, `999.135` and DETECT-02 carry over from v5.28.
+- Human actions:
+  - **re-verify CMVP by hand before 2026-11-24** (never `quirk compliance cmvp refresh`); hw_cve
+    trips 2026-11-29, pqc_deadlines and snmp_meta 2026-12-02, hardware_meta 2026-12-13;
+  - post the GO'd announcement;
+  - triage the 67 open Dependabot alerts on `main` (0 critical, 32 high).
+- 208 pending todos, 62 with no owner field. `.planning/LEDGER.md` holds every open item.
+
+<details>
+<summary>Current State at the v5.28 close (2026-11-03) — superseded</summary>
 
 **Now open: v5.28.1 Install & Source-Scan Truth** (patch release, Phases 235.1–235.2; see Current
 Milestone below). Ship by 2026-11-23.
@@ -71,6 +120,8 @@ claim-checked, but as of this close nobody has posted it.
   - post the announcement;
   - triage the 80 Dependabot alerts on `main` (4 critical, 33 high).
 - 195 pending todos, 45 with no owner field. OWN-01's gate polices `doc224` todos only.
+
+</details>
 
 <details>
 <summary>Current State during v5.28 (Phases 227–228, 2026-10-15) and at the v5.27 close — superseded</summary>
@@ -450,7 +501,25 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 
 </details>
 
-## Current Milestone: v5.28.1 Install & Source-Scan Truth (patch release, opened 2026-11-03, Phases 235.1–235.2)
+## Previous Milestone: v5.28.2 Connector Coverage Truth — SHIPPED 2026-11-08 (tag `v5.28.2`; opened 2026-11-06, Phases 235.3–235.4)
+
+**Goal:** a scan never records a connector as `ran` when it could not look at anything. The 5.28.1
+announcement was NO-GO on 2026-11-05 because dashboard scans recorded JWT, SAML and S3 as `ran` with
+zero rows when the server policy refused every internal URL or no AWS credentials were available,
+so the score came out higher than the estate deserved. Then ship `v5.28.2` by 2026-11-23 and
+re-check the announcement against it.
+
+**Target features:** a connector phase reads `ran` only if a target answered (COVTRUTH-01); new
+skip reasons `internal-target-refused` and `auth-failed`, with skips counting as scan errors
+(COVTRUTH-02); a run-time, source-enumerated backstop (COVTRUTH-03); the reason on every surface
+(COVTRUTH-04); a New Scan internal-target warning (COVTRUTH-05); an operators-guide "before a
+client scan" checklist (COVTRUTH-06); release, smoke and a full chaos-lab GUI walkthrough as the GO
+evidence (REL-11/12, LAUNCH-10/11).
+
+**Outcome:** all 10 requirements satisfied; shipped 2026-11-08; announcement GO. Audit `tech_debt`
+(F1, F2 filed). Archive: `.planning/milestones/v5.28.2-ROADMAP.md`.
+
+## Previous Milestone: v5.28.1 Install & Source-Scan Truth — SHIPPED 2026-11-05 (tag `v5.28.1`; opened 2026-11-03, Phases 235.1–235.2)
 
 **Goal:** Ship a 5.28.1 patch that fixes the two Critical findings in the published 5.28.0 package
 and the release-evidence and doctor defects from the same post-GO review. Then re-check the
@@ -1948,11 +2017,16 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Brand palette B (Ink-violet accent on the current grounds), picked after viewing sketches rather than descriptions (2026-10-02) | Variant C, picked from a description, would have re-themed the grounds and reopened the 216–219 contrast ratchets | ✓ Good — no ratchet pair regressed; the lesson is to sketch before deciding on a visual |
 | Split P2b into a measure-only phase (233) and a fix phase (234), with no fix shape chosen before the measurement closed (v5.28) | 212 had three candidate shapes and two instruments that could not tell them apart; choosing first would have fitted the fix to the hypothesis | ✓ Good — the third instrument ruled out all three candidates and every ceiling shape; scoring 4.0 (absolute count curve, classical ≠ ready) made the P2b xfail pass with 100/100 instrument agreement |
 | GO the public announcement with score-affecting dashboard/report divergences disclosed rather than fixed (D-30 attributed-gap rule, operator 2026-10-30) | Closing every divergence before launch was a milestone of its own; an attributed, published defect list keeps the docs true | — Pending — Phase 236 (v5.29 candidate, `999.132`) owns the four score-affecting cases; the disclosure is withdrawn only when they close |
-| Accept Phase 235 SC4 by operator override while the PyPI 5.28.0 long description stays frozen (2026-10-30) | A published PyPI description cannot be edited; only a new release replaces it | — Pending — expires with 5.28.1, which also carries CR-01 and CR-02 |
+| Accept Phase 235 SC4 by operator override while the PyPI 5.28.0 long description stays frozen (2026-10-30) | A published PyPI description cannot be edited; only a new release replaces it | ✓ Expired — 5.28.1 shipped 2026-11-05 with CR-01 and CR-02 fixed, replacing the frozen 5.28.0 description |
 | Give 261030 todos open HORIZON clusters as owners and carry the release target in a separate `target_release` key (v5.28 audit, 2026-11-02) | The OWN-01 gate accepts only a quoted `999.N` with an OPEN HORIZON row, or a requirement ID; "5.28.1" is neither | ✓ Good — the gate stays strict and the 5.28.1 scope is still machine-findable |
+| Ship CR-01/CR-02 as patch release 5.28.1 in inserted phases 235.1–235.2 before v5.29, and yank the pre-sslyze releases (operator, 2026-11-03/05) | Both were install-time or doctor-time truth defects in a published release; new scope would have shipped on top of them | ✓ Good — an unpinned 3.15 install fails `ResolutionImpossible`; 5.25.0 and 5.27.0 had to be yanked too, which the requirements had wrongly ruled out |
+| NO-GO the 5.28.1 announcement until connectors that could not scan stop reading as `ran` (operator, 2026-11-05) | An unscanned surface added zero findings and raised the score in a real engagement shape | ✓ Good — v5.28.2 fixed it in two phases and the announcement went GO on 2026-11-08 |
+| A connector reads `ran` only if a target answered; a skip emits an ADVISORY scan-error row that counts in the score (235.3 D-01..D-07) | "Ran with zero rows" was indistinguishable from "clean"; the 5.28.1 missing-binary rule already set the precedent | ✓ Good — backstop red on pre-fix code; ⚠️ F1: forwarding the in-band rows broke the Executive Skipped badge when a row has no category |
+| GO evidence for 5.28.2 is a two-pass chaos-lab GUI walkthrough of the exact candidate before the tag (235.4 D-05..D-11) | Unit tests had passed while the 5.28.1 defect was live in the GUI | ✓ Good, with a limit — the published wheel matched the candidate, but neither pass produced an in-band error row, so F1 went unseen until the audit |
+| Move every open item into one ledger, `.planning/LEDGER.md` (operator, 2026-11-06) | HORIZON's ledger, todo folders and backlog folders disagreed on what was open | ✓ Good — gated by `test_ledger_completeness.py`; one dashboard vitest gate still read HORIZON.md and kept Dashboard Quality red on `main` from PR #74 until the v5.28.2 close fixed it |
 
 ---
-*Last updated: 2026-11-03 at the v5.28.1 milestone open (Install & Source-Scan Truth, patch release); previously after the v5.28 milestone close*
+*Last updated: 2026-11-09 after the v5.28.1 + v5.28.2 milestone close (both patch releases archived together); previously at the v5.28.1 milestone open*
 
 ## Evolution
 
