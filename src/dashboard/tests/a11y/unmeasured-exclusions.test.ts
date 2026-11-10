@@ -12,7 +12,8 @@ import { matchHandler } from "./fixture-handlers.mjs"
 
 const A11Y_DIR = __dirname
 const APP_TSX = readFileSync(path.resolve(A11Y_DIR, "../../src/App.tsx"), "utf-8")
-const HORIZON = readFileSync(path.resolve(A11Y_DIR, "../../../../.planning/HORIZON.md"), "utf-8")
+// The master ledger (.planning/LEDGER.md, 2026-11-06) replaced the HORIZON.md Open-Item Ledger.
+const MASTER_LEDGER = readFileSync(path.resolve(A11Y_DIR, "../../../../.planning/LEDGER.md"), "utf-8")
 const LEDGER = readFileSync(path.resolve(A11Y_DIR, "UNMEASURED-EXCLUSIONS.md"), "utf-8")
 const RUN_A11Y = readFileSync(path.resolve(A11Y_DIR, "run-a11y.mjs"), "utf-8")
 
@@ -123,10 +124,11 @@ describe("UNMEASURED-EXCLUSIONS.md is enforced against a set derived from source
     }
   })
 
-  it("every Owner is a 999.NNN id that is a row of the tracked HORIZON.md ledger", () => {
+  it("every Owner is a 999.NNN id that is a row of the tracked LEDGER.md ledger", () => {
     for (const r of ROWS) {
       expect(/^999\.\d+$/.test(r.owner), `${r.id} Owner "${r.owner}" is not a 999.NNN id`).toBe(true)
-      expect(HORIZON.includes(`| **${r.owner}** |`), `${r.id} Owner ${r.owner} has no HORIZON.md ledger row`).toBe(true)
+      const row = new RegExp(`^\\| ${r.owner.replace(".", "\\.")} \\|`, "m")
+      expect(row.test(MASTER_LEDGER), `${r.id} Owner ${r.owner} has no LEDGER.md ledger row`).toBe(true)
     }
   })
 

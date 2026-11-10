@@ -1478,6 +1478,58 @@ whose containment guard never joins client input into a path at all.
 ### Cost Observations
 - Not measured for this milestone (no per-model session data was recorded).
 
+## Milestone: v5.28.1 + v5.28.2 — Install & Source-Scan Truth / Connector Coverage Truth (patch releases)
+
+**Shipped:** 5.28.1 on 2026-11-05 (tag `v5.28.1`, announcement NO-GO); 5.28.2 on 2026-11-08 (tag
+`v5.28.2`, announcement GO). Both closed 2026-11-09, together, because they shared one
+`REQUIREMENTS.md`.
+**Phases:** 4 (235.1–235.4) | **Plans:** 45 (15 + 30; 235.2 was a hand-run runbook)
+**Audit:** v5.28.2 `tech_debt`, 10/10 requirements, integration 15/17, flows 2/4. v5.28.1: none.
+**Scale:** 174 commits, 2026-11-03 → 2026-11-09 (65 for 5.28.1, 109 for 5.28.2)
+
+### What Was Built
+- **5.28.1:** Python 3.15 installs fail loudly instead of backtracking; a missing semgrep/syft reads
+  as not assessed; `doctor` tells the truth; release-evidence scripts cannot pass falsely.
+- **5.28.2:** a connector reads `ran` only if a target answered, otherwise `skipped` with a named
+  reason that counts as a scan error and shows on every surface; a source-enumerated backstop.
+
+### What Worked
+- **The go/no-go held.** The operator said NO-GO on 5.28.1 after a live chaos-lab GUI walkthrough
+  showed connectors reading `ran` with nothing scanned. Unit tests had been green the whole time.
+- **Walking through the exact candidate before the tag.** 5.28.2's wheel on PyPI matched the
+  walked-through wheel member for member.
+- **The operator added a disclosure at the GO** (SAML non-metadata answers), which the plans had not
+  covered because the lab only had well-formed SAML targets.
+
+### What Was Inefficient
+- **Requirements guessed the yank set wrong.** They ruled out yanking 5.25.0/5.27.0; on real 3.15,
+  pip picked 5.27.0 anyway, and both had to be yanked during the release.
+- **A fix created a regression that no walkthrough could see (F1).** Forwarding in-band connector
+  rows broke the Executive Skipped badge only when a row has no category, a path neither
+  walkthrough pass produced. The milestone audit's integration check found it.
+- **A ledger migration missed one gate.** PR #74 repointed the Python gates at `LEDGER.md` but not
+  a dashboard vitest gate, so Dashboard Quality was red on `main` for four merges. Required checks
+  on the PR page did not show it; `branch_ci_state.py` against `main` did.
+- **Two sessions shared one checkout,** and an executor commit landed on the wrong branch. Release
+  and close work moved to separate worktrees.
+
+### Patterns Established
+- Patch releases as inserted decimal phases (235.1–235.4), keeping Phase 236 as the next candidate.
+- A run-time, source-enumerated backstop for every connector, instead of a hand list.
+- A worktree for any close or release when another session may be active, with the gitignored
+  `.planning/phases` and each missing `.planning/milestones` entry symlinked in.
+
+### Key Lessons
+- A walkthrough proves the paths it exercises. Record which error shapes it produced, so an
+  audit knows what it did not cover.
+- Two patch milestones opened back to back need their own close, or a joint one. v5.28.1 was
+  never closed and was archived three days later with v5.28.2.
+- Counts drifted again: `audit-open` said 5 todos (208 real), and the staleness list in STATE.md
+  named two upcoming trips when there were four.
+
+### Cost Observations
+- Not measured for these milestones (no per-model session data was recorded).
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

@@ -1,5 +1,84 @@
 # Milestones
 
+## v5.28.2 Connector Coverage Truth (Shipped: 2026-11-08 — tag `v5.28.2`; closed 2026-11-09)
+
+**Phases completed:** 2 phases (235.3–235.4), 30 plans, 30 SUMMARY files
+**Requirements:** **10/10 satisfied** (COVTRUTH-01..06, REL-11/12, LAUNCH-10/11).
+**Audit:** `tech_debt` (`.planning/milestones/v5.28.2-MILESTONE-AUDIT.md`, 2026-11-09).
+- Requirements 10/10. Phases 2/2, both VERIFICATIONs `passed` with CI observed green at the phase head.
+- Integration 15/17: F1 BROKEN (Executive Skipped badge, a 235.3 regression) and F2 gap (dashboard
+  Export PDF shows no skip reason). Both are filed as todos with ledger rows (PR #75).
+- Flows 2/4: the two broken flows are F1 and F2.
+- Nyquist 2/2 (235.3's sign-off block is stale; evidence is current).
+
+**Released:** `quirk-scanner` 5.28.2 on PyPI and GitHub Releases.
+- Tag `v5.28.2` is on `a8c7fc65`, the PR #71 merge. Release run 42525338154.
+- The PyPI wheel matches the walked-through candidate member for member. Attestations verify, and
+  five PyPI smoke legs pass (macOS, Linux 3.10, Linux 3.11, contributor, 3.15 unpinned).
+- The operator recorded **GO** for the announcement on 2026-11-08, with the SAML
+  non-metadata-answer known issue added. Nothing has been posted by an agent.
+
+**Scale:** 109 commits (101 non-merge), 144 files, +11,027 / -775, 2026-11-06 -> 2026-11-09
+(range `139ed513..2c11ded8`). Merged to `main` through PRs #71–#75.
+
+**What it was about:** the 5.28.1 announcement was NO-GO because a connector that could not look at
+anything (JWT/SAML URLs refused by the internal-target guard, S3 with no credentials) recorded
+`ran` with zero rows, so an unscanned surface could raise the score and read as covered.
+
+**Highlights:**
+- **A connector reads `ran` only if a target answered.** Otherwise it reads `skipped` with a named
+  reason (`internal-target-refused`, `auth-failed`, `missing-credentials`, `failed`), and emits an
+  ADVISORY scan-error row that counts in the score. A paired-scan proof shows a skip never scores
+  higher than ran-clean, across intel, HTML, API and coverage.
+- **A run-time backstop.** A test enumerates every connector phase from source with no hand list,
+  and it was red on the pre-fix code (16 connectors).
+- **Every surface shows the reason.** Scan Coverage chips, the Data at Rest / Identity / Motion
+  empty states, the reports, failed DB rows, and a New Scan warning for internal JWT/SAML URLs.
+- **The operators-guide "before a client scan" checklist**, CHANGELOG `[5.28.2]`.
+- **Release by walkthrough.** The full chaos-lab GUI walkthrough ran twice (Pass A replay, Pass B
+  from the operators-guide setup) on the exact candidate that was then tagged.
+
+**Known deferred items at close** (see STATE.md Deferred Items, v5.28.2). Counted from disk, not
+from `gsd-sdk query audit-open`, which reported 5 todos:
+- 208 pending todos, 62 with no owner field, 15 high priority.
+- 0 open debug sessions.
+- 21 audit tech-debt items in 3 groups.
+- CMVP goes red 2026-11-24 (manual re-verify todo, P1); four more catalogs trip by 2026-12-13.
+
+**This close was hand-written under a pre-image + full-diff protocol** together with v5.28.1, because
+the two patch milestones shared one `REQUIREMENTS.md`. No `phase.complete`, `milestone.complete`, or
+mutating `state.*` / `roadmap.*` verb was used. `ROADMAP.md`'s `## Backlog` was diff-verified
+byte-identical, and every removed line is in an archive except the two rewritten index lines. No
+milestone tag was created: `v5.28.2` is the release tag.
+
+## v5.28.1 Install & Source-Scan Truth (Shipped: 2026-11-05 — tag `v5.28.1`; closed 2026-11-09)
+
+**Phases completed:** 2 phases (235.1–235.2), 15 plans, 15 SUMMARY files. 235.2 was a hand-run
+release runbook with no PLAN files.
+**Requirements:** **16/16 satisfied** (INSTALL-05..07, SRCSCAN-01..03, DOCTOR-01, HARNESS-04..06,
+DEP-03, REL-08..10, LAUNCH-08/09).
+**Audit:** none. v5.28.2 opened the day after 5.28.1 shipped, and no milestone audit was run for
+5.28.1. Each phase verified `passed` with CI observed at its head (235.1 at `af4f755c`, 235.2 at
+`139ed513`).
+
+**Released:** `quirk-scanner` 5.28.1 on PyPI and GitHub Releases, tag `v5.28.1` on `68bbe62d` (the
+PR #66 merge), release run 42154086272. All PyPI smoke legs passed, including the 3.15 unpinned leg
+after the operator yanked 4.10.0–5.21.0 and then 5.25.0 and 5.27.0. Announcement **NO-GO**
+(operator, 2026-11-05) until v5.28.2.
+
+**Scale:** 65 commits (61 non-merge), 106 files, +11,169 / -2,272, 2026-11-03 -> 2026-11-06
+(range `f4564d2c..139ed513`). Merged to `main` through PRs #66–#68.
+
+**Highlights:**
+- **Python 3.15 installs fail loudly** instead of silently backtracking to an old release (CR-01).
+- **A missing `semgrep` or `syft` reads as not assessed**, never as a clean scan, and counts as a
+  scan error (CR-02). The source scanner keeps partial results.
+- **`doctor` tells the truth** about the Python range, configured-but-missing scanners, and unusable
+  DB paths.
+- **Release-evidence gates cannot pass falsely**: the smoke harness, the audit and attribution
+  scripts, and the Semgrep-claim and CHANGELOG-parity tests each have a red-on-defect fixture.
+- **Four critical Dependabot alerts closed** (two fixed, two dismissed with a reachability reason).
+
 ## v5.28 Score & Finding Truth (Shipped: 2026-10-30 — tag `v5.28.0`; closed 2026-11-03)
 
 **Phases completed:** 9 phases (227–235), 88 plans, 88 SUMMARY files
