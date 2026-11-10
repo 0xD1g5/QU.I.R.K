@@ -10,7 +10,7 @@ newly un-swept page or retired leg cannot be omitted: the test names the missing
 The 216 W1 probe nodes are deliberately NOT a row: 221-01 repaired them (see
 `harness-falsification-probe.test.ts`, Injection D).
 
-Owner `999.118` is the `.planning/HORIZON.md` ledger row that carries these forward.
+Owner `999.118` is the `.planning/LEDGER.md` ledger row that carries these forward.
 
 | ID | Key | Blind spot | Why unmeasured | Owner | Date | Evidence / Revisit trigger |
 |----|-----|-----------|----------------|-------|------|----------------------------|
