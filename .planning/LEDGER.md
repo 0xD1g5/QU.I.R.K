@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (255)
+## Open (256)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -66,6 +66,7 @@ the Evidence cell.
 | 261012-doc224-windows-install-ps1-no-sensor-id-or-scan-config | OPEN | P1 | sensor | Windows install.ps1 has no -SensorId or scan config; sensor cannot push | .planning/todos/pending/261012-doc224-windows-install-ps1-no-sensor-id-or-scan-config.md | verified open: main packaging/windows/install.ps1 has no SensorId / --scan-config / --sensor-id |
 | 261109-executive-skipped-badge-drops-null-category-entries | OPEN | P1 | dashboard | Executive Skipped badge drops later entries after a null-category error row | .planning/todos/pending/261109-executive-skipped-badge-drops-null-category-entries.md | verified open: v5.28.2 milestone audit F1, reproduced; run_scan.py:1223 getattr default never applies to a nullable column; quirk/dashboard/api/routes/scan.py:1713 one try wraps the per-checkpoint loop; schemas.py:629 error_category is a required str. A 235.3 regression (P-08 forwarding) |
 | 261109-cmvp-manual-reverify-before-2026-11-24 | OPEN | P1 | other | Re-verify the CMVP catalog by hand before it goes red on 2026-11-24 | .planning/todos/pending/261109-cmvp-manual-reverify-before-2026-11-24.md | open: quirk/compliance/cmvp_cache.json:3 last_verified 2026-08-25, 90-day cadence; tests/test_cmvp_freshness.py trips 2026-11-24. Human action; never run cmvp refresh (see 261012-doc224-error-hints-recommend-cmvp-refresh) |
+| 261109-prober-image-libatomic1-playwright-165 | OPEN | P1 | lab | Prober image build fails on Playwright 1.65.0: its Node driver needs libatomic1, absent from python:3.11.12-slim | quantum-chaos-enterprise-lab/sensor.Dockerfile | open: main red since 2026-11-09 (Python CI run 42702913863, multihost + segmented-network nodes of tests/test_chaos_lab_idempotency.py); pyproject.toml pins playwright>=1.58.0 and 1.65.0 reached PyPI 21:09 UTC; fix on branch fix/prober-libatomic1 adds libatomic1 to the image and a docs/installation.md error row |
 | 261104-scan-latest-partial-failures-empty-for-cli-scans | OPEN | P2 | api | /api/scan/latest returns empty partial_failures for CLI-only scans | .planning/todos/pending/261104-scan-latest-partial-failures-empty-for-cli-scans.md | verified open: quirk/dashboard/api/routes/scan.py:2017 resolves checkpoint via ScanJob within 30-min window only — target 5.29 |
 | finding-item-id-not-unique-per-finding | OPEN | P2 | api | FindingItem.id is the endpoint id, not a unique per-finding identifier | .planning/todos/pending/finding-item-id-not-unique-per-finding.md | verified open: quirk/dashboard/api/routes/scan.py still has 10 `id=ep.id` emission sites — worked around by (id,title) key in Phase 202 |
 | 261012-doc224-dnssec-ecdsa-algorithms-classified-quantum-safe | OPEN | P2 | cbom | CBOM classifies DNSSEC ECDSA algorithms 13/14 as quantum-safe | .planning/todos/pending/261012-doc224-dnssec-ecdsa-algorithms-classified-quantum-safe.md | verified open: main quirk/cbom/classifier.py:190-191 ecdsap256sha256 level 1, ecdsap384sha384 level 3 |

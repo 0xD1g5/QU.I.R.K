@@ -21,11 +21,17 @@ FROM python:3.11.12-slim
 #   * nmap            — required by TLS/SSH scanners
 #   * curl            — used by network probes + diagnostics
 #   * ca-certificates — TLS trust store for HTTPS scans
+#   * libatomic1      — the Node driver bundled with playwright >= 1.65.0
+#                       links it, and the slim base does not ship it; without
+#                       it every `playwright` command, install-deps included,
+#                       dies with "libatomic.so.1: cannot open shared object
+#                       file" (2026-11-09, playwright 1.65.0 on PyPI)
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
         nmap \
         curl \
         ca-certificates \
+        libatomic1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
