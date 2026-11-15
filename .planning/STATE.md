@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.29
 milestone_name: Surface Agreement
 status: planning
-last_updated: "2026-11-15T22:16:00.880Z"
-last_activity: "2026-11-15 -- v5.29 Surface Agreement roadmap approved (Phases 236-240, 25 requirements); next /gsd-discuss-phase 236"
+last_updated: "2026-11-15T23:50:00.000Z"
+last_activity: "2026-11-15 -- Phase 236 context gathered (17 decisions; D-01..D-03 operator); next /gsd-plan-phase 236"
 progress:
   total_phases: 5
   completed_phases: 0
@@ -3634,9 +3634,9 @@ Found at Phase 208 close (2026-09-22):
 
 ## Session Continuity
 
-Resume file: none. v5.28.1 + v5.28.2 are closed; next `/gsd-new-milestone`.
+Resume file: .planning/phases/236-score-divergence-closure/236-CONTEXT.md
 
-Last session: 2026-11-09. Audited v5.28.2 (`tech_debt`), filed F1/F2/CMVP todos with ledger rows (PR #75), merged PRs #73/#75, then closed v5.28.1 and v5.28.2 together by hand. Found `main` red on Dashboard Quality since PR #74 (a vitest gate still read HORIZON.md) and fixed it in the archive PR. Counts re-derived from disk: 208 todos (`audit-open` said 5), 62 ownerless, 21 debt items, 67 Dependabot alerts.
+Last session: 2026-11-15. Phase 236 discuss-phase: CONTEXT.md written (legacy TLS two-tier, weak-cipher report HIGH, SCORING_VERSION stays 3.0 -- all operator); next `/gsd-plan-phase 236`. Previous (2026-11-09): Audited v5.28.2 (`tech_debt`), filed F1/F2/CMVP todos with ledger rows (PR #75), merged PRs #73/#75, then closed v5.28.1 and v5.28.2 together by hand. Found `main` red on Dashboard Quality since PR #74 (a vitest gate still read HORIZON.md) and fixed it in the archive PR. Counts re-derived from disk: 208 todos (`audit-open` said 5), 62 ownerless, 21 debt items, 67 Dependabot alerts.
 *Prior:* Resume file: `.planning/phases/235.1-install-source-scan-truth-fixes-inserted/` (15 PLAN files + CONTEXT/RESEARCH/VALIDATION). Next: `/gsd-execute-phase 235.1`.
 *Prior:* Resume file `235.1-CONTEXT.md`; next `/gsd-plan-phase 235.1`.
 *Prior:* none. v5.28 is closed (2026-11-03); its phase directories are now under
