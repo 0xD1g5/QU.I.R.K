@@ -119,6 +119,31 @@ tracked file.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| XSURF-09 | Phase 236 | Pending |
+| XSURF-10 | Phase 236 | Pending |
+| XSURF-11 | Phase 236 | Pending |
+| XSURF-12 | Phase 236 | Pending |
+| XSURF-13 | Phase 236 | Pending |
+| XSURF-14 | Phase 236 | Pending |
+| COUNT-01 | Phase 237 | Pending |
+| COUNT-02 | Phase 237 | Pending |
+| COUNT-03 | Phase 237 | Pending |
+| COUNT-04 | Phase 237 | Pending |
+| COUNT-05 | Phase 237 | Pending |
+| COUNT-06 | Phase 237 | Pending |
+| COUNT-07 | Phase 237 | Pending |
+| IDENT-05 | Phase 238 | Pending |
+| IDENT-06 | Phase 238 | Pending |
+| IDENT-07 | Phase 238 | Pending |
+| DETECT-06 | Phase 238 | Pending |
+| DETECT-07 | Phase 238 | Pending |
+| TRUST-01 | Phase 239 | Pending |
+| TRUST-02 | Phase 239 | Pending |
+| TRUST-03 | Phase 239 | Pending |
+| SCORE-11 | Phase 240 | Pending |
+| REL-13 | Phase 240 | Pending |
+| REL-14 | Phase 240 | Pending |
+| REL-15 | Phase 240 | Pending |
 
 ---
 *Requirements defined: 2026-11-15*

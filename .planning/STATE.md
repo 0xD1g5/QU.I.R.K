@@ -4,9 +4,9 @@ milestone: v5.29
 milestone_name: Surface Agreement
 status: planning
 last_updated: "2026-11-15T22:16:00.880Z"
-last_activity: 2026-11-15
+last_activity: "2026-11-15 -- v5.29 Surface Agreement roadmap approved (Phases 236-240, 25 requirements); next /gsd-discuss-phase 236"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -1537,10 +1537,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 236 of 236–240 (Score Divergence Closure) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-11-15 — Milestone v5.29 started
+Status: Roadmap approved; ready to discuss/plan Phase 236. Phases 236–239 are independent; 240 (release 5.29.0) depends on all four.
+Last activity: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
 
 ## v5.28.2 Close Record — superseded as Current Position 2026-11-15 (v5.29 opened)
 Phase: None — between milestones. v5.28.1 (Phases 235.1–235.2) and v5.28.2 (Phases 235.3–235.4) closed and archived 2026-11-09; phase directories moved to `.planning/milestones/v5.28.1-phases/` and `v5.28.2-phases/`.
