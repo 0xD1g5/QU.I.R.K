@@ -43,11 +43,10 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (296)
+## Open (295)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
-| A0527:PUBREPO-LAB-KEYS | OPEN | P0 | lab | Chaos-lab PEM private keys tracked in public repo | .planning/audit-2026-05-27/AUDIT-TASKS.md | verified open: 20 *.key files tracked on main under quantum-chaos-enterprise-lab/certs/ (e.g. legacy.key is BEGIN PRIVATE KEY; added 2ecb2403, touched 4e973fe0 2026-09-06) — Claimed removed from tree+history in Phase 120-02/04; lab throwaway keys, posture/credibility issue, not product vuln |
 | 261012-doc224-error-hints-recommend-cmvp-refresh | OPEN | P1 | cli | Error hints and CMVP gate tell operators to run forbidden 'cmvp refresh' | .planning/todos/pending/261012-doc224-error-hints-recommend-cmvp-refresh.md | verified open: main quirk/errors.py:191,206 still recommend quirk compliance cmvp refresh |
 | 261012-doc224-azure-keyvault-keys-never-emit-endpoints | OPEN | P1 | connector | Azure Key Vault key scan emits zero endpoints (KeyProperties lacks key_type) | .planning/todos/pending/261012-doc224-azure-keyvault-keys-never-emit-endpoints.md | verified open: main azure_connector.py:57-59 iterates list_properties_of_keys() and reads key.key_type; no get_key() — CertificateClient also imported but unused |
 | 261108-saml-non-metadata-answer-reads-ran | OPEN | P1 | connector | SAML connector records any HTTP answer as 'ran', even one that is not SAML metadata | .planning/todos/pending/261108-saml-non-metadata-answer-reads-ran.md | verified open: filed in Phase 235.4 walkthrough (5.28.2); quirk/scanner/saml_scanner.py:104 (check jwt_scanner.py:358 too). Residual of the 5.28.2 coverage-truth class (261105-unscanned-surfaces-inflate-score-in-real-engagements, DONE) |
@@ -344,10 +343,11 @@ the Evidence cell.
 | 261110-api-error-states-inconsistent | OPEN | P3 | dashboard | Raw "Failed to fetch …: 500" text on Executive/Findings/CBOM vs styled card on Scan History | HEALTHCHECK-2026-11-10 NEW-28 | fault-proxy screenshots |
 | 261115-cmvp-4885-curated-vendor-and-match-hint-say-wolfssl | OPEN | P3 | compliance | CMVP cert 4885 is ZPE Systems FIPS Provider for OpenSSL 3, but cmvp_curated.csv still lists vendor wolfSSL Inc. and the match hint "wolfSSL FIPS (firmware) [fallback]", so a wolfSSL detection can map to a ZPE certificate | 2026-11-15 CMVP re-verify (261109) | quirk/compliance/cmvp_curated.csv:53; NIST certificate 4885 page; cache vendor already ZPE Systems |
 
-## Deferred (17)
+## Deferred (18)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
+| A0527:PUBREPO-LAB-KEYS | DEFERRED | P1 | lab | Chaos-lab PEM private keys tracked in public repo | .planning/audit-2026-05-27/AUDIT-TASKS.md | verified open: 20 *.key files tracked on main under quantum-chaos-enterprise-lab/certs/ (e.g. legacy.key is BEGIN PRIVATE KEY; added 2ecb2403, touched 4e973fe0 2026-09-06) — Claimed removed from tree+history in Phase 120-02/04; lab throwaway keys, posture/credibility issue, not product vuln — DEFERRED to v5.30 by operator decision at the v5.29 open (2026-11-15): throwaway lab keys, a posture/credibility issue rather than a product vulnerability; re-rated P0 -> P1. Fix belongs with the 261111 chaos-lab fixtures cluster (generate keys at lab bring-up; history rewrite is a separate decision) |
 | 261015-xsurf-service-findings-on-scan-latest-lack-provenance | DEFERRED | P2 | api | Email/broker/code-signing findings on /api/scan/latest lack id/segment/compliance | .planning/todos/pending/261015-xsurf-service-findings-on-scan-latest-lack-provenance.md | deferred by operator at Phase 228 close; still open: finding_by_id_and_title walks findings_for_endpoint only (scan.py:468) |
 | 999.104 | DEFERRED | P2 | dashboard | CLI config to dashboard parity (Tier 4: dashboard config.yaml editing) | .planning/backlog/999.104-cli-config-dashboard-parity/ | Tiers 1-3 closed (Phases 194/197/198); Tier 4 out of scope at v5.26-REQUIREMENTS:260, owned by HORIZON row per v5.28-REQUIREMENTS:183 — Tier 4 needs its own threat-model decision |
 | 999.107 | DEFERRED | P2 | dashboard | Operator-declared reachability + crown-jewel declaration CRUD for Exposure Map | .planning/HORIZON.md | deferred by MAP-01 spike (195-SPIKE-DECISION.md); main has only config-declared crown_jewels (exposure_map.py:34), no CRUD endpoint |

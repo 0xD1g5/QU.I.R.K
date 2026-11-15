@@ -1,12 +1,12 @@
 # QU.I.R.K. — Quantum Infrastructure Readiness Kit
 
-## Current State (updated 2026-11-09)
+## Current State (updated 2026-11-15)
 
-**Between milestones.** v5.28.1 and v5.28.2, the two patch releases after v5.28, are CLOSED and
-ARCHIVED (2026-11-09). Next is `/gsd-new-milestone` for v5.29, after the PM review of the ledger
-and roadmap the operator asks for at every boundary. Phase 236 (score-divergence closure,
-`999.132`) is the carried candidate. `.planning/REQUIREMENTS.md` was removed on purpose; both patch
-milestones' requirements are archived in `.planning/milestones/v5.28.2-REQUIREMENTS.md`.
+**v5.29 Surface Agreement is OPEN (2026-11-15).** See `## Current Milestone` below. It opened after
+the PM review of `.planning/LEDGER.md` the operator asks for at every boundary, and after the
+milestone-boundary version-drift audit (clean: pyproject, README, UAT-SERIES, CHANGELOG and the
+latest tag all read 5.28.2). Phase 236 (score-divergence closure, `999.132`) is carried in as the
+first phase.
 
 **v5.28.2 Connector Coverage Truth SHIPPED 2026-11-08 as `v5.28.2`** (tag on `a8c7fc65`, the PR #71
 merge; release run 42525338154). 2 phases (235.3–235.4), 30 plans, **10/10 requirements**. Audit
@@ -500,6 +500,36 @@ ledger. A reconciliation phase plus a run-time derived gate is queued at
 </details>
 
 </details>
+
+## Current Milestone: v5.29 Surface Agreement (opened 2026-11-15, Phases 236–240)
+
+**Goal:** for any scan, every surface (dashboard, report, history/trends/compare, CBOM, notify) shows
+the same findings, counts and score, and connector targets cannot get past the trust gate.
+
+**Target features:**
+- **Score divergence closure (236):** the four score-affecting dashboard/report divergences owned by
+  `999.132`, the severity-gate and Slack drift blindness (`261015-xsurf-…-gate-blind`, P1), and the
+  headline-score divergence (`261108-headline-score-divergence`).
+- **History and count truth (237):** Scan History, Trends and Compare count every finding
+  (`261110-scan-history-trends-compare-count-endpoint-severities`, P1); the Executive Skipped badge
+  (F1, P1); Export PDF skip reasons (F2); a running scan is not published as the latest; Trends shows
+  a full connector outage.
+- **Identity and certificate findings (238):** weak JWKS algorithms become findings that score
+  (`261110-jwks-weak-alg-no-finding-no-score`, P1) and appear on the Identity page; a SAML URL that
+  answers with something other than metadata is not `ran` (P1); mTLS-required endpoints are detected
+  under TLS 1.3 (`[REG]`); SHA-1-signed certificates produce a finding.
+- **Connector target trust-gate hardening (239):** the two P1 security items owned by `999.136`.
+- **Regressions and release 5.29.0 (240):** scan confidence reflects a high scan-error rate
+  (`[REG]`), then the 5.29.0 release and its UAT walkthrough.
+
+**Deferred to v5.30, stated rather than absorbed:** the connector, packaging and docs clusters
+(`999.126`–`999.129`), the chaos-lab fixtures cluster (`261111`), Azure Key Vault endpoints,
+`install.ps1` sensor config, the Semgrep ruleset, and `A0527:PUBREPO-LAB-KEYS` (deferral recorded in
+the ledger, re-rated P1).
+
+**Human dates inside the milestone:** `hw_cve` staleness trips 2026-11-29; `pqc_deadlines` and
+`snmp_meta` trip 2026-12-02. Re-verify each against its `source_url`; never bump without checking.
+CMVP was re-verified 2026-11-15 (PR #81).
 
 ## Previous Milestone: v5.28.2 Connector Coverage Truth — SHIPPED 2026-11-08 (tag `v5.28.2`; opened 2026-11-06, Phases 235.3–235.4)
 
@@ -1234,12 +1264,17 @@ quantum-readiness score that a consultant can hand to a client in under two hour
 
 ### Active
 
-**v5.27 Launch Readiness is open** (see Current Milestone above; requirements in
+**v5.29 Surface Agreement is open** (see Current Milestone above; requirements in
 `.planning/REQUIREMENTS.md`):
 
-- [ ] Brand identity adopted on every product surface (dashboard, favicon, README, report footer)
-- [ ] Every user-facing doc verified claim by claim; master guide regenerated; screenshots current
-- [ ] v5.27.0 tagged and published to PyPI + GitHub Releases
+- [ ] Dashboard and report give the same readiness score and severities for the same scan
+- [ ] Scan History, Trends, Compare and the Executive badges count every finding and skip
+- [ ] Weak JWKS algorithms, non-metadata SAML answers, mTLS under TLS 1.3 and SHA-1 certificates produce findings
+- [ ] Connector targets cannot bypass the trust gate
+- [ ] v5.29.0 tagged and published to PyPI + GitHub Releases
+
+The v5.27-era paragraph below is kept as history; the open items it names now live in
+`.planning/LEDGER.md`.
 
 Deferred, owned by HORIZON ledger rows rather than by this milestone: `999.120` P2b (P1,
 operator-reserved, v5.28 anchor), `999.118` a11y design calls, `999.119` CI/lab hygiene, `999.104`,
@@ -2026,7 +2061,7 @@ v4.6 "Enterprise Readiness" shipped 2026-05-05 (tag `v4.6.0`). 6 phases, 24 plan
 | Move every open item into one ledger, `.planning/LEDGER.md` (operator, 2026-11-06) | HORIZON's ledger, todo folders and backlog folders disagreed on what was open | ✓ Good — gated by `test_ledger_completeness.py`; one dashboard vitest gate still read HORIZON.md and kept Dashboard Quality red on `main` from PR #74 until the v5.28.2 close fixed it |
 
 ---
-*Last updated: 2026-11-09 after the v5.28.1 + v5.28.2 milestone close (both patch releases archived together); previously at the v5.28.1 milestone open*
+*Last updated: 2026-11-15 at the v5.29 Surface Agreement milestone open; previously 2026-11-09 after the v5.28.1 + v5.28.2 milestone close (both patch releases archived together); previously at the v5.28.1 milestone open*
 
 ## Evolution
 

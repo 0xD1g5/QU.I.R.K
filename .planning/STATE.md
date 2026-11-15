@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.28.2
-milestone_name: Connector Coverage Truth
-status: milestone_complete
-last_updated: "2026-11-09T20:00:00.000Z"
-last_activity: "2026-11-09 -- v5.28.1 + v5.28.2 CLOSED and ARCHIVED by hand on branch archive-v5.28.2 (both patch milestones together: they shared one REQUIREMENTS.md, archived as milestones/v5.28.2-REQUIREMENTS.md; v5.28.1-ROADMAP.md + v5.28.2-ROADMAP.md). v5.28.2 audit tech_debt 10/10 (integration 15/17: F1 Executive Skipped badge, F2 Export PDF; both filed, PR #75). No milestone tag (v5.28.1/v5.28.2 are the release tags). Also fixed the dashboard vitest gate that still read HORIZON.md (Dashboard Quality red on main since PR #74). Next: /gsd-new-milestone v5.29 after the PM review. Prior: 2026-11-08 -- Phase 235.4 COMPLETE: 9/9 plans, verified passed 4/4 at 52e1b604 (branch_ci_state --compare-main exit 0; Python CI 42533403195, Dashboard Quality 42530002785); v5.28.2 tagged on a8c7fc65 (PR #71 merge) and on PyPI (release run 42525338154), attestations verify, five PyPI smoke legs PASS; chaos-lab GUI walkthrough Pass A + Pass B PASS (LAUNCH-10); announcement re-checked, operator GO with SAML non-metadata-answer disclosure (S8b); 12 findings filed as todos (52e1b604); PR #72 (post-release docs) open; REL-11/12 + LAUNCH-10/11 Complete. Next: merge PR #72 and PR #70 (ledger rows owed), then /gsd-audit-milestone v5.28.2. Prior: 2026-11-07 -- Phase 235.4 PLANNED: 9 plans in 8 waves, research HIGH confidence (release mechanics) / MEDIUM (per-connector walkthrough expectations), plan checker passed at iteration 3 (0 blockers, 0 warnings); REL-11/12 + LAUNCH-10/11 covered and D-01..D-16 cited (checked independently, because check.decision-coverage-plan counted 2/2); D-11 made concrete (C..M diff touches no packaged path + candidate-vs-dry-run/PyPI wheel RECORD compare; any packaged-path commit after C forces a re-candidate and both walkthrough passes re-run); every plan suppresses execute-plan's state/roadmap/requirements post-steps; pre-C CMVP margin check. Next /gsd-execute-phase 235.4. Prior: 2026-11-07 -- Phase 235.4 context gathered: D-01..D-16 (operator: two-pass chaos-lab walkthrough as GO evidence, Dependabot npm alerts do not block 5.28.2; recommended+locked: one PR v5282-open->main superseding #69, ledger PR #70 after release, walkthrough on the exact candidate before the tag, version-bump sites re-derived by grep); CI [api] extra added (e00f31e5, branch_ci_state exit 0); next /gsd-plan-phase 235.4. Prior: 2026-11-07 -- Phase 235.3 COMPLETE: 21/21 plans, verified passed 6/6 at dc055f3b (branch_ci_state --compare-main exit 0; Python CI 42344555900, Dashboard Quality 42344557789); code review 45 findings, 31 fixed red-first, 14 deferred; human UAT (New Scan internal-target warning, live quirk serve) approved by operator; COVTRUTH-01..06 Complete; folded 261105 todos closed; B-WR-07 + AKIA todos filed; next /gsd-plan-phase 235.4. Prior: 2026-11-06 -- Phase 235.3 EXECUTING: waves 1-6 complete (20/21 plans; orchestrator fixes 84021ff8 label redaction, 24348d12 registry/title gates, 1460c2e0 closed resolved 261030 todo); guide vault sync done), wave 7 (plan 19 UAT + CI close-out) next (21 plans, serial, use_worktrees=false). Prior: 2026-11-06 -- Phase 235.3 PLANNED: 21 plans in 7 waves, research HIGH confidence on code behaviour (16 of 21 connector closures affected, a hypothesis the backstop re-derives), plan checker passed at iteration 3 (0 blockers, 0 warnings), COVTRUTH-01..06 covered and D-01..D-12 cited (checked independently, because check.decision-coverage-plan skipped 0/0); UI-SPEC skipped by operator; planner decisions P-01..P-15 open for operator review. Clone found on chore/master-ledger (3 ledger commits, pushed) at plan close; every code plan asserts v5282-open first. Next /gsd-execute-phase 235.3 after git checkout v5282-open. Prior: 2026-11-06 -- Milestone v5.28.2 Connector Coverage Truth opened by hand on branch v5282-open (Phases 235.3 fixes + 235.4 release; 10 requirements COVTRUTH-01..06, REL-11/12, LAUNCH-10/11; ship by 2026-11-23). Phase 235.3 context gathered: D-01..D-12, all operator-confirmed (ran only if a target answered; new reasons internal-target-refused + auth-failed; skips count as scan errors; run-time source-enumerated backstop; empty states, DB failed rows, New Scan internal-target warning, operator checklist). Next /gsd-plan-phase 235.3. Prior: 2026-11-06 -- Phase 235.2 COMPLETE: verified passed 4/4 at 139ed513 (branch_ci_state --branch main exit 0; Python CI 42223519913, Dashboard Quality 42223519835); v5.28.1 tagged on 68bbe62d and on PyPI; all smoke legs PASS incl. 3.15 N2 after the extra 5.25.0/5.27.0 yanks; Dependabot #3/#31 fixed, DEP-03 closed; PRs #67/#68 merged; announcement re-check clean, operator NO-GO until 5.28.2 stops unscanned connectors reading as ran. 16/16 requirements Complete. Next: insert the 5.28.2 coverage-truth phase. Prior: 2026-11-05 -- Phase 235.1 COMPLETE: 15/15 plans, verified passed 5/5 at af4f755c after two re-verifications (branch_ci_state exit 0; Python CI 42092994455, Dashboard Quality 42092999192); code review WR-01..06 + IN-01/02/07 fixed, rest deferred (999.127); 10/11 requirements Complete, DEP-03 delivered and held open for the 235.2 merge; next /gsd-plan-phase 235.2. Prior: waves 1-5 complete (14/15; CHANGELOG [5.28.1], README/reference docs, guides + vault sync done). Prior: wave 2 complete (grpc-tls lab now negotiates X25519MLKEM768, oracle updated from measurement). Prior: wave 1 complete (plans 01-08, 8/15); operator approved vitest 3.2.7 and the tinypool #83/#84 tolerable_risk dismissal (both dismissed, #31/#3 still open until the 235.2 merge); next wave 2 (plan 09 needs Docker). Prior: Phase 235.1 PLANNED: 15 plans in 6 waves, research HIGH confidence, plan checker passed at iteration 3 (0 blockers), 11/11 requirements and D-01..D-16 covered (decisions checked independently, because check.decision-coverage-plan skipped 0/0); 3 operator checkpoints (npm package check, Dependabot #83/#84 approval, start Docker). Prior: Phase 235.1 context gathered (CR-01 re-measured on real Python 3.15.2: unpinned resolves 5.21.0, dropping the cap does not help; operator chose yank 4.10.0-5.21.0 + keep cap, INSTALL-07 added; CR-02 missing binary counts as a scan error). Prior: Milestone v5.28.1 (patch release) opened by hand on branch v5281-open: 15 requirements, Phases 235.1 (fixes) + 235.2 (release + announcement re-check); ship by 2026-11-23. Prior: v5.28 closed + archived, main green at f4564d2c (PR #65)"
+milestone: v5.29
+milestone_name: Surface Agreement
+status: planning
+last_updated: "2026-11-15T22:16:00.880Z"
+last_activity: 2026-11-15
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -23,11 +23,14 @@ progress:
 cap), 0 debug sessions and 0 quick tasks.
 
 From disk:
+
 - **208 pending todos, 62 of them with no `owner:` field, 15 high priority.** Up from 195 / 45 at the
   v5.28 close.
+
 - **0 open debug sessions.** The two files in `.planning/debug/` both read `status: resolved`.
 - **21 audit tech-debt items in 3 groups** (235.3: 10, 235.4: 8, milestone: 3), in the frontmatter of
   `.planning/milestones/v5.28.2-MILESTONE-AUDIT.md`. Not copied here, so it cannot drift.
+
 - **v5.28.1 had no milestone audit.** Its phases were each verified `passed`; nothing else was
   audited across them.
 
@@ -51,9 +54,11 @@ From disk:
 `260611-g0b-merge-healthcare-vertical-branch-into-ma`.
 
 From disk:
+
 - **195 pending todos, 45 of them with no `owner:` field.**
 - **0 open debug sessions.** The handoff said there were 2, but both files
   (`github-release-notes-and-ci-failures`, `sensor-enroll-id-mismatch`) read `status: resolved`.
+
 - **22 audit tech-debt items in 9 phase groups.** One of them is already marked RESOLVED.
 
 The full list is in the frontmatter of `.planning/milestones/v5.28-MILESTONE-AUDIT.md`. It is not
@@ -1531,6 +1536,13 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
   `### Roadmap Evolution` under Accumulated Context instead of using this section. Hand-edited instead.
 
 ## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-11-15 — Milestone v5.29 started
+
+## v5.28.2 Close Record — superseded as Current Position 2026-11-15 (v5.29 opened)
 Phase: None — between milestones. v5.28.1 (Phases 235.1–235.2) and v5.28.2 (Phases 235.3–235.4) closed and archived 2026-11-09; phase directories moved to `.planning/milestones/v5.28.1-phases/` and `v5.28.2-phases/`.
 Plan: —
 Status: Milestone complete. v5.28.2 audit `tech_debt` (10/10 requirements, integration 15/17, flows 2/4). Next: `/gsd-new-milestone` for v5.29.
@@ -2018,20 +2030,24 @@ review, same pattern as 213-09/217-05) and FIX-05 (the closing "zero badge pair 
 below 4.5:1" assertion against an empty RATCHET-01 baseline).
 
 **Inputs 217 hands to 218, re-derive rather than trust these prose figures:**
+
 1. The residual per-route axe `color-contrast` node table from `217-04-SUMMARY.md` (a different
    unit from badge-baseline keys): default-dark certificates 1 (FIX-05), hardware 1 (FIX-04
    badge-modbus); default-light compare 2, hardware 5, findings-storyline 1, qramm-assessment 1,
    root 1, trends 1 — a mix of named FIX-05 sites and genuinely unattributed debt needing triage.
+
 2. `roadmap.tsx:345`/`:354`'s runtime-interpolated `PHASE_COLORS`/`CLOSURE_STATE_COLOR`
    white-on-status-warning dark-theme failure (2.13:1), found by 217-02's spike but explicitly not
    fixed there (D-02) — the static classifier cannot see it since it is split across `className`
    and `style=`.
+
 3. The badge ratchet baseline's exact remaining 5-key set (asserted by symmetric-difference in
    `217-03-SUMMARY.md`): `compare.tsx|destructive|white|dark`,
    `hardware.tsx|badge-modbus|white|dark`, `sensors.tsx|quantum-safe|--quantum-safe-foreground|light`,
    `trends.tsx|destructive|white|dark`, `trends.tsx|quantum-safe|--quantum-safe-foreground|light`
    — this IS FIX-04's 5, byte-identical to their pre-217 `ratio`/`why` values (never touched by
    217's edits).
+
 4. The certificates 30-89-day-expiry and chart-tls-badge fixture gaps surfaced by 217-05's
    operator checkpoint (`UAT-217-07`/`UAT-217-08`) — Phase 220 input, not 218's, but relevant if
    218's own operator visual review needs the same fixture widened.
@@ -2066,9 +2082,11 @@ do not equate them — but the dark-only sweep was measuring the quieter theme, 
 be verified in BOTH themes now that both are swept.
 
 **Two live instrument caveats that affect how 217 verifies itself:**
+
 1. `empty`/`loading` baselines are **near-vacuous** (only 1 of 10 fixture endpoints honours the
    variant; `loading` serves the full fixture after 3s). Verify 217's swaps against the `default`
    dark AND light baselines; treat the 26 variant baselines as weak evidence. P1 todo owned by 220.
+
 2. `216-02` recorded **11 badge-style maps across 8 further pages** in `OUT_OF_SCOPE_MAPS`. The
    coverage gate covers `/certificates` + `/hardware` only, so FIX-05's "zero badge pair anywhere"
    is wider than the instrument currently sees.
@@ -2144,22 +2162,28 @@ artifact → inspect → commit only the CI-generated files.
 **Each executor's claims were re-verified independently, and each check found something the
 executor's own report would not have surfaced** — not because the executors erred, but because each
 tested the direction it had in mind:
+
 - 216-01: `baselineFilename` was confirmed to THROW on a 2-arg call rather than defaulting, so the
   theme dimension cannot silently go implicit again.
+
 - 216-02: the executor proved the coverage gate fails on under-reading; the *renaming* direction was
   untested, so it was broken here (rename a source map → 3 of 6 nodes red, restored byte-identical).
+
 - 216-03: the executor unit-proved the range floor works; whether it could be *disabled* was
   untested, so a mutation probe collapsed the floor to 0 → 2 tests red. The shrink-only ratchet
   cannot be silently turned into upward drift.
 
 **Findings carried out of Phase 216, not folded into "done":**
+
 - The run-time source scan found **11 badge-style maps across 8 further pages** beyond the 7 in
   `hardware.tsx`. Recorded in the coverage test's `OUT_OF_SCOPE_MAPS` with reasons. Consequence:
   HARNESS-02's named scope (`/certificates` + `/hardware`) covers less of the dashboard than the
   requirement's framing implies — relevant sizing for FIX-05's "zero badge pair anywhere".
+
 - `SNMP_STYLES` declares a `"v3 failed → none"` key that `snmpLabel` has no branch capable of
   producing. Dispositioned `unreachable` with a written reason rather than reached by an invented
   fixture value. A real, small product defect.
+
 - `216-CONTEXT.md` D-02's own file count was wrong (44 → 40), caught during research. Named in the
   decision rather than overwritten, since the phase's whole subject is instruments that drift.
 
@@ -2208,6 +2232,7 @@ sizing optimistic rather than wrong:
   `hardcoded-color-audit.test.tsx:86` and `theme-token-vocabulary.test.ts:41`, the second annotated
   *"Copied verbatim from hardcoded-color-audit.test.tsx's auditedFiles()."* Widening it means
   widening two hand-synced copies; derive once and delete the copy.
+
 - `run-a11y.mjs` has **no theme dimension at all**. Its `VARIANT` is a *fixture* variant
   (`default`/`empty`/`loading`), and `data-theme` / `.dark` / `classList` / `prefers-color-scheme`
   return zero hits. Adding the light theme is new harness capability, not a flag flip.
@@ -2223,6 +2248,7 @@ which cannot see the multi-line-value truncation defect (HITS #15-17). See `CLAU
 ---
 
 ## v5.25 Close Record — Phase 214 (Release Cut), superseded as Current Position 2026-09-28
+
 Phase: 214 (Release Cut) — **COMPLETE at 9 of 9 plans.** Recorded 2026-09-29 by the continuation
 pass that ran after plan 214-09's blocking operator checkpoint was satisfied.
 Plan: 9 of 9 complete.
@@ -2304,7 +2330,9 @@ STATE.md scalar**, and verify with a round-trip equality check, not with a parse
 the parse *succeeded* on the truncated value.
 
 **Counters re-derived FROM DISK, not inherited:** `total_plans: 40` (210:8 + 211:8 + 212:5 + 213:10
+
 + 214:9, each counted by `ls | grep -cE '^[0-9.]+-[0-9]+-PLAN\.md$'`), `completed_plans: 40` (40
+
 SUMMARY files), `completed_phases: 4` (checked ROADMAP boxes 211/212/213/214). **Phase 210's box
 stays `[ ]` deliberately** — unchanged by this pass, exactly as plan 08 left it.
 
@@ -2369,29 +2397,35 @@ the operator — the same reasoning Phase 210's own entry gives for leaving its 
 records that the call is still open rather than resolving it silently in either direction.
 
 **Deferred / carried items from this phase:**
+
 - **REL-03 pending on an operator-reserved tag push.** Not a blocker to be cleared by an agent; a
   decision to be taken by a person. `release.yml` fires on `v[0-9]*` and publishes to PyPI
   irreversibly, so there is no rehearsal tag that is not a real one.
+
 - **Backlog `999.116` filed, not actioned** —
   `.planning/backlog/999.116-boilerplate-release-bodies-pre-v5.7/IDEA.md`. The 8 genuinely-
   boilerplate pre-v5.7 tags (`v5.5.1`, `v5.5.2`, `v5.5.2.1`-`.5`, `v5.6.0`, 1153 bytes each, first
   line `## Windows Sensor Asset`) are a DIFFERENT set from REL-04's 7 and outside its stated scope.
   Carries the not-recoverable hazard note forward from `999.109`.
+
 - **`CLAUDE.md`'s Per-Phase Documentation Checklist was corrected in plan 214-03 and is
   UNCOMMITTABLE.** `CLAUDE.md` is gitignored (`.gitignore:92`), so that correction is real on disk
   and will never appear in a git diff, a commit, or a fresh clone. Do not look for it in history;
   read the file. A future `git clean`-equivalent or a fresh checkout loses it silently.
+
 - **ROADMAP Success Criterion 2's test count was stale by four** ("all 4 `tests/test_version.py`
   tests" against a measured 8) and is corrected in place at plan 08 with the prior claim preserved
   beside it. The identical claim in `REQUIREMENTS.md` and `CLAUDE.md` was corrected by plan 214-03;
   fixing two of three and leaving the third would have reproduced the hand-maintained-figure drift
   `CLAUDE.md` records this project being bitten by six times. The milestone GOAL line's matching
   "three milestones" was corrected the same way in the same pass.
+
 - **The `multihost` chaos-lab profile is still DOWN** (0 `chaoslab` containers). Any live
   re-comparison must re-raise it AND force-rebuild `mh-prober`
   (`docker compose -p chaoslab --profile multihost build mh-prober` first) — `lab.sh up` does not
   pass `--build`, and a stale image silently reproduces a superseded 91/100. Blocks none of plans
   06-09, none of which need a live scan.
+
 - **`"HTTP on TLS-designated port"` has no dashboard-side emission site**, dispositioned
   `unbridgeable-latent-divergence` with an explicit **tag-blocking verdict of NO**:
   `.planning/todos/pending/211-http-on-tls-designated-port-has-no-dashboard-equivalent.md`. It does
@@ -2470,6 +2504,7 @@ irreversible is at stake.
 stale — it described Phase 211 as unplanned and Phases 212/213 as `not_started`, all three since
 closed; archived to scratchpad as `214-prep/HANDOFF.stale-211.json`). Its two blockers are NOT
 stale and are recorded here so they survive the file:
+
 - **Phase 210 Success Criterion 5 — the handoff called this a live tag-blocker. It is NOT; it
   was RESOLVED the same day, and the handoff simply predated the fix.** The handoff cited
   `.planning/todos/pending/260928-hygiene-moderntls-subscores-diverge-report-vs-dashboard.md`.
@@ -2495,6 +2530,7 @@ stale and are recorded here so they survive the file:
   `completed_phases: 3` is left UNCHANGED — whether criterion 5 now counts as met is the
   orchestrator's call at phase/milestone close, not a resume step's, and plan 214-08 is where
   that judgement is recorded.
+
 - **The `multihost` chaos-lab profile is DOWN** (0 chaoslab containers; torn down since). Any
   live re-comparison must re-raise it AND force-rebuild `mh-prober`
   (`docker compose -p chaoslab --profile multihost build mh-prober` first) — `lab.sh up` does not
@@ -2663,6 +2699,7 @@ so the ROADMAP checkbox is deliberately left UNCHECKED. XSURF-01..04 are each in
 Complete; 4/4 must never be read as goal-achieved.
 
 ### Phase 210 plan 05 (2026-09-27) — XSURF-04 three-number cross-surface
+
 equality gate + both required falsifications; A==B alone found insensitive to the shared
 evaluate_identity_endpoints/evidence.py dedupe sites, widened with pinned-oracle assertions
 
@@ -3607,6 +3644,7 @@ Last session: 2026-11-09. Audited v5.28.2 (`tech_debt`), filed F1/F2/CMVP todos 
 
 Last session: 2026-11-03. **Confirmed `main` CI green at `66e6a992` (after PR #64), then closed v5.28 by hand.** Every count was re-derived
 from disk. Three drifted from what was carried in:
+
 - The handoff said 2 open debug sessions; both read `status: resolved`.
 - The draft deferred table said about 20 debt items in 8 groups; the audit holds 22 in 9.
 - `audit-open` said `todos: 5`; there are 195.
