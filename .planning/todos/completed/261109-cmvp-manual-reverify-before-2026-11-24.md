@@ -36,3 +36,13 @@ If it cannot be done by 2026-11-23, record the deferral in STATE.md instead of b
 ## Feasibility & Effort
 
 Small (about 1 hour of reading against the CSRC search). No code change.
+
+## Resolution (2026-11-15)
+
+- [x] All 53 `cmvp_cache.json` modules re-verified by hand against the NIST CSRC certificate pages
+  (`/projects/cryptographic-module-validation-program/certificate/<n>`): name, FIPS standard, overall level
+  and approved-algorithm set. 52 matched. Cert 4885 carried the wrong module name ("wolfSSL FIPS Ready");
+  NIST lists "ZPE Systems FIPS Provider for OpenSSL 3". Fixed in `cmvp_cache.json` and `cmvp_curated.csv`.
+- [x] `last_verified` bumped 2026-08-25 -> 2026-11-15 after that check. `cmvp refresh` was not run.
+- Residual, ledgered as `261115-cmvp-4885-curated-vendor-and-match-hint-say-wolfssl`: the CSV vendor and
+  match-hint columns for 4885 still say wolfSSL.

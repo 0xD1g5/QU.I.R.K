@@ -50,5 +50,5 @@ certificate_number,vendor,name,rationale
 4444,Utimaco IS GmbH,SecurityServer CryptoServer,Utimaco HSM (EU enterprise) [fallback]
 4459,VMware Inc.,VMware OpenSSL FIPS Object Module,VMware vSphere crypto [fallback]
 4718,wolfSSL Inc.,wolfCrypt,wolfCrypt (embedded TLS)
-4885,wolfSSL Inc.,wolfSSL FIPS Ready,wolfSSL FIPS (firmware) [fallback]
+4885,wolfSSL Inc.,ZPE Systems FIPS Provider for OpenSSL 3,wolfSSL FIPS (firmware) [fallback]
 4179,Yubico AB,YubiHSM 2,Yubico HSM [fallback]
