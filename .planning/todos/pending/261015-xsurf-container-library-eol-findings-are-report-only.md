@@ -5,7 +5,7 @@ source: Phase 228 (Cross-Surface Score Parity) D-04; RESEARCH "Report-only HIGH/
 priority: medium
 area: quirk/engine/findings_evaluator.py (_evaluate_container_package), quirk/dashboard/api/routes/scan.py (derive_dashboard_finding_items)
 status: pending
-resolves_phase: null
+resolves_phase: 236
 owner: "999.132"
 ---
 

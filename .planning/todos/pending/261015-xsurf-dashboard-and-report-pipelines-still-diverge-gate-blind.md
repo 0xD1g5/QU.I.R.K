@@ -5,7 +5,7 @@ source: Phase 228 code review (.planning/phases/228-cross-surface-score-parity/2
 priority: high
 area: quirk/dashboard/api/routes/scan.py (_derive_identity_findings), tests/test_finding_title_bridge.py (_severity_divergence_keys), quirk/notify/dispatcher.py:197
 status: pending
-resolves_phase: null
+resolves_phase: 236
 owner: "999.132"
 ---
 

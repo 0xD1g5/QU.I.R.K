@@ -6,7 +6,7 @@ source: v5.28.2 milestone audit, integration check F2 (.planning/milestones/v5.2
 priority: medium
 area: src/dashboard/src/pages/print.tsx:506, derive_dashboard_finding_items (dashboard deriver)
 status: pending
-resolves_phase: null
+resolves_phase: 237
 owner: null
 ---
 

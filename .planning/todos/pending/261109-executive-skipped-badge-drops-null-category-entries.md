@@ -6,7 +6,7 @@ source: v5.28.2 milestone audit, integration check F1 (.planning/milestones/v5.2
 priority: high
 area: run_scan.py:1223 (_collect_stage_partial_failures), quirk/dashboard/api/routes/scan.py:1713 (_load_partial_failures)
 status: pending
-resolves_phase: null
+resolves_phase: 237
 owner: null
 ---
 

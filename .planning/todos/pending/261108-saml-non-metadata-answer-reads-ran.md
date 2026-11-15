@@ -6,7 +6,7 @@ source: Phase 235.4 (5.28.2 release walkthrough and go/no-go)
 priority: high
 area: quirk/scanner/saml_scanner.py:104 (also check jwt_scanner.py:358)
 status: pending
-resolves_phase: null
+resolves_phase: 238
 owner: null
 ---
 

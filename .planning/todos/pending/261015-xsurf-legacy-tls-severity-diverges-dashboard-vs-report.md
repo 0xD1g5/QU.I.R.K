@@ -5,7 +5,7 @@ source: Phase 228 (Cross-Surface Score Parity) D-04; operator decision 2026-10-1
 priority: medium
 area: quirk/dashboard/api/routes/scan.py (findings_for_endpoint), quirk/engine/findings_evaluator.py (_normalize_finding), quirk/dashboard/api/finding_title_bridge.py (SEVERITY_DIVERGENCES)
 status: pending
-resolves_phase: null
+resolves_phase: 236
 owner: "999.132"
 ---
 

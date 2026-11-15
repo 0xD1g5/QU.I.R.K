@@ -6,7 +6,7 @@ source: Phase 235.4 (5.28.2 release walkthrough and go/no-go)
 priority: medium
 area: dashboard score vs report pipeline
 status: pending
-resolves_phase: null
+resolves_phase: 236
 owner: null
 ---
 
