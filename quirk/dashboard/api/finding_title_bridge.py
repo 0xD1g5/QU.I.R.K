@@ -187,48 +187,132 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# SEVERITY_DIVERGENCES (Phase 228 D-03 / D-04 / D-22)
+# SEVERITY_DIVERGENCES (Phase 228 D-03 / D-04 / D-22; reshaped Phase 236 D-09)
 #
-# Key: a dashboard title key/prefix whose literal severity, as emitted by
-# quirk/dashboard/api/routes/scan.py::findings_for_endpoint, does NOT match
-# the report side. Two kinds of key can appear here:
-#   * a BRIDGED key (DASHBOARD_TITLE_BRIDGE): the report severity is the one
-#     findings_evaluator.py emits for the CLI title AFTER _normalize_finding
-#     rewrites it;
-#   * an UNBRIDGED key (UNBRIDGED_DASHBOARD_TITLES) whose dashboard severity
-#     is HIGH or CRITICAL and so can move the consequence ceiling with no
-#     report counterpart (D-22).
-# Value: {"reason": <one sentence>, "todo": <filename in .planning/todos/pending/>}.
+# Key: a title prefix (matched longest-prefix against the titles on the
+# divergent side) whose HIGH/CRITICAL findings exist on one surface only, or
+# at a different severity, for the same host:port. The headline ceiling counts
+# RAW severities, so each mismatch moves the headline between surfaces.
 #
-# Why it matters: the headline ceiling counts RAW severities, so any
-# mismatched pair moves the headline between surfaces (D-03). Each entry is
-# filed and owned, NOT fixed here (D-04, D-22); fixing one means deleting its
-# entry in the same change, and the gate fails if a stale entry stays.
+# Value (all fields required):
+#   reason       one sentence naming both firing conditions;
+#   todo         filename in .planning/todos/pending/ that owns the fix;
+#   score_moving True when the divergence changes a headline score;
+#   side         "dashboard_only" (the dashboard raises a HIGH/CRITICAL the
+#                report does not) or "report_only" (the reverse). The key is a
+#                title on THAT side;
+#   families     the tests/fixtures/divergence_rows.py families that exhibit
+#                it. An entry only dispositions a residual in a listed family
+#                on its own side; a listed family that stops producing the
+#                residual makes the entry stale.
 #
-# This dict is a disposition, not the safeguard.
-# tests/test_finding_title_bridge.py regenerates both generators' literal
-# severities from source with `ast` on every run and requires set equality
-# against this dict's keys (no gaps, no extras).
+# Each entry is filed and owned, not hidden: fixing a divergence means
+# deleting its entry in the same change.
+#
+# This dict is a disposition, not the safeguard. The safeguard is
+# tests/test_severity_divergence_behaviour.py: it RUNS both derivers on a
+# fixture family per finding type, diffs the HIGH/CRITICAL multisets per
+# host:port in both directions, requires every residual to be dispositioned
+# here, and fails on a stale entry. Its fixture families are themselves
+# checked at run time against the title sites extracted from source.
 # ---------------------------------------------------------------------------
-SEVERITY_DIVERGENCES: Dict[str, Dict[str, str]] = {
-    # Bridged. Dashboard emits HIGH (scan.py, `Legacy TLS version: ...`); the
-    # report emits LOW and _normalize_finding pins that title to LOW. The two
-    # conditions also differ (negotiated vs offered versions).
+SEVERITY_DIVERGENCES: Dict[str, Dict[str, object]] = {
+    # Bridged. Dashboard emits HIGH on the negotiated version; the report emits
+    # LOW on the offered versions and _normalize_finding pins that title to LOW.
     "Legacy TLS version: ": {
         "reason": (
-            "Dashboard HIGH on the negotiated version vs report LOW on the "
-            "offered versions; operator chose to file rather than fix (D-04)."
+            "Dashboard HIGH on the negotiated version (tls_version in TLSv1/1.1) "
+            "vs report LOW on the offered versions "
+            "(has_legacy_tls_versions_signal); the report has no HIGH tier."
         ),
         "todo": "261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["legacy_max_tls10"],
     },
     # Unbridged (D-22). Dashboard HIGH on ep.tls_weak_ciphers_present; no
-    # report finding fires on that column, so the report ceiling never sees it.
+    # report finding fires on that column. An SSLv3 row sets the flag too.
     "Weak cipher suites enabled": {
         "reason": (
             "Dashboard HIGH on tls_weak_ciphers_present has no report "
             "counterpart; one such endpoint scores 84 (report) vs 69 (dashboard)."
         ),
         "todo": "261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["weak_cipher", "legacy_max_sslv3"],
+    },
+    # Report-only. The report splits ECDSA by size (<256 bits HIGH); the
+    # dashboard has one MEDIUM "Quantum-..." title regardless of size.
+    "TLS certificate uses undersized ECDSA key": {
+        "reason": (
+            "Report HIGH when cert_pubkey_size < 256 (findings_evaluator ECDSA "
+            "branch) vs dashboard MEDIUM 'Quantum-vulnerable algorithm' at any size."
+        ),
+        "todo": "261015-xsurf-undersized-ecdsa-report-high-dashboard-medium.md",
+        "score_moving": True,
+        "side": "report_only",
+        "families": ["ecdsa_192"],
+    },
+    # Report-only. The dashboard never evaluates CONTAINER rows.
+    "End-of-life ": {
+        "reason": (
+            "Report evaluates CONTAINER package rows (_evaluate_container_package: "
+            "OpenSSL EOL HIGH/CRITICAL); the dashboard derivation has no "
+            "CONTAINER branch."
+        ),
+        "todo": "261015-xsurf-container-library-eol-findings-are-report-only.md",
+        "score_moving": True,
+        "side": "report_only",
+        "families": ["container_openssl_111", "container_openssl_102"],
+    },
+    "Severely outdated Python cryptography package": {
+        "reason": (
+            "Report flags cryptography < 3.x in a container image (HIGH); the "
+            "dashboard derivation has no CONTAINER branch."
+        ),
+        "todo": "261015-xsurf-container-library-eol-findings-are-report-only.md",
+        "score_moving": True,
+        "side": "report_only",
+        "families": ["container_pycrypto_old"],
+    },
+    # Dashboard-only identity findings (D-19: dispositioned, not fixed; which
+    # surface is right is an open scoring question).
+    "Kerberos weak etype: ": {
+        "reason": (
+            "Dashboard raises HIGH/CRITICAL from the etype severity in "
+            "service_detail (_derive_identity_findings); the report composition "
+            "has no Kerberos finding at all."
+        ),
+        "todo": "261115-kerberos-weak-etype-dashboard-only-score-divergence.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["kerberos_rc4"],
+    },
+    "DNSSEC: ": {
+        "reason": (
+            "Dashboard raises variable-severity DNSSEC findings (NONE is HIGH) "
+            "from _DNSSEC_WEAK_MAP; the report composition has no DNSSEC "
+            "finding at all."
+        ),
+        "todo": "261115-dnssec-dashboard-only-score-divergence.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["dnssec_none"],
+    },
+    # Census extra (Phase 236-01): found by the behaviour gate, not previously
+    # listed. HTTP row plus an MTLS_REQUIRED TLS row on the same host:port.
+    "Unencrypted HTTP service": {
+        "reason": (
+            "Report _postprocess_findings downgrades 'Plaintext HTTP service "
+            "detected' to INFO 'mTLS required' when a sibling TLS row on the "
+            "same host:port has tls_blocker_reason MTLS_REQUIRED; the dashboard "
+            "judges each row alone and keeps HIGH."
+        ),
+        "todo": "261115-http-mtls-pair-dashboard-only-score-divergence.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["http_on_tls_port_with_mtls_pair"],
     },
 }
 

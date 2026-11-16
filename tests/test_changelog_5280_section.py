@@ -37,6 +37,13 @@ _DIVERGENCE_PHRASES: dict[str, str] = {
     "Legacy TLS version: ": "legacy TLS version",
     "Weak cipher suites enabled": "weak cipher suites",
     "Quantum-": "undersized ECDSA",
+    "TLS certificate uses undersized ECDSA key": "undersized ECDSA",
+    "End-of-life ": "end-of-life crypto libraries in container images",
+    "Severely outdated Python cryptography package":
+        "end-of-life crypto libraries in container images",
+    "Kerberos weak etype: ": "Kerberos weak-encryption",
+    "DNSSEC: ": "DNSSEC",
+    "Unencrypted HTTP service": "Other findings may also differ",
 }
 
 # Todo-derived score divergences: one (item, phrase) pair per row classified
