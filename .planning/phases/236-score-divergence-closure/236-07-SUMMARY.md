@@ -74,3 +74,12 @@ None for the plan criteria. No live leg isolates legacy-max TLS (tls-legacy offe
 
 ## Self-Check: PASSED
 Commit 03c59e25 present; evidence files present under 236-evidence/.
+
+## Orchestrator correction
+
+Orchestrator correction (2026-11-16, re-derived from /Volumes/Digs-1TB/pytest-236-evidence/core-registry-dnssec/latest.json):
+the scored dashboard `findings` list is CRITICAL 3 / HIGH 8 (Certificate expired; 2x EOL OpenSSL 1.0.x; 2x EOL
+OpenSSL 1.1.x; 2x Severely outdated Python cryptography 2.9.2; TLS certificate is self-signed; 3x "DNSSEC: NONE").
+Against the report (CRITICAL 3 / HIGH 5) the multiset difference is exactly 3x "DNSSEC: NONE" (dashboard_only),
+the D-19 dispositioned key. The "HIGH 11" above also counted the separate identity_findings / dar_findings panels,
+which are not in the scored findings set. No undispositioned live divergence.
