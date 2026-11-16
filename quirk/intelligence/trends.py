@@ -8,6 +8,9 @@ legacy rows with scan_run_id NULL fall back to millisecond buckets so two scans
 started in different milliseconds stay distinct (CR-05).
 _fetch_session_endpoints resolves a session timestamp back to its scan run.
 
+Scan-error counting (Phase 237 D-10/D-11): environment categories are advisory
+and weigh 0; an ADVISORY outage row weighs the number of targets it covers.
+
 NULL scanned_at rows (D-13): v4.2-era endpoints may have scanned_at IS NULL.
 These are excluded from session grouping AND from per-session endpoint fetches by
 filtering scanned_at.isnot(None) in every query.
@@ -25,7 +28,10 @@ from quirk.models import CryptoEndpoint
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
-from quirk.scanner.target_outcome import COVERAGE_SKIP_ADVISORY_CATEGORIES
+from quirk.scanner.target_outcome import (
+    COVERAGE_SKIP_ADVISORY_CATEGORIES,
+    failed_target_count,
+)
 
 FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 
@@ -34,10 +40,38 @@ FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 # Severity bucketing
 # ---------------------------------------------------------------------------
 
-# 235.1 D-06: advisory-only categories never count as scan-error regressions.
-# 235.3 D-07/P-02: sourced from the one shared set so a new coverage-skip
-# category cannot drift between consumers. target_unanswered is NOT in it.
-_ADVISORY_ONLY_CATEGORIES = COVERAGE_SKIP_ADVISORY_CATEGORIES
+# Phase 237 D-10: trends keeps its OWN advisory-only set. Environment facts
+# (extra/binary not installed, internal-target guard) stay advisory; run-to-run
+# outcomes (targets_unreachable, auth_failed, missing_credentials) are scan-error
+# regressions, otherwise a FULL connector outage collapses to one advisory row
+# and reads as zero while a partial outage shows. The shared
+# COVERAGE_SKIP_ADVISORY_CATEGORIES (scoring, findings_evaluator, sensor_cmd) is
+# deliberately unchanged (235.3 P-02) and is still imported for reference.
+# target_unanswered is NOT in either set.
+_ADVISORY_ONLY_CATEGORIES: frozenset = frozenset(
+    {"missing_extra", "missing_binary", "internal_target_refused"}
+)
+_OUTAGE_CATEGORIES: frozenset = frozenset(
+    {"targets_unreachable", "auth_failed", "missing_credentials"}
+)
+
+
+def _error_weight(ep) -> int:
+    """Scan-error weight of one endpoint row (Phase 237 D-11).
+
+    0 for advisory-only categories. An ADVISORY outage row stands for every
+    target of its phase, so it weighs N from "<k> of <N> targets ..." (else 1,
+    e.g. the Vault missing-token row). Everything else weighs 1. Note: for
+    db/k8s/cloud the classifier also forwards in-band error rows (P-08), so a
+    full outage there may read up to 2N; this is documented, not subtracted.
+    """
+    category = getattr(ep, "scan_error_category", None)
+    if category in _ADVISORY_ONLY_CATEGORIES:
+        return 0
+    if ep.protocol == "ADVISORY" and category in _OUTAGE_CATEGORIES:
+        return failed_target_count(ep.scan_error) or 1
+    return 1
+
 
 _SEVERITY_BUCKET = {
     "CRITICAL": "high",
@@ -452,16 +486,8 @@ def compute_trend_report(
     # (missing_extra, missing_binary, and the 235.3 coverage-skip categories) so that "user did not
     # install [motion] this run" does not register as a scan-error regression.
     # getattr(..., None) tolerates older DB rows that predate the column.
-    cur_err = sum(
-        1 for ep in current_eps
-        if ep.scan_error is not None
-        and getattr(ep, "scan_error_category", None) not in _ADVISORY_ONLY_CATEGORIES
-    )
-    prev_err = sum(
-        1 for ep in previous_eps
-        if ep.scan_error is not None
-        and getattr(ep, "scan_error_category", None) not in _ADVISORY_ONLY_CATEGORIES
-    )
+    cur_err = sum(_error_weight(ep) for ep in current_eps if ep.scan_error is not None)
+    prev_err = sum(_error_weight(ep) for ep in previous_eps if ep.scan_error is not None)
     scan_errors_new_count = max(0, cur_err - prev_err)
     scan_errors_resolved_count = max(0, prev_err - cur_err)
 
