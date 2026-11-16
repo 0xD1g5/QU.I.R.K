@@ -37,7 +37,8 @@ from quirk.dashboard.api.finding_title_bridge import (
 from quirk.intelligence.remediation import REMEDIATION_CONSTITUENCY
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_SCAN_PY = _REPO_ROOT / "quirk" / "dashboard" / "api" / "routes" / "scan.py"
+# Phase 236 D-10: the derivation block moved out of routes/scan.py into a FastAPI-free module.
+_SCAN_PY = _REPO_ROOT / "quirk" / "dashboard" / "api" / "finding_derivation.py"
 _EVALUATOR_PY = _REPO_ROOT / "quirk" / "engine" / "findings_evaluator.py"
 
 # Matches `title="literal"` or `title=f"literal{expr}..."` -- single-line only

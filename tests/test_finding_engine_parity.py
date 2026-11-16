@@ -379,7 +379,7 @@ def _is_bare_tls_compare(test):
 
 def test_both_pipelines_call_the_shared_tls_predicate():
     for path, name in (
-        ("quirk/dashboard/api/routes/scan.py", "findings_for_endpoint"),
+        ("quirk/dashboard/api/finding_derivation.py", "findings_for_endpoint"),
         ("quirk/engine/findings_evaluator.py", "evaluate_endpoints"),
     ):
         fn = _func_node(path, name)

@@ -1,0 +1,435 @@
+tests/test_missing_extra_advisory_per_scanner.py:49:    monkeypatch.setattr(broker_scanner, "SSLYZE_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:50:    monkeypatch.setattr(broker_scanner, "KAFKA_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:51:    monkeypatch.setattr(broker_scanner, "REDIS_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:61:    monkeypatch.setattr(broker_scanner, "SSLYZE_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:62:    monkeypatch.setattr(broker_scanner, "KAFKA_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:63:    monkeypatch.setattr(broker_scanner, "REDIS_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:73:    monkeypatch.setattr(broker_scanner, "SSLYZE_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:74:    monkeypatch.setattr(broker_scanner, "KAFKA_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:75:    monkeypatch.setattr(broker_scanner, "REDIS_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:86:    monkeypatch.setattr(broker_scanner, "SSLYZE_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:87:    monkeypatch.setattr(broker_scanner, "KAFKA_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:88:    monkeypatch.setattr(broker_scanner, "REDIS_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:101:    monkeypatch.setattr(broker_scanner, "SSLYZE_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:102:    monkeypatch.setattr(broker_scanner, "KAFKA_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:103:    monkeypatch.setattr(broker_scanner, "REDIS_AVAILABLE", True)
+tests/test_missing_extra_advisory_per_scanner.py:116:    monkeypatch.setattr(broker_scanner, "SSLYZE_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:117:    monkeypatch.setattr(broker_scanner, "KAFKA_AVAILABLE", False)
+tests/test_missing_extra_advisory_per_scanner.py:118:    monkeypatch.setattr(broker_scanner, "REDIS_AVAILABLE", False)
+tests/test_html_report.py:231:    monkeypatch.setattr(html_renderer, "_MAX_LOGO_BYTES", 10)
+tests/test_hardware_scanner.py:92:    monkeypatch.setattr(hw_mod, "_probe_http_mgmt", lambda host, port, timeout: None)
+tests/test_hardware_scanner.py:178:    monkeypatch.setattr(hw_mod, "_match_matrix", _raise)
+tests/test_hardware_scanner.py:235:    monkeypatch.setattr(hardware_eol, "EOL_TABLE", {})
+tests/test_siem_dispatcher.py:110:    monkeypatch.setattr(dispatcher, "_send_raw", _fake_send)
+tests/test_siem_dispatcher.py:131:    monkeypatch.setattr(dispatcher, "_send_raw", lambda *a, **kw: None)
+tests/test_siem_dispatcher.py:158:    monkeypatch.setattr(dispatcher, "_send_raw", _fail_send)
+tests/test_siem_dispatcher.py:184:    monkeypatch.setattr(dispatcher, "_send_raw", lambda *a, **kw: calls.append(a))
+tests/test_siem_dispatcher.py:188:    monkeypatch.setattr(dispatcher, "load_siem_config", lambda: cfg)
+tests/test_siem_dispatcher.py:209:    monkeypatch.setattr(dispatcher, "_send_raw", lambda *a, **kw: calls.append(a))
+tests/test_siem_dispatcher.py:213:    monkeypatch.setattr(dispatcher, "load_siem_config", lambda: cfg)
+tests/test_siem_dispatcher.py:238:    monkeypatch.setattr(dispatcher, "_send_raw", lambda *a, **kw: calls.append(a))
+tests/test_siem_dispatcher.py:239:    monkeypatch.setattr(dispatcher, "load_siem_config", lambda: None)
+tests/test_siem_dispatcher.py:259:    monkeypatch.setattr(dispatcher, "_send_raw", lambda *a, **kw: calls.append(a))
+tests/test_siem_dispatcher.py:263:    monkeypatch.setattr(dispatcher, "load_siem_config", lambda: cfg)
+tests/test_internal_target_preflight.py:201:    monkeypatch.setattr(m, "_INTERNAL_CHECK_DEADLINE_S", 0.3)
+tests/test_fingerprint_host_header.py:25:    with patch.object(fp, "_tcp_connect", return_value=fake_sock):
+tests/test_changelog_5280_section.py:253:    monkeypatch.setattr(ph, "pyproject_version", lambda *a, **k: "5.28.1")
+tests/test_missing_binary_skip.py:188:        mp.setattr(sys, "argv", [
+tests/test_missing_binary_skip.py:329:        mp.setattr(sys, "argv", [
+tests/test_remediation_persist.py:520:    monkeypatch.setattr(mod, "build_phased_roadmap", _boom)
+tests/test_p2b_instrument.py:1016:    monkeypatch.setattr(fe, "datetime", _LaterClock)
+tests/test_p2b_instrument.py:1133:    monkeypatch.setattr(inst, "SNAPSHOT_LOCK_TIMEOUT_S", 0.5, raising=False)
+tests/test_p2b_instrument.py:1134:    monkeypatch.setattr(inst, "SNAPSHOT_DEADLINE_S", 2.0, raising=False)
+tests/test_siem_export_cmd.py:115:        monkeypatch.setattr(export_mod, "run_export", _fake_run_export)
+tests/test_siem_export_cmd.py:134:    monkeypatch.setattr(export_cmd_mod, "load_siem_config", lambda: MagicMock())
+tests/test_openapi_scanner.py:258:    with patch.object(oas_mod, "OPENAPI_AVAILABLE", False):
+tests/test_openapi_scanner.py:275:    with patch.object(oas_mod, "OPENAPI_AVAILABLE", False):
+tests/test_browser_e2e_harness_clock.py:36:    monkeypatch.setattr(harness, "datetime", frozen)
+tests/test_browser_e2e_harness_clock.py:37:    monkeypatch.setattr(scan_mod, "datetime", frozen)
+tests/test_compliance_status_staleness.py:43:    with patch.object(compliance_mod, "COMPLIANCE_MAP", fake_map):
+tests/test_compliance_status_staleness.py:88:    with patch.object(compliance_mod, "COMPLIANCE_MAP", fake_map):
+tests/test_compliance_status_staleness.py:116:    with patch.object(compliance_mod, "COMPLIANCE_MAP", fake_map):
+tests/test_scan_coverage_no_backfill.py:183:    monkeypatch.setattr(writer_mod, "load_scan_coverage", _counting_loader)
+tests/test_scan_coverage_no_backfill.py:189:    monkeypatch.setattr(writer_mod, "render_pdf_report", lambda **kwargs: False)
+tests/test_scan_coverage_no_backfill.py:224:    monkeypatch.setattr(writer_mod, "load_scan_coverage", _counting_loader)
+tests/test_scan_coverage_no_backfill.py:225:    monkeypatch.setattr(writer_mod, "render_pdf_report", lambda **kwargs: False)
+tests/test_api_scan_window.py:409:    monkeypatch.setattr(scan_routes, "_default_db_path", lambda: db_path)
+tests/test_api_scan_window.py:457:    monkeypatch.setattr(scan_routes, "load_scan_coverage", _boom)
+tests/test_nmap_scope_args.py:26:    monkeypatch.setattr(subprocess, "run", fake_run)
+tests/test_nmap_scope_args.py:51:    monkeypatch.setattr(subprocess, "run", fake_run)
+tests/test_executive_truncation_indicator.py:43:    with patch.object(executive, "recommend_migration_paths", return_value=recs):
+tests/test_executive_truncation_indicator.py:54:    with patch.object(executive, "recommend_migration_paths", return_value=recs):
+tests/test_dar_dashboard.py:222:    monkeypatch.setattr(scan_routes, "_default_db_path", lambda: db_path)
+tests/test_cli_help_doctor_qramm_cve.py:117:    monkeypatch.setattr(sys, "argv", ["run_scan.py", *args])
+tests/test_connector_coverage_review_fixes.py:46:    monkeypatch.setattr(oe, "find_spec", fake)
+tests/test_connector_coverage_review_fixes.py:56:        mp.setattr(sys, "argv", [
+tests/test_connector_coverage_review_fixes.py:126:    monkeypatch.setattr(krb, "IMPACKET_AVAILABLE", False)
+tests/test_connector_coverage_review_fixes.py:142:    monkeypatch.setattr(cs, "scan_codesign_from_tls_endpoints", lambda *a, **kw: [])
+tests/test_connector_coverage_review_fixes.py:157:    monkeypatch.setattr(oas, "OPENAPI_AVAILABLE", False)
+tests/test_connector_coverage_review_fixes.py:172:    monkeypatch.setattr(db, "PYMYSQL_AVAILABLE", False)
+tests/test_connector_coverage_review_fixes.py:223:    monkeypatch.setattr(az, "_scan_keyvault_keys", fake_kv)
+tests/test_connector_coverage_review_fixes.py:251:    monkeypatch.setattr(run_scan, "scan_kafka_targets", lambda **kw: list(kafka))
+tests/test_connector_coverage_review_fixes.py:252:    monkeypatch.setattr(run_scan, "scan_rabbitmq_targets", lambda **kw: list(rabbit))
+tests/test_connector_coverage_review_fixes.py:253:    monkeypatch.setattr(run_scan, "scan_redis_targets", lambda **kw: list(redis))
+tests/test_connector_coverage_review_fixes.py:316:    monkeypatch.setattr(cs, "scan_codesign_from_ldap", fake_ldap)
+tests/test_connector_coverage_review_fixes.py:317:    monkeypatch.setattr(cs, "scan_codesign_from_tls_endpoints", lambda *a, **kw: [tls_row])
+tests/test_nmap_hardening.py:70:    monkeypatch.setattr(subprocess, "run", boom)
+tests/test_nmap_hardening.py:88:    monkeypatch.setattr(subprocess, "run", boom)
+tests/test_notify_hardware_lifecycle.py:166:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:167:             patch.object(dispatcher, "_channel_send_email") as mock_email, \
+tests/test_notify_hardware_lifecycle.py:168:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook, \
+tests/test_notify_hardware_lifecycle.py:169:             patch.object(dispatcher, "_channel_send_slack") as mock_slack:
+tests/test_notify_hardware_lifecycle.py:182:        with patch.object(dispatcher, "load_notifications_config", return_value=None), \
+tests/test_notify_hardware_lifecycle.py:183:             patch.object(dispatcher, "_channel_send_email") as mock_email, \
+tests/test_notify_hardware_lifecycle.py:184:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook:
+tests/test_notify_hardware_lifecycle.py:201:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:202:             patch.object(dispatcher, "_channel_send_email") as mock_email, \
+tests/test_notify_hardware_lifecycle.py:203:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook:
+tests/test_notify_hardware_lifecycle.py:221:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:223:             patch.object(dispatcher, "_channel_send_email") as mock_email, \
+tests/test_notify_hardware_lifecycle.py:224:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook, \
+tests/test_notify_hardware_lifecycle.py:225:             patch.object(dispatcher, "_channel_send_slack") as mock_slack:
+tests/test_notify_hardware_lifecycle.py:244:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:246:             patch.object(dispatcher, "_channel_send_email") as mock_email, \
+tests/test_notify_hardware_lifecycle.py:247:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook:
+tests/test_notify_hardware_lifecycle.py:265:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:266:             patch.object(dispatcher, "_channel_send_email") as mock_email, \
+tests/test_notify_hardware_lifecycle.py:267:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook, \
+tests/test_notify_hardware_lifecycle.py:268:             patch.object(dispatcher, "_channel_send_slack") as mock_slack:
+tests/test_notify_hardware_lifecycle.py:292:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:293:             patch.object(dispatcher, "_channel_send_email"), \
+tests/test_notify_hardware_lifecycle.py:294:             patch.object(dispatcher, "_channel_send_webhook"), \
+tests/test_notify_hardware_lifecycle.py:295:             patch.object(dispatcher, "_channel_send_slack") as mock_slack:
+tests/test_notify_hardware_lifecycle.py:315:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:316:             patch.object(dispatcher, "_channel_send_email"), \
+tests/test_notify_hardware_lifecycle.py:317:             patch.object(dispatcher, "_channel_send_webhook"):
+tests/test_notify_hardware_lifecycle.py:340:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:341:             patch.object(dispatcher, "_channel_send_email", side_effect=boom), \
+tests/test_notify_hardware_lifecycle.py:342:             patch.object(dispatcher, "_channel_send_webhook") as mock_webhook:
+tests/test_notify_hardware_lifecycle.py:362:        with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_hardware_lifecycle.py:363:             patch.object(dispatcher, "_channel_send_email"), \
+tests/test_notify_hardware_lifecycle.py:364:             patch.object(dispatcher, "_channel_send_webhook"):
+tests/test_score_clamp_property.py:163:    monkeypatch.setattr(scoring, "_apply_weighted_impacts", spy)
+tests/test_console_cmd.py:314:    monkeypatch.setattr(console_cmd_mod, "_ingest_envelope", fake_ingest)
+tests/test_console_cmd.py:349:    monkeypatch.setattr(console_cmd_mod, "_ingest_envelope", fake_ingest)
+tests/test_console_cmd.py:379:    monkeypatch.setattr(sys, "argv", ["run_scan.py", "console", "import-results", "/tmp/test.qpush"])
+tests/test_console_cmd.py:395:    monkeypatch.setattr(sys, "argv", ["run_scan.py", "console", "--help"])
+tests/test_console_cmd.py:444:    monkeypatch.setattr(m, "_ingest_envelope", fake_ingest)
+tests/test_console_cmd.py:624:    monkeypatch.setattr(m, "_ingest_envelope", fake_ingest)
+tests/test_aws_connector.py:223:    with patch.object(mod, "CryptoEndpoint", side_effect=_flaky_endpoint):
+tests/test_gcp_connector.py:229:    monkeypatch.setattr(gcp_connector, "GCP_AVAILABLE", True)
+tests/test_codesign_scanner.py:78:         patch.object(codesign_scanner, "_bind_and_search_codesign",
+tests/test_codesign_scanner.py:256:         patch.object(codesign_scanner, "_bind_and_search_codesign", **bind):
+tests/test_dashboard_api.py:242:        monkeypatch.setattr(scan_module, "_detect_crypto_bridges", _boom)
+tests/test_master_guide_freshness.py:88:    monkeypatch.setattr(bmg, "REPO_ROOT", tmp_path)
+tests/test_notify_email.py:118:    monkeypatch.setattr(smtplib, "SMTP", _FakeSMTP)
+tests/test_notify_email.py:173:    monkeypatch.setattr(smtplib, "SMTP_SSL", _FakeSMTP_SSL)
+tests/test_notify_email.py:229:    monkeypatch.setattr(smtplib, "SMTP", _FakeSMTP)
+tests/test_readme_hero.py:189:    monkeypatch.setattr(hero, "_run", fake_run)
+tests/test_readme_hero.py:198:    monkeypatch.setattr(hero, "_run", mutating_abort)
+tests/test_readme_hero.py:263:    monkeypatch.setattr(tempfile, "tempdir", str(tmproot))
+tests/test_readme_hero.py:264:    monkeypatch.setattr(hero, "REPO_ROOT", fake_repo)
+tests/test_readme_hero.py:280:    monkeypatch.setattr(hero, "_capture_with_server", fake_capture)
+tests/test_readme_hero.py:288:    monkeypatch.setattr(hero, "_capture_with_server", boom)
+tests/test_readme_hero.py:306:    monkeypatch.setattr(tempfile, "tempdir", str(tmproot))
+tests/test_readme_hero.py:338:    monkeypatch.setattr(hero, "REPO_ROOT", root)
+tests/test_tls_scanner_resource_cleanup.py:61:    monkeypatch.setattr(tls_scanner, "SSLYZE_AVAILABLE", True)
+tests/test_tls_scanner_resource_cleanup.py:62:    monkeypatch.setattr(tls_scanner, "SslyzeScanner", fake_cls)
+tests/test_severity_bands_freshness.py:53:    monkeypatch.setattr(sb, "BAND_THRESHOLDS", mutated)
+tests/test_notify_dispatcher.py:163:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: None)
+tests/test_notify_dispatcher.py:195:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+tests/test_notify_dispatcher.py:196:    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (None, None))
+tests/test_notify_dispatcher.py:231:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+tests/test_notify_dispatcher.py:232:    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
+tests/test_notify_dispatcher.py:236:    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+tests/test_notify_dispatcher.py:239:    monkeypatch.setattr(dispatcher, "_channel_send_slack", lambda cfg, summary: None)
+tests/test_notify_dispatcher.py:240:    monkeypatch.setattr(dispatcher, "_channel_send_webhook", lambda cfg, payload: None)
+tests/test_notify_dispatcher.py:290:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+tests/test_notify_dispatcher.py:291:    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
+tests/test_notify_dispatcher.py:294:    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+tests/test_notify_dispatcher.py:304:    monkeypatch.setattr(email_mod, "send_email", _fake_send_email)
+tests/test_notify_dispatcher.py:347:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+tests/test_notify_dispatcher.py:348:    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
+tests/test_notify_dispatcher.py:351:    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+tests/test_notify_dispatcher.py:354:    monkeypatch.setattr(dispatcher, "_channel_send_slack", lambda cfg, summary: (_ for _ in ()).throw(RuntimeError("Slack timeout")))
+tests/test_notify_dispatcher.py:355:    monkeypatch.setattr(dispatcher, "_channel_send_webhook", lambda cfg, payload: None)
+tests/test_notify_dispatcher.py:398:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+tests/test_notify_dispatcher.py:399:    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
+tests/test_notify_dispatcher.py:402:    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+tests/test_notify_dispatcher.py:409:    monkeypatch.setattr(dispatcher, "_channel_send_slack", _raise_with_secret)
+tests/test_notify_dispatcher.py:462:    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: FakePopen())
+tests/test_notify_dispatcher.py:505:    monkeypatch.setattr(dispatcher, "load_notifications_config", lambda: cfg)
+tests/test_notify_dispatcher.py:506:    monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, None))
+tests/test_notify_dispatcher.py:510:    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+tests/test_notify_dispatcher.py:518:    monkeypatch.setattr(email_mod, "send_email", _fake_send_email)
+tests/connector_coverage_harness.py:257:        mp.setattr(sys, "argv", [
+tests/test_report_template_sandbox.py:349:    monkeypatch.setattr(html_renderer, "SandboxedEnvironment", Environment)
+tests/test_jobs_api.py:387:    monkeypatch.setattr(jobs_mod, "_PROCS", {"dead-1": dead}, raising=False)
+tests/test_jobs_api.py:418:    monkeypatch.setattr(jobs_mod, "_PROCS", {"alive-1": alive}, raising=False)
+tests/test_jobs_api.py:444:    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+tests/test_jobs_api.py:469:    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+tests/test_jobs_api.py:500:    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+tests/test_jobs_api.py:561:    monkeypatch.setattr(jobs_mod, "_PROCS", {"race-1": dead}, raising=False)
+tests/test_jobs_api.py:610:    monkeypatch.setattr(jobs_mod, "_PROCS", {}, raising=False)
+tests/test_evidence_bridge_correctness.py:151:    with patch.object(db, "query", side_effect=counting_query):
+tests/test_evidence_bridge_correctness.py:172:    with patch.object(db, "commit", side_effect=SQLAlchemyError("boom")):
+tests/test_bacnet_scanner.py:60:    with patch.object(bacnet_mod, "_PYBACNET_AVAILABLE", False), patch.object(
+tests/test_bacnet_scanner.py:90:    with patch.object(bacnet_mod, "_PYBACNET_AVAILABLE", True), patch.object(
+tests/test_bacnet_scanner.py:128:    with patch.object(bacnet_mod, "_PYBACNET_AVAILABLE", True), patch.object(
+tests/test_connector_phase_backstop.py:791:            mp.setattr(mod, "DefaultAzureCredential", _blocked, raising=False)
+tests/test_connector_phase_backstop.py:793:        mp.setattr(sys, "argv", [
+tests/test_report_colophon.py:131:    with mock.patch.object(html_renderer, "_ASSETS_DIR", str(tmp_path / "nope")):
+tests/test_smime_no_envelope_leak.py:86:         patch.object(smime_scanner, "_bind_and_search", return_value=iter(entries)):
+tests/test_smime_no_envelope_leak.py:104:         patch.object(smime_scanner, "_bind_and_search", return_value=iter(entries)):
+tests/test_tls_scanner_chain_verified.py:146:    with patch.object(_tls, "SslyzeScanner", return_value=fake_scanner):
+tests/test_tls_scanner_chain_verified.py:158:    with patch.object(_tls, "SslyzeScanner", return_value=fake_scanner):
+tests/test_tls_scanner_chain_verified.py:289:    with patch.object(_tls, "SSLYZE_AVAILABLE", True), \
+tests/test_tls_scanner_chain_verified.py:290:         patch.object(_tls, "_scan_one_sslyze", return_value=half) as m_sslyze, \
+tests/test_tls_scanner_chain_verified.py:291:         patch.object(_tls, "_scan_one_fallback", return_value=fb) as m_fb:
+tests/test_tls_scanner_chain_verified.py:314:    with patch.object(_tls, "SSLYZE_AVAILABLE", True), \
+tests/test_tls_scanner_chain_verified.py:315:         patch.object(_tls, "_scan_one_sslyze", return_value=healthy), \
+tests/test_tls_scanner_chain_verified.py:316:         patch.object(_tls, "_scan_one_fallback") as m_fb:
+tests/test_smime_scanner.py:62:         patch.object(smime_scanner, "_bind_and_search", return_value=iter(entries)):
+tests/test_smime_scanner.py:181:         patch.object(smime_scanner, "_bind_and_search", **bind):
+tests/test_smime_scanner.py:226:         patch.object(smime_scanner, "_bind_and_search", side_effect=OSError("x")):
+tests/test_job_progress.py:116:    monkeypatch.setattr(sqlalchemy, "create_engine", tracking_create_engine)
+tests/test_notify_ssrf.py:47:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: object())
+tests/test_cmvp_refresh.py:114:    monkeypatch.setattr(cmvp_mod, "_CACHE_PATH", cache_path)
+tests/test_cmvp_refresh.py:115:    monkeypatch.setattr(cmvp_mod, "_CACHE", None)
+tests/test_cmvp_refresh.py:133:    monkeypatch.setattr(cmvp_mod, "time", SimpleNamespace(sleep=lambda *_: None))
+tests/test_cmvp_refresh.py:160:    monkeypatch.setattr(cmvp_mod, "_CACHE_PATH", tmp_path / "c.json")
+tests/test_cmvp_refresh.py:161:    monkeypatch.setattr(cmvp_mod, "_CACHE", None)
+tests/test_cmvp_refresh.py:162:    monkeypatch.setattr(cmvp_mod, "_read_curated_cert_numbers", lambda: ["4985"])
+tests/test_cmvp_refresh.py:215:    monkeypatch.setattr(cmvp_mod, "_CACHE_PATH", tmp_path / "c.json")
+tests/test_cmvp_refresh.py:216:    monkeypatch.setattr(cmvp_mod, "_CACHE", None)
+tests/test_cmvp_refresh.py:217:    monkeypatch.setattr(cmvp_mod, "_read_curated_cert_numbers", lambda: ["4985"])
+tests/test_cmvp_refresh.py:283:    monkeypatch.setattr(cmvp_mod, "_CACHE_PATH", cache_path)
+tests/test_cmvp_refresh.py:284:    monkeypatch.setattr(cmvp_mod, "_CACHE", None)
+tests/test_cmvp_refresh.py:285:    monkeypatch.setattr(cmvp_mod, "_read_curated_cert_numbers", lambda: ["4985"])
+tests/test_cmvp_refresh.py:286:    monkeypatch.setattr(cmvp_mod, "time", SimpleNamespace(sleep=lambda *_: None))
+tests/test_source_error_rows_score.py:37:    monkeypatch.setattr(subprocess, "run", _fork_safe_run)
+tests/test_install_errors.py:56:    monkeypatch.setattr(shutil, "which", lambda name: None)
+tests/test_install_errors.py:68:    monkeypatch.setattr(shutil, "which", lambda name: None)
+tests/test_sslyze_integration.py:256:        with patch.object(tls_mod, "_scan_one_fallback", return_value=fallback_ep) as mock_fallback:
+tests/test_sslyze_integration.py:299:        with patch.object(tls_mod, "_scan_one_sslyze", return_value=None):
+tests/test_sslyze_integration.py:300:            with patch.object(tls_mod, "_scan_one_fallback", return_value=fallback_ep) as mock_fallback:
+tests/test_fingerprint_socket_cleanup.py:63:    monkeypatch.setattr(fingerprint, "_tcp_connect", lambda host, port, timeout: fake)
+tests/test_fingerprint_socket_cleanup.py:68:    monkeypatch.setattr(fingerprint, "_try_read_ssh_banner", _raise_kbi)
+tests/test_fingerprint_socket_cleanup.py:85:    monkeypatch.setattr(fingerprint, "_tcp_connect", lambda host, port, timeout: fake)
+tests/test_fingerprint_socket_cleanup.py:90:    monkeypatch.setattr(fingerprint, "_try_read_ssh_banner", _raise_se)
+tests/test_fingerprint_socket_cleanup.py:108:    monkeypatch.setattr(fingerprint, "_tcp_connect", lambda host, port, timeout: fake)
+tests/test_optional_extra.py:61:    with patch.object(optional_extra, "find_spec", return_value=None):
+tests/test_optional_extra.py:66:    with patch.object(optional_extra, "find_spec", return_value=fake_spec):
+tests/test_optional_extra.py:92:    with patch.object(optional_extra, "find_spec", return_value=None):
+tests/test_optional_extra.py:127:    with patch.object(optional_extra, "find_spec", return_value=None):
+tests/test_optional_extra.py:153:    with patch.object(optional_extra, "find_spec", return_value=fake_spec):
+tests/test_optional_extra.py:175:    with patch.object(optional_extra, "find_spec", return_value=None):
+tests/test_optional_extra.py:253:    with patch.object(optional_extra, "find_spec", return_value=object()), \
+tests/test_optional_extra.py:281:    with patch.object(optional_extra, "find_spec", return_value=object()), \
+tests/test_optional_extra.py:307:    with patch.object(optional_extra, "find_spec", return_value=object()), \
+tests/test_optional_extra.py:390:    with patch.object(optional_extra, "find_spec", return_value=None), \
+tests/test_optional_extra.py:405:    with patch.object(optional_extra, "find_spec", return_value=object()), \
+tests/test_cmvp_coverage_query.py:114:    monkeypatch.setattr(cmvp_mod, "_CACHE", fixture)
+tests/test_cmvp_coverage_query.py:151:    monkeypatch.setattr(cmvp_mod, "_CACHE", fixture)
+tests/test_kerberos_preauth_wire.py:241:    monkeypatch.setattr(ks, "KDC_PORT", port)
+tests/test_kerberos_preauth_wire.py:339:        monkeypatch.setattr(ks, "_probe_kdc_udp", spy)
+tests/test_kerberos_preauth_wire.py:503:        monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_kerberos_preauth_wire.py:625:        monkeypatch.setattr(ks, "_probe_kdc_udp",
+tests/test_kerberos_preauth_wire.py:627:        monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_kerberos_preauth_wire.py:636:        monkeypatch.setattr(socket, "create_connection", cc)
+tests/test_snmp_scanner_contract.py:608:    with patch.object(mod, "walk_cmd", fake_walk_cmd), \
+tests/test_snmp_scanner_contract.py:610:         patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls:
+tests/test_snmp_scanner_contract.py:652:         patch.object(mod, "SnmpEngine") as mock_engine_cls:
+tests/test_snmp_scanner_contract.py:686:    with patch.object(mod, "walk_cmd", fake_walk_cmd), \
+tests/test_snmp_scanner_contract.py:688:         patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls:
+tests/test_snmp_scanner_contract.py:709:    with patch.object(mod, "_PYSNMP_AVAILABLE", False), \
+tests/test_snmp_scanner_contract.py:710:         patch.object(mod, "SnmpDispatcher") as mock_dispatcher_cls, \
+tests/test_snmp_scanner_contract.py:711:         patch.object(mod, "SnmpEngine") as mock_engine_cls:
+tests/test_console_enroll_race.py:87:    monkeypatch.setattr(quirk_db_mod, "init_db", tracking_init_db)
+tests/test_console_enroll_race.py:91:    monkeypatch.setattr(deps_mod, "_default_db_path", lambda: db_path)
+tests/test_notify_slack.py:81:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: None)
+tests/test_notify_slack.py:100:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: object())
+tests/test_notify_slack.py:121:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: object())
+tests/test_notify_slack.py:134:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: object())
+tests/test_notify_slack.py:157:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: object())
+tests/test_notify_slack.py:209:    monkeypatch.setattr(slack_mod, "find_spec", lambda name: object())
+tests/test_connector_availability_mapping.py:166:    monkeypatch.setattr(db_connector, "PYMYSQL_AVAILABLE", False)
+tests/test_connector_availability_mapping.py:172:    monkeypatch.setattr(db_connector, "PYMYSQL_AVAILABLE", True)
+tests/test_connector_availability_mapping.py:177:    monkeypatch.setattr(db_connector, "PYMYSQL_AVAILABLE", False)
+tests/test_sensor_cmd.py:27:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:70:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:98:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:124:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:153:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:199:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:226:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:267:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:355:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", capturing_validate)
+tests/test_sensor_cmd.py:379:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:380:    monkeypatch.setattr(sensor_cmd_mod, "_flush_spool", lambda *a, **kw: None)
+tests/test_sensor_cmd.py:444:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: ok)
+tests/test_sensor_cmd.py:473:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: mock_result)
+tests/test_sensor_cmd.py:485:    monkeypatch.setattr(yaml, "dump", patched_dump)
+tests/test_sensor_cmd.py:500:    monkeypatch.setattr(yaml, "dump", original_dump)
+tests/test_sensor_cmd.py:977:    monkeypatch.setattr(sensor_cmd_mod, "_spool_dir", lambda: spool_dir)
+tests/test_sensor_cmd.py:1067:    monkeypatch.setattr(sensor_cmd_mod, "_spool_dir", lambda: spool_dir)
+tests/test_sensor_cmd.py:1106:    monkeypatch.setattr(sensor_cmd_mod, "_spool_dir", lambda: spool_dir)
+tests/test_sensor_cmd.py:1168:    monkeypatch.setattr(sensor_cmd_mod, "_spool_dir", lambda: spool_dir)
+tests/test_sensor_cmd.py:1231:    monkeypatch.setattr(sensor_cmd_mod, "_spool_dir", lambda: spool_dir)
+tests/test_sensor_cmd.py:1297:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:1330:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:1388:    monkeypatch.setattr(sensor_cmd_mod, "_build_envelope", patched_build_envelope)
+tests/test_sensor_cmd.py:1389:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:1390:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_hardware_devices", lambda db_path: [])
+tests/test_sensor_cmd.py:1446:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:1494:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:1498:        monkeypatch.setattr(httpx, "Client", _fail_if_httpx_called)
+tests/test_sensor_cmd.py:1581:    monkeypatch.setattr(sensor_cmd_mod, "_read_scan_endpoints", lambda db_path: [])
+tests/test_sensor_cmd.py:1582:    monkeypatch.setattr(sensor_cmd_mod, "_flush_spool", lambda *a, **kw: None)
+tests/test_sensor_cmd.py:1616:    monkeypatch.setattr(sensor_cmd_mod, "validate_external_url", lambda *a, **kw: ok)
+tests/test_scoring_normalization.py:200:    monkeypatch.setattr(scoring_module, "_apply_weighted_impacts", _patched_apply)
+tests/test_modbus_scanner.py:49:    with patch.object(modbus_mod, "_PYMODBUS_AVAILABLE", False):
+tests/test_modbus_scanner.py:80:    with patch.object(modbus_mod, "_PYMODBUS_AVAILABLE", True), patch.object(
+tests/test_modbus_scanner.py:119:    with patch.object(modbus_mod, "_PYMODBUS_AVAILABLE", True), patch.object(
+tests/test_modbus_scanner.py:152:    with patch.object(modbus_mod, "_PYMODBUS_AVAILABLE", True), patch.object(
+tests/test_auto_merge_trigger.py:422:    monkeypatch.setattr(merge_scan_mod, "merge_scan", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("simulated merge failure")))
+tests/test_codesign_tls_eku_live.py:127:    monkeypatch.setattr(tls_scanner, "SSLYZE_AVAILABLE", False)
+tests/test_identity_scanner_hardening.py:129:         patch.object(_random, "getrandbits", side_effect=_fail_random), \
+tests/test_identity_scanner_hardening.py:130:         patch.object(_random, "randint", side_effect=_fail_random):
+tests/test_notify_dispatcher_isolation.py:74:    with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
+tests/test_notify_dispatcher_isolation.py:75:         patch.object(dispatcher, "_find_two_sessions", return_value=(_some_dt, None)), \
+tests/test_notify_dispatcher_isolation.py:76:         patch.object(dispatcher, "compute_trend_report", return_value=report), \
+tests/test_notify_dispatcher_isolation.py:77:         patch.object(dispatcher, "should_notify", return_value=True), \
+tests/test_notify_dispatcher_isolation.py:78:         patch.object(dispatcher, "_channel_send_slack") as mock_slack, \
+tests/test_notify_dispatcher_isolation.py:79:         patch.object(dispatcher, "build_drift_summary", return_value=MagicMock()), \
+tests/test_notify_dispatcher_isolation.py:80:         patch.object(dispatcher, "to_integration_payload", return_value=MagicMock()):
+tests/test_schedule_cmd.py:145:    monkeypatch.setattr(sys, "argv", ["quirk", "schedule", "list", "--config", db_path])
+tests/test_source_partial_failure_channel.py:90:        mp.setattr(run_scan, "scan_source_targets", lambda *a, **k: [_ok_row(), _err_row()])
+tests/test_source_partial_failure_channel.py:91:        mp.setattr(sys, "argv", ["run_scan.py", "--config", str(cfg_path), "--db-path", str(db)])
+tests/test_kerberos_probe_principal_config.py:236:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:242:    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+tests/test_kerberos_probe_principal_config.py:243:    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+tests/test_kerberos_probe_principal_config.py:244:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+tests/test_kerberos_probe_principal_config.py:319:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:327:    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+tests/test_kerberos_probe_principal_config.py:328:    monkeypatch.setattr(ks, "_probe_kdc_udp", udp)
+tests/test_kerberos_probe_principal_config.py:329:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+tests/test_kerberos_probe_principal_config.py:371:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:382:    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+tests/test_kerberos_probe_principal_config.py:383:    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+tests/test_kerberos_probe_principal_config.py:384:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+tests/test_kerberos_probe_principal_config.py:477:        monkeypatch.setattr(ks, "decoder", _DecoderRaises(exc), raising=False)
+tests/test_kerberos_probe_principal_config.py:478:        monkeypatch.setattr(ks, "MethodData", lambda: None, raising=False)
+tests/test_kerberos_probe_principal_config.py:495:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:507:    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+tests/test_kerberos_probe_principal_config.py:508:    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+tests/test_kerberos_probe_principal_config.py:509:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+tests/test_kerberos_probe_principal_config.py:633:    monkeypatch.setattr(ks, "constants", consts, raising=False)
+tests/test_kerberos_probe_principal_config.py:634:    monkeypatch.setattr(ks, "Principal", lambda *a, **k: object(), raising=False)
+tests/test_kerberos_probe_principal_config.py:635:    monkeypatch.setattr(ks, "_build_as_req", lambda *a, **k: object())
+tests/test_kerberos_probe_principal_config.py:636:    monkeypatch.setattr(ks, "encoder", types.SimpleNamespace(encode=lambda _: _REQ),
+tests/test_kerberos_probe_principal_config.py:696:        monkeypatch.setattr(socket_mod, "socket", Tracked)
+tests/test_kerberos_probe_principal_config.py:697:        monkeypatch.setattr(socket_mod, "getaddrinfo", gai)
+tests/test_kerberos_probe_principal_config.py:712:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:721:    monkeypatch.setattr(ks, "KDC_PORT", peer.port)
+tests/test_kerberos_probe_principal_config.py:723:    monkeypatch.setattr(ks, "_probe_kdc_udp", lambda *a, **k: udp_calls.append(1) or [])
+tests/test_kerberos_probe_principal_config.py:724:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+tests/test_kerberos_probe_principal_config.py:890:    monkeypatch.setattr(socket_mod, "socket", FakeSock)
+tests/test_kerberos_probe_principal_config.py:979:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:987:    monkeypatch.setattr(ks, "_classify_kdc_reply", classify, raising=False)
+tests/test_kerberos_probe_principal_config.py:988:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {"ldap_status": "skipped"})
+tests/test_kerberos_probe_principal_config.py:998:    monkeypatch.setattr(ks, "KDC_PORT", peer.port if peer else port)
+tests/test_kerberos_probe_principal_config.py:1003:    monkeypatch.setattr(ks, "_probe_kdc", tcp)
+tests/test_kerberos_probe_principal_config.py:1042:    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: boom())
+tests/test_kerberos_probe_principal_config.py:1043:    monkeypatch.setattr(socket_mod, "getaddrinfo", boom)
+tests/test_kerberos_probe_principal_config.py:1171:    monkeypatch.setattr(socket_mod, "socket", FakeSock)
+tests/test_kerberos_probe_principal_config.py:1172:    monkeypatch.setattr(socket_mod, "getaddrinfo", gai)
+tests/test_kerberos_probe_principal_config.py:1271:    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: probe())
+tests/test_kerberos_probe_principal_config.py:1279:        monkeypatch.setattr(ks, "KDC_PORT",
+tests/test_kerberos_probe_principal_config.py:1283:    monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_kerberos_probe_principal_config.py:1289:        monkeypatch.setattr(ks, "_probe_kdc_udp", no_udp)
+tests/test_kerberos_probe_principal_config.py:1293:        monkeypatch.setattr(socket_mod, "getaddrinfo", no_name)
+tests/test_kerberos_probe_principal_config.py:1521:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1528:    monkeypatch.setattr(ks, "_probe_kdc", fake_tcp)
+tests/test_kerberos_probe_principal_config.py:1529:    monkeypatch.setattr(ks, "_probe_kdc_udp",
+tests/test_kerberos_probe_principal_config.py:1531:    monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_kerberos_probe_principal_config.py:1549:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1558:    monkeypatch.setattr(ks, "_probe_kdc", tcp_refused)
+tests/test_kerberos_probe_principal_config.py:1559:    monkeypatch.setattr(ks, "_probe_kdc_udp", udp_unbuildable)
+tests/test_kerberos_probe_principal_config.py:1560:    monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_kerberos_probe_principal_config.py:1600:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1602:    monkeypatch.setattr(ks, "_probe_kdc",
+tests/test_kerberos_probe_principal_config.py:1604:    monkeypatch.setattr(ks, "_probe_kdc_udp",
+tests/test_kerberos_probe_principal_config.py:1606:    monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_kerberos_probe_principal_config.py:1626:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1628:    monkeypatch.setattr(ks, "_probe_kdc",
+tests/test_kerberos_probe_principal_config.py:1630:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {})
+tests/test_kerberos_probe_principal_config.py:1640:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1641:    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: [23, 18, 23])
+tests/test_kerberos_probe_principal_config.py:1642:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {})
+tests/test_kerberos_probe_principal_config.py:1886:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1888:    monkeypatch.setattr(ks, "_probe_kdc",
+tests/test_kerberos_probe_principal_config.py:1890:    monkeypatch.setattr(ks, "_probe_ldap_anon", lambda *a, **k: {})
+tests/test_kerberos_probe_principal_config.py:1902:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1903:    monkeypatch.setattr(ks, "_probe_kdc", lambda *a, **k: [18])
+tests/test_kerberos_probe_principal_config.py:1922:    monkeypatch.setattr(ks, "Principal", bad_principal, raising=False)
+tests/test_kerberos_probe_principal_config.py:1923:    monkeypatch.setattr(ks, "constants",
+tests/test_kerberos_probe_principal_config.py:1928:    monkeypatch.setattr(ks, "IMPACKET_AVAILABLE", True)
+tests/test_kerberos_probe_principal_config.py:1937:    monkeypatch.setattr(ks, "_probe_ldap_anon",
+tests/test_readme_audit.py:142:    monkeypatch.setattr(builtins, "__import__", fake_import)
+tests/test_api_auth.py:474:    monkeypatch.setattr(pdf_module, "sync_playwright", object(), raising=False)
+tests/test_hardware_drift.py:200:    monkeypatch.setattr(hw_cve, "correlate_device", fake_correlate)
+tests/test_hardware_drift.py:212:    monkeypatch.setattr(hw_cve, "correlate_device", fake_correlate)
+tests/test_hardware_drift.py:239:    monkeypatch.setattr(hw_cve, "correlate_device", fake_correlate)
+tests/test_hardware_drift.py:353:    monkeypatch.setattr(hw_cve, "correlate_device", fake_correlate)
+tests/test_hardware_drift.py:507:        monkeypatch.setattr(hw_cve, "correlate_device", fake_correlate)
+tests/test_hardware_drift.py:607:    monkeypatch.setattr(session, "commit", _boom)
+tests/test_hardware_drift.py:782:    monkeypatch.setattr(session, "commit", _boom)
+tests/test_azure_keyvault.py:189:    with patch.object(azure_connector, "KeyClient", return_value=client):
+tests/test_azure_keyvault.py:244:    with patch.object(azure_connector, "AZURE_AVAILABLE", True), \
+tests/test_azure_keyvault.py:245:         patch.object(azure_connector, "DefaultAzureCredential", return_value=MagicMock()), \
+tests/test_azure_keyvault.py:246:         patch.object(azure_connector, "KeyClient", return_value=client):
+tests/test_azure_keyvault.py:256:    with patch.object(azure_connector, "AZURE_AVAILABLE", True), \
+tests/test_closure_state_model_e2e.py:521:    monkeypatch.setattr(persist_mod, "build_phased_roadmap", _boom)
+tests/test_adcs_scanner.py:259:         patch.object(adcs_scanner, "_bind_and_query", **bind_patch):
+tests/test_adcs_scanner.py:316:         patch.object(adcs_scanner, "_bind_and_query", return_value=(conn, None)):
+tests/test_auth_config_loading.py:120:    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: calls.append(1))
+tests/test_auth_config_loading.py:232:    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
+tests/test_auth_config_loading.py:263:    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
+tests/test_source_scanner.py:47:    monkeypatch.setattr(subprocess, "run", _fork_safe_run)
+tests/test_source_scanner.py:235:    monkeypatch.setattr(subprocess, "run", _fork_safe_run)
+tests/test_kerberos_scanner.py:107:    return patch.object(kmod, '_probe_kdc', return_value=etypes)
+tests/test_kerberos_scanner.py:112:    return patch.object(kmod, '_probe_kdc', side_effect=exc)
+tests/test_kerberos_scanner.py:117:    return patch.object(kmod, '_probe_kdc_udp', return_value=etypes)
+tests/test_kerberos_scanner.py:122:    return patch.object(kmod, '_probe_ldap_anon', return_value=result)
+tests/test_kerberos_scanner.py:137:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:157:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:175:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:191:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:196:        with patch.object(kmod, '_probe_kdc_udp', side_effect=OSError("UDP timeout")):
+tests/test_kerberos_scanner.py:213:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:216:        with patch.object(kmod, '_probe_kdc_udp', side_effect=OSError("UDP timeout")):
+tests/test_kerberos_scanner.py:234:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:253:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:270:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:288:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:291:        with patch.object(kmod, '_probe_ldap_anon',
+tests/test_kerberos_scanner.py:307:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:325:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:345:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:365:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:418:    with patch.object(kmod, "IMPACKET_AVAILABLE", False):
+tests/test_kerberos_scanner.py:439:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:458:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:460:         patch.object(kmod, "_probe_kdc_udp", side_effect=OSError("udp down")), \
+tests/test_kerberos_scanner.py:472:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:484:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:494:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+tests/test_kerberos_scanner.py:504:    with patch.object(kmod, "IMPACKET_AVAILABLE", True), \
+---STRINGPATH---
+tests/test_scan_coverage_api.py:69:    monkeypatch.setattr("quirk.dashboard.api.routes.scan._default_db_path", lambda: db_path)
+tests/test_scan_coverage_api.py:151:    monkeypatch.setattr("quirk.dashboard.api.routes.scan._default_db_path", lambda: db_path)
+tests/test_missing_binary_skip.py:281:    monkeypatch.setattr("quirk.dashboard.api.routes.scan._default_db_path", lambda: m["db"])
+tests/test_scan_roadmap_score_lift.py:202:        monkeypatch.setattr("quirk.dashboard.api.routes.scan.compute_item_lifts", _boom)
+tests/test_scan_roadmap_score_lift.py:229:        monkeypatch.setattr("quirk.dashboard.api.routes.scan.compute_projected_score", _boom)
+tests/test_connector_coverage_truth.py:407:    monkeypatch.setattr("quirk.dashboard.api.routes.scan._default_db_path", lambda: db)
