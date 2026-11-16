@@ -1,0 +1,13 @@
+endpoints: 56
+report    score=27 CRITICAL=2 HIGH=8 ceiling_reason='2 open CRITICAL findings — score limited to 27 (computed 78)'
+dashboard score=42 CRITICAL=0 HIGH=6 ceiling_reason='6 open HIGH findings — score limited to 42 (computed 78)'
+dashboard-only residuals: 2
+  DASH-ONLY ('unsigned.example.com', 15353, 'HIGH') DNSSEC: NONE
+  DASH-ONLY ('weak.example.com', 15353, 'HIGH') DNSSEC: NONE
+report-only residuals: 6
+  REPORT-ONLY ('localhost:20005/image-mixed:latest', 0, 'CRITICAL') End-of-life OpenSSL 1.0.x (EOL Dec 2019) in container image
+  REPORT-ONLY ('localhost:20005/image-mixed:latest', 0, 'HIGH') End-of-life OpenSSL 1.1.x (EOL Sep 2023) in container image
+  REPORT-ONLY ('localhost:20005/image-mixed:latest', 0, 'HIGH') Severely outdated Python cryptography package (2.9.2) in container image
+  REPORT-ONLY ('localhost:20005/image-old-libssl:latest', 0, 'CRITICAL') End-of-life OpenSSL 1.0.x (EOL Dec 2019) in container image
+  REPORT-ONLY ('localhost:20005/image-old-libssl:latest', 0, 'HIGH') End-of-life OpenSSL 1.1.x (EOL Sep 2023) in container image
+  REPORT-ONLY ('localhost:20005/image-old-pycrypto:latest', 0, 'HIGH') Severely outdated Python cryptography package (2.9.2) in container image

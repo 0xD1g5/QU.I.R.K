@@ -1,0 +1,53 @@
+SCORES: intel=27 html=27 dashboard=42
+SCORE-STRICT: intel==html PASS
+UNATTRIBUTED: Cisco Device - Hardware PQC Advisory | dashboard-severity=MEDIUM report-severity=absent
+UNATTRIBUTED: Cisco Device - Hardware PQC Advisory | dashboard-severity=MEDIUM report-severity=absent
+UNATTRIBUTED: Cisco Device - Hardware PQC Advisory | dashboard-severity=MEDIUM report-severity=absent
+UNATTRIBUTED: Cisco Device - Hardware PQC Advisory | dashboard-severity=MEDIUM report-severity=absent
+UNATTRIBUTED: IMAP-STARTTLS TLS endpoint | dashboard-severity=LOW report-severity=absent
+UNATTRIBUTED: IMAPS TLS endpoint | dashboard-severity=LOW report-severity=absent
+UNATTRIBUTED: MYSQL encryption posture | dashboard-severity=HIGH report-severity=absent
+UNATTRIBUTED: POP3-STARTTLS TLS endpoint | dashboard-severity=LOW report-severity=absent
+UNATTRIBUTED: POP3S TLS endpoint | dashboard-severity=LOW report-severity=absent
+UNATTRIBUTED: POSTGRESQL connection failed | dashboard-severity=INFO report-severity=absent
+UNATTRIBUTED: POSTGRESQL encryption posture | dashboard-severity=HIGH report-severity=absent
+UNATTRIBUTED: POSTGRESQL encryption posture | dashboard-severity=HIGH report-severity=absent
+UNATTRIBUTED: SMTP STARTTLS susceptible to stripping (port 25) | dashboard-severity=MEDIUM report-severity=absent
+UNATTRIBUTED: SMTP-STARTTLS TLS endpoint | dashboard-severity=LOW report-severity=absent
+UNATTRIBUTED: SMTPS TLS endpoint | dashboard-severity=LOW report-severity=absent
+UNATTRIBUTED: Connector skipped — no target answered | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Connector skipped — no target answered | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Connector skipped — no target answered | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Connector skipped — no target answered | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Container image uses quantum-vulnerable crypto library (openssl@3.5.7-1~deb13u3) | dashboard-severity=absent report-severity=LOW
+UNATTRIBUTED: End-of-life OpenSSL 1.0.x (EOL Dec 2019) in container image | dashboard-severity=absent report-severity=CRITICAL
+UNATTRIBUTED: End-of-life OpenSSL 1.0.x (EOL Dec 2019) in container image | dashboard-severity=absent report-severity=CRITICAL
+UNATTRIBUTED: End-of-life OpenSSL 1.1.x (EOL Sep 2023) in container image | dashboard-severity=absent report-severity=HIGH
+UNATTRIBUTED: End-of-life OpenSSL 1.1.x (EOL Sep 2023) in container image | dashboard-severity=absent report-severity=HIGH
+UNATTRIBUTED: Informational protocol observation | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Informational protocol observation | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Informational protocol observation | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Informational protocol observation | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Informational protocol observation | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Informational protocol observation | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Legacy TLS cipher suites accepted | dashboard-severity=absent report-severity=LOW
+UNATTRIBUTED: Legacy TLS cipher suites accepted | dashboard-severity=absent report-severity=LOW
+UNATTRIBUTED: Legacy TLS cipher suites accepted | dashboard-severity=absent report-severity=LOW
+UNATTRIBUTED: Outdated libgcrypt (1.8.1-4ubuntu1.3) in container image | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: Outdated libgcrypt (1.8.1-4ubuntu1.3) in container image | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: Outdated pyOpenSSL package (19.1.0) in container image | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: Outdated pyOpenSSL package (19.1.0) in container image | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: SSH quantum planning advisory | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: SSH quantum planning advisory | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: SSH quantum planning advisory | dashboard-severity=absent report-severity=INFO
+UNATTRIBUTED: Severely outdated Python cryptography package (2.9.2) in container image | dashboard-severity=absent report-severity=HIGH
+UNATTRIBUTED: Severely outdated Python cryptography package (2.9.2) in container image | dashboard-severity=absent report-severity=HIGH
+UNATTRIBUTED: TLS certificate uses quantum-vulnerable RSA key | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: TLS certificate uses quantum-vulnerable RSA key | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: TLS certificate uses quantum-vulnerable RSA key | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: TLS handshake blocked assessment | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: TLS handshake blocked assessment | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: TLS handshake blocked assessment | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: Unknown open service | dashboard-severity=absent report-severity=MEDIUM
+UNATTRIBUTED: Unknown open service | dashboard-severity=absent report-severity=MEDIUM
+SCORE-PARITY: FAIL unattributed dashboard=42 report=27
