@@ -1501,6 +1501,29 @@ def evaluate_protocol_service_endpoints(endpoints) -> List[Dict[str, Any]]:
     )
 
 
+def evaluate_container_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Evaluate CONTAINER package rows with the report's own container evaluator.
+
+    Skips rows carrying a scan_error (rejected images, matching the generic
+    scan_err branch of evaluate_endpoints), maps cipher_suite -> package name
+    and tls_version -> package version, and dedupes like the report. Shared by
+    the dashboard derivation (Phase 236 D-06, Phase 228 D-20 pattern); the
+    report path reaches the same evaluator through evaluate_endpoints.
+    """
+    out: List[Dict[str, Any]] = []
+    for e in endpoints:
+        if getattr(e, "protocol", "") != "CONTAINER" or getattr(e, "scan_error", None):
+            continue
+        pkg_name = (getattr(e, "cipher_suite", "") or "").strip()
+        pkg_version = (getattr(e, "tls_version", "") or "").strip()
+        finding = _evaluate_container_package(
+            getattr(e, "host", "") or "", getattr(e, "port", 0) or 0, pkg_name, pkg_version
+        )
+        if finding:
+            out.append(finding)
+    return _dedupe_findings(out)
+
+
 def derive_report_findings(endpoints, cfg=None) -> List[Dict[str, Any]]:
     """The report headline finding composition (Phase 228 D-25).
 

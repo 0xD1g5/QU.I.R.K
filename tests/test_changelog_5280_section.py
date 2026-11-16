@@ -35,9 +35,6 @@ _README = _ROOT / "README.md"
 # a divergence turns this red until the release notes follow.
 _DIVERGENCE_PHRASES: dict[str, str] = {
     "Quantum-": "undersized ECDSA",
-    "End-of-life ": "end-of-life crypto libraries in container images",
-    "Severely outdated Python cryptography package":
-        "end-of-life crypto libraries in container images",
     "Kerberos weak etype: ": "Kerberos weak-encryption",
     "DNSSEC: ": "DNSSEC",
     "Unencrypted HTTP service": "Other findings may also differ",

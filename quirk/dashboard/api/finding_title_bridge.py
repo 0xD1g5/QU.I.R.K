@@ -208,28 +208,6 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
 # checked at run time against the title sites extracted from source.
 # ---------------------------------------------------------------------------
 SEVERITY_DIVERGENCES: Dict[str, Dict[str, object]] = {
-    # Report-only. The dashboard never evaluates CONTAINER rows.
-    "End-of-life ": {
-        "reason": (
-            "Report evaluates CONTAINER package rows (_evaluate_container_package: "
-            "OpenSSL EOL HIGH/CRITICAL); the dashboard derivation has no "
-            "CONTAINER branch."
-        ),
-        "todo": "261015-xsurf-container-library-eol-findings-are-report-only.md",
-        "score_moving": True,
-        "side": "report_only",
-        "families": ["container_openssl_111", "container_openssl_102"],
-    },
-    "Severely outdated Python cryptography package": {
-        "reason": (
-            "Report flags cryptography < 3.x in a container image (HIGH); the "
-            "dashboard derivation has no CONTAINER branch."
-        ),
-        "todo": "261015-xsurf-container-library-eol-findings-are-report-only.md",
-        "score_moving": True,
-        "side": "report_only",
-        "families": ["container_pycrypto_old"],
-    },
     # Dashboard-only identity findings (D-19: dispositioned, not fixed; which
     # surface is right is an open scoring question).
     "Kerberos weak etype: ": {

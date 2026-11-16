@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 # is how the two surfaces drifted apart in the first place.
 from quirk.engine.findings_evaluator import (
     _chain_verified,
+    evaluate_container_endpoints,
     evaluate_identity_endpoints,
     evaluate_protocol_service_endpoints,
     runs_tls_certificate_checks,
@@ -376,7 +377,8 @@ def derive_dashboard_finding_items(endpoints) -> list[FindingItem]:
     too), then the report's email/broker/code-signing findings (D-20: the report
     evaluators are adopted, not new detection; same adapter shape as the Phase 210
     SAML precedent, with the report's ``recommendation`` key mapped to
-    ``remediation``). Router-free: no FastAPI or DB use.
+    ``remediation``), then container crypto-library findings (Phase 236 D-06,
+    the report's own container evaluator). Router-free: no FastAPI or DB use.
     """
     eps = list(endpoints)
     findings = _derive_findings(eps)
@@ -393,6 +395,18 @@ def derive_dashboard_finding_items(endpoints) -> list[FindingItem]:
             source=idf.source,
         ))
     for d in evaluate_protocol_service_endpoints(eps):
+        findings.append(FindingItem(
+            host=d["host"],
+            port=d["port"],
+            severity=d["severity"],
+            title=d["title"],
+            protocol=d.get("protocol"),
+            description=d.get("description"),
+            remediation=d.get("recommendation"),
+            quantum_risk=d.get("quantum_risk"),
+            source=d.get("source"),
+        ))
+    for d in evaluate_container_endpoints(eps):
         findings.append(FindingItem(
             host=d["host"],
             port=d["port"],
