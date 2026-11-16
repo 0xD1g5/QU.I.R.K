@@ -43,10 +43,11 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (298)
+## Open (299)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
+| 261115-phase236-post-merge-closure | OPEN | P1 | scoring | Apply Phase 236 closure after merge: flip XSURF-09..14, close six todos, DONE rows with main evidence | .planning/phases/236-score-divergence-closure/236-08-SUMMARY.md | fixes on v529-open 2d8d2d35 045bd805 6a751dff 6c4f24d1 8a414dca bd2d6c6a 759ee1b7 e63b4b5f 5d18efab 7ed02587 b4a425a5 03c59e25; not yet ancestors of main (LEDGER rule 3); the exact edits are in 236-08-SUMMARY.md section Closure pending merge (and 236-evidence/closure-pending.md) |
 | 261012-doc224-error-hints-recommend-cmvp-refresh | OPEN | P1 | cli | Error hints and CMVP gate tell operators to run forbidden 'cmvp refresh' | .planning/todos/pending/261012-doc224-error-hints-recommend-cmvp-refresh.md | verified open: main quirk/errors.py:191,206 still recommend quirk compliance cmvp refresh |
 | 261012-doc224-azure-keyvault-keys-never-emit-endpoints | OPEN | P1 | connector | Azure Key Vault key scan emits zero endpoints (KeyProperties lacks key_type) | .planning/todos/pending/261012-doc224-azure-keyvault-keys-never-emit-endpoints.md | verified open: main azure_connector.py:57-59 iterates list_properties_of_keys() and reads key.key_type; no get_key() — CertificateClient also imported but unused |
 | 261108-saml-non-metadata-answer-reads-ran | OPEN | P1 | connector | SAML connector records any HTTP answer as 'ran', even one that is not SAML metadata | .planning/todos/pending/261108-saml-non-metadata-answer-reads-ran.md | verified open: filed in Phase 235.4 walkthrough (5.28.2); quirk/scanner/saml_scanner.py:104 (check jwt_scanner.py:358 too). Residual of the 5.28.2 coverage-truth class (261105-unscanned-surfaces-inflate-score-in-real-engagements, DONE) |
