@@ -85,13 +85,14 @@ SCORING_VERSION stays "4.0"; no changelog.d fragment exists.
 - Dashboard scores drop for ECDSA keys under 256 bits (MEDIUM -> HIGH), for end-of-life OpenSSL / outdated Python `cryptography` in container images (new findings; Pass A replay 42 -> 27), for SSLv2/SSLv3-max endpoints (new HIGH), and rise by a small LOW for legacy offered alongside TLS 1.2+.
 - The Slack/notify drift score now follows the Trends page recipe, so drift notifications can differ from before for the same data.
 - Pinned per-family headlines (report == dashboard): legacy_max_tls10 62, weak_cipher 63, ecdsa_192 63, container_openssl_111 63, container_openssl_102 31. Live: core 28/28/28, core+registry+dnssec 27/27/27.
+- Plan 236-09 gap closure: dashboard scores rise for TLS or HTTP rows whose scan errored after populating columns (they no longer raise dashboard HIGH/CRITICAL findings, matching the report). Pinned: tls_scan_error_with_fields 73 == 73.
 - Residual dispositioned differences (score-moving, dashboard-only): Kerberos weak etype, DNSSEC NONE, HTTP beside an mTLS-required sibling.
 
 ## Closure pending merge (D-14, LEDGER rule 3)
 
 `git merge-base --is-ancestor <sha> main` is false for every fix commit (checked: 2d8d2d35, 6c4f24d1, 8a414dca, 7ed02587, b4a425a5, 5d18efab; v529-open was never pushed before this plan). So there is no requirement flip, no todo move and no DONE row. The staged edits live in `236-evidence/closure-pending.md` (gitignored phase dir) and are reproduced here so they survive. Owner: LEDGER row `261115-phase236-post-merge-closure` (OPEN, P1, scoring, Source = this SUMMARY).
 
-Fix commits (replace with post-merge main shas when applying): XSURF-09: 2d8d2d35, 045bd805, 6a751dff. XSURF-10/11: 6c4f24d1. XSURF-12: 8a414dca, bd2d6c6a. XSURF-13: 759ee1b7, e63b4b5f, 5d18efab, 7ed02587, b4a425a5. XSURF-14: 03c59e25 (Pass A replay e621fa68, 2dd285fc).
+Fix commits (replace with post-merge main shas when applying): XSURF-09: 2d8d2d35, 045bd805, 6a751dff, e13b62f8 (236-09 scan_error guard). XSURF-10/11: 6c4f24d1. XSURF-12: 8a414dca, bd2d6c6a. XSURF-13: 759ee1b7, e63b4b5f, 5d18efab, 7ed02587, b4a425a5, 56e2395a (236-09 families), e13b62f8 (M3). XSURF-14: 03c59e25 (Pass A replay e621fa68, 2dd285fc).
 
 Apply as ONE commit after the merge:
 1. `.planning/REQUIREMENTS.md`: XSURF-09..14 `[ ]` -> `[x]` (lines ~30-41) and Pending -> Complete in the six traceability rows (~122-127); verify by hand (mark-complete over-flips).
@@ -127,3 +128,5 @@ None. No embargoed text used; README, CHANGELOG and changelog.d untouched.
 ## Self-Check
 
 See the orchestrator report; commits 2825c61a, 7a843d3f, 76e37517 and c81eeb61 exist on v529-open.
+
+Plan 236-09 additions to the staged closure: add to the `261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md` Resolution test list `tests/test_cross_surface_parity.py::test_xsurf236_scan_error_tls_row_headline_parity` and `tests/test_severity_divergence_behaviour.py::test_injected_mutations_turn_new_gate_red[M3_drop_scan_error_guard]`, and the score-movement clause above.

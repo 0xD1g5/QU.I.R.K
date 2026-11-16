@@ -146,7 +146,7 @@ Plans:
 **Wave 8** *(blocked on Wave 7 completion)*
 - [x] 236-08-PLAN.md — Docs, UAT, vault sync, Phase 240 phrase hand-off, closure, branch CI (D-14..D-18)
 **Wave 9 (gap closure)**
-- [ ] 236-09-PLAN.md — Gap closure: dashboard skips scan_error rows like the report, boundary families + mutation M3, branch CI (XSURF-09, WR-02/WR-06)
+- [x] 236-09-PLAN.md — Gap closure: dashboard skips scan_error rows like the report, boundary families + mutation M3, branch CI (XSURF-09, WR-02/WR-06)
 **UI hint**: yes
 
 ### Phase 237: History and Count Truth

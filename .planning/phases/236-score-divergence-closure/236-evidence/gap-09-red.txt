@@ -1,0 +1,63 @@
+RED commit: 56e2395aa2f62000344ff84f28907cc31b05b36c
+.................................FF....
+CENSUS (measured): 6 residual(s) across 39 families
+  kerberos_rc4 | dashboard_only | 10.236.15.1:88 | HIGH | Kerberos weak etype: rc4-hmac
+  dnssec_none | dashboard_only | 10.236.16.1:53 | HIGH | DNSSEC: NONE
+  http_on_tls_port_with_mtls_pair | dashboard_only | 10.236.31.1:443 | HIGH | Unencrypted HTTP service
+  tls_scan_error_with_fields | dashboard_only | 10.236.34.1:443 | HIGH | Legacy TLS version: TLSv1
+  tls_scan_error_with_fields | dashboard_only | 10.236.34.1:443 | HIGH | TLS certificate is self-signed
+  http_scan_error | dashboard_only | 10.236.35.1:80 | HIGH | Unencrypted HTTP service
+.
+=================================== FAILURES ===================================
+_______ test_every_residual_is_dispositioned[tls_scan_error_with_fields] _______
+
+family = 'tls_scan_error_with_fields'
+
+    @pytest.mark.parametrize("family", list(FAMILY_ROWS))
+    def test_every_residual_is_dispositioned(family):
+        undisp, _hit, _every = _evaluate_family(family, SEVERITY_DIVERGENCES)
+>       assert not undisp, (
+            "undispositioned dashboard/report HIGH/CRITICAL divergence:\n  "
+            + "\n  ".join(_fmt(family, s, k, t) for s, k, t in undisp)
+            + "\nFix the severity, or file a todo and add a SEVERITY_DIVERGENCES entry "
+            "(reason, todo, score_moving, side, families)."
+        )
+E       AssertionError: undispositioned dashboard/report HIGH/CRITICAL divergence:
+E           tls_scan_error_with_fields: dashboard_only 10.236.34.1:443 HIGH 'Only legacy TLS versions offered (no TLS 1.2+)'
+E           tls_scan_error_with_fields: dashboard_only 10.236.34.1:443 HIGH 'TLS certificate is self-signed'
+E         Fix the severity, or file a todo and add a SEVERITY_DIVERGENCES entry (reason, todo, score_moving, side, families).
+E       assert not [('dashboard_only', ('10.236.34.1', 443, 'HIGH'), 'Legacy TLS version: TLSv1'), ('dashboard_only', ('10.236.34.1', 443, 'HIGH'), 'TLS certificate is self-signed')]
+
+tests/test_severity_divergence_behaviour.py:165: AssertionError
+____________ test_every_residual_is_dispositioned[http_scan_error] _____________
+
+family = 'http_scan_error'
+
+    @pytest.mark.parametrize("family", list(FAMILY_ROWS))
+    def test_every_residual_is_dispositioned(family):
+        undisp, _hit, _every = _evaluate_family(family, SEVERITY_DIVERGENCES)
+>       assert not undisp, (
+            "undispositioned dashboard/report HIGH/CRITICAL divergence:\n  "
+            + "\n  ".join(_fmt(family, s, k, t) for s, k, t in undisp)
+            + "\nFix the severity, or file a todo and add a SEVERITY_DIVERGENCES entry "
+            "(reason, todo, score_moving, side, families)."
+        )
+E       AssertionError: undispositioned dashboard/report HIGH/CRITICAL divergence:
+E           http_scan_error: dashboard_only 10.236.35.1:80 HIGH 'Plaintext HTTP service detected'
+E         Fix the severity, or file a todo and add a SEVERITY_DIVERGENCES entry (reason, todo, score_moving, side, families).
+E       assert not [('dashboard_only', ('10.236.35.1', 80, 'HIGH'), 'Unencrypted HTTP service')]
+
+tests/test_severity_divergence_behaviour.py:165: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/ldap3/utils/asn1.py:50
+    from pyasn1.codec.ber.encoder import tagMap, typeMap, AbstractItemEncoder
+
+.venv/lib/python3.14/site-packages/ldap3/utils/asn1.py:50
+    from pyasn1.codec.ber.encoder import tagMap, typeMap, AbstractItemEncoder
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[tls_scan_error_with_fields]
+FAILED tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[http_scan_error]
+2 failed, 38 passed, 9 deselected, 2 warnings in 0.31s
+PRE-FIX headline (tls_scan_error_with_fields via _xsurf236_run, 2 healthy rows + family): report=73 dashboard=60
