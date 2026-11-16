@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react"
+import { Fragment, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useScanList } from "@/hooks/useScanList"
@@ -24,7 +24,7 @@ const SEVERITY_STYLES: Record<string, string> = {
 export function ScanHistoryPage() {
   const navigate = useNavigate()
   const { sessions, loading, error } = useScanList()
-  const [selected, setSelected] = useState<string[]>([])
+  const [selectedRaw, setSelected] = useState<string[]>([])
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null)
 
   // 237 D-09: a missing status (older server) is a complete scan.
@@ -32,12 +32,9 @@ export function ScanHistoryPage() {
   const isNonComplete = (s: ScanSession) => !!s.status && s.status !== "complete"
   const hasNonComplete = sessions.some(isNonComplete)
 
-  // A row already selected when its status arrives as running must not stay selected.
-  useEffect(() => {
-    const runningIds = new Set(sessions.filter(isRunning).map(s => s.scan_id))
-    if (runningIds.size === 0) return
-    setSelected(prev => (prev.some(id => runningIds.has(id)) ? prev.filter(id => !runningIds.has(id)) : prev))
-  }, [sessions])
+  // A row selected before its status arrived as running must not count as selected (derived, not an effect).
+  const runningIds = new Set(sessions.filter(isRunning).map(s => s.scan_id))
+  const selected = selectedRaw.filter(id => !runningIds.has(id))
 
   function handleToggleExpand(scanId: string) {
     setExpandedScanId(prev => (prev === scanId ? null : scanId))

@@ -39,7 +39,9 @@
       "host": "chaos-lab.local",
       "protocol": "SMTP",
       "severity": "HIGH",
-      "description": "SMTP server does not offer or enforce STARTTLS upgrade."
+      "description": "SMTP server does not offer or enforce STARTTLS upgrade.",
+      "title": "Missing STARTTLS enforcement",
+      "port": 25
     }
   ],
   "removed_findings": [
@@ -47,7 +49,9 @@
       "host": "chaos-lab.local",
       "protocol": "HTTP",
       "severity": "HIGH",
-      "description": "Deprecated cipher suite removed after remediation."
+      "description": "Deprecated cipher suite removed after remediation.",
+      "title": "Deprecated cipher suite",
+      "port": 443
     }
   ],
   "endpoints_only_in_a": [
