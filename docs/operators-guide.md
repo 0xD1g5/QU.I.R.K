@@ -686,6 +686,46 @@ directory. Other dashboard pages score differently: Scan History uses each dashb
 calibration (`balanced` for a CLI-launched scan), and Compare and Trends score with the default
 `balanced` profile. Any other divergence is a defect to file.
 
+### 3.1.8 History, Trends and Compare counts, running scans, and drift notifications (Phase 237, COUNT-01..07)
+
+From 5.29 the dashboard's count surfaces agree with the Findings page:
+
+- **Scan History and the Trends timeline** count derived findings (one per finding; Critical and High
+  together read as High), not endpoint rows. For scans recorded before 5.29 the numbers move
+  when you reopen the page, and for cloud scans they sometimes go down. This is the corrected number, not a regression. The
+  downloadable report is not claimed to match exactly: it lists more Medium and Low findings
+  (for example "TLS certificate uses quantum-vulnerable RSA key" and "Legacy TLS cipher suites
+  accepted") than the dashboard derives (ledger 999.132); Critical and High agree on the lab scans measured.
+- **Trends** keys findings by host, port and canonical title, so a severity change is one transition and a
+  certificate-expiry day count is not churn. See `docs/report-interpretation.md` §15.
+- **Compare** shows **Finding** and **Port** columns on its Added and Removed tables.
+- **Trends scan errors:** `targets_unreachable`, `auth_failed` and `missing_credentials` are regressions;
+  `missing_extra`, `missing_binary` and `internal_target_refused` stay advisory. A connector that failed
+  against all N of its targets counts N. For database, Kubernetes and cloud connectors, a full outage may read up to 2N because
+  the forwarded in-band error rows count as well.
+- **Export PDF** (`/print`) now includes a "Scan Coverage" subsection listing what ran and each skip reason.
+- **Executive Skipped badge** lists every connector that did not run, and a connector error row that carries no
+  category shows as **Failed** instead of vanishing.
+
+**Running and Incomplete scans (D-24).** Scan History shows a scan that has not finished with its score
+and counts withheld. Only a dashboard-launched job can show **Running**. An in-progress CLI or scheduled scan shows
+**Incomplete**, because it has no job row, only checkpoints. If the dashboard server process dies mid-scan, that job
+keeps showing **Running** until you restart the server or open the job's status page, which reconciles it
+(ledger 261116-dead-dashboard-job-shows-running). The Executive page, the sidebar scan date, Trends and
+notify all keep reading the **last completed scan** while a newer one runs. Scans recorded before 5.29 have no
+checkpoints and read as complete.
+
+**Checkpoints on every scan path.** CLI and scheduled scans now write checkpoint rows the way dashboard scans do, so
+`--list-resumable` also lists interrupted CLI and scheduled runs (see section 13) and History shows them as
+Incomplete while they run.
+
+**Notify (scheduled-scan drift alerts).** A scan-error regression now fires the alert and the message prints
+"Scan errors: N new"; when no new HIGH finding exists the Slack header reads "QUIRK Scan-Coverage Alert" and the email
+subject names the new scan errors. Notify also now fires on new TLS HIGH findings, which it effectively never
+did before 5.29 because the old delta ignored them. Notify skips a failed or interrupted scheduled run (D-22) so the
+previous pair is not re-alerted, and never alerts on scan errors when there is no previous scan (D-23). Known limit: a scheduled
+run that completes while a newer dashboard scan is running has its alert skipped and not re-sent.
+
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
 `--fuzz` enables active REST crypto-posture probing against discovered OpenAPI endpoints. It
@@ -3433,6 +3473,9 @@ batches (batches 61-64).
    e.g. `10.0.0.1, 10.0.0.2 (+3 more)`, truncated to the first 2 hosts. A run with no
    scanned endpoints yet (interrupted before any stage produced rows) shows
    `(no target recorded)` rather than a blank column.
+
+   As of 5.29, CLI and scheduled scans write checkpoints too, so an interrupted CLI or scheduled run is listed here
+   as well, and a scan recorded before 5.29 has no checkpoints and is never listed.
 
 2. Re-run the identical command with `--resume-scan-id <scan_run_id>` added.
 
