@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (298)
+## Open (300)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -345,8 +345,10 @@ the Evidence cell.
 | 261116-divergence-gate-title-blind-and-disposition-absorbs-residuals | OPEN | P3 | tests | Divergence gate keys on severity not canonical title and one disposition absorbs every residual at its key | .planning/todos/pending/261116-divergence-gate-title-blind-and-disposition-absorbs-residuals.md | verified open at the 236-09 fix commit (WR-04, WR-05): tests/test_severity_divergence_behaviour.py; owner 999.132 |
 | 261116-post-handshake-tls-failure-drops-observed-findings | OPEN | P2 | scoring | A TLS failure after a successful handshake sets scan_error, so observed findings (legacy version, expired cert CRITICAL) appear on neither surface and the report says the handshake was blocked | .planning/todos/pending/261116-post-handshake-tls-failure-drops-observed-findings.md | 236-09 review WR-02 at 992e52bf: quirk/scanner/tls_scanner.py _scan_one_fallback; guard quirk/dashboard/api/finding_derivation.py:90 mirrors evaluate_endpoints; owner 999.132 |
 | 261116-errored-tls-http-rows-absent-from-dashboard-findings | OPEN | P3 | dashboard | Errored TLS/HTTP rows get a MEDIUM/INFO scan-error finding in the report but no row on the dashboard Findings page | .planning/todos/pending/261116-errored-tls-http-rows-absent-from-dashboard-findings.md | 236-09 review WR-01 at 992e52bf: routes/scan.py _derive_dar_findings covers POSTGRESQL/MYSQL only; score unaffected; owner 999.132 |
+| 261116-dead-dashboard-job-shows-running | OPEN | P3 | dashboard | A dashboard job whose process died stays status=running and History shows Running | Phase 237 (237-02-PLAN.md) | Phase 237 D-24: stays running until the startup sweep or a status poll reconciles it; list_scans is read-only and does not reconcile. |
+| 261116-phase237-release-notes | OPEN | P1 | release | Phase 237 user-visible changes to put in CHANGELOG 5.29.0 (owned by Phase 240 REL-14) | Phase 237 (237-02-PLAN.md) | D-20 text for CHANGELOG 5.29.0: notify's scan-error trigger and text; notify firing on new TLS HIGH; History/Trends/Compare counts moving for existing scans (measured example: a cloud scan from 27 HIGH to 12 HIGH / 13 MEDIUM); CLI and scheduled scans writing checkpoints (and --list-resumable listing interrupted runs); in-progress CLI/scheduled scans reading 'Incomplete', not 'Running' (D-24); db/k8s/cloud full outages counting up to 2N. No changelog.d fragment. |
 
-## Deferred (18)
+## Deferred (23)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -368,6 +370,11 @@ the Evidence cell.
 | 999.105 | DEFERRED | P3 | reports | Customizable reporting engine (Tiers 2-3) (aka BACK-51) | .planning/backlog/999.105-customizable-reporting-engine/ | Tier 1 shipped Phase 200 RPT-01..04; Tier 2 NO-GO (v5.24-REQUIREMENTS:359); owned by HORIZON row per v5.28-REQUIREMENTS:183 — Tier 3 (DOCX templating) unknown/L |
 | HUAT:158 | DEFERRED | P3 | sensor | Sensor push hardware_devices rows on /hardware + drift on /compare (live) | .planning/milestones/v5.14-phases/158-sensor-fleet-drift-coverage/158-VERIFICATION.md | UAT-SERIES:19259,19289 UAT-158-01/02 SKIP 'DEFERRED - covered by tests/test_h...' |
 | phase158-human-uat-and-uat-143-03 | DEFERRED | P3 | uat | Phase 158 human-UAT visual scenarios + UAT-143-03 Authenticode cert | .planning/HORIZON.md | standing carry-forward, blocked on procuring a production signing certificate (PROJECT.md Standing carry-forward) |
+| 261116-connector-inband-rows-lack-error-category | DEFERRED | P3 | connector | db/k8s/gcp/aws/vault in-band scan_error rows carry no scan_error_category | Phase 237 (237-02-PLAN.md) | Phase 237 D-05: these rows carry no scan_error_category; the writer and reader now coalesce them to 'exception' so they render Failed on the Executive badge. Giving connectors a real category at source is deferred. |
+| 261116-merge-latest-includes-running-scans | DEFERRED | P3 | merge | /api/merge/latest per-sensor MAX(scanned_at) bracket does not skip incomplete scans | Phase 237 (237-02-PLAN.md) | Phase 237 D-17: quirk/merge/scan.py latest resolution does not yet call quirk/intelligence/scan_completion.py. |
+| 261116-qramm-evidence-bridge-latest-includes-running-scans | DEFERRED | P3 | qramm | QRAMM evidence bridge day cohort includes running scans | Phase 237 (237-02-PLAN.md) | Phase 237 D-17: quirk/qramm/evidence_bridge.py day cohort does not yet skip incomplete scans. |
+| 261116-dashboard-resume-incomplete-scan | DEFERRED | P3 | dashboard | Resume action for incomplete scans in the dashboard | Phase 237 (237-02-PLAN.md) | Phase 237 CONTEXT deferred: History marks scans Incomplete but offers no Resume action; CLI --resume exists. |
+| 261116-dashboard-connector-skipped-finding-parity | DEFERRED | P3 | dashboard | Dashboard lacks a 'Connector skipped' coverage_gap finding that the report emits | Phase 237 (237-02-PLAN.md) | Phase 237 deferred: connector-skipped finding parity between the report and dashboard Findings pipelines; related to cluster 999.132. |
 
 ## Development tooling (not shipped) (10)
 
