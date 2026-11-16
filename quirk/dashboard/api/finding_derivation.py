@@ -24,6 +24,7 @@ from quirk.engine.findings_evaluator import (
 )
 from quirk.dashboard.api.schemas import FindingItem, IdentityFinding
 from quirk.models import CryptoEndpoint
+from quirk.util.weak_crypto import has_legacy_tls_versions_signal, is_max_legacy_tls
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 
 _QS_DISPLAY = {
@@ -102,8 +103,14 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
     if not runs_tls_certificate_checks(ep):
         return findings
 
-    # Legacy TLS version
-    if ep.tls_version and ep.tls_version in ("TLSv1", "TLSv1.1", "TLS 1.0", "TLS 1.1"):
+    # Legacy TLS, two tiers (Phase 236 D-01/D-20). Both tiers use the shared
+    # predicates in quirk.util.weak_crypto, the same ones the report calls, so
+    # the surfaces cannot drift. The tiers are mutually exclusive.
+    _tls_ver = ep.tls_version
+    _tls_sup = getattr(ep, "tls_supported_versions", None)
+    if is_max_legacy_tls(_tls_ver, _tls_sup):
+        # D-05: title kept (today's ticket fingerprint); bridged to the report's
+        # "Only legacy TLS versions offered (no TLS 1.2+)".
         findings.append(FindingItem(
             id=ep.id,
             host=ep.host,
@@ -113,6 +120,22 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
             protocol="TLS",
             description=f"Server accepts {ep.tls_version} which is deprecated and insecure.",
             remediation="Disable TLSv1.0 and TLSv1.1. Enforce TLS 1.2 minimum, prefer TLS 1.3.",
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+    elif has_legacy_tls_versions_signal(_tls_ver, _tls_sup):
+        # Bridged to the report's "Legacy TLS versions allowed (TLS 1.0/1.1)" (LOW).
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="LOW",
+            title="Legacy TLS versions offered alongside TLS 1.2+",
+            protocol="TLS",
+            description="Server still offers TLS 1.0/1.1 alongside TLS 1.2+, which are deprecated.",
+            remediation="Disable TLS 1.0 and TLS 1.1; keep TLS 1.2+ (prefer TLS 1.3).",
             quantum_risk=None,
             source="tls",
             sensor_id=ep.sensor_id,

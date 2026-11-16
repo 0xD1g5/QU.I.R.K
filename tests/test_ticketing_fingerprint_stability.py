@@ -27,7 +27,7 @@ This file has two jobs, deliberately asymmetric (see 178-CONTEXT.md /
      is why these guards exist and must never regress.
 
 Guarded interpolation sites (verified this session):
-  - quirk/dashboard/api/routes/scan.py:200
+  - quirk/dashboard/api/finding_derivation.py (cert-expiry f-string; moved out of routes/scan.py in Phase 236-03)
     -> f"Certificate expiring in {days_to_expiry} day(s)"
   - quirk/engine/findings_evaluator.py:181
     -> f"Container image uses quantum-vulnerable crypto library ({name}@{version})"
@@ -187,3 +187,30 @@ def test_generic_crypto_library_catchall_does_not_collide():
         f"into one fingerprint ({fp_openssl}). This means the second library "
         f"never gets its own ticket (T-178-01)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 236 D-21: the HIGH max-legacy-TLS report title keeps the fingerprint
+# of the LOW title it replaces for the same endpoint.
+# ---------------------------------------------------------------------------
+
+_OLD_LEGACY = "Legacy TLS versions allowed (TLS 1.0/1.1)"
+_NEW_LEGACY = "Only legacy TLS versions offered (no TLS 1.2+)"
+
+
+def test_max_legacy_title_keeps_legacy_tls_fingerprint():
+    new_fp = TicketingChannel.compute_fingerprint(_finding(_NEW_LEGACY))
+    old_fp = TicketingChannel.compute_fingerprint(_finding(_OLD_LEGACY))
+    assert new_fp == old_fp
+    # remediation_persist hashes through the same staticmethod (~:273).
+    import quirk.intelligence.remediation_persist as rp
+
+    assert rp.TicketingChannel.compute_fingerprint(dict(_finding(_NEW_LEGACY))) == old_fp
+    # Counterweights: host is a discriminator, and the cipher-suite title
+    # must not be merged into the legacy-version identity.
+    assert TicketingChannel.compute_fingerprint(
+        _finding(_NEW_LEGACY, host="10.0.0.2")
+    ) != new_fp
+    assert TicketingChannel.compute_fingerprint(
+        _finding("Legacy TLS cipher suites accepted")
+    ) != new_fp

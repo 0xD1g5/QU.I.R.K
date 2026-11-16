@@ -75,18 +75,14 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # on `proto == "HTTP"`. Same field (protocol), same comparison. bridged.
     "Unencrypted HTTP service": "Plaintext HTTP service detected",
 
-    # scan.py:154-168 "Legacy TLS version: {ep.tls_version}" fires on
-    # `ep.tls_version in ("TLSv1", "TLSv1.1", "TLS 1.0", "TLS 1.1")`.
-    # findings_evaluator.py:551-565 "Legacy TLS versions allowed (TLS
-    # 1.0/1.1)" fires on `_has_legacy_tls_versions(e)`
-    # (findings_evaluator.py:278-287), which checks `ep.tls_version in
-    # {"TLSv1", "TLSv1.1"}` OR a `{"TLSv1", "TLSv1.1"}` intersection against
-    # `tls_supported_versions`. Same primary field (tls_version); the CLI
-    # condition is a superset (also considers tls_supported_versions) and
-    # omits the spaced "TLS 1.0"/"TLS 1.1" forms the dashboard also matches.
-    # Overlapping-but-not-byte-identical conditions on the same field and
-    # same concept -- bridged, not identity, per Task 1's read.
-    "Legacy TLS version: ": "Legacy TLS versions allowed (TLS 1.0/1.1)",
+    # Phase 236 D-01/D-20: two tiers on both surfaces, decided by
+    # quirk.util.weak_crypto.is_max_legacy_tls / has_legacy_tls_versions_signal.
+    # HIGH: finding_derivation.py (is_max_legacy_tls branch, title kept per D-05)
+    # <-> findings_evaluator.py (_is_max_legacy_tls branch, HIGH).
+    "Legacy TLS version: ": "Only legacy TLS versions offered (no TLS 1.2+)",
+    # LOW: finding_derivation.py (has_legacy_tls_versions_signal and not max)
+    # <-> findings_evaluator.py (_has_legacy_tls_versions elif, LOW).
+    "Legacy TLS versions offered alongside TLS 1.2+": "Legacy TLS versions allowed (TLS 1.0/1.1)",
 
     # scan.py:188-207 "Certificate expired" fires on
     # `days_to_expiry < 0` (from `ep.cert_not_after`).
@@ -217,19 +213,6 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
 # checked at run time against the title sites extracted from source.
 # ---------------------------------------------------------------------------
 SEVERITY_DIVERGENCES: Dict[str, Dict[str, object]] = {
-    # Bridged. Dashboard emits HIGH on the negotiated version; the report emits
-    # LOW on the offered versions and _normalize_finding pins that title to LOW.
-    "Legacy TLS version: ": {
-        "reason": (
-            "Dashboard HIGH on the negotiated version (tls_version in TLSv1/1.1) "
-            "vs report LOW on the offered versions "
-            "(has_legacy_tls_versions_signal); the report has no HIGH tier."
-        ),
-        "todo": "261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md",
-        "score_moving": True,
-        "side": "dashboard_only",
-        "families": ["legacy_max_tls10"],
-    },
     # Unbridged (D-22). Dashboard HIGH on ep.tls_weak_ciphers_present; no
     # report finding fires on that column. An SSLv3 row sets the flag too.
     "Weak cipher suites enabled": {
@@ -340,6 +323,8 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     "Plaintext HTTP service detected": "specific",
     # In "legacy-tls-versions" fingerprint tuple (remediation.py:97).
     "Legacy TLS versions allowed (TLS 1.0/1.1)": "specific",
+    # Phase 236 D-01: HIGH tier, in the same "legacy-tls-versions" tuple.
+    "Only legacy TLS versions offered (no TLS 1.2+)": "specific",
     # In "expired-certificates" fingerprint tuple (remediation.py:88).
     "TLS certificate expired": "specific",
     # In "near-expiry-certificates" fingerprint tuple (remediation.py:91).
