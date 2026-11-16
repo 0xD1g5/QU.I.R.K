@@ -127,7 +127,7 @@ each other and can run in any order. Phase 240 depends on all four, because 5.29
   3. The severity-divergence gate and the Slack/Trends drift check read derived severities: a test that introduces a dashboard/report severity divergence turns CI red, and the same test is red against the pre-fix gate.
   4. For the same core-lab run, the dashboard headline score equals the score in that job's report.
   5. The CHANGELOG and README known-defect phrases for these items are removed in the release that ships the fix.
-**Plans**: 8 plans
+**Plans**: 9 plans
 Plans:
 **Wave 1**
 - [x] 236-01-PLAN.md — Behaviour-derived divergence gate, mutation proof, HEAD census and dispositions (D-07/D-08/D-09/D-19)
@@ -145,6 +145,8 @@ Plans:
 - [x] 236-07-PLAN.md — Pinned per-family headline parity tests and live lab three-number evidence (XSURF-14, D-13)
 **Wave 8** *(blocked on Wave 7 completion)*
 - [x] 236-08-PLAN.md — Docs, UAT, vault sync, Phase 240 phrase hand-off, closure, branch CI (D-14..D-18)
+**Wave 9 (gap closure)**
+- [ ] 236-09-PLAN.md — Gap closure: dashboard skips scan_error rows like the report, boundary families + mutation M3, branch CI (XSURF-09, WR-02/WR-06)
 **UI hint**: yes
 
 ### Phase 237: History and Count Truth
