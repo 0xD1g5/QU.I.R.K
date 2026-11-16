@@ -54,6 +54,8 @@ class DriftSummary:
     new_low: int
     scan_id: str              # ISO timestamp from current_session_ts
     dashboard_url: Optional[str]
+    # Phase 237 D-16: integer only (ISEC-03); last so positional callers still work.
+    scan_errors_new_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +150,7 @@ def build_drift_summary(
         new_low=report.new_low,
         scan_id=scan_id,
         dashboard_url=dashboard_url,
+        scan_errors_new_count=report.scan_errors_new_count,
     )
 
 
