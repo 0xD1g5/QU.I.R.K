@@ -215,3 +215,106 @@ def test_job_run_id_stamped_after_resume_override():
     assert calls[0] > override
     guard = _RUN_SCAN_SRC[max(0, calls[0] - 120): calls[0]]
     assert "if args.job_id and args.db_path:" in guard
+
+
+# --- routes (237-04) ---
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from quirk.models import CryptoEndpoint  # noqa: E402
+
+OLD_RUN = "2026-11-09T10:00:00"
+NEW_RUN = "2026-11-10T10:00:00"
+
+
+def _route_client(tmp_path):
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+
+    eng = init_db(str(tmp_path / "r.db"))
+    Maker = sessionmaker(bind=eng, autoflush=False, autocommit=False)
+
+    def _get_db():
+        d = Maker()
+        try:
+            yield d
+        finally:
+            d.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _get_db
+    return TestClient(app), Maker
+
+
+def _ep(db, run, ts, host="h"):
+    db.add(CryptoEndpoint(
+        host=host, port=80, protocol="HTTP", scanned_at=ts, scan_run_id=run,
+    ))
+
+
+def _seed_old_complete_new_incomplete(Maker):
+    db = Maker()
+    _ep(db, OLD_RUN, datetime(2026, 11, 9, 10), host="old-host")
+    _ep(db, NEW_RUN, datetime(2026, 11, 10, 10), host="new-host")
+    _cp(db, OLD_RUN, "reports")
+    _cp(db, NEW_RUN, "discovery")
+    db.commit()
+    db.close()
+
+
+def test_latest_skips_incomplete_scan(tmp_path):
+    client, Maker = _route_client(tmp_path)
+    _seed_old_complete_new_incomplete(Maker)
+    body = client.get("/api/scan/latest").json()
+    hosts = {e["host"] for e in body["findings"]}
+    assert hosts == {"old-host"}
+
+
+def test_latest_explicit_scan_id_loads_incomplete(tmp_path):
+    client, Maker = _route_client(tmp_path)
+    _seed_old_complete_new_incomplete(Maker)
+    body = client.get("/api/scan/latest", params={"scan_id": NEW_RUN}).json()
+    assert {e["host"] for e in body["findings"]} == {"new-host"}
+
+
+def test_latest_404_when_only_incomplete(tmp_path):
+    client, Maker = _route_client(tmp_path)
+    db = Maker()
+    _ep(db, NEW_RUN, datetime(2026, 11, 10, 10))
+    _cp(db, NEW_RUN, "discovery")
+    db.commit()
+    db.close()
+    r = client.get("/api/scan/latest")
+    assert r.status_code == 404
+    assert "DASHBOARD-006" in r.text
+
+
+def test_latest_legacy_null_run_id_still_served(tmp_path):
+    client, Maker = _route_client(tmp_path)
+    db = Maker()
+    _ep(db, None, datetime(2026, 11, 8, 10), host="legacy-host")
+    _ep(db, NEW_RUN, datetime(2026, 11, 10, 10), host="new-host")
+    _cp(db, NEW_RUN, "discovery")
+    db.commit()
+    db.close()
+    body = client.get("/api/scan/latest").json()
+    assert {e["host"] for e in body["findings"]} == {"legacy-host"}
+
+
+def test_scans_status_values(tmp_path):
+    client, Maker = _route_client(tmp_path)
+    run_running = "2026-11-11T10:00:00"
+    db = Maker()
+    _ep(db, OLD_RUN, datetime(2026, 11, 9, 10))
+    _ep(db, NEW_RUN, datetime(2026, 11, 10, 10))
+    _ep(db, run_running, datetime(2026, 11, 11, 10))
+    _cp(db, OLD_RUN, "reports")
+    _cp(db, NEW_RUN, "discovery")
+    _cp(db, run_running, "discovery")
+    _job(db, "job-1", "running", run_running)
+    db.commit()
+    db.close()
+    rows = {s["scan_id"]: s["status"] for s in client.get("/api/scans").json()}
+    assert rows == {OLD_RUN: "complete", NEW_RUN: "incomplete", run_running: "running"}
