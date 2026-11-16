@@ -62,3 +62,26 @@ def test_helper_symmetry_repeated_calls():
     """is_weak_cipher is pure — repeated calls return the same value (parity prep for Task 2)."""
     for cipher in ("DES-CBC-SHA", "RC4-MD5", "AES128-GCM-SHA256", None, ""):
         assert is_weak_cipher(cipher) is is_weak_cipher(cipher)
+
+
+import pytest as _pytest_236
+
+
+@_pytest_236.mark.parametrize(
+    "ver,supported,expected",
+    [
+        ("TLSv1", "TLSv1", True),
+        ("TLSv1.1", "TLSv1.1,TLSv1", True),
+        ("SSLv3", "SSLv3", True),
+        ("SSLv2", "SSLv2", True),
+        ("TLSv1.2", "TLSv1.2,TLSv1.1", False),
+        ("TLSv1.3", "TLSv1.3", False),
+        (None, None, False),
+        ("", "", False),
+        ("TLSv1", "TLSv1.2,TLSv1", False),
+    ],
+)
+def test_is_max_legacy_tls(ver, supported, expected):
+    from quirk.util.weak_crypto import is_max_legacy_tls
+
+    assert is_max_legacy_tls(ver, supported) is expected

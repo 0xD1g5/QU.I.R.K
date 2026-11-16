@@ -1,0 +1,89 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.10, pytest-9.0.2, pluggy-1.6.0 -- /Volumes/Digs-1TB/Development/quantum-apps/QUIRK/.venv/bin/python
+hypothesis profile 'default'
+rootdir: /Volumes/Digs-1TB/Development/quantum-apps/QUIRK
+configfile: pyproject.toml
+plugins: hypothesis-6.152.9, schemathesis-4.19.0, anyio-4.13.0
+collecting ... collected 65 items
+
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[legacy_max_tls10] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[legacy_max_sslv3] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[legacy_offered_with_tls12] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[weak_cipher] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[ecdsa_192] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[rsa_1024] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[cert_expired] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[cert_near_expiry] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[tls_untrusted_ca] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[tls_self_signed] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[container_openssl_111] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[container_openssl_102] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[container_pycrypto_old] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[container_scan_error] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[kerberos_rc4] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[dnssec_none] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[dnssec_nsec] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[email_weak] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[broker] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[broker_tls_weak] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[plaintext_amqp] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[plaintext_redis] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[codesign] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[codesign_weak_alg] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[saml] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[saml_weak_encryption] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[saml_sha1] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[saml_oidc_rs256] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[plaintext_http] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[http_on_tls_port] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[http_on_tls_port_with_mtls_pair] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[jwks_verify_disabled] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[bearer_unsigned] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[tls_scan_error_with_fields] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[http_scan_error] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[legacy_inconsistent_max] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[legacy_supported_only] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[ecdsa_256] PASSED
+tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned[rsa_2048] PASSED
+tests/test_severity_divergence_behaviour.py::test_no_stale_disposition PASSED
+tests/test_severity_divergence_behaviour.py::test_disposition_entries_are_well_formed PASSED
+tests/test_severity_divergence_behaviour.py::test_fixture_families_cover_every_high_critical_title_site PASSED
+tests/test_severity_divergence_behaviour.py::test_injected_mutations_turn_new_gate_red[M1_dnssec_nsec_to_high] PASSED
+tests/test_severity_divergence_behaviour.py::test_injected_mutations_turn_new_gate_red[M2_untrusted_ca_to_high] PASSED
+tests/test_severity_divergence_behaviour.py::test_injected_mutations_turn_new_gate_red[M3_drop_scan_error_guard] PASSED
+tests/test_severity_divergence_behaviour.py::test_gate_is_red_with_empty_dispositions[M1_dnssec_nsec_to_high] PASSED
+tests/test_severity_divergence_behaviour.py::test_gate_is_red_with_empty_dispositions[M2_untrusted_ca_to_high] PASSED
+tests/test_severity_divergence_behaviour.py::test_gate_is_red_with_empty_dispositions[M3_drop_scan_error_guard] PASSED
+tests/test_severity_divergence_behaviour.py::test_old_ast_gate_is_blind_to_the_same_mutations[M1_dnssec_nsec_to_high] PASSED
+tests/test_severity_divergence_behaviour.py::test_old_ast_gate_is_blind_to_the_same_mutations[M2_untrusted_ca_to_high] PASSED
+tests/test_severity_divergence_behaviour.py::test_old_ast_gate_is_blind_to_the_same_mutations[M3_drop_scan_error_guard] PASSED
+tests/test_severity_divergence_behaviour.py::test_census_report 
+CENSUS (measured): 3 residual(s) across 39 families
+  kerberos_rc4 | dashboard_only | 10.236.15.1:88 | HIGH | Kerberos weak etype: rc4-hmac
+  dnssec_none | dashboard_only | 10.236.16.1:53 | HIGH | DNSSEC: NONE
+  http_on_tls_port_with_mtls_pair | dashboard_only | 10.236.31.1:443 | HIGH | Unencrypted HTTP service
+PASSED
+tests/test_cross_surface_parity.py::test_narrative_content_parity PASSED
+tests/test_cross_surface_parity.py::test_top_risks_parity PASSED
+tests/test_cross_surface_parity.py::test_docx_narrative_parity DOCX report written to /Volumes/Digs-1TB/tmp/pytest-236-09/test_docx_narrative_parity0/parity-docx-test.docx
+PASSED
+tests/test_cross_surface_parity.py::test_xsurf04_three_number_cross_surface_equality PASSED
+tests/test_cross_surface_parity.py::test_xsurf0508_no_critical_cross_surface_parity PASSED
+tests/test_cross_surface_parity.py::test_xsurf07_trend_merge_segment_scores_match_headline PASSED
+tests/test_cross_surface_parity.py::test_xsurf07_compare_includes_identity_findings PASSED
+tests/test_cross_surface_parity.py::test_xsurf236_family_headline_parity[legacy_max_tls10] PASSED
+tests/test_cross_surface_parity.py::test_xsurf236_family_headline_parity[weak_cipher] PASSED
+tests/test_cross_surface_parity.py::test_xsurf236_family_headline_parity[ecdsa_192] PASSED
+tests/test_cross_surface_parity.py::test_xsurf236_family_headline_parity[container_openssl_111] PASSED
+tests/test_cross_surface_parity.py::test_xsurf236_container_critical_headline_parity PASSED
+tests/test_cross_surface_parity.py::test_xsurf236_scan_error_tls_row_headline_parity PASSED
+
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/ldap3/utils/asn1.py:50
+    from pyasn1.codec.ber.encoder import tagMap, typeMap, AbstractItemEncoder
+
+.venv/lib/python3.14/site-packages/ldap3/utils/asn1.py:50
+    from pyasn1.codec.ber.encoder import tagMap, typeMap, AbstractItemEncoder
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 65 passed, 2 warnings in 0.99s ========================

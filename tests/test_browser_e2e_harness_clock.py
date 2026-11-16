@@ -29,12 +29,14 @@ def _frozen(at_utc: datetime):
 
 
 def _seed_and_findings(tmp_path, monkeypatch, at_utc):
-    import quirk.dashboard.api.routes.scan as scan_mod
+    # Phase 236 D-10: findings_for_endpoint now lives in finding_derivation and
+    # reads ITS OWN module-global ``datetime``; patching routes.scan no longer lands.
+    import quirk.dashboard.api.finding_derivation as derivation_mod
     from tests import browser_e2e_harness as harness
 
     frozen = _frozen(at_utc)
     monkeypatch.setattr(harness, "datetime", frozen)
-    monkeypatch.setattr(scan_mod, "datetime", frozen)
+    monkeypatch.setattr(derivation_mod, "datetime", frozen)
 
     db_path = tmp_path / "q.db"
     harness.seed_dashboard_db(db_path)
@@ -47,7 +49,9 @@ def _seed_and_findings(tmp_path, monkeypatch, at_utc):
                     CryptoEndpoint.port == 443,
                 )
             ).scalar_one()
-            findings = scan_mod.findings_for_endpoint(ep)
+            # A missed patch would silently read the real clock; fail loudly instead.
+            assert derivation_mod.datetime is frozen
+            findings = derivation_mod.findings_for_endpoint(ep)
             scanned_at = ep.scanned_at
     finally:
         engine.dispose()
@@ -59,8 +63,11 @@ def _seed_and_findings(tmp_path, monkeypatch, at_utc):
     [
         datetime(2026, 11, 15, 9, 0, tzinfo=timezone.utc),
         datetime(2027, 6, 1, 9, 0, tzinfo=timezone.utc),
+        # Past-dated (run-time computed): only a landing clock patch keeps the 45d
+        # cert unexpired; the real clock would read it ~75 days expired.
+        datetime.now(timezone.utc) - timedelta(days=120),
     ],
-    ids=["2026-11-15", "2027-06-01"],
+    ids=["2026-11-15", "2027-06-01", "past-120d"],
 )
 def test_seed_cert_valid_on_forward_clock(tmp_path, monkeypatch, now):
     findings, _ = _seed_and_findings(tmp_path, monkeypatch, now)

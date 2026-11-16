@@ -75,18 +75,21 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # on `proto == "HTTP"`. Same field (protocol), same comparison. bridged.
     "Unencrypted HTTP service": "Plaintext HTTP service detected",
 
-    # scan.py:154-168 "Legacy TLS version: {ep.tls_version}" fires on
-    # `ep.tls_version in ("TLSv1", "TLSv1.1", "TLS 1.0", "TLS 1.1")`.
-    # findings_evaluator.py:551-565 "Legacy TLS versions allowed (TLS
-    # 1.0/1.1)" fires on `_has_legacy_tls_versions(e)`
-    # (findings_evaluator.py:278-287), which checks `ep.tls_version in
-    # {"TLSv1", "TLSv1.1"}` OR a `{"TLSv1", "TLSv1.1"}` intersection against
-    # `tls_supported_versions`. Same primary field (tls_version); the CLI
-    # condition is a superset (also considers tls_supported_versions) and
-    # omits the spaced "TLS 1.0"/"TLS 1.1" forms the dashboard also matches.
-    # Overlapping-but-not-byte-identical conditions on the same field and
-    # same concept -- bridged, not identity, per Task 1's read.
-    "Legacy TLS version: ": "Legacy TLS versions allowed (TLS 1.0/1.1)",
+    # Phase 236 D-01/D-20: two tiers on both surfaces, decided by
+    # quirk.util.weak_crypto.is_max_legacy_tls / has_legacy_tls_versions_signal.
+    # HIGH: finding_derivation.py (is_max_legacy_tls branch, title kept per D-05)
+    # <-> findings_evaluator.py (_is_max_legacy_tls branch, HIGH).
+    "Legacy TLS version: ": "Only legacy TLS versions offered (no TLS 1.2+)",
+    # LOW: finding_derivation.py (has_legacy_tls_versions_signal and not max)
+    # <-> findings_evaluator.py (_has_legacy_tls_versions elif, LOW).
+    "Legacy TLS versions offered alongside TLS 1.2+": "Legacy TLS versions allowed (TLS 1.0/1.1)",
+
+    # Phase 236 D-02 (XSURF-10): both fire on the SAME column,
+    # tls_weak_ciphers_present (finding_derivation.py HIGH "Weak cipher suites
+    # enabled" <-> findings_evaluator.py HIGH "Weak TLS cipher suites accepted").
+    # The LOW "Legacy TLS cipher suites accepted" fires on the distinct
+    # tls_legacy_suites_present column and is NOT bridged to it.
+    "Weak cipher suites enabled": "Weak TLS cipher suites accepted",
 
     # scan.py:188-207 "Certificate expired" fires on
     # `days_to_expiry < 0` (from `ep.cert_not_after`).
@@ -120,6 +123,12 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # certs, so this does not change real-world behaviour). identity.
     "TLS certificate uses undersized RSA key": "TLS certificate uses undersized RSA key",
 
+    # Phase 236 D-04 (XSURF-11): finding_derivation.py fires on
+    # `cert_pubkey_alg.upper() == "ECDSA" and cert_pubkey_size < 256`;
+    # findings_evaluator.py fires on `cert_pubkey_alg == "ECDSA" and
+    # cert_pubkey_size < 256`. Same title, same threshold. identity.
+    "TLS certificate uses undersized ECDSA key": "TLS certificate uses undersized ECDSA key",
+
     # scan.py:263-286 "TLS certificate is self-signed" fires on
     # `issuer and subject and issuer == subject`.
     # findings_evaluator.py:634-652, byte-identical title and condition.
@@ -146,24 +155,6 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
 # TODO. `canonical_cli_title()` returns None for every key here.
 # ---------------------------------------------------------------------------
 UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
-    # scan.py:171-185 fires on `ep.tls_weak_ciphers_present`.
-    # findings_evaluator.py:568-584's nearest-sounding title, "Legacy TLS
-    # cipher suites accepted", fires on `ep.tls_legacy_suites_present`.
-    # These are two DISTINCT, independently-populated boolean columns
-    # (quirk/models.py:45-46; quirk/scanner/tls_scanner.py:323-324 sets both
-    # from different capability checks in the same scan). They can and do
-    # disagree on a given endpoint. Bridging them would attribute the CLI's
-    # legacy-cipher-suites theme (and its lift) to a dashboard finding whose
-    # firing condition is a different column -- exactly the T-202-01 failure
-    # this module exists to prevent. Confirmed unbridged, matching the
-    # plan's own "suspect unbridged" hypothesis.
-    "Weak cipher suites enabled": (
-        "Fires on ep.tls_weak_ciphers_present; the CLI's nearest title "
-        "('Legacy TLS cipher suites accepted') fires on the distinct "
-        "ep.tls_legacy_suites_present column -- different firing condition, "
-        "no 1:1 CLI equivalent."
-    ),
-
     # scan.py:309-331 fires on `cert_pubkey_alg` truthy and NOT starting
     # with "RSA", i.e. EVERY non-RSA public-key algorithm the CBOM
     # classifier (`classify_algorithm`/`quantum_safety_label`) marks
@@ -178,57 +169,82 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
     # the plan's own "suspect unbridged" hypothesis.
     "Quantum-": (
         "Fires on any non-RSA cert_pubkey_alg the CBOM classifier scores "
-        "Vulnerable/At-Risk (DSA, DH, Ed25519, ECDSA of any size, one "
-        "title); the CLI has algorithm-specific sites only for RSA and "
-        "ECDSA, and even the ECDSA subset splits into two size-gated CLI "
-        "titles the dashboard does not distinguish -- no 1:1 CLI "
-        "equivalent at any granularity."
+        "Vulnerable/At-Risk (DSA, DH, Ed25519, ECDSA of 256+ bits, one "
+        "title); ECDSA under 256 bits no longer reaches it (Phase 236 D-04: "
+        "that row gets the HIGH 'TLS certificate uses undersized ECDSA key' "
+        "on both surfaces). The remaining Quantum- finding is MEDIUM and "
+        "therefore not score-moving; the CLI has no 1:1 equivalent."
     ),
 }
 
 # ---------------------------------------------------------------------------
-# SEVERITY_DIVERGENCES (Phase 228 D-03 / D-04 / D-22)
+# SEVERITY_DIVERGENCES (Phase 228 D-03 / D-04 / D-22; reshaped Phase 236 D-09)
 #
-# Key: a dashboard title key/prefix whose literal severity, as emitted by
-# quirk/dashboard/api/routes/scan.py::findings_for_endpoint, does NOT match
-# the report side. Two kinds of key can appear here:
-#   * a BRIDGED key (DASHBOARD_TITLE_BRIDGE): the report severity is the one
-#     findings_evaluator.py emits for the CLI title AFTER _normalize_finding
-#     rewrites it;
-#   * an UNBRIDGED key (UNBRIDGED_DASHBOARD_TITLES) whose dashboard severity
-#     is HIGH or CRITICAL and so can move the consequence ceiling with no
-#     report counterpart (D-22).
-# Value: {"reason": <one sentence>, "todo": <filename in .planning/todos/pending/>}.
+# Key: a title prefix (matched longest-prefix against the titles on the
+# divergent side) whose HIGH/CRITICAL findings exist on one surface only, or
+# at a different severity, for the same host:port. The headline ceiling counts
+# RAW severities, so each mismatch moves the headline between surfaces.
 #
-# Why it matters: the headline ceiling counts RAW severities, so any
-# mismatched pair moves the headline between surfaces (D-03). Each entry is
-# filed and owned, NOT fixed here (D-04, D-22); fixing one means deleting its
-# entry in the same change, and the gate fails if a stale entry stays.
+# Value (all fields required):
+#   reason       one sentence naming both firing conditions;
+#   todo         filename in .planning/todos/pending/ that owns the fix;
+#   score_moving True when the divergence changes a headline score;
+#   side         "dashboard_only" (the dashboard raises a HIGH/CRITICAL the
+#                report does not) or "report_only" (the reverse). The key is a
+#                title on THAT side;
+#   families     the tests/fixtures/divergence_rows.py families that exhibit
+#                it. An entry only dispositions a residual in a listed family
+#                on its own side; a listed family that stops producing the
+#                residual makes the entry stale.
 #
-# This dict is a disposition, not the safeguard.
-# tests/test_finding_title_bridge.py regenerates both generators' literal
-# severities from source with `ast` on every run and requires set equality
-# against this dict's keys (no gaps, no extras).
+# Each entry is filed and owned, not hidden: fixing a divergence means
+# deleting its entry in the same change.
+#
+# This dict is a disposition, not the safeguard. The safeguard is
+# tests/test_severity_divergence_behaviour.py: it RUNS both derivers on a
+# fixture family per finding type, diffs the HIGH/CRITICAL multisets per
+# host:port in both directions, requires every residual to be dispositioned
+# here, and fails on a stale entry. Its fixture families are themselves
+# checked at run time against the title sites extracted from source.
 # ---------------------------------------------------------------------------
-SEVERITY_DIVERGENCES: Dict[str, Dict[str, str]] = {
-    # Bridged. Dashboard emits HIGH (scan.py, `Legacy TLS version: ...`); the
-    # report emits LOW and _normalize_finding pins that title to LOW. The two
-    # conditions also differ (negotiated vs offered versions).
-    "Legacy TLS version: ": {
+SEVERITY_DIVERGENCES: Dict[str, Dict[str, object]] = {
+    # Dashboard-only identity findings (D-19: dispositioned, not fixed; which
+    # surface is right is an open scoring question).
+    "Kerberos weak etype: ": {
         "reason": (
-            "Dashboard HIGH on the negotiated version vs report LOW on the "
-            "offered versions; operator chose to file rather than fix (D-04)."
+            "Dashboard raises HIGH/CRITICAL from the etype severity in "
+            "service_detail (_derive_identity_findings); the report composition "
+            "has no Kerberos finding at all."
         ),
-        "todo": "261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md",
+        "todo": "261115-kerberos-weak-etype-dashboard-only-score-divergence.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["kerberos_rc4"],
     },
-    # Unbridged (D-22). Dashboard HIGH on ep.tls_weak_ciphers_present; no
-    # report finding fires on that column, so the report ceiling never sees it.
-    "Weak cipher suites enabled": {
+    "DNSSEC: ": {
         "reason": (
-            "Dashboard HIGH on tls_weak_ciphers_present has no report "
-            "counterpart; one such endpoint scores 84 (report) vs 69 (dashboard)."
+            "Dashboard raises variable-severity DNSSEC findings (NONE is HIGH) "
+            "from _DNSSEC_WEAK_MAP; the report composition has no DNSSEC "
+            "finding at all."
         ),
-        "todo": "261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md",
+        "todo": "261115-dnssec-dashboard-only-score-divergence.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["dnssec_none"],
+    },
+    # Census extra (Phase 236-01): found by the behaviour gate, not previously
+    # listed. HTTP row plus an MTLS_REQUIRED TLS row on the same host:port.
+    "Unencrypted HTTP service": {
+        "reason": (
+            "Report _postprocess_findings downgrades 'Plaintext HTTP service "
+            "detected' to INFO 'mTLS required' when a sibling TLS row on the "
+            "same host:port has tls_blocker_reason MTLS_REQUIRED; the dashboard "
+            "judges each row alone and keeps HIGH."
+        ),
+        "todo": "261115-http-mtls-pair-dashboard-only-score-divergence.md",
+        "score_moving": True,
+        "side": "dashboard_only",
+        "families": ["http_on_tls_port_with_mtls_pair"],
     },
 }
 
@@ -256,6 +272,10 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     "Plaintext HTTP service detected": "specific",
     # In "legacy-tls-versions" fingerprint tuple (remediation.py:97).
     "Legacy TLS versions allowed (TLS 1.0/1.1)": "specific",
+    # Phase 236 D-01: HIGH tier, in the same "legacy-tls-versions" tuple.
+    "Only legacy TLS versions offered (no TLS 1.2+)": "specific",
+    # Phase 236 D-02: HIGH, in the "legacy-tls-versions" fingerprint tuple.
+    "Weak TLS cipher suites accepted": "specific",
     # In "expired-certificates" fingerprint tuple (remediation.py:88).
     "TLS certificate expired": "specific",
     # In "near-expiry-certificates" fingerprint tuple (remediation.py:91).
@@ -266,6 +286,9 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # (scan.py:240-241) -> constitutes the "high-impact-findings" severity
     # catch-all as its ONLY theme (D-09).
     "TLS certificate uses undersized RSA key": "catchall-only",
+    # Phase 236 D-04: HIGH, in no fingerprint tuple (like undersized RSA) ->
+    # constitutes the "high-impact-findings" catch-all only.
+    "TLS certificate uses undersized ECDSA key": "catchall-only",
     # NOT in any fingerprint tuple. Dashboard severity is MEDIUM
     # (scan.py:292-293), below the HIGH/CRITICAL catch-all threshold ->
     # constitutes no theme at all.

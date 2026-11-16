@@ -1,0 +1,7 @@
+endpoints: 56
+report    score=27 CRITICAL=2 HIGH=8 ceiling_reason='2 open CRITICAL findings — score limited to 27 (computed 78)'
+dashboard score=27 CRITICAL=2 HIGH=10 ceiling_reason='2 open CRITICAL findings — score limited to 27 (computed 78)'
+dashboard-only residuals: 2
+  DASH-ONLY ('unsigned.example.com', 15353, 'HIGH') DNSSEC: NONE
+  DASH-ONLY ('weak.example.com', 15353, 'HIGH') DNSSEC: NONE
+report-only residuals: 0

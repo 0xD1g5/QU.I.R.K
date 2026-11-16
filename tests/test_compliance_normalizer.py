@@ -86,6 +86,7 @@ def test_title_identity_class_is_exhaustive_and_closed_vocabulary():
 
 
 def test_fingerprint_table_derived_size():
-    # 7 compliance entries - 2 identity-bearing prefixes + 1 new cert entry = 6.
-    assert len(FINGERPRINT_TITLE_ALIASES) == 6
-    assert len(TITLE_PREFIX_ALIASES) == 7
+    # 8 compliance entries (7 + the Phase 236 D-21 max-legacy-TLS alias)
+    # - 2 identity-bearing prefixes + 1 new cert entry = 7.
+    assert len(FINGERPRINT_TITLE_ALIASES) == 7
+    assert len(TITLE_PREFIX_ALIASES) == 8

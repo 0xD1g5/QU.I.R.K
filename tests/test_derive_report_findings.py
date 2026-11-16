@@ -182,3 +182,14 @@ def test_run_scan_risk_engine_uses_composer_not_inlined_calls():
         assert "derive_report_findings" in called
         assert not (called & banned), called & banned
     assert found, "no function with a risk_engine _phase_timer found"
+
+
+def test_container_rows_not_double_counted_in_report():
+    """Phase 236 D-06: the shared container helper must not add to the report."""
+    row = CryptoEndpoint(id=1, host="img", port=0, protocol="CONTAINER",
+                         cipher_suite="openssl", tls_version="1.0.2u",
+                         scanned_at=datetime(2026, 10, 15))
+    out = derive_report_findings([row])
+    eol = [d for d in out if d["title"].startswith("End-of-life")]
+    assert len(eol) == 1
+    assert len(fe.evaluate_container_endpoints([row])) == 1

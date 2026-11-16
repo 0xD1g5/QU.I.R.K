@@ -6,7 +6,7 @@ source: Phase 235.3 code review B-WR-07 (deferred; 235.3-REVIEW.md)
 priority: medium
 area: quirk/intelligence/trends.py
 status: pending
-resolves_phase: null
+resolves_phase: 237
 owner: null
 ---
 

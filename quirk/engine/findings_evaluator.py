@@ -22,7 +22,7 @@ from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.scanner.target_outcome import SKIP_REASON_TO_ADVISORY_CATEGORY
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
-from quirk.util.weak_crypto import has_legacy_tls_versions_signal
+from quirk.util.weak_crypto import has_legacy_tls_versions_signal, is_max_legacy_tls
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -294,6 +294,16 @@ def runs_tls_certificate_checks(ep: Any) -> bool:
 EMAIL_PROTOCOLS = frozenset({
     "SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS", "POP3-STARTTLS", "POP3S",
 })
+
+
+def _is_max_legacy_tls(ep: Any) -> bool:
+    # Phase 236 D-01/D-20: thin wrapper over the shared HIGH-tier predicate in
+    # quirk.util.weak_crypto.is_max_legacy_tls(), the same one the dashboard
+    # deriver calls, so the two surfaces cannot drift on the tier boundary.
+    return is_max_legacy_tls(
+        getattr(ep, "tls_version", "") or "",
+        getattr(ep, "tls_supported_versions", "") or "",
+    )
 
 
 def _has_legacy_tls_versions(ep: Any) -> bool:
@@ -674,7 +684,25 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
             ))
 
         if runs_tls_certificate_checks(e):
-            if _has_legacy_tls_versions(e):
+            if _is_max_legacy_tls(e):
+                # Phase 236 D-01/D-20: HIGH tier -- nothing newer than TLS 1.1
+                # (or SSLv2/SSLv3 only) is offered.
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="Only legacy TLS versions offered (no TLS 1.2+)",
+                    description=(
+                        "This service negotiates nothing newer than TLS 1.1, or only "
+                        "SSLv2/SSLv3, so every client is forced onto a deprecated "
+                        "protocol (RFC 8996)."
+                    ),
+                    recommendation=(
+                        "Enable TLS 1.2+ (prefer TLS 1.3), then disable "
+                        "SSLv2/SSLv3/TLS 1.0/1.1."
+                    ),
+                ))
+            elif _has_legacy_tls_versions(e):
                 findings.append(_build_finding(
                     severity="LOW",
                     host=host,
@@ -705,6 +733,27 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     recommendation=(
                         "Disable legacy cipher suites (e.g. AES128-SHA, AES256-SHA) and require "
                         "AEAD suites with forward secrecy (AES-GCM, ChaCha20-Poly1305)."
+                    ),
+                ))
+
+            # Phase 236 D-02 (XSURF-10): weak cipher suites (RC4/3DES/NULL/EXPORT/MD5,
+            # SSLv2/SSLv3) are HIGH. Independent of the LOW legacy-suites site above:
+            # distinct column (tls_weak_ciphers_present), never merged (T-236-10).
+            if getattr(e, "tls_weak_ciphers_present", False):
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="Weak TLS cipher suites accepted",
+                    description=(
+                        "The endpoint accepts weak cipher suites (RC4, 3DES, NULL, "
+                        "EXPORT or MD5-based suites) or the SSLv2/SSLv3 protocols, "
+                        "which are cryptographically broken and allow traffic to be "
+                        "decrypted or downgraded."
+                    ),
+                    recommendation=(
+                        "Remove RC4/3DES/NULL/EXPORT/MD5 suites and SSLv2/SSLv3, and keep "
+                        "only AEAD suites with forward secrecy (AES-GCM, ChaCha20-Poly1305)."
                     ),
                 ))
 
@@ -1450,6 +1499,29 @@ def evaluate_protocol_service_endpoints(endpoints) -> List[Dict[str, Any]]:
         + evaluate_codesign_endpoints([e for e in eps if getattr(e, "protocol", "") == "CODE_SIGNING"])
         + evaluate_bearer_token_endpoints([e for e in eps if getattr(e, "protocol", "") == "BEARER_TOKEN"])
     )
+
+
+def evaluate_container_endpoints(endpoints) -> List[Dict[str, Any]]:
+    """Evaluate CONTAINER package rows with the report's own container evaluator.
+
+    Skips rows carrying a scan_error (rejected images, matching the generic
+    scan_err branch of evaluate_endpoints), maps cipher_suite -> package name
+    and tls_version -> package version, and dedupes like the report. Shared by
+    the dashboard derivation (Phase 236 D-06, Phase 228 D-20 pattern); the
+    report path reaches the same evaluator through evaluate_endpoints.
+    """
+    out: List[Dict[str, Any]] = []
+    for e in endpoints:
+        if getattr(e, "protocol", "") != "CONTAINER" or getattr(e, "scan_error", None):
+            continue
+        pkg_name = (getattr(e, "cipher_suite", "") or "").strip()
+        pkg_version = (getattr(e, "tls_version", "") or "").strip()
+        finding = _evaluate_container_package(
+            getattr(e, "host", "") or "", getattr(e, "port", 0) or 0, pkg_name, pkg_version
+        )
+        if finding:
+            out.append(finding)
+    return _dedupe_findings(out)
 
 
 def derive_report_findings(endpoints, cfg=None) -> List[Dict[str, Any]]:

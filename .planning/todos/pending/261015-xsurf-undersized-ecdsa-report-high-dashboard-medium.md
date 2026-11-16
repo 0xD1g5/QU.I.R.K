@@ -5,7 +5,7 @@ source: Phase 228 (Cross-Surface Score Parity) D-04; RESEARCH Open Question 6
 priority: medium
 area: quirk/engine/findings_evaluator.py (ECDSA sites), quirk/dashboard/api/routes/scan.py (Quantum- finding), quirk/dashboard/api/finding_title_bridge.py
 status: pending
-resolves_phase: null
+resolves_phase: 236
 owner: "999.132"
 ---
 

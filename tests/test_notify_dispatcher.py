@@ -233,7 +233,7 @@ def test_dispatch_fan_out_creates_delivery_rows(tmp_path, monkeypatch):
 
     # Fake trend report that triggers (new_high=2)
     fake_report = _make_trend_report(new_high=2, score_delta=-8, previous_score=80)
-    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db, **kw: fake_report)
 
     # Stub channel senders — succeed silently
     monkeypatch.setattr(dispatcher, "_channel_send_slack", lambda cfg, summary: None)
@@ -291,7 +291,7 @@ def test_dispatch_email_channel_reaches_transport(tmp_path, monkeypatch):
     monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
 
     fake_report = _make_trend_report(new_high=2, score_delta=-8, previous_score=80)
-    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db, **kw: fake_report)
 
     # Stub only the transport — the real _channel_send_email wrapper runs and
     # reads summary.new_high / summary.current_score from the DriftSummary.
@@ -348,7 +348,7 @@ def test_dispatch_delivery_failure_isolated(tmp_path, monkeypatch):
     monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
 
     fake_report = _make_trend_report(new_high=1, score_delta=-8, previous_score=80)
-    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db, **kw: fake_report)
 
     # Slack raises; webhook succeeds
     monkeypatch.setattr(dispatcher, "_channel_send_slack", lambda cfg, summary: (_ for _ in ()).throw(RuntimeError("Slack timeout")))
@@ -399,7 +399,7 @@ def test_dispatch_secret_not_in_delivery_row(tmp_path, monkeypatch):
     monkeypatch.setattr(dispatcher, "_find_two_sessions", lambda db: (current_ts, previous_ts))
 
     fake_report = _make_trend_report(new_high=1, score_delta=-8, previous_score=80)
-    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db, **kw: fake_report)
 
     SECRET_TOKEN = "xoxb-12345678901-ABCDEFGHIJKLMNOP"
 
@@ -507,7 +507,7 @@ def test_email_score_delta_none_does_not_crash(tmp_path, monkeypatch):
 
     # First-scan report: score_delta is None, new_high > 0
     fake_report = _make_trend_report(new_high=3, score_delta=None, previous_score=None)
-    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db: fake_report)
+    monkeypatch.setattr(dispatcher, "compute_trend_report", lambda cur, prev, db, **kw: fake_report)
 
     captured = {}
 
@@ -592,7 +592,9 @@ def test_drift_band_applies_ceiling(tmp_path):
     assert summary.score_band != _score_to_band(findings_less)
 
 
-def test_dispatcher_trend_call_stays_three_positional_args():
+def test_dispatcher_trend_call_passes_dashboard_deriver():
+    """Phase 236 D-11: the Slack drift score uses the dashboard recipe, so it equals
+    the Trends page it links to."""
     import ast
     import inspect
 
@@ -604,6 +606,95 @@ def test_dispatcher_trend_call_stays_three_positional_args():
         if isinstance(n, ast.Call)
         and getattr(n.func, "id", None) == "compute_trend_report"
     ]
-    assert calls
-    for c in calls:
-        assert len(c.args) == 3 and not c.keywords
+    assert len(calls) == 1
+    (c,) = calls
+    assert len(c.args) == 3
+    assert [k.arg for k in c.keywords] == ["findings_deriver"]
+    value = c.keywords[0].value
+    assert isinstance(value, ast.Name) and value.id == "derive_dashboard_scoring_findings"
+
+
+def test_dispatcher_score_matches_trends_page_trends_parity(tmp_path, monkeypatch):
+    """Phase 236 D-11: Slack drift score == /api/trends current_score on the same DB.
+
+    Non-vacuous: the current session carries Kerberos RC4 and DNSSEC NONE rows, on
+    which the report and dashboard recipes disagree, so the default
+    compute_trend_report score differs from the dashboard one.
+    """
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.cli.scheduler_cmd import _utcnow_naive
+    from quirk.dashboard.api.app import create_app
+    from quirk.dashboard.api.deps import get_db
+    from quirk.intelligence.trends import compute_trend_report
+    from quirk.models import CryptoEndpoint
+    from quirk.notify import dispatcher
+    from quirk.notify.config import NotifyCfg
+    from tests.fixtures import divergence_rows as rows
+
+    prev_ts = datetime(2026, 4, 25, 9, 0, 0)
+    curr_ts = datetime(2026, 4, 26, 9, 0, 0)
+
+    db_path = _make_db(tmp_path)
+    schedule = _add_schedule(db_path)
+    with get_session(db_path) as db:
+        db.add(CryptoEndpoint(host="base.example", port=443, protocol="TLS", scanned_at=prev_ts))
+        db.add(CryptoEndpoint(host="base.example", port=443, protocol="TLS", scanned_at=curr_ts))
+        for build in (rows._kerberos_rc4, rows._dnssec_none):
+            for ep in build():
+                ep.id = None
+                ep.scanned_at = curr_ts
+                db.add(ep)
+        db.commit()
+
+    captured = {}
+    real = dispatcher.compute_trend_report
+
+    def _spy(*a, **kw):
+        report = real(*a, **kw)
+        captured["report"] = report
+        return report
+
+    monkeypatch.setattr(dispatcher, "compute_trend_report", _spy)
+    # trigger_score_floor huge: should_notify returns False, so no channel is touched.
+    monkeypatch.setattr(
+        dispatcher, "load_notifications_config",
+        lambda: NotifyCfg(trigger_score_floor=-1000),
+    )
+
+    with get_session(db_path) as db:
+        run = ScheduledRun(
+            schedule_id=schedule.id, dispatched_at=_utcnow_naive(),
+            status="completed", scan_output_path=None, scan_id=None,
+        )
+        db.add(run)
+        db.commit()
+        dispatcher.dispatch_notifications(run=run, schedule=schedule, db=db)
+        default_score = compute_trend_report(curr_ts, prev_ts, db).current_score
+
+    assert "report" in captured, "dispatcher never reached compute_trend_report"
+    slack_score = captured["report"].current_score
+
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_get_db():
+        s = factory()
+        try:
+            yield s
+        finally:
+            s.close()
+
+    app = create_app()
+    app.dependency_overrides[get_db] = _override_get_db
+    try:
+        resp = TestClient(app).get("/api/trends")
+    finally:
+        engine.dispose()
+    assert resp.status_code == 200, resp.text
+    page_score = resp.json()["current_score"]
+
+    assert slack_score == page_score
+    assert default_score != page_score, "non-vacuity: report recipe must differ here"

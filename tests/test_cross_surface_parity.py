@@ -16,6 +16,8 @@ from __future__ import annotations
 import os
 from types import SimpleNamespace
 
+import pytest
+
 from quirk.reports.content_model import build_exec_content, ExecContent
 
 
@@ -949,3 +951,134 @@ def test_xsurf07_compare_includes_identity_findings():
     assert data["scan_a"]["score"] == head_a == _EXPECTED_XSURF0508_SCORE, (
         f"XSURF-07 VIOLATION: /compare side A {data['scan_a']['score']} headline {head_a}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 236 Plan 07 -- XSURF-14 (D-13): one isolated seeded run per fixed
+# family; report score == /api/scan/latest score == a pinned literal.
+# The XSURF-04 seeder is deliberately NOT extended: its SAML CRITICAL ceiling
+# (<= 34) would mask a HIGH-driven ceiling (69 / 49).
+# ---------------------------------------------------------------------------
+
+_XSURF236_LEGACY_MAX_RUN_ID = "2026-11-10T10:01:00"
+_XSURF236_WEAK_CIPHER_RUN_ID = "2026-11-10T10:02:00"
+_XSURF236_ECDSA_192_RUN_ID = "2026-11-10T10:03:00"
+_XSURF236_CONTAINER_111_RUN_ID = "2026-11-10T10:04:00"
+_XSURF236_CONTAINER_102_RUN_ID = "2026-11-10T10:05:00"
+_XSURF236_SCAN_ERROR_TLS_RUN_ID = "2026-11-16T10:01:00"
+
+# Measured, not derived (Phase 236 D-13): (score, CRITICAL count, HIGH count).
+_EXPECTED_XSURF236 = {
+    "legacy_max_tls10": (62, 0, 1),
+    "weak_cipher": (63, 0, 1),
+    "ecdsa_192": (63, 0, 1),
+    "container_openssl_111": (63, 0, 1),
+    "container_openssl_102": (31, 1, 0),
+    "tls_scan_error_with_fields": (73, 0, 0),
+}
+_XSURF236_RUN_IDS = {
+    "legacy_max_tls10": _XSURF236_LEGACY_MAX_RUN_ID,
+    "weak_cipher": _XSURF236_WEAK_CIPHER_RUN_ID,
+    "ecdsa_192": _XSURF236_ECDSA_192_RUN_ID,
+    "container_openssl_111": _XSURF236_CONTAINER_111_RUN_ID,
+    "container_openssl_102": _XSURF236_CONTAINER_102_RUN_ID,
+    "tls_scan_error_with_fields": _XSURF236_SCAN_ERROR_TLS_RUN_ID,
+}
+
+
+def _xsurf236_seed(TestingSession, family: str, scan_run_id: str) -> None:
+    from tests.fixtures.divergence_rows import FAMILY_ROWS
+
+    db = TestingSession()
+    try:
+        now = _datetime.now()
+        wall = _datetime.now(_timezone.utc)
+        for i, host in enumerate(("10.81.0.10", "10.81.0.11")):
+            db.add(_CryptoEndpoint(
+                scan_run_id=scan_run_id, scanned_at=now,
+                host=host, port=443, protocol="TLS",
+                tls_version="TLSv1.3", cipher_suite="TLS_AES_256_GCM_SHA384",
+                cert_subject=f"CN=ok{i}.example.com", cert_issuer="CN=Example CA",
+                cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+                cert_not_after=wall + _timedelta(days=365),
+                tls_supported_versions="TLSv1.3",
+            ))
+        cols = [c.name for c in _CryptoEndpoint.__table__.columns if c.name != "id"]
+        for row in FAMILY_ROWS[family]():
+            vals = {c: getattr(row, c) for c in cols}
+            vals["scan_run_id"] = scan_run_id
+            vals["scanned_at"] = now
+            db.add(_CryptoEndpoint(**vals))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _xsurf236_run(family: str):
+    client, TestingSession = _xsurf04_make_client_and_session()
+    run_id = _XSURF236_RUN_IDS[family]
+    _xsurf236_seed(TestingSession, family, run_id)
+    db = TestingSession()
+    try:
+        eps = (
+            db.query(_CryptoEndpoint)
+            .filter(_CryptoEndpoint.scan_run_id == run_id).all()
+        )
+        findings_a = _derive_report_findings(eps)
+        evidence_a = _build_evidence_summary(eps, findings_a)
+        score_a = _compute_readiness_score(evidence_a, profile=None)
+    finally:
+        db.close()
+    resp = client.get(f"/api/scan/latest?scan_id={run_id}")
+    assert resp.status_code == 200, resp.text[:300]
+    data = resp.json()
+    crit_a = evidence_a["finding_severity_counts"].get("CRITICAL", 0)
+    high_a = evidence_a["finding_severity_counts"].get("HIGH", 0)
+    crit_b = sum(1 for f in data["findings"] if f.get("severity") == "CRITICAL")
+    high_b = sum(1 for f in data["findings"] if f.get("severity") == "HIGH")
+    return score_a["score"], data["score"]["score"], (crit_a, crit_b), (high_a, high_b)
+
+
+@pytest.mark.parametrize(
+    "family",
+    ["legacy_max_tls10", "weak_cipher", "ecdsa_192", "container_openssl_111"],
+)
+def test_xsurf236_family_headline_parity(family):
+    """XSURF-14: CRITICAL-free single-family run; headline equal on both
+    surfaces and equal to the pinned literal."""
+    exp_score, exp_crit, exp_high = _EXPECTED_XSURF236[family]
+    a, b, (crit_a, crit_b), (high_a, high_b) = _xsurf236_run(family)
+    assert a == b == exp_score, (
+        f"XSURF-14 VIOLATION [{family}]: report={a} dashboard={b} expected={exp_score}"
+    )
+    assert crit_a == crit_b == exp_crit == 0, f"[{family}] CRITICAL {crit_a}/{crit_b}"
+    assert high_a == high_b == exp_high, f"[{family}] HIGH {high_a}/{high_b}"
+    assert exp_high >= 1, f"[{family}] non-vacuity: a HIGH must move the ceiling"
+
+
+def test_xsurf236_container_critical_headline_parity():
+    """XSURF-14: container OpenSSL 1.0.x is CRITICAL; headline parity."""
+    exp_score, exp_crit, exp_high = _EXPECTED_XSURF236["container_openssl_102"]
+    a, b, (crit_a, crit_b), (high_a, high_b) = _xsurf236_run("container_openssl_102")
+    assert a == b == exp_score, f"XSURF-14 VIOLATION: report={a} dashboard={b} expected={exp_score}"
+    assert crit_a == crit_b == exp_crit and exp_crit >= 1
+    assert high_a == high_b == exp_high
+    assert a <= 34
+
+
+def test_xsurf236_scan_error_tls_row_headline_parity():
+    """XSURF-09 gap closure (236-09, review WR-02): a TLS row whose scan
+    errored after the handshake populated TLS columns gets the same headline
+    on both surfaces, with no HIGH/CRITICAL on either (the report sends every
+    scan_error row to its scan-error branch; the dashboard now does too)."""
+    from quirk.util.weak_crypto import is_max_legacy_tls
+
+    exp_score, exp_crit, exp_high = _EXPECTED_XSURF236["tls_scan_error_with_fields"]
+    # Non-vacuity: without the guard this row would hit the HIGH legacy tier.
+    assert is_max_legacy_tls("TLSv1", None) is True
+    a, b, (crit_a, crit_b), (high_a, high_b) = _xsurf236_run("tls_scan_error_with_fields")
+    assert a == b == exp_score, (
+        f"XSURF-09 VIOLATION: report={a} dashboard={b} expected={exp_score}"
+    )
+    assert crit_a == crit_b == exp_crit == 0, f"CRITICAL {crit_a}/{crit_b}"
+    assert high_a == high_b == exp_high == 0, f"HIGH {high_a}/{high_b}"

@@ -92,3 +92,21 @@ def test_self_test_under_host_python_isolated():
                        capture_output=True, text=True, close_fds=False)
     assert r.returncode == 0
     assert r.stdout.strip().splitlines()[-1] == "self-test: 6/6"
+
+
+def test_severity_multiset_diff_returns_surplus_per_side():
+    """Phase 236 D-07: the shared helper reports a 2-vs-1 surplus exactly once."""
+    key = ("10.0.0.1", 443, "HIGH")
+    dash_only, rep_only = sa.severity_multiset_diff(
+        [(key, "a"), (key, "b")], [(key, "x")])
+    assert len(dash_only) == 1 and dash_only[0][0] == key
+    assert rep_only == []
+    d2, r2 = sa.severity_multiset_diff([(key, "a")], [(key, "x"), (key, "y")])
+    assert d2 == [] and len(r2) == 1
+
+
+def test_self_test_case_count_is_unchanged():
+    out = subprocess.run([sys.executable, str(SCRIPT), "--self-test"],
+                         capture_output=True, text=True, check=True,
+                         close_fds=False).stdout
+    assert "self-test: 6/6" in out

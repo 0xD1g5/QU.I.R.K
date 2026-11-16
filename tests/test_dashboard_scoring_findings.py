@@ -141,3 +141,59 @@ def test_score_sites_use_the_single_helper():
         }
         assert called & helpers, f"{name} does not use the single helper"
         assert "_derive_findings" not in called, f"{name} calls _derive_findings directly"
+
+
+# --- Phase 236 D-06: container crypto-library findings on the dashboard -----
+
+def _sev_title(items):
+    return sorted((f.severity, f.title) for f in items if f.protocol == "CONTAINER")
+
+
+def test_container_findings_match_report_titles_and_severities():
+    from tests.fixtures.divergence_rows import FAMILY_ROWS
+
+    for fam, sev in (("container_openssl_111", "HIGH"),
+                     ("container_openssl_102", "CRITICAL"),
+                     ("container_pycrypto_old", "HIGH")):
+        rows = FAMILY_ROWS[fam]()
+        dash = [f for f in derive_dashboard_finding_items(rows)
+                if f.title.startswith(("End-of-life", "Severely outdated"))]
+        rep = [d for d in derive_report_findings(rows)
+               if d["title"].startswith(("End-of-life", "Severely outdated"))]
+        assert dash and sev in {f.severity for f in dash}, fam
+        assert sorted((f.severity, f.title) for f in dash) == sorted(
+            (d["severity"], d["title"]) for d in rep), fam
+
+
+def test_container_scan_error_yields_no_finding_on_either_surface():
+    from tests.fixtures.divergence_rows import FAMILY_ROWS
+
+    rows = FAMILY_ROWS["container_scan_error"]()
+    assert [f for f in derive_dashboard_finding_items(rows)
+            if f.protocol == "CONTAINER"] == []
+    assert [d for d in derive_report_findings(rows)
+            if "container image" in d["title"].lower()] == []
+
+
+def test_container_duplicate_packages_dedupe_identically():
+    rows = [
+        _ep(id=1, host="img", port=0, protocol="CONTAINER",
+            cipher_suite="openssl", tls_version="1.1.1w"),
+        _ep(id=2, host="img", port=0, protocol="CONTAINER",
+            cipher_suite="libssl1.1", tls_version="1.1.1w"),
+    ]
+    def hi(titles):
+        return Counter(
+            (s, t) for s, t in titles if s in ("HIGH", "CRITICAL")
+        )
+    dash = hi((f.severity, f.title) for f in derive_dashboard_finding_items(rows))
+    rep = hi((d["severity"], d["title"]) for d in derive_report_findings(rows))
+    assert dash == rep and sum(dash.values()) >= 1
+
+
+def test_container_findings_carry_container_protocol():
+    from tests.fixtures.divergence_rows import FAMILY_ROWS
+
+    items = derive_dashboard_finding_items(FAMILY_ROWS["container_openssl_102"]())
+    eol = [f for f in items if f.title.startswith("End-of-life")]
+    assert eol and all(f.protocol == "CONTAINER" for f in eol)

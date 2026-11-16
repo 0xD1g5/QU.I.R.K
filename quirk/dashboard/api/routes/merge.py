@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.middleware.auth import require_auth
-from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
+from quirk.dashboard.api.finding_derivation import derive_dashboard_scoring_findings
 from quirk.dashboard.api.schemas import MergeLatestData, MergeLatestResponse
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score

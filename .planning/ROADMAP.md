@@ -45,6 +45,7 @@
 - ✅ **v5.28 Score & Finding Truth** — Phases 227–235, 88 plans (**SHIPPED 2026-10-30 — tag `v5.28.0`, published to PyPI + GitHub Releases**; scoring 4.0; audit `tech_debt`, 29/29 requirements, phases 9/9, integration 24/28, flows 9/12, Nyquist 9/9; launch gate GO; merged to main via PRs #63–#64) → `.planning/milestones/v5.28-ROADMAP.md`
 - ✅ **v5.28.1 Install & Source-Scan Truth** — Phases 235.1–235.2, 15 plans, patch release (**SHIPPED 2026-11-05 — tag `v5.28.1` on `68bbe62d`, published to PyPI + GitHub Releases**; 16/16 requirements; no milestone audit, each phase verified `passed`; announcement NO-GO; merged to main via PRs #66–#68) → `.planning/milestones/v5.28.1-ROADMAP.md`
 - ✅ **v5.28.2 Connector Coverage Truth** — Phases 235.3–235.4, 30 plans, patch release (**SHIPPED 2026-11-08 — tag `v5.28.2` on `a8c7fc65`, published to PyPI + GitHub Releases**; audit `tech_debt`, 10/10 requirements, phases 2/2, integration 15/17, flows 2/4, Nyquist 2/2; announcement GO; merged to main via PRs #71–#75) → `.planning/milestones/v5.28.2-ROADMAP.md` (requirements for both patch milestones: `v5.28.2-REQUIREMENTS.md`)
+- 🚧 **v5.29 Surface Agreement** — Phases 236–240 (opened 2026-11-15) → Current Milestone below
 
 ### v5.16 and v5.17: developed untagged, shipped together under v5.18.0 (resolved 2026-09-02, Phase 177)
 
@@ -101,34 +102,99 @@ is the reason the three-component tag matters for every release after v5.15,
 including v5.18.0, and it is the institutional memory behind Phase 177's
 insistence on a real, correctly-formed tag rather than another silent gap.
 
-## Next Milestone Candidates (v5.29)
+## Current Milestone: v5.29 Surface Agreement (opened 2026-11-15, Phases 236–240)
 
-Phase numbers below are provisional. `/gsd-new-milestone` must carry each entry into the v5.29 roadmap by hand; archived roadmaps have
-swallowed backlog items before, so this section is the pointer that keeps it visible.
+**Goal:** for any scan, every surface (dashboard, report, history/trends/compare, CBOM, notify) shows
+the same findings, counts and score, and connector targets cannot get past the trust gate.
+Requirements are in `.planning/REQUIREMENTS.md` (25, all mapped). Phases 236–239 are independent of
+each other and can run in any order. Phase 240 depends on all four, because 5.29.0 ships their fixes.
 
-### Phase 236 (v5.29 candidate, early): Dashboard/Report Score Divergence Closure
+- [ ] **Phase 236: Score Divergence Closure** - The dashboard and the report give the same severities and the same headline score for the same scan, and a new divergence fails CI
+- [ ] **Phase 237: History and Count Truth** - Scan History, Trends, Compare, the Executive Skipped badge, Export PDF and notify count and show every finding, skip and outage
+- [ ] **Phase 238: Identity and Certificate Findings** - Weak JWKS algorithms, non-metadata SAML answers, TLS 1.3 mTLS rejections and SHA-1-signed certificates each produce the right finding or skip
+- [ ] **Phase 239: Connector Target Trust-Gate Hardening** - The trust gate checks exactly the targets each connector scans, including scalar target values, directory referrals and non-ASCII IP literals
+- [ ] **Phase 240: Regressions and Release 5.29.0** - Scan confidence reflects a high probe error rate, and 5.29.0 is published with its fixed known-defect wording withdrawn
 
-**Goal**: for the same scan, the dashboard and the report give the same readiness score for the four score-affecting divergences below, so the 5.28.0 known-defect disclosure for them can be withdrawn.
+## Phase Details
 
-**Depends on**: Phase 235 (v5.28.0 shipped with the divergence disclosed, D-30).
+### Phase 236: Score Divergence Closure
+**Goal**: For the same scan, the dashboard and the report give the same readiness score. The four score-affecting divergences owned by `999.132` (legacy-TLS severity, weak cipher suites, undersized ECDSA, container crypto-library EOL) are closed, the dashboard headline score equals the job report's score, and the severity-divergence gate and the Slack/Trends drift check read derived severities, so a new divergence fails CI. The 5.28.0 known-defect disclosure for these items can then be withdrawn.
+**Depends on**: Nothing in this milestone (v5.28.0 shipped with the divergence disclosed, Phase 235 D-30). Independent of Phases 237–239.
+**Requirements**: XSURF-09, XSURF-10, XSURF-11, XSURF-12, XSURF-13, XSURF-14
+**Success Criteria** (what must be TRUE):
+  1. Legacy TLS, "Weak cipher suites enabled" and an undersized ECDSA key carry the same severity on the dashboard and in the report, container crypto-library EOL findings appear on the dashboard, and none of the four appears as an ATTRIBUTED item when `scripts/score_attribution.py` runs against a core-lab scan.
+  2. Their keys leave `SEVERITY_DIVERGENCES` / `UNBRIDGED_DASHBOARD_TITLES`, or the remaining entry is documented as not score-moving.
+  3. The severity-divergence gate and the Slack/Trends drift check read derived severities: a test that introduces a dashboard/report severity divergence turns CI red, and the same test is red against the pre-fix gate.
+  4. For the same core-lab run, the dashboard headline score equals the score in that job's report.
+  5. The CHANGELOG and README known-defect phrases for these items are removed in the release that ships the fix.
+**Plans**: 9 plans
+Plans:
+**Wave 1**
+- [x] 236-01-PLAN.md — Behaviour-derived divergence gate, mutation proof, HEAD census and dispositions (D-07/D-08/D-09/D-19)
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 236-02-PLAN.md — Operator decision on any census extra outside the known set (checkpoint, skipped if none)
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 236-03-PLAN.md — FastAPI-free dashboard derivation module, notify uses the dashboard deriver, Pass A pre-fix replay (D-10/D-11/D-22)
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 236-04-PLAN.md — Legacy TLS two tiers on both surfaces, SSL max counts, fingerprint alias (XSURF-09, D-01/D-20/D-21)
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 236-05-PLAN.md — Weak cipher suites report HIGH, undersized ECDSA dashboard HIGH (XSURF-10/11, D-02/D-04)
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 236-06-PLAN.md — Container crypto-library findings on the dashboard via a shared evaluator, Pass A post-fix replay (XSURF-12, D-06)
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 236-07-PLAN.md — Pinned per-family headline parity tests and live lab three-number evidence (XSURF-14, D-13)
+**Wave 8** *(blocked on Wave 7 completion)*
+- [x] 236-08-PLAN.md — Docs, UAT, vault sync, Phase 240 phrase hand-off, closure, branch CI (D-14..D-18)
+**Wave 9 (gap closure)**
+- [x] 236-09-PLAN.md — Gap closure: dashboard skips scan_error rows like the report, boundary families + mutation M3, branch CI (XSURF-09, WR-02/WR-06)
+**UI hint**: yes
 
-**Scope**: owner 999.132. The four score-affecting todos, in `.planning/todos/pending/`:
-- `261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report.md` (legacy-TLS severity)
-- `261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md` (weak-cipher suites)
-- `261015-xsurf-undersized-ecdsa-report-high-dashboard-medium.md` (undersized ECDSA)
-- `261015-xsurf-container-library-eol-findings-are-report-only.md` (container-library EOL)
+### Phase 237: History and Count Truth
+**Goal**: Every history and summary surface counts every finding and shows every skip and outage. Scan History, Trends and Compare include TLS-derived findings, the Executive Skipped badge and Export PDF show every skipped connector and its reason, an in-progress scan is never published as the latest, and Trends and notify show a full connector outage.
+**Depends on**: Nothing in this milestone. Independent of Phases 236, 238 and 239.
+**Requirements**: COUNT-01, COUNT-02, COUNT-03, COUNT-04, COUNT-05, COUNT-06, COUNT-07
+**Success Criteria** (what must be TRUE):
+  1. For a core-lab scan, Scan History's High/Medium/Low counts and Trends' new-finding counts include TLS-derived findings and match the finding counts the Findings page and the report show for the same scan.
+  2. Compare between two scans that differ lists the findings added and the findings removed.
+  3. The Executive Skipped badge lists every skipped connector, including those after a connector row with no error category, and Export PDF shows the skip reasons whenever skips lowered the score.
+  4. While a scan is running it is marked as running, and the dashboard and the latest-scan API keep showing the last completed scan until it finishes.
+  5. A scan in which the JWT, SAML or DNSSEC connector fails on every target shows that outage in Trends and in the notify message.
+**Plans**: TBD
+**UI hint**: yes
 
-The gate and Slack/Trends parts (WR-01, WR-02) are sized in the "Feasibility & Effort" section of
-`261015-xsurf-dashboard-and-report-pipelines-still-diverge-gate-blind.md`.
+### Phase 238: Identity and Certificate Findings
+**Goal**: Identity and certificate weaknesses produce findings that appear on every surface and move the score. Weak JWKS algorithms become scored findings and the Identity page shows JWT results, a SAML URL that does not answer with metadata reads as skipped or failed rather than `ran`, mTLS-required endpoints are detected again under TLS 1.3, and SHA-1-signed certificates produce a finding.
+**Depends on**: Nothing in this milestone. Independent of Phases 236, 237 and 239.
+**Requirements**: IDENT-05, IDENT-06, IDENT-07, DETECT-06, DETECT-07
+**Success Criteria** (what must be TRUE):
+  1. A JWKS key using `alg: none`, RSA-1024 or HS256 produces a finding on the dashboard and in the report, and the score is lower than for the same estate without it.
+  2. The Identity page shows JWT results whenever JWT scanning ran.
+  3. A SAML URL that answers with a page that is not SAML metadata reads as skipped or failed with a named reason on Scan Coverage and in the report, and the JWT connector is measured for the same defect and fixed if it is affected.
+  4. An endpoint that completes a TLS 1.3 handshake and then rejects the client at the HTTP layer for lack of a client certificate is reported as MTLS_REQUIRED, and UAT-4-11 passes again.
+  5. A TLS endpoint serving a SHA-1-signed certificate produces a finding on the dashboard and in the report.
+**Plans**: TBD
+**UI hint**: yes
 
-**Requirements**: TBD at /gsd-new-milestone.
+### Phase 239: Connector Target Trust-Gate Hardening
+**Goal**: The connector target trust gate checks exactly the targets each connector scans. Target values load in one shape regardless of how they are written in config, LDAP-based connectors only talk to hosts the gate has checked, and IP literals the gate cannot parse are refused.
+**Depends on**: Nothing in this milestone. Independent of Phases 236–238.
+**Requirements**: TRUST-01, TRUST-02, TRUST-03
+**Success Criteria** (what must be TRUE):
+  1. A scalar `*_targets` value for any connector loads as a one-element list, and a test that enumerates the target fields from `ConnectorsCfg` at run time shows the trust gate and the scanner see the same target set for every field.
+  2. LDAP-based connectors do not follow a directory referral to a host the trust gate has not checked, and a run-time source scan finds every `ldap3.Server` / `Connection` in `quirk/` and fails if any one is not covered.
+  3. The trust gate refuses an IP literal that is not ASCII instead of passing it through.
+**Plans**: TBD
 
-**Success Criteria**:
-1. Each of the four no longer appears as an ATTRIBUTED item when `scripts/score_attribution.py` runs against a core-lab scan.
-2. Their keys leave `SEVERITY_DIVERGENCES` / `UNBRIDGED_DASHBOARD_TITLES`, or the remaining entry is documented as not score-moving.
-3. The CHANGELOG and README known-defect phrases for them are removed in the release that ships the fix.
-
-**Plans**: TBD.
+### Phase 240: Regressions and Release 5.29.0
+**Goal**: Scan confidence reflects a high probe error rate again, and 5.29.0 ships the milestone's fixes with the known-defect wording for every fixed item withdrawn and every date-gated catalog green on an honest re-verification.
+**Depends on**: Phases 236, 237, 238 and 239 (the release ships their fixes)
+**Requirements**: SCORE-11, REL-13, REL-14, REL-15
+**Success Criteria** (what must be TRUE):
+  1. A scan whose probe error rate is above 50% reports confidence below 60, and UAT-8-02 passes again.
+  2. Every date-gated catalog is green at release time, each re-verified against its `source_url` (hw_cve trips 2026-11-29, pqc_deadlines and snmp_meta 2026-12-02), with no `last_verified` bump that lacks a re-verification.
+  3. The CHANGELOG and README known-defect wording is removed for every item fixed in this milestone and kept for anything not fixed; the 5.28.0 score-divergence disclosure is withdrawn only for what Phase 236 fixed.
+  4. `v5.29.0` is tagged and published to PyPI and GitHub Releases, and UAT-1-02 passes on the published wheel.
+**Plans**: TBD
 
 ## Previous Milestone: v5.28.2 Connector Coverage Truth — SHIPPED 2026-11-08 (tag `v5.28.2`)
 

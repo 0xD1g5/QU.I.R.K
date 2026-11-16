@@ -37,7 +37,8 @@ from sqlalchemy.orm import Session
 from quirk.dashboard.api.deps import get_db
 from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 from quirk.dashboard.api.middleware.auth import require_auth
-from quirk.dashboard.api.routes.scan import finding_by_id_and_title, lift_context_for_scan
+from quirk.dashboard.api.finding_derivation import finding_by_id_and_title
+from quirk.dashboard.api.routes.scan import lift_context_for_scan
 from quirk.dashboard.api.schemas import FindingStoryline
 from quirk.intelligence.remediation import REMEDIATION_KIND_SLUGS, item_progress
 from quirk.models import RemediationItemFingerprint

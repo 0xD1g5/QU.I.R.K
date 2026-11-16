@@ -117,6 +117,39 @@ def has_legacy_tls_versions_signal(
     return bool({"TLSv1", "TLSv1.1"} & versions)
 
 
+_MODERN_TLS_VERSIONS: Final[frozenset[str]] = frozenset({"TLSv1.2", "TLSv1.3"})
+_MAX_LEGACY_VERSIONS: Final[frozenset[str]] = frozenset(
+    {"SSLv2", "SSLv3", "TLSv1", "TLSv1.1"}
+)
+
+
+def is_max_legacy_tls(
+    tls_version: str | None, tls_supported_versions: str | None
+) -> bool:
+    """Return True iff the endpoint's HIGHEST version is legacy and no TLS 1.2+
+    is offered (Phase 236 D-01 / D-20).
+
+    This is the HIGH tier of the two-tier legacy-TLS rule shared by the report
+    and the dashboard; :func:`has_legacy_tls_versions_signal` minus this is the
+    LOW tier (legacy offered alongside TLS 1.2+), so the tiers never overlap.
+
+    Two deliberate choices, mirroring the sibling's case-sensitive style:
+
+    * The maximum set includes SSLv2/SSLv3 (D-20). An SSL-only server is worse
+      than a TLS 1.0 one, but ``has_legacy_tls_versions_signal`` is False for
+      it, so this predicate must NOT gate on that signal first.
+    * A TLS 1.2/1.3 entry in ``tls_supported_versions`` wins even when
+      ``tls_version`` itself reads legacy (inconsistent scanner data is
+      treated as modern-capable, never as a false HIGH).
+    """
+    ver = (tls_version or "").strip()
+    if ver not in _MAX_LEGACY_VERSIONS:
+        return False
+    supported = (tls_supported_versions or "").strip()
+    versions = {v.strip() for v in supported.split(",") if v.strip()}
+    return not (_MODERN_TLS_VERSIONS & versions)
+
+
 def is_weak_cipher_classification(cipher: str | None) -> bool:
     """Return True iff *cipher* is weak by classification (Phase 77 D-05).
 

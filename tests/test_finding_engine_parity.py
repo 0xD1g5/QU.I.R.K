@@ -319,10 +319,11 @@ _NON_TLS_PROTOCOLS = [
 ]
 
 _TLS_TITLE_PREFIXES = (
-    "Legacy TLS version", "Weak cipher suites enabled", "Certificate expired",
+    "Legacy TLS version", "Legacy TLS versions offered alongside TLS 1.2+",
+    "Weak cipher suites enabled", "Certificate expired",
     "Certificate expiring in", "TLS certificate uses undersized RSA key",
     "TLS certificate is self-signed", "TLS certificate issued by untrusted CA",
-    "Quantum-",
+    "Quantum-", "TLS certificate uses undersized ECDSA key",
 )
 
 
@@ -379,7 +380,7 @@ def _is_bare_tls_compare(test):
 
 def test_both_pipelines_call_the_shared_tls_predicate():
     for path, name in (
-        ("quirk/dashboard/api/routes/scan.py", "findings_for_endpoint"),
+        ("quirk/dashboard/api/finding_derivation.py", "findings_for_endpoint"),
         ("quirk/engine/findings_evaluator.py", "evaluate_endpoints"),
     ):
         fn = _func_node(path, name)

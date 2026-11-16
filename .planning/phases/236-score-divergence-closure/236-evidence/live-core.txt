@@ -1,0 +1,27 @@
+Phase 236 plan 07, Task 2, leg 1: core lab (unprofiled default service set), 2026-11-16
+Genuinely fresh scan; no patched inputs. Evidence dir: /Volumes/Digs-1TB/pytest-236-evidence/core/
+
+Commands
+  cd quantum-chaos-enterprise-lab && PROFILE_ARGS="--profile core" ./lab.sh up      # .env PROFILE_ARGS bypassed by CLI value; "core" matches no service profile
+  config copy of scan-configs/config-lab-core.yaml with output.directory and output.db_path under the evidence dir
+  .venv/bin/python run_scan.py --config <evidence>/config.yaml --quiet --allow-internal-targets   (rc=0)
+  sqlite3 "file:<evidence>/quirk.db?mode=ro" ".backup <evidence>/snapshot.db"
+  env -i HOME=<evidence>/home QUIRK_DB_PATH=<evidence>/snapshot.db quirk serve --host 127.0.0.1 --port 8612 --no-open   (127.0.0.1 worked; HTTP 200)
+  curl -s http://127.0.0.1:8612/api/scan/latest > latest.json ; server killed; lsof :8612 empty
+  html score read from report-20261116-122226.html (score-value 28)
+  scripts/score_attribution.py --dashboard-json latest.json --intel-json out/intelligence-20261116-122226.json --findings-json out/findings-20261116-122226.json --html-score 28
+  ./lab.sh down  (docker ps -q empty afterwards)
+
+Result
+intel=28 html=28 dashboard=28
+SCORE-STRICT: intel==html PASS
+SCORE-PARITY: equal dashboard=28 report=28
+No ATTRIBUTED line printed.
+Cap reason (both surfaces): "1 open CRITICAL finding - score limited to 28 (computed 82)"
+Severity census: report CRITICAL 1 / HIGH 1 ; dashboard CRITICAL 1 / HIGH 1
+CRITICAL/HIGH titles (report): TLS certificate expired ; TLS certificate is self-signed
+
+Vacuity note (RESEARCH Pitfall 7): the core lab holds none of the four fixed conditions (legacy-max TLS,
+weak generic-TLS cipher, undersized ECDSA, container EOL), so this equality is real but does not by itself
+prove them. CI per-family fixtures (test_xsurf236_*) and the wider leg carry that proof.
+Canonical DB: ./quirk-output/quirk.db untouched (never opened).

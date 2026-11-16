@@ -5,7 +5,7 @@ source: Phase 230 review round R16 (WR-03; the gate half of CR-01), the 230-REVI
 priority: high
 area: quirk/scanner/adcs_scanner.py, quirk/scanner/smime_scanner.py, quirk/scanner/codesign_scanner.py, quirk/util/target_trust.py (is_target_trusted)
 status: pending
-resolves_phase: null
+resolves_phase: 239
 owner: "999.136"
 ---
 

@@ -15,6 +15,7 @@ _REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))
 _GATED_FILES = [
     "quirk/engine/risk_engine.py",
     "quirk/dashboard/api/routes/scan.py",
+    "quirk/dashboard/api/finding_derivation.py",  # Phase 236 D-10: moved derivation block
 ]
 
 _FORBIDDEN = ("kyber", "dilithium", "when standards are adopted")

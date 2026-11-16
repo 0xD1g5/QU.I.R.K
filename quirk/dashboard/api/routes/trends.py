@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
 from quirk.dashboard.api.deps import get_db
-from quirk.dashboard.api.routes.scan import derive_dashboard_scoring_findings
+from quirk.dashboard.api.finding_derivation import derive_dashboard_scoring_findings
 from quirk.dashboard.api.schemas import (
     FindingCounts,
     SampleFinding,

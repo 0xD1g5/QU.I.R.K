@@ -34,9 +34,10 @@ _README = _ROOT / "README.md"
 # text must contain. The key set must EQUAL the live union, so adding or fixing
 # a divergence turns this red until the release notes follow.
 _DIVERGENCE_PHRASES: dict[str, str] = {
-    "Legacy TLS version: ": "legacy TLS version",
-    "Weak cipher suites enabled": "weak cipher suites",
     "Quantum-": "undersized ECDSA",
+    "Kerberos weak etype: ": "Kerberos weak-encryption",
+    "DNSSEC: ": "DNSSEC",
+    "Unencrypted HTTP service": "Other findings may also differ",
 }
 
 # Todo-derived score divergences: one (item, phrase) pair per row classified

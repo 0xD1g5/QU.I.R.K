@@ -5,7 +5,7 @@ source: Phase 230 review round R12 (CR-01), the 230-REVIEW-R12.md finding
 priority: high
 area: quirk/config.py (connector *_targets coercion), quirk/util/target_trust.py (_field_values), every scanner that iterates a *_targets list
 status: pending
-resolves_phase: null
+resolves_phase: 239
 owner: "999.136"
 ---
 

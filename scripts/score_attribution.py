@@ -170,6 +170,29 @@ def dashboard_items(dash: dict, bridge: Optional[Bridge]) -> List[Tuple[str, str
     return items
 
 
+def severity_multiset_diff(dash_items, report_items):
+    """Multiset diff of ``(key, label)`` pairs; returns ``(dash_only, rep_only)``.
+
+    ``key`` is any hashable (evaluate() uses ``(canonical_title, severity)``;
+    the Phase 236 behaviour gate uses ``(host, port, severity)``). The
+    surplus items on each side are returned as ``(key, label)`` pairs.
+    """
+    dash_side = collections.defaultdict(list)
+    for key, label in dash_items:
+        dash_side[key].append(label)
+    rep_side = collections.defaultdict(list)
+    for key, label in report_items:
+        rep_side[key].append(label)
+    dash_only, rep_only = [], []
+    for key in sorted(set(dash_side) | set(rep_side), key=repr):
+        nd, nr = len(dash_side.get(key, [])), len(rep_side.get(key, []))
+        if nd > nr:
+            dash_only += [(key, o) for o in dash_side[key][nr:]]
+        elif nr > nd:
+            rep_only += [(key, o) for o in rep_side[key][nd:]]
+    return dash_only, rep_only
+
+
 def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
              patterns, constants: Optional[Constants] = None
              ) -> Tuple[List[str], bool]:
@@ -198,20 +221,9 @@ def evaluate(intel, html, dash_score, dash_items, report_items, bridge,
                    "dashboard=%s report=%s" % (d, h))
         return out, False
 
-    dash_side = collections.defaultdict(list)
-    for orig, canon, sev in dash_items:
-        dash_side[(canon, sev)].append(orig)
-    rep_side = collections.defaultdict(list)
-    for title, sev in report_items:
-        rep_side[(title, sev)].append(title)
-
-    dash_only, rep_only = [], []
-    for key in set(dash_side) | set(rep_side):
-        nd, nr = len(dash_side.get(key, [])), len(rep_side.get(key, []))
-        if nd > nr:
-            dash_only += [(key, o) for o in dash_side[key][nr:]]
-        elif nr > nd:
-            rep_only += [(key, key[0])] * (nr - nd)
+    dash_only, rep_only = severity_multiset_diff(
+        [((canon, sev), orig) for orig, canon, sev in dash_items],
+        [((title, sev), title) for title, sev in report_items])
 
     def pattern_for(*titles):
         for p in patterns:

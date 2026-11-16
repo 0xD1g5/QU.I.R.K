@@ -6,8 +6,8 @@ source: Phase 235.4 (5.28.2 release walkthrough and go/no-go)
 priority: medium
 area: dashboard score vs report pipeline
 status: pending
-resolves_phase: null
-owner: null
+resolves_phase: 236
+owner: "999.132"
 ---
 
 # Dashboard headline score differs from job report for the same run

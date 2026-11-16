@@ -52,6 +52,13 @@ _SCAN_ROUTES = (
     / "quirk/dashboard/api/routes/scan.py"
 )
 
+# Phase 236 D-10: the finding derivation block moved out of scan.py into this
+# FastAPI-free module; scan.py keeps the other derive helpers (identity/dar/motion/hw).
+_FINDING_DERIVATION = (
+    pathlib.Path(__file__).resolve().parents[2]
+    / "quirk/dashboard/api/finding_derivation.py"
+)
+
 _DASHBOARD_FINDING_CTORS = frozenset({
     "FindingItem",
     "IdentityFinding",
@@ -143,7 +150,13 @@ def collect_dashboard_titles() -> set[str]:
     `quirk/dashboard/api/routes/scan.py` — the second derivation path, which
     has no chokepoint function.
 
-    **This walk is deliberately scoped to `scan.py` ALONE. Do not widen it.**
+    **Phase 236 D-10: this walk spans TWO dashboard files, `scan.py` and
+    `finding_derivation.py`, because the derivation block moved from the first
+    to the second without changing any title. Both are the dashboard path; it
+    still reads neither `findings_evaluator.py`'s walker nor its output.**
+
+    **This walk is deliberately scoped to the dashboard derivation files ONLY. Do not widen it
+    to `findings_evaluator.py`.**
     The value of this fixture is that the two derivation paths are measured by
     two INDEPENDENT walkers — this one over `scan.py`'s constructor names, and
     `collect_all_interpolated_templates()`'s own walk over
@@ -174,24 +187,25 @@ def collect_dashboard_titles() -> set[str]:
     comment in `quirk/engine/findings_evaluator.py` at the SAML weak-key
     branch.
     """
-    tree = ast.parse(_SCAN_ROUTES.read_text())
     titles: set[str] = set()
-    for node in ast.walk(tree):
-        if not (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id in _DASHBOARD_FINDING_CTORS
-        ):
-            continue
-        for kw in node.keywords:
-            if kw.arg != "title":
+    for source_path in (_SCAN_ROUTES, _FINDING_DERIVATION):
+        tree = ast.parse(source_path.read_text())
+        for node in ast.walk(tree):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id in _DASHBOARD_FINDING_CTORS
+            ):
                 continue
-            result = _template_from_keyword(kw)
-            if result is None:
-                continue
-            template, is_fstring = result
-            if is_fstring:
-                titles.add(template)
+            for kw in node.keywords:
+                if kw.arg != "title":
+                    continue
+                result = _template_from_keyword(kw)
+                if result is None:
+                    continue
+                template, is_fstring = result
+                if is_fstring:
+                    titles.add(template)
     return titles
 
 
