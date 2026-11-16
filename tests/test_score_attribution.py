@@ -107,5 +107,6 @@ def test_severity_multiset_diff_returns_surplus_per_side():
 
 def test_self_test_case_count_is_unchanged():
     out = subprocess.run([sys.executable, str(SCRIPT), "--self-test"],
-                         capture_output=True, text=True, check=True).stdout
+                         capture_output=True, text=True, check=True,
+                         close_fds=False).stdout
     assert "self-test: 6/6" in out

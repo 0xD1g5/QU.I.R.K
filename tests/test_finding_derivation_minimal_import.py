@@ -9,11 +9,14 @@ venv that happens to have fastapi installed cannot mask a leak.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.cli_helpers import run_fork_safe
 
 _REPO = Path(__file__).resolve().parents[1]
 _SENTINEL = "MINIMAL_IMPORT_OK"
@@ -42,13 +45,14 @@ print("@@SENTINEL@@")
 
 
 def _run(body: str) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [sys.executable, "-c", _BLOCKER + body + _TAIL],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        close_fds=False,
-        cwd=str(_REPO),
+    # No cwd= (it defeats posix_spawn on macOS, tests/cli_helpers.py): the repo
+    # root is put on PYTHONPATH instead so ``quirk`` resolves the same way.
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [str(_REPO)] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])
+    )
+    return run_fork_safe(
+        [sys.executable, "-c", _BLOCKER + body + _TAIL], timeout=60, env=env
     )
 
 
