@@ -222,6 +222,44 @@ def _bearer_unsigned():
                 cert_pubkey_alg="none", service_detail="bearer")]
 
 
+def _tls_scan_error_with_fields():
+    """The _scan_one_fallback shape: tls_version is set at the handshake and
+    the catch-all sets scan_error afterwards (review WR-02, 236-VERIFICATION
+    gap 1). The report sends every scan_error row to its scan-error branch."""
+    return [_tls(_fam_host(34), tls_version="TLSv1",
+                 tls_supported_versions=None,
+                 cert_subject="CN=legacy-device", cert_issuer="CN=legacy-device",
+                 scan_error="TLS_ERROR: certificate parse failed after handshake",
+                 tls_blocker_reason="TLS_ERROR")]
+
+
+def _http_scan_error():
+    """Same guard asymmetry on the HTTP block; the report emits INFO."""
+    return [_ep(_fam_host(35), port=80, protocol="HTTP",
+                scan_error="TIMEOUT: read timed out")]
+
+
+def _legacy_inconsistent_max():
+    return [_tls(_fam_host(36), tls_version="TLSv1",
+                 tls_supported_versions="TLSv1,TLSv1.2")]
+
+
+def _legacy_supported_only():
+    # Both surfaces give LOW today (review WR-07, filed not fixed).
+    return [_tls(_fam_host(37), tls_version=None,
+                 tls_supported_versions="TLSv1,TLSv1.1")]
+
+
+def _ecdsa_256():
+    return [_tls(_fam_host(38), cert_pubkey_alg="ECDSA", cert_pubkey_size=256)]
+
+
+def _rsa_2048():
+    # rsa_size_0 / rsa_pss_1024 are deliberately NOT families: they diverge
+    # (WR-03), tracked by LEDGER 261116-rsa-undersized-key-predicate-differs-across-surfaces.
+    return [_tls(_fam_host(39), cert_pubkey_alg="RSA", cert_pubkey_size=2048)]
+
+
 FAMILY_ROWS: Dict[str, Callable[[], List[CryptoEndpoint]]] = {
     "legacy_max_tls10": _legacy_max_tls10,
     "legacy_max_sslv3": _legacy_max_sslv3,
@@ -256,6 +294,12 @@ FAMILY_ROWS: Dict[str, Callable[[], List[CryptoEndpoint]]] = {
     "http_on_tls_port_with_mtls_pair": _http_on_tls_port_with_mtls_pair,
     "jwks_verify_disabled": _jwks_verify_disabled,
     "bearer_unsigned": _bearer_unsigned,
+    "tls_scan_error_with_fields": _tls_scan_error_with_fields,
+    "http_scan_error": _http_scan_error,
+    "legacy_inconsistent_max": _legacy_inconsistent_max,
+    "legacy_supported_only": _legacy_supported_only,
+    "ecdsa_256": _ecdsa_256,
+    "rsa_2048": _rsa_2048,
 }
 
 
