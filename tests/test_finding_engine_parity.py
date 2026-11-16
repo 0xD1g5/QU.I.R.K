@@ -319,7 +319,8 @@ _NON_TLS_PROTOCOLS = [
 ]
 
 _TLS_TITLE_PREFIXES = (
-    "Legacy TLS version", "Weak cipher suites enabled", "Certificate expired",
+    "Legacy TLS version", "Legacy TLS versions offered alongside TLS 1.2+",
+    "Weak cipher suites enabled", "Certificate expired",
     "Certificate expiring in", "TLS certificate uses undersized RSA key",
     "TLS certificate is self-signed", "TLS certificate issued by untrusted CA",
     "Quantum-",

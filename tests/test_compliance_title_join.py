@@ -127,3 +127,13 @@ class TestFingerprintIdentityClassification:
                 f"prefix from FINGERPRINT_TITLE_ALIASES, or reclassify this "
                 f"template to NORMALIZE if the merge is actually intended."
             )
+
+
+def test_max_legacy_tls_title_has_compliance_controls():
+    """Phase 236 T-236-08: non-xfail guard that the HIGH max-legacy-TLS title
+    resolves to a non-empty COMPLIANCE_MAP control list (the broad join test
+    above is xfail(strict=False) and would not catch a gap)."""
+    from quirk.compliance import COMPLIANCE_MAP, normalize_finding_title
+
+    key = normalize_finding_title("Only legacy TLS versions offered (no TLS 1.2+)")
+    assert COMPLIANCE_MAP.get(key), key

@@ -209,6 +209,10 @@ def test_canonical_cli_title_resolves_interpolated_runtime_string() -> None:
     # interpolated value filled in), not only on the bare literal prefix.
     assert (
         canonical_cli_title("Legacy TLS version: TLSv1.1")
+        == "Only legacy TLS versions offered (no TLS 1.2+)"
+    )
+    assert (
+        canonical_cli_title("Legacy TLS versions offered alongside TLS 1.2+")
         == "Legacy TLS versions allowed (TLS 1.0/1.1)"
     )
     assert (

@@ -126,7 +126,8 @@ _EXPIRED = _ep(
 _IDENTITY_ENDPOINTS = [_HTTP_1, _HTTP_2, _HTTP_3, _SELF_SIGNED, _UNDERSIZED_RSA, _EXPIRED]
 
 # Two endpoints tripping `_has_legacy_tls_versions` two DIFFERENT ways --
-# both must count, and both are exercised so a fix that only handles one
+# (Phase 236 D-01: the first is now the HIGH max-legacy tier, the second the
+# LOW offered-alongside-1.2 tier; the evidence counter spans both) both must count, and both are exercised so a fix that only handles one
 # branch of the predicate is caught.
 _TLS_LEGACY_VIA_VERSION = _ep(
     id=9, host="10.0.5.1", port=443, protocol="TLS",
@@ -297,7 +298,12 @@ class TestLegacyTlsCountCrossVocabularyParity:
         findings = _cli_findings(_LEGACY_TLS_ENDPOINTS)
         generator_pairs = {
             (f["host"], f["port"]) for f in findings
-            if f["title"] == "Legacy TLS versions allowed (TLS 1.0/1.1)"
+            # Phase 236 D-01: the legacy-TLS finding is two-tier; the evidence
+            # counter (signal-based) spans both titles.
+            if f["title"] in {
+                "Legacy TLS versions allowed (TLS 1.0/1.1)",
+                "Only legacy TLS versions offered (no TLS 1.2+)",
+            }
         }
         summary = build_evidence_summary(_LEGACY_TLS_ENDPOINTS, findings)
         assert summary["legacy_tls_count"] == len(generator_pairs), (
