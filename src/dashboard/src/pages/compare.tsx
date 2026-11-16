@@ -39,8 +39,14 @@ function FindingRow({ finding }: { finding: CompareFinding }) {
         </Badge>
       </TableCell>
       <TableCell className="text-sm">{finding.host}</TableCell>
+      <TableCell className="text-sm font-data text-muted-foreground">{finding.port ?? "—"}</TableCell>
       <TableCell className="text-sm text-muted-foreground">{finding.protocol ?? "—"}</TableCell>
-      <TableCell className="text-sm text-muted-foreground">{finding.description ?? ""}</TableCell>
+      <TableCell className="text-sm">
+        {finding.title ?? finding.description ?? "—"}
+        {finding.title && finding.description && finding.description !== finding.title && (
+          <span className="block text-xs text-muted-foreground">{finding.description}</span>
+        )}
+      </TableCell>
     </TableRow>
   )
 }
@@ -161,8 +167,9 @@ export function ComparePage() {
                   <TableRow>
                     <TableHead>Severity</TableHead>
                     <TableHead>Host</TableHead>
+                    <TableHead>Port</TableHead>
                     <TableHead>Protocol</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Finding</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -186,8 +193,9 @@ export function ComparePage() {
                   <TableRow>
                     <TableHead>Severity</TableHead>
                     <TableHead>Host</TableHead>
+                    <TableHead>Port</TableHead>
                     <TableHead>Protocol</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Finding</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

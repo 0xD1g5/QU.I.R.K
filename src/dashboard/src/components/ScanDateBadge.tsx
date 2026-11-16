@@ -14,7 +14,9 @@ export function ScanDateBadge() {
   // TAIL-01: unlike ScanSelector, the badge must never hide once loading resolves.
   if (loading) return null
 
-  const label = sessions.length > 0 ? formatBadgeLabel(sessions[0].scanned_at) : "No scan yet"
+  // 237 D-17: a running or incomplete scan is never "the last scan".
+  const latest = sessions.find(s => !s.status || s.status === "complete")
+  const label = latest ? formatBadgeLabel(latest.scanned_at) : "No scan yet"
 
   return (
     <div className="px-2 py-3 border-t border-border" role="status">

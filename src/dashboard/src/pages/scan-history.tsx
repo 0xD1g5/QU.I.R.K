@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useScanList } from "@/hooks/useScanList"
@@ -27,11 +27,24 @@ export function ScanHistoryPage() {
   const [selected, setSelected] = useState<string[]>([])
   const [expandedScanId, setExpandedScanId] = useState<string | null>(null)
 
+  // 237 D-09: a missing status (older server) is a complete scan.
+  const isRunning = (s: ScanSession) => s.status === "running"
+  const isNonComplete = (s: ScanSession) => !!s.status && s.status !== "complete"
+  const hasNonComplete = sessions.some(isNonComplete)
+
+  // A row already selected when its status arrives as running must not stay selected.
+  useEffect(() => {
+    const runningIds = new Set(sessions.filter(isRunning).map(s => s.scan_id))
+    if (runningIds.size === 0) return
+    setSelected(prev => (prev.some(id => runningIds.has(id)) ? prev.filter(id => !runningIds.has(id)) : prev))
+  }, [sessions])
+
   function handleToggleExpand(scanId: string) {
     setExpandedScanId(prev => (prev === scanId ? null : scanId))
   }
 
   function handleCheck(scanId: string, checked: boolean) {
+    if (checked && sessions.some(s => s.scan_id === scanId && isRunning(s))) return
     setSelected(prev => {
       if (!checked) return prev.filter(id => id !== scanId)
       const next = [...prev, scanId]
@@ -74,6 +87,9 @@ export function ScanHistoryPage() {
       <div>
         <h1 className="text-xl font-semibold">Scan History</h1>
         <p className="text-sm text-muted-foreground">All scans — select any two to compare</p>
+        {hasNonComplete && (
+          <p className="text-sm text-muted-foreground">Scores and finding counts are shown only for completed scans.</p>
+        )}
       </div>
 
       {sessions.length === 0 ? (
@@ -118,7 +134,12 @@ export function ScanHistoryPage() {
                     onCheckedChange={(checked: boolean | "indeterminate") =>
                       handleCheck(s.scan_id, checked === true)
                     }
-                    aria-label={`Select scan from ${formatDateTimeShort(s.scanned_at)}`}
+                    disabled={isRunning(s)}
+                    aria-label={
+                      isRunning(s)
+                        ? `Scan from ${formatDateTimeShort(s.scanned_at)} is still running and cannot be compared`
+                        : `Select scan from ${formatDateTimeShort(s.scanned_at)}`
+                    }
                   />
                 </TableCell>
                 <TableCell className="text-sm">
@@ -133,22 +154,40 @@ export function ScanHistoryPage() {
                 <TableCell className="font-data text-sm">
                   {/* 188 review CR-04: null score = not computed — render an
                       honest placeholder, never a fabricated 0. */}
-                  {s.score ?? <span className="text-muted-foreground">—</span>}
+                  {s.status === "running" ? (
+                    <Badge variant="outline" aria-label="status: Running">Running</Badge>
+                  ) : s.status === "incomplete" ? (
+                    <Badge aria-label="status: Incomplete" className="bg-[hsl(var(--status-neutral))] text-white text-xs">Incomplete</Badge>
+                  ) : (
+                    s.score ?? <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${SEVERITY_STYLES.HIGH} font-semibold text-xs font-data`}>
-                    {s.finding_counts.high}
-                  </Badge>
+                  {isNonComplete(s) ? (
+                    <span className="text-muted-foreground" aria-label="not counted">—</span>
+                  ) : (
+                    <Badge className={`${SEVERITY_STYLES.HIGH} font-semibold text-xs font-data`}>
+                      {s.finding_counts.high}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${SEVERITY_STYLES.MEDIUM} font-semibold text-xs font-data`}>
-                    {s.finding_counts.medium}
-                  </Badge>
+                  {isNonComplete(s) ? (
+                    <span className="text-muted-foreground" aria-label="not counted">—</span>
+                  ) : (
+                    <Badge className={`${SEVERITY_STYLES.MEDIUM} font-semibold text-xs font-data`}>
+                      {s.finding_counts.medium}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <Badge className={`${SEVERITY_STYLES.LOW} font-semibold text-xs font-data`}>
-                    {s.finding_counts.low}
-                  </Badge>
+                  {isNonComplete(s) ? (
+                    <span className="text-muted-foreground" aria-label="not counted">—</span>
+                  ) : (
+                    <Badge className={`${SEVERITY_STYLES.LOW} font-semibold text-xs font-data`}>
+                      {s.finding_counts.low}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Button variant="outline" size="sm" onClick={() => handleClone(s)}>Clone</Button>
