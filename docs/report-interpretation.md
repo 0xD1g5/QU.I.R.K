@@ -435,7 +435,7 @@ TLS 1.0/1.1 is offered alongside it), a weak cipher suite is HIGH on both, an EC
 (the protocol filter has no CONTAINER option yet). The two surfaces still do not always agree: Kerberos
 weak encryption types and DNSSEC findings count on the dashboard only, and a plaintext HTTP row next to
 an mTLS-required TLS row on the same port stays HIGH on the dashboard where the report downgrades it
-(tracked under 999.132). The scheduled-scan drift notification now uses the Trends page's score.
+(tracked under 999.132). Like the report, the dashboard raises no HIGH or CRITICAL finding for an endpoint whose scan reported an error, even when some TLS or certificate fields were captured before the error. The scheduled-scan drift notification now uses the Trends page's score.
 
 **Precondition: the four-surface equality guarantee assumes unmodified templates (999.112).**
 The numeric-equality guarantee described above — the same badge and the same projected score on
