@@ -9,8 +9,8 @@ progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 1
-  percent: 12
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -1538,9 +1538,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 236 of 236–240 (Score Divergence Closure) — EXECUTING
-Plan: 2 of 8
-Status: Executing Phase 236 (236-01 divergence gate DONE; next 236-02, the conditional decision checkpoint on the census extra). Decisions from 236-01: SEVERITY_DIVERGENCES now carries reason/todo/score_moving/side/families (8 entries); old AST severity group retired; census extra "Unencrypted HTTP service" (HTTP + MTLS_REQUIRED sibling) dispositioned with its own todo and LEDGER row.
-Last activity: 2026-11-16 — Phase 236 plan 01 complete: tests/test_severity_divergence_behaviour.py behaviour gate, mutation-proved; measured census 10 residuals in 33 families. Previous: 2026-11-16 — Phase 236 execution started. Previous: 2026-11-16 — Phase 236 planned. Research + pattern map done; plan-checker passed on iteration 3. Operator amendments D-18 (SCORING_VERSION stays 4.0, no changelog.d fragment), D-19 (Kerberos/DNSSEC dispositioned), D-20 (SSLv2/v3 max = max-is-legacy), D-21 (fingerprint alias). Hand-edited from a pre-image (state.planned-phase added unrelated blank-line churn). Previous: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
+Plan: 3 of 8
+Status: Executing Phase 236 (236-01 gate DONE; 236-02 decision DONE: operator kept the census extra "Unencrypted HTTP service" dispositioned, no gap-closure plan; next 236-03 FastAPI-free finding_derivation module).
+Last activity: 2026-11-16 — Phase 236 plan 02 complete: census extra kept dispositioned (operator). Previous: 2026-11-16 — Phase 236 plan 01 complete: tests/test_severity_divergence_behaviour.py behaviour gate, mutation-proved; measured census 10 residuals in 33 families. Previous: 2026-11-16 — Phase 236 execution started. Previous: 2026-11-16 — Phase 236 planned. Research + pattern map done; plan-checker passed on iteration 3. Operator amendments D-18 (SCORING_VERSION stays 4.0, no changelog.d fragment), D-19 (Kerberos/DNSSEC dispositioned), D-20 (SSLv2/v3 max = max-is-legacy), D-21 (fingerprint alias). Hand-edited from a pre-image (state.planned-phase added unrelated blank-line churn). Previous: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
 
 ## v5.28.2 Close Record — superseded as Current Position 2026-11-15 (v5.29 opened)
 Phase: None — between milestones. v5.28.1 (Phases 235.1–235.2) and v5.28.2 (Phases 235.3–235.4) closed and archived 2026-11-09; phase directories moved to `.planning/milestones/v5.28.1-phases/` and `v5.28.2-phases/`.
