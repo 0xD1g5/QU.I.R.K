@@ -317,7 +317,9 @@ The table below maps common finding titles to their plain-English explanation an
 |---------|----------|--------------------------|---------------|
 | Plaintext HTTP service detected | HIGH | Service responding over HTTP with no TLS | Enable TLS, redirect HTTP → HTTPS |
 | HTTP on TLS-designated port | HIGH | HTTP found on a port expected to serve TLS (by default 443, 4433, 5001, 8443, 9443 or 10443) | Check service config — likely misconfigured |
-| Legacy TLS versions allowed (TLS 1.0/1.1) | LOW | Server still advertises deprecated protocol versions | Disable TLS 1.0/1.1 in server config |
+| Only legacy TLS versions offered (no TLS 1.2+) | HIGH | The highest TLS version the endpoint offers is TLS 1.1 or older, including servers that offer only SSLv2 or SSLv3; no modern protocol is available to negotiate | Enable TLS 1.2 or 1.3 and retire the legacy protocols |
+| Legacy TLS versions allowed (TLS 1.0/1.1) | LOW | Server offers TLS 1.0/1.1 alongside TLS 1.2+; on the dashboard the same finding is titled "Legacy TLS versions offered alongside TLS 1.2+" | Disable TLS 1.0/1.1 in server config |
+| Weak TLS cipher suites accepted | HIGH | The endpoint accepts RC4, 3DES, NULL, EXPORT or MD5 cipher suites, or SSLv2/SSLv3 (the dashboard titles it "Weak cipher suites enabled") | Remove the weak suites from the server cipher list |
 | TLS certificate expired | CRITICAL | Certificate past its `Not After` date | Renew certificate immediately |
 | TLS certificate is self-signed | HIGH | Certificate not issued by a trusted CA | Replace with CA-issued cert |
 | TLS certificate issued by untrusted CA | MEDIUM | Certificate chain does not validate to a trusted root | Replace with a cert from a trusted CA, or install the correct chain |
@@ -426,8 +428,14 @@ them and the dashboard's roadmap numbers do not. The dashboard now runs its TLS 
 only on TLS rows, as the report does, so certificate data on email, broker, code-signing, S/MIME,
 AD CS, Vault, cloud (AWS, Azure, GCP and Cloud SQL), JWT and OpenAPI rows no longer produces
 dashboard-only findings. Email, broker and code-signing rows are scored on both surfaces with the
-report's own findings. Two severity differences remain on shared titles (legacy TLS version and
-weak cipher suites, tracked under 999.132).
+report's own findings. Legacy TLS now has the same two tiers on both surfaces (HIGH when no TLS 1.2+ is offered, LOW when
+TLS 1.0/1.1 is offered alongside it), a weak cipher suite is HIGH on both, an ECDSA certificate key under
+256 bits is HIGH on both, and container crypto-library findings (end-of-life OpenSSL, outdated Python
+`cryptography`) now appear on the dashboard Findings page, one row per package and mostly LOW or MEDIUM
+(the protocol filter has no CONTAINER option yet). The two surfaces still do not always agree: Kerberos
+weak encryption types and DNSSEC findings count on the dashboard only, and a plaintext HTTP row next to
+an mTLS-required TLS row on the same port stays HIGH on the dashboard where the report downgrades it
+(tracked under 999.132). The scheduled-scan drift notification now uses the Trends page's score.
 
 **Precondition: the four-surface equality guarantee assumes unmodified templates (999.112).**
 The numeric-equality guarantee described above — the same badge and the same projected score on

@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,810 lines, in reading order.
+Five guides, 7,821 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -4590,6 +4590,17 @@ received certificate chain and whether it verifies. Findings include expired and
 soon-to-expire certificates, self-signed certificates, certificates from an untrusted
 CA, undersized or quantum-vulnerable RSA and ECDSA keys, legacy TLS versions (1.0 and
 1.1), and legacy cipher suites. Activated by the core install — no extra required.
+
+Severity tiers on the report and the dashboard (Phase 236): "Only legacy TLS versions offered (no TLS 1.2+)"
+is HIGH when the endpoint's highest offered version is TLS 1.1 or older (including SSLv2/SSLv3-only
+servers); "Legacy TLS versions allowed (TLS 1.0/1.1)" is the narrower LOW tier, used only when TLS 1.2+ is
+offered alongside (the dashboard shows it as "Legacy TLS versions offered alongside TLS 1.2+").
+"Weak TLS cipher suites accepted" is a separate HIGH when RC4, 3DES, NULL, EXPORT or MD5 suites are
+accepted. An ECDSA certificate key under 256 bits is HIGH on the dashboard as it is on the report.
+Container crypto-library findings (end-of-life OpenSSL, outdated Python `cryptography`) now appear on the
+dashboard Findings page, one row per package. The scheduled-scan drift notification (Slack and other
+channels) now computes its score the way the Trends page does, so the two numbers agree. Kerberos weak
+encryption types and DNSSEC findings remain dashboard-only score contributors.
 
 ##### SSH scanner
 

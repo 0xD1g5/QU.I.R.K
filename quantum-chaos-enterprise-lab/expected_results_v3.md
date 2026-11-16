@@ -147,6 +147,8 @@ quirk scan --container localhost:20005/image-old-pycrypto localhost:20005/image-
 ```
 **Expected:** Container scanner returns at least 4 crypto library findings (cryptography, pyopenssl, openssl per image).
 
+**Dashboard (Phase 236):** the same container crypto-library findings now also appear on the dashboard Findings page (one row per package, titles and severities identical to the report, protocol `CONTAINER`), so an end-of-life OpenSSL 1.0.x image lowers the dashboard score exactly as it lowers the report score. Per-package counts for a live registry run are not re-measured here.
+
 
 
 ## Phase 4 — Source Profile (profile: source)
