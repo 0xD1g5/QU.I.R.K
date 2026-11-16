@@ -99,6 +99,7 @@ REMEDIATION_CONSTITUENCY: Dict[str, Tuple[str, Tuple[str, ...]]] = {
             "Legacy TLS versions allowed (TLS 1.0/1.1)",
             "Only legacy TLS versions offered (no TLS 1.2+)",
             "Legacy TLS cipher suites accepted",
+            "Weak TLS cipher suites accepted",
         ),
     ),
     "unknown-open-services": ("fingerprint", ("Unknown open service",)),

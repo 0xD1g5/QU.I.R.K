@@ -551,14 +551,14 @@ def test_unbridged_title_stays_null_and_never_reaches_fingerprint_compute():
     from unittest.mock import patch
 
     client, TestingSession = _client_and_session()
-    ep_id = _seed_endpoint(TestingSession, protocol="TLS", tls_weak_ciphers_present=True)
+    ep_id = _seed_endpoint(TestingSession, protocol="TLS", cert_pubkey_alg="Ed25519", cert_pubkey_size=256)
 
     with patch(
         "quirk.dashboard.api.routes.storyline.TicketingChannel.compute_fingerprint"
     ) as mock_fp:
         resp = client.get(
             f"/api/findings/{ep_id}/storyline",
-            params={"title": "Weak cipher suites enabled"},
+            params={"title": "Quantum-vulnerable algorithm: Ed25519"},
         )
     assert resp.status_code == 200
     data = resp.json()

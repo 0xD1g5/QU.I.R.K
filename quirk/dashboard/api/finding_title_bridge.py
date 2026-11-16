@@ -84,6 +84,13 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # <-> findings_evaluator.py (_has_legacy_tls_versions elif, LOW).
     "Legacy TLS versions offered alongside TLS 1.2+": "Legacy TLS versions allowed (TLS 1.0/1.1)",
 
+    # Phase 236 D-02 (XSURF-10): both fire on the SAME column,
+    # tls_weak_ciphers_present (finding_derivation.py HIGH "Weak cipher suites
+    # enabled" <-> findings_evaluator.py HIGH "Weak TLS cipher suites accepted").
+    # The LOW "Legacy TLS cipher suites accepted" fires on the distinct
+    # tls_legacy_suites_present column and is NOT bridged to it.
+    "Weak cipher suites enabled": "Weak TLS cipher suites accepted",
+
     # scan.py:188-207 "Certificate expired" fires on
     # `days_to_expiry < 0` (from `ep.cert_not_after`).
     # findings_evaluator.py:586-608 "TLS certificate expired" fires on
@@ -116,6 +123,12 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # certs, so this does not change real-world behaviour). identity.
     "TLS certificate uses undersized RSA key": "TLS certificate uses undersized RSA key",
 
+    # Phase 236 D-04 (XSURF-11): finding_derivation.py fires on
+    # `cert_pubkey_alg.upper() == "ECDSA" and cert_pubkey_size < 256`;
+    # findings_evaluator.py fires on `cert_pubkey_alg == "ECDSA" and
+    # cert_pubkey_size < 256`. Same title, same threshold. identity.
+    "TLS certificate uses undersized ECDSA key": "TLS certificate uses undersized ECDSA key",
+
     # scan.py:263-286 "TLS certificate is self-signed" fires on
     # `issuer and subject and issuer == subject`.
     # findings_evaluator.py:634-652, byte-identical title and condition.
@@ -142,24 +155,6 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
 # TODO. `canonical_cli_title()` returns None for every key here.
 # ---------------------------------------------------------------------------
 UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
-    # scan.py:171-185 fires on `ep.tls_weak_ciphers_present`.
-    # findings_evaluator.py:568-584's nearest-sounding title, "Legacy TLS
-    # cipher suites accepted", fires on `ep.tls_legacy_suites_present`.
-    # These are two DISTINCT, independently-populated boolean columns
-    # (quirk/models.py:45-46; quirk/scanner/tls_scanner.py:323-324 sets both
-    # from different capability checks in the same scan). They can and do
-    # disagree on a given endpoint. Bridging them would attribute the CLI's
-    # legacy-cipher-suites theme (and its lift) to a dashboard finding whose
-    # firing condition is a different column -- exactly the T-202-01 failure
-    # this module exists to prevent. Confirmed unbridged, matching the
-    # plan's own "suspect unbridged" hypothesis.
-    "Weak cipher suites enabled": (
-        "Fires on ep.tls_weak_ciphers_present; the CLI's nearest title "
-        "('Legacy TLS cipher suites accepted') fires on the distinct "
-        "ep.tls_legacy_suites_present column -- different firing condition, "
-        "no 1:1 CLI equivalent."
-    ),
-
     # scan.py:309-331 fires on `cert_pubkey_alg` truthy and NOT starting
     # with "RSA", i.e. EVERY non-RSA public-key algorithm the CBOM
     # classifier (`classify_algorithm`/`quantum_safety_label`) marks
@@ -174,11 +169,11 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
     # the plan's own "suspect unbridged" hypothesis.
     "Quantum-": (
         "Fires on any non-RSA cert_pubkey_alg the CBOM classifier scores "
-        "Vulnerable/At-Risk (DSA, DH, Ed25519, ECDSA of any size, one "
-        "title); the CLI has algorithm-specific sites only for RSA and "
-        "ECDSA, and even the ECDSA subset splits into two size-gated CLI "
-        "titles the dashboard does not distinguish -- no 1:1 CLI "
-        "equivalent at any granularity."
+        "Vulnerable/At-Risk (DSA, DH, Ed25519, ECDSA of 256+ bits, one "
+        "title); ECDSA under 256 bits no longer reaches it (Phase 236 D-04: "
+        "that row gets the HIGH 'TLS certificate uses undersized ECDSA key' "
+        "on both surfaces). The remaining Quantum- finding is MEDIUM and "
+        "therefore not score-moving; the CLI has no 1:1 equivalent."
     ),
 }
 
@@ -213,30 +208,6 @@ UNBRIDGED_DASHBOARD_TITLES: Dict[str, str] = {
 # checked at run time against the title sites extracted from source.
 # ---------------------------------------------------------------------------
 SEVERITY_DIVERGENCES: Dict[str, Dict[str, object]] = {
-    # Unbridged (D-22). Dashboard HIGH on ep.tls_weak_ciphers_present; no
-    # report finding fires on that column. An SSLv3 row sets the flag too.
-    "Weak cipher suites enabled": {
-        "reason": (
-            "Dashboard HIGH on tls_weak_ciphers_present has no report "
-            "counterpart; one such endpoint scores 84 (report) vs 69 (dashboard)."
-        ),
-        "todo": "261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart.md",
-        "score_moving": True,
-        "side": "dashboard_only",
-        "families": ["weak_cipher", "legacy_max_sslv3"],
-    },
-    # Report-only. The report splits ECDSA by size (<256 bits HIGH); the
-    # dashboard has one MEDIUM "Quantum-..." title regardless of size.
-    "TLS certificate uses undersized ECDSA key": {
-        "reason": (
-            "Report HIGH when cert_pubkey_size < 256 (findings_evaluator ECDSA "
-            "branch) vs dashboard MEDIUM 'Quantum-vulnerable algorithm' at any size."
-        ),
-        "todo": "261015-xsurf-undersized-ecdsa-report-high-dashboard-medium.md",
-        "score_moving": True,
-        "side": "report_only",
-        "families": ["ecdsa_192"],
-    },
     # Report-only. The dashboard never evaluates CONTAINER rows.
     "End-of-life ": {
         "reason": (
@@ -325,6 +296,8 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     "Legacy TLS versions allowed (TLS 1.0/1.1)": "specific",
     # Phase 236 D-01: HIGH tier, in the same "legacy-tls-versions" tuple.
     "Only legacy TLS versions offered (no TLS 1.2+)": "specific",
+    # Phase 236 D-02: HIGH, in the "legacy-tls-versions" fingerprint tuple.
+    "Weak TLS cipher suites accepted": "specific",
     # In "expired-certificates" fingerprint tuple (remediation.py:88).
     "TLS certificate expired": "specific",
     # In "near-expiry-certificates" fingerprint tuple (remediation.py:91).
@@ -335,6 +308,9 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # (scan.py:240-241) -> constitutes the "high-impact-findings" severity
     # catch-all as its ONLY theme (D-09).
     "TLS certificate uses undersized RSA key": "catchall-only",
+    # Phase 236 D-04: HIGH, in no fingerprint tuple (like undersized RSA) ->
+    # constitutes the "high-impact-findings" catch-all only.
+    "TLS certificate uses undersized ECDSA key": "catchall-only",
     # NOT in any fingerprint tuple. Dashboard severity is MEDIUM
     # (scan.py:292-293), below the HIGH/CRITICAL catch-all threshold ->
     # constitutes no theme at all.

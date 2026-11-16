@@ -365,6 +365,10 @@ COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
         _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
         _soc2("CC6.7"), _iso("8.26"),
     ],
+    "Weak TLS cipher suites accepted": [
+        _pci("4.2.1"), _hipaa("§164.312(e)(1)"),
+        _soc2("CC6.7"), _iso("8.26"),
+    ],
     "Non-PFS cipher suite on email TLS endpoint": [_pci("4.2.1"), _soc2("CC6.7"), _iso("8.26")],
     # ── Broker plaintext / weak family
     "Plaintext Kafka listener detected": [

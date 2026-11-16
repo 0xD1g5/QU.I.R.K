@@ -226,7 +226,8 @@ def test_canonical_cli_title_returns_none_for_unbridged_and_unknown() -> None:
         # Unbridged prefixes need a runtime-shaped probe, not the bare key,
         # for the interpolated ones -- exercise both forms.
         assert canonical_cli_title(key) is None
-    assert canonical_cli_title("Weak cipher suites enabled") is None
+    # Phase 236 D-02: weak cipher suites are bridged now, no longer unbridged.
+    assert canonical_cli_title("Weak cipher suites enabled") == "Weak TLS cipher suites accepted"
     assert canonical_cli_title("Quantum-vulnerable algorithm: DSA") is None
     assert canonical_cli_title("this finding title does not exist anywhere") is None
 

@@ -736,6 +736,27 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     ),
                 ))
 
+            # Phase 236 D-02 (XSURF-10): weak cipher suites (RC4/3DES/NULL/EXPORT/MD5,
+            # SSLv2/SSLv3) are HIGH. Independent of the LOW legacy-suites site above:
+            # distinct column (tls_weak_ciphers_present), never merged (T-236-10).
+            if getattr(e, "tls_weak_ciphers_present", False):
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="Weak TLS cipher suites accepted",
+                    description=(
+                        "The endpoint accepts weak cipher suites (RC4, 3DES, NULL, "
+                        "EXPORT or MD5-based suites) or the SSLv2/SSLv3 protocols, "
+                        "which are cryptographically broken and allow traffic to be "
+                        "decrypted or downgraded."
+                    ),
+                    recommendation=(
+                        "Remove RC4/3DES/NULL/EXPORT/MD5 suites and SSLv2/SSLv3, and keep "
+                        "only AEAD suites with forward secrecy (AES-GCM, ChaCha20-Poly1305)."
+                    ),
+                ))
+
             # BUG-02: Certificate expiry
             cert_not_after = getattr(e, "cert_not_after", None)
             if isinstance(cert_not_after, datetime):

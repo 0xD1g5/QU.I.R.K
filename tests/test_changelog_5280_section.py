@@ -34,9 +34,7 @@ _README = _ROOT / "README.md"
 # text must contain. The key set must EQUAL the live union, so adding or fixing
 # a divergence turns this red until the release notes follow.
 _DIVERGENCE_PHRASES: dict[str, str] = {
-    "Weak cipher suites enabled": "weak cipher suites",
     "Quantum-": "undersized ECDSA",
-    "TLS certificate uses undersized ECDSA key": "undersized ECDSA",
     "End-of-life ": "end-of-life crypto libraries in container images",
     "Severely outdated Python cryptography package":
         "end-of-life crypto libraries in container images",

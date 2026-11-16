@@ -281,8 +281,39 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
             segment=ep.segment,
         ))
 
+    # Phase 236 D-04 (XSURF-11): an ECDSA key under 256 bits is HIGH, as in the
+    # report (findings_evaluator ECDSA branch, same threshold); that row then
+    # skips the MEDIUM Quantum- finding so there is one ECDSA finding per row.
+    _undersized_ecdsa = (
+        (ep.cert_pubkey_alg or "").strip().upper() == "ECDSA"
+        and ep.cert_pubkey_size is not None
+        and ep.cert_pubkey_size < 256
+    )
+    if _undersized_ecdsa:
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="TLS certificate uses undersized ECDSA key",
+            protocol="TLS",
+            description=(
+                f"Certificate uses a {ep.cert_pubkey_size}-bit ECDSA key, below the "
+                f"P-256 classical minimum."
+            ),
+            remediation=(
+                f"ECDSA-{ep.cert_pubkey_size} is below the P-256 classical minimum. "
+                "Migrate to P-256+ immediately and plan migration to ML-DSA "
+                "(FIPS 204) or SLH-DSA (FIPS 205)."
+            ),
+            quantum_risk="Vulnerable",
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
     # Quantum-vulnerable algorithm (non-RSA)
-    if ep.cert_pubkey_alg and not ep.cert_pubkey_alg.upper().startswith("RSA"):
+    if not _undersized_ecdsa and ep.cert_pubkey_alg and not ep.cert_pubkey_alg.upper().startswith("RSA"):
         try:
             from quirk.cbom.classifier import classify_algorithm, quantum_safety_label
             _, nist_level, _ = classify_algorithm(ep.cert_pubkey_alg)
