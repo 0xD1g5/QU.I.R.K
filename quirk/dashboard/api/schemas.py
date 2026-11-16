@@ -736,9 +736,10 @@ class SampleFinding(BaseModel):
     """
 
     host: str
-    port: int
-    protocol: str
+    port: Optional[int] = None
+    protocol: Optional[str] = None
     severity: Optional[str] = None
+    title: Optional[str] = None  # 237-01 additive: finding title (finding-level delta)
 
 
 class SeverityTransitionResponse(BaseModel):
@@ -746,10 +747,11 @@ class SeverityTransitionResponse(BaseModel):
     whose severity changed between two sessions without its identity
     changing (replaces the old severity-in-key double-count, D-03)."""
     host: str
-    port: int
-    protocol: str
+    port: Optional[int] = None
+    protocol: Optional[str] = None
     previous_severity: Optional[str] = None
     current_severity: Optional[str] = None
+    title: Optional[str] = None  # 237-01 additive
 
 
 class TrendReportResponse(BaseModel):

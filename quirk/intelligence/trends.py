@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from quirk.models import CryptoEndpoint
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
+from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
 from quirk.scanner.target_outcome import COVERAGE_SKIP_ADVISORY_CATEGORIES
 
 FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
@@ -61,21 +62,22 @@ _SEVERITY_RANK = {
 @dataclass
 class SampleFindingItem:
     host: str
-    port: int
-    protocol: str
+    port: Optional[int]
+    protocol: Optional[str]
     severity: str
+    title: Optional[str] = None
 
 
 @dataclass
 class SeverityTransitionItem:
-    """One (host, port, protocol) endpoint whose severity changed between two
-    sessions without its identity changing. Replaces the old severity-in-key
-    encoding (D-03) now that the match key is (host, port, protocol)."""
+    """One finding, keyed (host, port, canonical title), whose severity changed
+    between two sessions without its identity changing (D-03)."""
     host: str
-    port: int
-    protocol: str
+    port: Optional[int]
+    protocol: Optional[str]
     previous_severity: Optional[str]
     current_severity: Optional[str]
+    title: Optional[str] = None
 
 
 @dataclass
@@ -225,37 +227,63 @@ def _count_by_bucket(keys: Iterable[tuple], sev_map: dict) -> dict:
     return counts
 
 
+def _finding_key(f: Mapping[str, Any]) -> tuple:
+    """The ONE finding identity: (host, port, canonical title).
+
+    Severity and the finding id are never part of the key (D-03).
+    canonical_cli_title folds bridged titles; unbridged titles pass through.
+    """
+    t = f.get("title") or ""
+    return (str(f.get("host") or ""), f.get("port"), canonical_cli_title(t) or t)
+
+
+def _count_findings_by_bucket(findings: Iterable[Mapping[str, Any]]) -> dict:
+    """Count findings (one per finding, not per endpoint) by severity bucket."""
+    items = list(findings)
+    return _count_by_bucket(range(len(items)), {i: f.get("severity") for i, f in enumerate(items)})
+
+
+def _index_findings(findings: Iterable[Mapping[str, Any]], excluded_hosts: set) -> dict:
+    """key -> finding; on collision keep the highest-severity one."""
+    out: dict = {}
+    for f in findings:
+        if (f.get("host"), f.get("port")) in excluded_hosts:
+            continue
+        k = _finding_key(f)
+        cur = out.get(k)
+        if cur is None or _SEVERITY_RANK.get(f.get("severity"), 99) < _SEVERITY_RANK.get(
+            cur.get("severity"), 99
+        ):
+            out[k] = f
+    return out
+
+
 def _sample_findings(
-    endpoints: List[CryptoEndpoint],
+    findings_by_key: dict,
     target_keys: set,
 ) -> List[SampleFindingItem]:
-    """Return sample findings (max 5) whose match-key is in target_keys.
+    """Return sample findings (max 5) whose finding key is in target_keys.
 
-    Sort order: severity rank asc (CRITICAL=0 → first), then host asc, then port asc.
-    Caps at 5 (D-08). Match key is (host, port, protocol) — severity is no
-    longer part of the key (see compute_trend_report's docstring); a row is
-    included whenever its endpoint identity is in target_keys, regardless of
-    its severity (including None).
+    Sort: severity rank asc (CRITICAL first), host, port (None-safe). Cap 5 (D-08).
     """
-    matched = [
-        ep for ep in endpoints
-        if (ep.host, ep.port, ep.protocol) in target_keys
-    ]
+    matched = [findings_by_key[k] for k in target_keys if k in findings_by_key]
     matched.sort(
-        key=lambda ep: (
-            _SEVERITY_RANK.get(ep.severity, 99),
-            ep.host or "",
-            ep.port or 0,
+        key=lambda f: (
+            _SEVERITY_RANK.get(f.get("severity"), 99),
+            str(f.get("host") or ""),
+            f.get("port") or 0,
+            f.get("title") or "",
         )
     )
     return [
         SampleFindingItem(
-            host=ep.host,
-            port=ep.port,
-            protocol=ep.protocol,
-            severity=ep.severity,
+            host=f.get("host"),
+            port=f.get("port"),
+            protocol=f.get("protocol"),
+            severity=f.get("severity"),
+            title=f.get("title"),
         )
-        for ep in matched[:5]
+        for f in matched[:5]
     ]
 
 
@@ -280,7 +308,15 @@ def _score_for_session(
     """
     # Phase 228 (XSURF-07, D-09): findings come from the caller's deriver (dashboard) or the report composer; a findings-less score is not reachable by default.
     derive = findings_deriver or _default_report_deriver
-    evidence = build_evidence_summary(endpoints, derive(endpoints))
+    return _score_from_findings(endpoints, derive(endpoints))
+
+
+def _score_from_findings(
+    endpoints: List[CryptoEndpoint],
+    findings: Sequence[Mapping[str, Any]],
+) -> Optional[float]:
+    """Score from an already-derived findings list (derive-once, D-01)."""
+    evidence = build_evidence_summary(endpoints, findings)
     score_dict = compute_readiness_score(evidence)
     return score_dict["score"]
 
@@ -306,7 +342,8 @@ def compute_trend_report(
     D-06: When previous_ts is None, returns null-delta single-session response.
     D-13: NULL scanned_at rows are excluded from all session fetches.
 
-    Match key for finding delta: (host, port, protocol). Severity is NOT part
+    Match key for finding delta: (host, port, canonical title) over DERIVED findings
+    (see _finding_key; the legacy endpoint-severity rationale follows). Severity is NOT part
     of the key — it is carried alongside as a per-key map instead. Severity is
     populated only by the three cloud connectors; measured against
     output/quirk.db's crypto_endpoints table: 30 rows, 0 non-NULL severity. A
@@ -343,8 +380,10 @@ def compute_trend_report(
     findings if IPs change. NULL collision with v4.2-era sessions
     (scanned_at IS NULL) is expected behavior per D-13.
     """
+    derive = findings_deriver or _default_report_deriver
     current_eps = _fetch_session_endpoints(db, current_ts)
-    current_score = _score_for_session(current_eps, findings_deriver) if current_eps else None
+    cur_f = list(derive(current_eps)) if current_eps else []
+    current_score = _score_from_findings(current_eps, cur_f) if current_eps else None
 
     # D-06: single-session early return — no previous data to compare
     if previous_ts is None:
@@ -367,69 +406,46 @@ def compute_trend_report(
         )
 
     previous_eps = _fetch_session_endpoints(db, previous_ts)
-    previous_score = _score_for_session(previous_eps, findings_deriver) if previous_eps else None
+    prev_f = list(derive(previous_eps)) if previous_eps else []
+    previous_score = _score_from_findings(previous_eps, prev_f) if previous_eps else None
     score_delta = (
         current_score - previous_score
         if current_score is not None and previous_score is not None
         else None
     )
 
-    # D-04: build match-key sets, excluding scan_error rows from finding delta.
-    # Hosts that errored in the current session are excluded from BOTH sides:
-    # a scan_error in current means we cannot determine if previous findings
-    # for that host are resolved or still present — so exclude them to avoid
-    # phantom "resolved" entries.
+    # D-03: a (host, port) that errored in the current session cannot have its
+    # previous findings judged resolved, so exclude it from the previous side.
     current_error_hosts = {
-        (ep.host, ep.port, ep.protocol)
-        for ep in current_eps
-        if ep.scan_error is not None
+        (ep.host, ep.port) for ep in current_eps if ep.scan_error is not None
     }
-    # current_sev / previous_sev: key is (host, port, protocol) — severity is
-    # no longer part of the identity key, it is carried alongside as a map so
-    # severity_transitions can still be computed. NOTE: if two rows in the
-    # SAME session share a (host, port, protocol) with different severities
-    # (duplicate scan of the same endpoint within one session), the dict keeps
-    # whichever row was seen last — this is best-effort for multi-row
-    # endpoints and is not silently papered over; it is the same "last write
-    # wins" behaviour a plain set of keys would have had for membership.
-    current_sev = {
-        (ep.host, ep.port, ep.protocol): ep.severity
-        for ep in current_eps
-        if ep.scan_error is None
-    }
-    previous_sev = {
-        (ep.host, ep.port, ep.protocol): ep.severity
-        for ep in previous_eps
-        if ep.scan_error is None
-        and (ep.host, ep.port, ep.protocol) not in current_error_hosts
-    }
+    current_sev = _index_findings(cur_f, set())
+    previous_sev = _index_findings(prev_f, current_error_hosts)
     current_keys = set(current_sev)
     previous_keys = set(previous_sev)
 
     new_keys = current_keys - previous_keys
     resolved_keys = previous_keys - current_keys
 
-    # D-03's intent, replacing severity-in-key: endpoints present in BOTH
-    # sessions whose severity differs are reported once as a transition, not
-    # as 1 new + 1 resolved. Sorted by (host, port) for deterministic output
-    # (D-08's spirit).
+    # A severity change on the same finding is one transition, not new+resolved.
     severity_transitions = sorted(
         (
             SeverityTransitionItem(
-                host=key[0],
-                port=key[1],
-                protocol=key[2],
-                previous_severity=previous_sev[key],
-                current_severity=current_sev[key],
+                host=current_sev[key].get("host"),
+                port=current_sev[key].get("port"),
+                protocol=current_sev[key].get("protocol"),
+                previous_severity=previous_sev[key].get("severity"),
+                current_severity=current_sev[key].get("severity"),
+                title=current_sev[key].get("title"),
             )
             for key in (current_keys & previous_keys)
-            if current_sev[key] != previous_sev[key]
+            if current_sev[key].get("severity") != previous_sev[key].get("severity")
         ),
-        key=lambda t: (t.host or "", t.port or 0),
+        key=lambda t: (str(t.host or ""), t.port or 0, t.title or ""),
     )
 
-    new_counts = _count_by_bucket(new_keys, current_sev)
-    resolved_counts = _count_by_bucket(resolved_keys, previous_sev)
+    new_counts = _count_findings_by_bucket(current_sev[k] for k in new_keys)
+    resolved_counts = _count_findings_by_bucket(previous_sev[k] for k in resolved_keys)
 
     # D-05: scan error count delta computed independently of finding delta.
     # Phase 41 / D-15 + 235.1 D-06: exclude advisory-only categories
@@ -450,8 +466,8 @@ def compute_trend_report(
     scan_errors_resolved_count = max(0, prev_err - cur_err)
 
     # D-08: top-5 sample arrays, sorted by severity then host then port
-    new_samples = _sample_findings(current_eps, new_keys)
-    resolved_samples = _sample_findings(previous_eps, resolved_keys)
+    new_samples = _sample_findings(current_sev, new_keys)
+    resolved_samples = _sample_findings(previous_sev, resolved_keys)
 
     return TrendReport(
         current_session_ts=current_ts,

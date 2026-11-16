@@ -100,6 +100,7 @@ def _to_response(report) -> TrendReportResponse:
                 port=s.port,
                 protocol=s.protocol,
                 severity=s.severity,
+                title=s.title,
             )
             for s in report.new_findings_sample
         ],
@@ -109,6 +110,7 @@ def _to_response(report) -> TrendReportResponse:
                 port=s.port,
                 protocol=s.protocol,
                 severity=s.severity,
+                title=s.title,
             )
             for s in report.resolved_findings_sample
         ],
@@ -119,6 +121,7 @@ def _to_response(report) -> TrendReportResponse:
                 protocol=t.protocol,
                 previous_severity=t.previous_severity,
                 current_severity=t.current_severity,
+                title=t.title,
             )
             for t in report.severity_transitions
         ],
