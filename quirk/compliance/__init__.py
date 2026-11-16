@@ -130,6 +130,12 @@ TITLE_PREFIX_ALIASES: Dict[str, str] = {
     # line 190 — interpolated (name@version) at end-paren; mapped to UNMAPPED.
     "Container image contains crypto library (":
         "Container image contains crypto library",
+    # Phase 236 D-21: the HIGH legacy-TLS report title keeps the remediation /
+    # ticket fingerprint of the LOW title it replaces for max-legacy endpoints.
+    # D-01 guarantees one endpoint never carries both tiers (if/elif), so this
+    # alias cannot merge two findings on one host:port.
+    "Only legacy TLS versions offered (no TLS 1.2+)":
+        "Legacy TLS versions allowed (TLS 1.0/1.1)",
 }
 
 

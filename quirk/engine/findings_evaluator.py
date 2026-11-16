@@ -22,7 +22,7 @@ from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.scanner.target_outcome import SKIP_REASON_TO_ADVISORY_CATEGORY
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
-from quirk.util.weak_crypto import has_legacy_tls_versions_signal
+from quirk.util.weak_crypto import has_legacy_tls_versions_signal, is_max_legacy_tls
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -294,6 +294,16 @@ def runs_tls_certificate_checks(ep: Any) -> bool:
 EMAIL_PROTOCOLS = frozenset({
     "SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS", "POP3-STARTTLS", "POP3S",
 })
+
+
+def _is_max_legacy_tls(ep: Any) -> bool:
+    # Phase 236 D-01/D-20: thin wrapper over the shared HIGH-tier predicate in
+    # quirk.util.weak_crypto.is_max_legacy_tls(), the same one the dashboard
+    # deriver calls, so the two surfaces cannot drift on the tier boundary.
+    return is_max_legacy_tls(
+        getattr(ep, "tls_version", "") or "",
+        getattr(ep, "tls_supported_versions", "") or "",
+    )
 
 
 def _has_legacy_tls_versions(ep: Any) -> bool:
@@ -674,7 +684,25 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
             ))
 
         if runs_tls_certificate_checks(e):
-            if _has_legacy_tls_versions(e):
+            if _is_max_legacy_tls(e):
+                # Phase 236 D-01/D-20: HIGH tier -- nothing newer than TLS 1.1
+                # (or SSLv2/SSLv3 only) is offered.
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="Only legacy TLS versions offered (no TLS 1.2+)",
+                    description=(
+                        "This service negotiates nothing newer than TLS 1.1, or only "
+                        "SSLv2/SSLv3, so every client is forced onto a deprecated "
+                        "protocol (RFC 8996)."
+                    ),
+                    recommendation=(
+                        "Enable TLS 1.2+ (prefer TLS 1.3), then disable "
+                        "SSLv2/SSLv3/TLS 1.0/1.1."
+                    ),
+                ))
+            elif _has_legacy_tls_versions(e):
                 findings.append(_build_finding(
                     severity="LOW",
                     host=host,
