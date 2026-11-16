@@ -9,8 +9,8 @@ progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 8
-  completed_plans: 3
-  percent: 37
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -1538,9 +1538,9 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 ## Current Position
 
 Phase: 236 of 236–240 (Score Divergence Closure) — EXECUTING
-Plan: 4 of 8
-Status: Executing Phase 236 (236-01 gate DONE; 236-02 decision DONE; 236-03 DONE: finding_derivation.py FastAPI-free module, notify drift on dashboard deriver, Pass A baseline report 27 vs dashboard 42; next 236-04).
-Last activity: 2026-11-16 — Phase 236 plan 03 complete: derivation block moved to quirk/dashboard/api/finding_derivation.py (behaviour unchanged, census still 8 SEVERITY_DIVERGENCES), notify dispatcher uses derive_dashboard_scoring_findings, Pass A replay 27 vs 42 recorded. Previous: 2026-11-16 — Phase 236 plan 02 complete: census extra kept dispositioned (operator). Previous: 2026-11-16 — Phase 236 plan 01 complete: tests/test_severity_divergence_behaviour.py behaviour gate, mutation-proved; measured census 10 residuals in 33 families. Previous: 2026-11-16 — Phase 236 execution started. Previous: 2026-11-16 — Phase 236 planned. Research + pattern map done; plan-checker passed on iteration 3. Operator amendments D-18 (SCORING_VERSION stays 4.0, no changelog.d fragment), D-19 (Kerberos/DNSSEC dispositioned), D-20 (SSLv2/v3 max = max-is-legacy), D-21 (fingerprint alias). Hand-edited from a pre-image (state.planned-phase added unrelated blank-line churn). Previous: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
+Plan: 5 of 8
+Status: Executing Phase 236 (236-01 gate DONE; 236-02 decision DONE; 236-03 DONE; 236-04 DONE: two-tier legacy TLS on both surfaces via is_max_legacy_tls, D-21 fingerprint alias, SEVERITY_DIVERGENCES 8 -> 7; next 236-05).
+Last activity: 2026-11-16 — Phase 236 plan 04 complete: XSURF-09 legacy-TLS two tiers (HIGH max-legacy / LOW offered-with-1.2+) on report and dashboard, SEVERITY_DIVERGENCES now 7. Previous: 2026-11-16 — Phase 236 plan 03 complete: derivation block moved to quirk/dashboard/api/finding_derivation.py (behaviour unchanged, census still 8 SEVERITY_DIVERGENCES), notify dispatcher uses derive_dashboard_scoring_findings, Pass A replay 27 vs 42 recorded. Previous: 2026-11-16 — Phase 236 plan 02 complete: census extra kept dispositioned (operator). Previous: 2026-11-16 — Phase 236 plan 01 complete: tests/test_severity_divergence_behaviour.py behaviour gate, mutation-proved; measured census 10 residuals in 33 families. Previous: 2026-11-16 — Phase 236 execution started. Previous: 2026-11-16 — Phase 236 planned. Research + pattern map done; plan-checker passed on iteration 3. Operator amendments D-18 (SCORING_VERSION stays 4.0, no changelog.d fragment), D-19 (Kerberos/DNSSEC dispositioned), D-20 (SSLv2/v3 max = max-is-legacy), D-21 (fingerprint alias). Hand-edited from a pre-image (state.planned-phase added unrelated blank-line churn). Previous: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
 
 ## v5.28.2 Close Record — superseded as Current Position 2026-11-15 (v5.29 opened)
 Phase: None — between milestones. v5.28.1 (Phases 235.1–235.2) and v5.28.2 (Phases 235.3–235.4) closed and archived 2026-11-09; phase directories moved to `.planning/milestones/v5.28.1-phases/` and `v5.28.2-phases/`.
