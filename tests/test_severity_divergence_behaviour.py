@@ -329,6 +329,14 @@ def _mutate_nsec(text: str) -> str:
     return text.replace(anchor, '"NSEC": ("HIGH",')
 
 
+def _mutate_drop_scan_error_guard(text: str) -> str:
+    """Remove the scan_error guard (236-09, XSURF-09): errored TLS rows then
+    derive dashboard-only HIGH findings again."""
+    anchor = 'if getattr(ep, "scan_error", None):'
+    assert text.count(anchor) == 1, "M3 anchor must occur exactly once"
+    return text.replace(anchor, "if False:")
+
+
 def _mutate_untrusted_ca(text: str) -> str:
     """Post-loop rewrite of the untrusted-CA severity (a divergence no literal
     ``severity=`` reveals). Inserted before the last statement of
@@ -363,6 +371,8 @@ def _load_deriver_from_text(text: str, tmp_path: Path) -> Callable:
 _MUTATIONS = (
     ("M1_dnssec_nsec_to_high", _mutate_nsec, "dnssec_nsec"),
     ("M2_untrusted_ca_to_high", _mutate_untrusted_ca, "tls_untrusted_ca"),
+    ("M3_drop_scan_error_guard", _mutate_drop_scan_error_guard,
+     "tls_scan_error_with_fields"),
 )
 
 

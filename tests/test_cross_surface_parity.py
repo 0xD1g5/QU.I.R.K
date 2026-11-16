@@ -965,6 +965,7 @@ _XSURF236_WEAK_CIPHER_RUN_ID = "2026-11-10T10:02:00"
 _XSURF236_ECDSA_192_RUN_ID = "2026-11-10T10:03:00"
 _XSURF236_CONTAINER_111_RUN_ID = "2026-11-10T10:04:00"
 _XSURF236_CONTAINER_102_RUN_ID = "2026-11-10T10:05:00"
+_XSURF236_SCAN_ERROR_TLS_RUN_ID = "2026-11-16T10:01:00"
 
 # Measured, not derived (Phase 236 D-13): (score, CRITICAL count, HIGH count).
 _EXPECTED_XSURF236 = {
@@ -973,6 +974,7 @@ _EXPECTED_XSURF236 = {
     "ecdsa_192": (63, 0, 1),
     "container_openssl_111": (63, 0, 1),
     "container_openssl_102": (31, 1, 0),
+    "tls_scan_error_with_fields": (73, 0, 0),
 }
 _XSURF236_RUN_IDS = {
     "legacy_max_tls10": _XSURF236_LEGACY_MAX_RUN_ID,
@@ -980,6 +982,7 @@ _XSURF236_RUN_IDS = {
     "ecdsa_192": _XSURF236_ECDSA_192_RUN_ID,
     "container_openssl_111": _XSURF236_CONTAINER_111_RUN_ID,
     "container_openssl_102": _XSURF236_CONTAINER_102_RUN_ID,
+    "tls_scan_error_with_fields": _XSURF236_SCAN_ERROR_TLS_RUN_ID,
 }
 
 
@@ -1061,3 +1064,21 @@ def test_xsurf236_container_critical_headline_parity():
     assert crit_a == crit_b == exp_crit and exp_crit >= 1
     assert high_a == high_b == exp_high
     assert a <= 34
+
+
+def test_xsurf236_scan_error_tls_row_headline_parity():
+    """XSURF-09 gap closure (236-09, review WR-02): a TLS row whose scan
+    errored after the handshake populated TLS columns gets the same headline
+    on both surfaces, with no HIGH/CRITICAL on either (the report sends every
+    scan_error row to its scan-error branch; the dashboard now does too)."""
+    from quirk.util.weak_crypto import is_max_legacy_tls
+
+    exp_score, exp_crit, exp_high = _EXPECTED_XSURF236["tls_scan_error_with_fields"]
+    # Non-vacuity: without the guard this row would hit the HIGH legacy tier.
+    assert is_max_legacy_tls("TLSv1", None) is True
+    a, b, (crit_a, crit_b), (high_a, high_b) = _xsurf236_run("tls_scan_error_with_fields")
+    assert a == b == exp_score, (
+        f"XSURF-09 VIOLATION: report={a} dashboard={b} expected={exp_score}"
+    )
+    assert crit_a == crit_b == exp_crit == 0, f"CRITICAL {crit_a}/{crit_b}"
+    assert high_a == high_b == exp_high == 0, f"HIGH {high_a}/{high_b}"

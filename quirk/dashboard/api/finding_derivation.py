@@ -82,6 +82,14 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
             segment=ep.segment,
         ))
 
+    # Phase 236 gap closure (XSURF-09, review WR-02): mirrors
+    # evaluate_endpoints, which sends every row with a scan error to its
+    # scan-error branch before the HTTP and TLS checks, so an errored row
+    # raises no HIGH/CRITICAL there. JWKS stays above this guard because the
+    # report evaluates the JWKS advisory before the scan-error branch too.
+    if getattr(ep, "scan_error", None):
+        return findings
+
     # Unencrypted HTTP
     if ep.protocol and ep.protocol.upper() == "HTTP":
         findings.append(FindingItem(
