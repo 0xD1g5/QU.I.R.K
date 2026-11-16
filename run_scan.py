@@ -1220,7 +1220,7 @@ def _collect_stage_partial_failures(
         stage_failures.append({
             "stage": stage,
             "scanner": getattr(ep, "host", "unknown"),
-            "error_category": getattr(ep, "scan_error_category", "exception"),
+            "error_category": getattr(ep, "scan_error_category", None) or "exception",
             "error_message": getattr(ep, "scan_error", "") or "",
             "endpoint_count": 0,
         })

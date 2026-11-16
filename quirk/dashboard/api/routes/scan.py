@@ -1270,16 +1270,23 @@ def _load_partial_failures(db: Session, scan_run_id_str: str) -> list[PartialFai
                 continue
             try:
                 entries = _json.loads(cp.error_summary)
-                for entry in entries:
+            except ValueError:
+                continue
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                # Phase 237 D-05: one bad entry skips only itself; an explicit
+                # null coalesces (entry.get(k, default) does not).
+                try:
                     result.append(PartialFailureEntry(
                         stage=cp.stage,
-                        scanner=entry.get("scanner", "unknown"),
-                        error_category=entry.get("error_category", "exception"),
-                        error_message=entry.get("error_message", ""),
-                        endpoint_count=entry.get("endpoint_count", 0),
+                        scanner=entry.get("scanner") or "unknown",
+                        error_category=entry.get("error_category") or "exception",
+                        error_message=entry.get("error_message") or "",
+                        endpoint_count=entry.get("endpoint_count") or 0,
                     ))
-            except (ValueError, KeyError):
-                pass
+                except (ValueError, KeyError, AttributeError, TypeError):
+                    continue
         return result
     except Exception:
         return []
