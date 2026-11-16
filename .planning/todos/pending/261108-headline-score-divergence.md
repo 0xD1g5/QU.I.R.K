@@ -7,7 +7,7 @@ priority: medium
 area: dashboard score vs report pipeline
 status: pending
 resolves_phase: 236
-owner: null
+owner: "999.132"
 ---
 
 # Dashboard headline score differs from job report for the same run
