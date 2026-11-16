@@ -132,3 +132,86 @@ def test_import_hygiene_no_fastapi_or_pydantic():
         capture_output=True, text=True, timeout=120, close_fds=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+# --- run_scan wiring (237-02) ---
+
+import pathlib  # noqa: E402
+import re  # noqa: E402
+
+_RUN_SCAN_SRC = (pathlib.Path(__file__).resolve().parents[1] / "run_scan.py").read_text(
+    encoding="utf-8"
+)
+
+
+def test_mark_job_scan_run_id_sets_run_id_only(tmp_path):
+    from quirk.cli.job_progress import mark_job_scan_run_id
+    from quirk.models import ScanJob
+
+    db_path = tmp_path / "q.db"
+    db = _session(db_path)
+    _job(db, "j1", "running", None)
+    db.commit()
+    db.close()
+
+    mark_job_scan_run_id(str(db_path), "j1", "run-1")
+    db = _session(db_path)
+    row = db.get(ScanJob, "j1")
+    assert row.scan_run_id == "run-1"
+    assert row.status == "running"
+    assert row.completed_at is None
+    db.close()
+
+    # silent no-ops: missing job id, bad db path
+    mark_job_scan_run_id(str(db_path), "nope", "run-2")
+    mark_job_scan_run_id(str(tmp_path / "missing" / "x.db"), "j1", "run-3")
+
+
+def test_first_checkpoint_is_inventory_without_db_path():
+    """The nmap-only 'discovery' checkpoint sits under _discovery_batch_loop_ran;
+    the inventory checkpoint is unconditional on the scan path, so a default
+    (--discovery builtin) scan's earliest checkpoint is 'inventory'."""
+    m = re.search(
+        r'if _discovery_batch_loop_ran:.*?write_scan_checkpoint\([^)]*"discovery"',
+        _RUN_SCAN_SRC, re.S,
+    )
+    assert m, "discovery checkpoint is no longer gated on the nmap batch loop"
+    inv = re.search(
+        r'\n( *)(?:if [^\n]*:\n *)?write_scan_checkpoint\(\s*([^,]+), scan_run_id, "inventory"',
+        _RUN_SCAN_SRC,
+    )
+    assert inv, "inventory checkpoint call not found"
+    assert inv.group(2).strip() == "_ckpt_db"
+    assert "if args.db_path:\n        write_scan_checkpoint(\n            args.db_path" not in _RUN_SCAN_SRC
+
+
+def test_checkpoint_db_falls_back_to_output_db():
+    assert _RUN_SCAN_SRC.count("_ckpt_db = args.db_path or cfg.output.db_path") == 1
+    lines = _RUN_SCAN_SRC.splitlines()
+    sites = [
+        i for i, ln in enumerate(lines)
+        if "write_scan_checkpoint(" in ln and not ln.lstrip().startswith(("def ", "#"))
+    ]
+    assert len(sites) >= 8, sites
+    offenders = []
+    for i in sites:
+        window = "\n".join(lines[max(0, i - 12): i + 2])
+        paired_with_cache = "save_cache(" in window  # batch-stage resume marker
+        if paired_with_cache:
+            continue
+        text = "\n".join(lines[i: i + 2])
+        guard = "\n".join(lines[max(0, i - 2): i])
+        if "write_scan_checkpoint(args.db_path" in text or re.search(
+            r"write_scan_checkpoint\(\s*$\n\s*args\.db_path", text, re.M
+        ) or "if args.db_path:" in guard:
+            offenders.append((i + 1, lines[i].strip()))
+    assert not offenders, offenders
+
+
+def test_job_run_id_stamped_after_resume_override():
+    override = _RUN_SCAN_SRC.index("scan_run_id = _resume_scan_id  # override")
+    calls = [m.start() for m in re.finditer(r"\bmark_job_scan_run_id\(", _RUN_SCAN_SRC)]
+    assert len(calls) == 1, calls
+    assert calls[0] > override
+    guard = _RUN_SCAN_SRC[max(0, calls[0] - 120): calls[0]]
+    assert "if args.job_id and args.db_path:" in guard

@@ -99,6 +99,23 @@ def mark_job_completed(db_path: str, job_id: str, scan_run_id: Optional[str]) ->
         pass
 
 
+def mark_job_scan_run_id(db_path: str, job_id: str, scan_run_id: str) -> None:
+    """Phase 237 D-15: stamp scan_run_id on the job row at scan start.
+
+    Sets only scan_run_id (never status or timestamps) so a running job can be
+    joined to its scan_checkpoints rows. Silent no-op on any failure.
+    """
+    try:
+        from quirk.models import ScanJob
+        with _open_session(db_path) as db:
+            row = db.get(ScanJob, job_id)
+            if row is not None:
+                row.scan_run_id = scan_run_id
+                db.commit()
+    except Exception:
+        pass
+
+
 def mark_job_failed(db_path: str, job_id: str, error_message: str) -> None:
     """Flip scan_jobs row to status=failed with error_message set."""
     try:

@@ -110,6 +110,7 @@ from quirk.cli.job_progress import (  # Phase 65 — best-effort job progress up
     update_job_stage,
     mark_job_completed,
     mark_job_failed,
+    mark_job_scan_run_id,    # Phase 237 D-15
     write_scan_checkpoint,   # Phase 67 RESUME-01
     update_batch_progress,   # Phase 146 DISC-04
 )
@@ -2441,6 +2442,16 @@ def main():
             _completed_stages = set()
             _resumed_endpoints = []
 
+    # Phase 237 D-15: stamp the run id on the dashboard job NOW (after the
+    # resume override) so a running job can be joined to its checkpoints.
+    if args.job_id and args.db_path:
+        mark_job_scan_run_id(args.db_path, args.job_id, scan_run_id)
+
+    # Phase 237 D-14: every scan writes checkpoints to the DB it writes
+    # endpoints to (a plain CLI/scheduled scan has no --db-path). Job rows stay
+    # on args.db_path: they live only in the dashboard DB.
+    _ckpt_db = args.db_path or cfg.output.db_path
+
     limiter = TokenBucket(args.rate_limit, capacity=max(1.0, args.rate_limit)) if args.rate_limit and args.rate_limit > 0 else None
 
     # Phase 41 / D-12 + D-14: scanner-phase failure surface — both missing-extra
@@ -2782,8 +2793,8 @@ def main():
         # branch from this bookkeeping).
         if _discovery_batch_loop_ran:
             _discovery_pf = _collect_stage_partial_failures(run_stats, "discovery", error_endpoints, _err_before_discovery)
-            if args.db_path:
-                write_scan_checkpoint(args.db_path, scan_run_id, "discovery",
+            if _ckpt_db:
+                write_scan_checkpoint(_ckpt_db, scan_run_id, "discovery",
                     status="partial" if _discovery_pf else "completed",
                     endpoint_count=len(targets), partial_failure=bool(_discovery_pf),
                     error_summary=_discovery_pf or None)
@@ -2970,9 +2981,9 @@ def main():
 
     # Phase 67 RESUME-01: persist inventory before first scanner stage
     _flush_stage_endpoints(cfg.output.db_path, inventory_endpoints, scan_run_id)
-    if args.db_path:
+    if _ckpt_db:
         write_scan_checkpoint(
-            args.db_path, scan_run_id, "inventory", "completed",
+            _ckpt_db, scan_run_id, "inventory", "completed",
             endpoint_count=len(inventory_endpoints),
         )
 
@@ -3015,8 +3026,8 @@ def main():
         ) or []
         _flush_stage_endpoints(cfg.output.db_path, tls_endpoints, scan_run_id)   # Phase 67 RESUME-01
         _tls_pf = _collect_stage_partial_failures(run_stats, "tls", error_endpoints, _err_before_tls)
-        if args.db_path:
-            write_scan_checkpoint(args.db_path, scan_run_id, "tls",
+        if _ckpt_db:
+            write_scan_checkpoint(_ckpt_db, scan_run_id, "tls",
                 status="partial" if _tls_pf else "completed",
                 endpoint_count=len(tls_endpoints), partial_failure=bool(_tls_pf),
                 error_summary=_tls_pf or None)
@@ -3077,8 +3088,8 @@ def main():
         # ordering is safe and keeps the checkpoint write scoped to this
         # branch only, never re-written on resume).
         _ssh_pf = _collect_stage_partial_failures(run_stats, "ssh", error_endpoints, _err_before_ssh)
-        if args.db_path:
-            write_scan_checkpoint(args.db_path, scan_run_id, "ssh",
+        if _ckpt_db:
+            write_scan_checkpoint(_ckpt_db, scan_run_id, "ssh",
                 status="partial" if _ssh_pf else "completed",
                 endpoint_count=len(ssh_endpoints), partial_failure=bool(_ssh_pf),
                 error_summary=_ssh_pf or None)
@@ -3627,8 +3638,8 @@ def main():
         _src_pf = _source_row_partial_failures("api", source_endpoints)
         run_stats.setdefault("partial_failures", []).extend(_src_pf)
         _api_pf = _api_pf + _src_pf
-        if args.db_path:
-            write_scan_checkpoint(args.db_path, scan_run_id, "api",
+        if _ckpt_db:
+            write_scan_checkpoint(_ckpt_db, scan_run_id, "api",
                 status="partial" if _api_pf else "completed",
                 endpoint_count=len(jwt_endpoints + container_endpoints + source_endpoints + openapi_endpoints + fuzz_endpoints),
                 partial_failure=bool(_api_pf), error_summary=_api_pf or None)
@@ -3851,8 +3862,8 @@ def main():
         _identity_eps = aws_endpoints + azure_endpoints + gcp_endpoints + db_endpoints
         _flush_stage_endpoints(cfg.output.db_path, _identity_eps, scan_run_id)
         _identity_pf = _collect_stage_partial_failures(run_stats, "identity", error_endpoints, _err_before_identity)
-        if args.db_path:
-            write_scan_checkpoint(args.db_path, scan_run_id, "identity",
+        if _ckpt_db:
+            write_scan_checkpoint(_ckpt_db, scan_run_id, "identity",
                 status="partial" if _identity_pf else "completed",
                 endpoint_count=len(_identity_eps), partial_failure=bool(_identity_pf),
                 error_summary=_identity_pf or None)
@@ -4400,8 +4411,8 @@ def main():
         _dar_eps = s3_endpoints + blob_endpoints + k8s_endpoints + gcs_storage_endpoints + dnssec_endpoints + saml_endpoints + kerberos_endpoints + smime_endpoints + adcs_endpoints + vault_endpoints
         _flush_stage_endpoints(cfg.output.db_path, _dar_eps, scan_run_id)
         _dar_pf = _collect_stage_partial_failures(run_stats, "data_at_rest", error_endpoints, _err_before_dar)
-        if args.db_path:
-            write_scan_checkpoint(args.db_path, scan_run_id, "data_at_rest",
+        if _ckpt_db:
+            write_scan_checkpoint(_ckpt_db, scan_run_id, "data_at_rest",
                 status="partial" if _dar_pf else "completed",
                 endpoint_count=len(_dar_eps), partial_failure=bool(_dar_pf),
                 error_summary=_dar_pf or None)
@@ -4627,8 +4638,8 @@ def main():
         _broker_email_eps = email_endpoints + kafka_endpoints + rabbit_endpoints + redis_endpoints
         _flush_stage_endpoints(cfg.output.db_path, _broker_email_eps, scan_run_id)
         _broker_pf = _collect_stage_partial_failures(run_stats, "broker_email", error_endpoints, _err_before_broker)
-        if args.db_path:
-            write_scan_checkpoint(args.db_path, scan_run_id, "broker_email",
+        if _ckpt_db:
+            write_scan_checkpoint(_ckpt_db, scan_run_id, "broker_email",
                 status="partial" if _broker_pf else "completed",
                 endpoint_count=len(_broker_email_eps), partial_failure=bool(_broker_pf),
                 error_summary=_broker_pf or None)
@@ -4836,8 +4847,8 @@ def main():
             sys.exit(2)
 
     # Phase 67 RESUME-01: checkpoint after reports written
-    if args.db_path:
-        write_scan_checkpoint(args.db_path, scan_run_id, "reports", "completed",
+    if _ckpt_db:
+        write_scan_checkpoint(_ckpt_db, scan_run_id, "reports", "completed",
             endpoint_count=len(endpoints))
 
     # Phase 65: mark scan job completed after all phases succeed.
