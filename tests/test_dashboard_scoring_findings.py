@@ -189,3 +189,11 @@ def test_container_duplicate_packages_dedupe_identically():
     dash = hi((f.severity, f.title) for f in derive_dashboard_finding_items(rows))
     rep = hi((d["severity"], d["title"]) for d in derive_report_findings(rows))
     assert dash == rep and sum(dash.values()) >= 1
+
+
+def test_container_findings_carry_container_protocol():
+    from tests.fixtures.divergence_rows import FAMILY_ROWS
+
+    items = derive_dashboard_finding_items(FAMILY_ROWS["container_openssl_102"]())
+    eol = [f for f in items if f.title.startswith("End-of-life")]
+    assert eol and all(f.protocol == "CONTAINER" for f in eol)

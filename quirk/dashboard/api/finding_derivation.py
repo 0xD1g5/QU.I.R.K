@@ -412,7 +412,7 @@ def derive_dashboard_finding_items(endpoints) -> list[FindingItem]:
             port=d["port"],
             severity=d["severity"],
             title=d["title"],
-            protocol=d.get("protocol"),
+            protocol="CONTAINER",
             description=d.get("description"),
             remediation=d.get("recommendation"),
             quantum_risk=d.get("quantum_risk"),
