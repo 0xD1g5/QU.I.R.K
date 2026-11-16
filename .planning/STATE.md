@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v5.29
 milestone_name: Surface Agreement
-status: planning
-last_updated: "2026-11-15T23:50:00.000Z"
-last_activity: "2026-11-15 -- Phase 236 context gathered (17 decisions; D-01..D-03 operator); next /gsd-plan-phase 236"
+status: executing
+last_updated: "2026-11-16T01:54:46.204Z"
+last_activity: "2026-11-16 -- Phase 236 planned (8 plans, 8 sequential waves; operator amendments D-18..D-21); next /gsd-execute-phase 236"
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
@@ -1537,10 +1537,10 @@ the `gsd-verifier` phase-goal pass — next step is that verification pass, then
 
 ## Current Position
 
-Phase: 236 of 236–240 (Score Divergence Closure) — not started
-Plan: —
-Status: Roadmap approved; ready to discuss/plan Phase 236. Phases 236–239 are independent; 240 (release 5.29.0) depends on all four.
-Last activity: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
+Phase: 236 of 236–240 (Score Divergence Closure) — planned, not started
+Plan: 0 of 8
+Status: Ready to execute. 8 plans in 8 sequential waves (236-01 gate first; 236-02 conditional decision checkpoint). Phases 236–239 are independent; 240 (release 5.29.0) depends on all four.
+Last activity: 2026-11-16 — Phase 236 planned. Research + pattern map done; plan-checker passed on iteration 3. Operator amendments D-18 (SCORING_VERSION stays 4.0, no changelog.d fragment), D-19 (Kerberos/DNSSEC dispositioned), D-20 (SSLv2/v3 max = max-is-legacy), D-21 (fingerprint alias). Hand-edited from a pre-image (state.planned-phase added unrelated blank-line churn). Previous: 2026-11-15 — Milestone v5.29 Surface Agreement opened: PM review of LEDGER.md, requirements (25) and roadmap (5 phases) approved by the operator. Research skipped. CMVP re-verified 2026-11-15 (PR #81). Human dates inside the milestone: hw_cve staleness 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02.
 
 ## v5.28.2 Close Record — superseded as Current Position 2026-11-15 (v5.29 opened)
 Phase: None — between milestones. v5.28.1 (Phases 235.1–235.2) and v5.28.2 (Phases 235.3–235.4) closed and archived 2026-11-09; phase directories moved to `.planning/milestones/v5.28.1-phases/` and `v5.28.2-phases/`.

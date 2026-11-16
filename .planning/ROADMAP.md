@@ -129,13 +129,21 @@ each other and can run in any order. Phase 240 depends on all four, because 5.29
   5. The CHANGELOG and README known-defect phrases for these items are removed in the release that ships the fix.
 **Plans**: 8 plans
 Plans:
+**Wave 1**
 - [ ] 236-01-PLAN.md — Behaviour-derived divergence gate, mutation proof, HEAD census and dispositions (D-07/D-08/D-09/D-19)
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 236-02-PLAN.md — Operator decision on any census extra outside the known set (checkpoint, skipped if none)
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 236-03-PLAN.md — FastAPI-free dashboard derivation module, notify uses the dashboard deriver, Pass A pre-fix replay (D-10/D-11/D-22)
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 236-04-PLAN.md — Legacy TLS two tiers on both surfaces, SSL max counts, fingerprint alias (XSURF-09, D-01/D-20/D-21)
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 236-05-PLAN.md — Weak cipher suites report HIGH, undersized ECDSA dashboard HIGH (XSURF-10/11, D-02/D-04)
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 236-06-PLAN.md — Container crypto-library findings on the dashboard via a shared evaluator, Pass A post-fix replay (XSURF-12, D-06)
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 236-07-PLAN.md — Pinned per-family headline parity tests and live lab three-number evidence (XSURF-14, D-13)
+**Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 236-08-PLAN.md — Docs, UAT, vault sync, Phase 240 phrase hand-off, closure, branch CI (D-14..D-18)
 **UI hint**: yes
 
