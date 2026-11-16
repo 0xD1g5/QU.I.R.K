@@ -27,18 +27,18 @@ tracked file.
 
 ### Score agreement (XSURF)
 
-- [ ] **XSURF-09**: Legacy TLS gets the same severity on the dashboard and in the report for the same
+- [x] **XSURF-09**: Legacy TLS gets the same severity on the dashboard and in the report for the same
   endpoint. Source: `261015-xsurf-legacy-tls-severity-diverges-dashboard-vs-report`.
-- [ ] **XSURF-10**: "Weak cipher suites enabled" has a report counterpart with the same severity as the
+- [x] **XSURF-10**: "Weak cipher suites enabled" has a report counterpart with the same severity as the
   dashboard. Source: `261015-xsurf-weak-cipher-suites-dashboard-high-has-no-report-counterpart`.
-- [ ] **XSURF-11**: An undersized ECDSA key gets the same severity on the dashboard and in the report.
+- [x] **XSURF-11**: An undersized ECDSA key gets the same severity on the dashboard and in the report.
   Source: `261015-xsurf-undersized-ecdsa-report-high-dashboard-medium`.
-- [ ] **XSURF-12**: Container crypto-library EOL findings appear on the dashboard as well as in the
+- [x] **XSURF-12**: Container crypto-library EOL findings appear on the dashboard as well as in the
   report. Source: `261015-xsurf-container-library-eol-findings-are-report-only`.
-- [ ] **XSURF-13**: The severity-divergence gate and the Slack/Trends drift check read derived
+- [x] **XSURF-13**: The severity-divergence gate and the Slack/Trends drift check read derived
   severities, so a new dashboard/report divergence fails CI. Source:
   `261015-xsurf-dashboard-and-report-pipelines-still-diverge-gate-blind` (P1; WR-01, WR-02).
-- [ ] **XSURF-14**: For the same run, the dashboard headline score equals the job report's score on a
+- [x] **XSURF-14**: For the same run, the dashboard headline score equals the job report's score on a
   core-lab scan. Source: `261108-headline-score-divergence`.
 
 ### Count truth (COUNT)
@@ -119,12 +119,12 @@ tracked file.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| XSURF-09 | Phase 236 | Pending |
-| XSURF-10 | Phase 236 | Pending |
-| XSURF-11 | Phase 236 | Pending |
-| XSURF-12 | Phase 236 | Pending |
-| XSURF-13 | Phase 236 | Pending |
-| XSURF-14 | Phase 236 | Pending |
+| XSURF-09 | Phase 236 | Complete |
+| XSURF-10 | Phase 236 | Complete |
+| XSURF-11 | Phase 236 | Complete |
+| XSURF-12 | Phase 236 | Complete |
+| XSURF-13 | Phase 236 | Complete |
+| XSURF-14 | Phase 236 | Complete |
 | COUNT-01 | Phase 237 | Pending |
 | COUNT-02 | Phase 237 | Pending |
 | COUNT-03 | Phase 237 | Pending |

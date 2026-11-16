@@ -27,3 +27,7 @@ passA.md correction; plan 03 SUMMARY (Phase 235.4 evidence directory, untracked)
 ## Feasibility & Effort
 
 Medium (half a day): trace both derivations (the two report pipelines) and unify the cap source.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 236 (XSURF-14): per-family pinned headline parity (tests/test_cross_surface_parity.py::test_xsurf236_*) plus live legs 28/28/28 and 27/27/27 (intel/html/dashboard). Commits main 405925d5 (PR #82 merge). Pass A replay 27 == 27. Residual: dispositioned DNSSEC NONE (masked by the CRITICAL ceiling in the wider leg).

@@ -30,3 +30,7 @@ rather than a gate entry.
 - **CONFIRMED** by reading both generators at HEAD (citations above); not probed end to end.
 - Effort **S-M**. Unknown: the exact size threshold the report uses (read it from `findings_evaluator.py:750-760`
   before copying). No spike needed.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 236 (XSURF-11): dashboard HIGH "TLS certificate uses undersized ECDSA key" (<256 bits), no Quantum- finding for that row. Commit main 405925d5 (PR #82 merge). Test: ...test_xsurf236_family_headline_parity[ecdsa_192]. Score movement: dashboard drops for ECDSA <256 bits (MEDIUM -> HIGH).

@@ -33,3 +33,7 @@ container evaluator, so this is the remaining report-only HIGH/CRITICAL emitter.
 - **CONFIRMED** by reading `findings_evaluator.py:49-55,152-265,820` and grepping the dashboard route at HEAD.
 - Effort **S-M**. Unknown: how CONTAINER package rows are stored (service_detail format) for the dashboard path; check
   `findings_evaluator.py:805-825` before writing the adapter. No spike needed.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 236 (XSURF-12): `evaluate_container_endpoints` feeds the dashboard the report's own container findings. Commits main 405925d5 (PR #82 merge). Tests: tests/test_dashboard_scoring_findings.py::test_container_findings_match_report_titles_and_severities, ...test_xsurf236_container_critical_headline_parity. Score movement: dashboard drops for EOL OpenSSL/outdated cryptography in images (Pass A replay 42 -> 27).
