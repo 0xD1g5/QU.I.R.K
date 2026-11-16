@@ -11,7 +11,7 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from quirk.errors import format_error
 from quirk.dashboard.api.middleware.auth import require_auth
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from quirk.dashboard.api._timestamp_utils import stamp_utc_iso
@@ -68,7 +68,12 @@ from quirk.models_util import latest_successful_hardware_devices
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.score_lift import compute_item_lifts, compute_projected_score
 from quirk.intelligence.scoring import compute_readiness_score
-from quirk.intelligence.trends import _count_by_bucket
+from quirk.intelligence.scan_completion import (
+    incomplete_scan_run_ids,
+    running_scan_run_ids,
+    session_status,
+)
+from quirk.intelligence.trends import _count_findings_by_bucket, _finding_key
 from quirk.engine.findings_evaluator import evaluate_identity_endpoints, evaluate_protocol_service_endpoints
 from quirk.util.safe_exc import safe_str
 
@@ -1082,7 +1087,7 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
 
     Phase 66 D-01: LIMIT 10 removed — return every session.
     Phase 66 D-02: per-session score computed inline via evidence pipeline.
-    Phase 66 D-03: finding severity counts via _count_by_bucket.
+    Phase 66 D-03: finding counts via _count_findings_by_bucket (237: derived findings).
     Phase 66 D-04: clone data from ScanJob join; fallback to host reconstruction.
 
     RVW-003: groups by the stored `scan_run_id`, not by a truncated timestamp.
@@ -1124,6 +1129,15 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             groups[key] = (1, row_ts)
         else:
             groups[key] = (prev[0] + 1, min(prev[1], row_ts))
+
+    # D-09: completion status, two queries per request (not per session).
+    # Fail-soft: History must never 500 because of the status query.
+    try:
+        _incomplete = incomplete_scan_run_ids(db)
+        _running = running_scan_run_ids(db)
+    except Exception as exc:
+        logger.debug("scan status query failed (non-fatal): %s", safe_str(exc))
+        _incomplete, _running = set(), set()
 
     sessions: list[ScanSession] = []
     # Newest first, ordered by the session's earliest endpoint timestamp.
@@ -1178,6 +1192,7 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
         score: Optional[int] = None
         rating = ""
         rating_cap_reason = None
+        session_findings: list = []
         if eps:
             # Phase 228 D-08: one recipe for every dashboard score (184.4 D-07 lineage).
             session_findings = derive_dashboard_finding_items(eps)
@@ -1197,24 +1212,11 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
             rating = score_dict.get("rating", "")
             rating_cap_reason = score_dict.get("rating_cap_reason")
 
-        # Finding counts (D-03). Phase 178 IDENT-02: _count_by_bucket's signature
-        # changed from (keys) to (keys, sev_map) since severity is no longer
-        # embedded in the key tuple (quirk/intelligence/trends.py). This call site
-        # was missed by Plan 178-05's caller sweep (only trends.py's /api/trends
-        # endpoints were updated) — fixed here as a same-phase regression, not a
-        # new feature: severity is carried alongside the (host, port, protocol) key
-        # in a dict instead of as a 4th tuple element.
-        keys = [
-            (ep.host, ep.port, ep.protocol)
-            for ep in eps
-            if ep.scan_error is None and ep.severity
-        ]
-        sev_map = {
-            (ep.host, ep.port, ep.protocol): ep.severity
-            for ep in eps
-            if ep.scan_error is None and ep.severity
-        }
-        counts = _count_by_bucket(keys, sev_map)
+        # Finding counts (237 D-01/D-02): one count per derived finding, the same
+        # derivation the Findings page shows, never the endpoint severity column.
+        counts = _count_findings_by_bucket(
+            [{"severity": f.severity} for f in session_findings]
+        )
 
         sessions.append(
             ScanSession(
@@ -1232,6 +1234,7 @@ def list_scans(db: Session = Depends(get_db)) -> List[ScanSession]:
                 ),
                 rating=rating,
                 rating_cap_reason=rating_cap_reason,
+                status=session_status(ts_str, _incomplete, _running),
             )
         )
     return sessions
@@ -1389,11 +1392,23 @@ def get_latest_scan(
         # to a fallback that fires ONLY when the latest row's scan_run_id IS
         # NULL — the legacy case D-10 requires stay reachable, with no
         # migration and no backfill.
-        latest_row = (
-            db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
-            .order_by(CryptoEndpoint.scanned_at.desc())
-            .first()
-        )
+        # Phase 237 COUNT-06 (D-08/D-17): skip scans with checkpoint rows but
+        # no completed reports checkpoint; NULL run ids (legacy) stay reachable.
+        # The explicit scan_id branch above is deliberately unfiltered.
+        _latest_q = db.query(CryptoEndpoint.scanned_at, CryptoEndpoint.scan_run_id)
+        try:
+            _incomplete_ids = incomplete_scan_run_ids(db)
+        except Exception as exc:
+            logger.debug("completion query failed (non-fatal): %s", safe_str(exc))
+            _incomplete_ids = set()
+        if _incomplete_ids:
+            _latest_q = _latest_q.filter(
+                or_(
+                    CryptoEndpoint.scan_run_id.is_(None),
+                    CryptoEndpoint.scan_run_id.notin_(_incomplete_ids),
+                )
+            )
+        latest_row = _latest_q.order_by(CryptoEndpoint.scanned_at.desc()).first()
         if latest_row is None:
             raise HTTPException(
                 status_code=404,
@@ -1703,8 +1718,10 @@ def compare_scans(
     # own severity — a shared or swapped findings list here would make the
     # comparison lie in a way a mere non-None check would not catch.
     # Phase 228 D-23: /compare now includes identity + service findings too.
-    evidence_a = build_evidence_summary(eps_a, derive_dashboard_scoring_findings(eps_a))
-    evidence_b = build_evidence_summary(eps_b, derive_dashboard_scoring_findings(eps_b))
+    fa = derive_dashboard_scoring_findings(eps_a)
+    fb = derive_dashboard_scoring_findings(eps_b)
+    evidence_a = build_evidence_summary(eps_a, fa)
+    evidence_b = build_evidence_summary(eps_b, fb)
     sd_a = compute_readiness_score(evidence_a)
     sd_b = compute_readiness_score(evidence_b)
     # Phase 188 SCORE-06 / 188-04 Task 1 (RQ-3): sd_a["score"]/subscores may be
@@ -1735,20 +1752,52 @@ def compare_scans(
         data_in_motion=_delta("data_in_motion"),
     )
 
-    # Finding diff: (host, protocol, severity) composite key (D-07, Pattern 3)
-    def _ep_key(ep: CryptoEndpoint) -> tuple[str, str, str] | None:
-        if ep.scan_error or not ep.severity:
-            return None
-        return (ep.host or "", ep.protocol or "", ep.severity or "")
+    # Finding diff (237 D-03/D-04): keyed by trends._finding_key (host, port,
+    # canonical title); severity is not part of identity. A (host, port) that
+    # errored in scan a is excluded from b so it is not a phantom removal.
+    errored_a = {(ep.host, ep.port) for ep in eps_a if ep.scan_error is not None}
+    _rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 
-    def _key_to_finding(key: tuple[str, str, str]) -> CompareFinding:
-        host, proto, sev = key
-        return CompareFinding(host=host, protocol=proto or None, severity=sev)
+    def _index(findings, excluded):
+        out: dict = {}
+        for f in findings:
+            if (f.get("host"), f.get("port")) in excluded:
+                continue
+            k = _finding_key(f)
+            cur = out.get(k)
+            if cur is None or _rank.get(f.get("severity"), 99) < _rank.get(
+                cur.get("severity"), 99
+            ):
+                out[k] = f
+        return out
 
-    keys_a = {k for k in (_ep_key(ep) for ep in eps_a) if k is not None}
-    keys_b = {k for k in (_ep_key(ep) for ep in eps_b) if k is not None}
-    added_findings = [_key_to_finding(k) for k in sorted(keys_a - keys_b)]
-    removed_findings = [_key_to_finding(k) for k in sorted(keys_b - keys_a)]
+    ka = _index(fa, set())
+    kb = _index(fb, errored_a)
+
+    def _to_compare(f: dict) -> CompareFinding:
+        return CompareFinding(
+            host=f.get("host") or "",
+            protocol=f.get("protocol"),
+            severity=f.get("severity") or "INFO",
+            port=f.get("port"),
+            title=f.get("title"),
+            description=f.get("description"),
+        )
+
+    def _sort_key(f: dict):
+        return (
+            _rank.get(f.get("severity"), 99),
+            str(f.get("host") or ""),
+            f.get("port") if f.get("port") is not None else -1,
+            f.get("title") or "",
+        )
+
+    added_findings = [
+        _to_compare(f) for f in sorted((ka[k] for k in ka.keys() - kb.keys()), key=_sort_key)
+    ]
+    removed_findings = [
+        _to_compare(f) for f in sorted((kb[k] for k in kb.keys() - ka.keys()), key=_sort_key)
+    ]
 
     # Endpoint diff: host sets + posture comparison
     hosts_a: dict[str, CryptoEndpoint] = {ep.host: ep for ep in eps_a if ep.host}

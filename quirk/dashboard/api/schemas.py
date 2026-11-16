@@ -716,6 +716,9 @@ class ScanSession(BaseModel):
     # bypass scoring; `rating_cap_reason` absent/None means NOT capped.
     rating: str = ""
     rating_cap_reason: Optional[str] = None
+    # Phase 237 D-09: 'complete' | 'running' | 'incomplete', from
+    # quirk/intelligence/scan_completion.py.
+    status: str = "complete"
 
 
 # Trend Analysis (Phase 31)
@@ -830,6 +833,9 @@ class CompareFinding(BaseModel):
     protocol: Optional[str] = None
     severity: str
     description: Optional[str] = None
+    # Phase 237 D-04: finding identity (additive, optional).
+    port: Optional[int] = None
+    title: Optional[str] = None
 
 
 class CompareEndpoint(BaseModel):
