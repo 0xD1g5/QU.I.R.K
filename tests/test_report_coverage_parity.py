@@ -780,3 +780,28 @@ class TestFourSurfaceCoverageParity:
         ]:
             assert COVERAGE_NOT_RECORDED_NOTICE in surface_text, surface_name
             assert "| Phase | Status | Detail |" not in surface_text, surface_name
+
+
+class TestPrintScanCoverageSourceLeg:
+    """237-03 / COUNT-05: the /print (Export PDF) leg of the coverage parity set.
+
+    Source-level guard only; the behavioural leg is
+    src/dashboard/src/pages/__tests__/print-scan-coverage.test.tsx. /print reuses
+    the dashboard's phaseRecordText so its wording cannot drift from the other pages.
+    """
+
+    def _src(self) -> str:
+        from pathlib import Path
+
+        return (
+            Path(__file__).resolve().parent.parent / "src/dashboard/src/pages/print.tsx"
+        ).read_text(encoding="utf-8")
+
+    def test_print_uses_shared_phase_text_and_testid(self):
+        src = self._src()
+        assert 'import { phaseRecordText } from "@/lib/coverage-reason"' in src
+        assert 'data-testid="print-scan-coverage"' in src
+        assert "coverage } = data" in src
+
+    def test_print_has_no_raw_html_injection(self):
+        assert "dangerouslySetInnerHTML" not in self._src()

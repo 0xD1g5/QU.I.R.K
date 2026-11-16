@@ -6,6 +6,7 @@ import type { QRAMMScoreResponse, QRAMMComplianceMapRow } from "@/types/api"
 import { extractCN } from "@/lib/cert-parse"
 import { formatScanDateTime, formatDateOnly } from "@/lib/datetime"
 import { formatScoreNumber } from "@/lib/utils"
+import { phaseRecordText } from "@/lib/coverage-reason"
 import {
   stateFromCoverageStatus,
   ASSESSMENT_LABEL,
@@ -55,6 +56,8 @@ const PRINT_CSS = [
   "h1{font-size:28px;font-weight:600;margin-bottom:8px}",
   "h2{font-size:20px;font-weight:600;margin-bottom:12px;margin-top:24px}",
   "h3{font-size:16px;font-weight:600;margin-bottom:8px}",
+  ".coverage-list{margin:8px 0 0 24px;padding:0;font-size:12px}",
+  ".print-coverage{margin-top:16px}",
   "table{width:100%;border-collapse:collapse;font-size:12px}",
   "th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--print-border);font-weight:600;background:var(--print-surface)}",
   "td{padding:5px 8px;border-bottom:1px solid var(--print-border);vertical-align:top}",
@@ -503,7 +506,11 @@ export function PrintPage() {
   }
   if (!data) return null
 
-  const { meta, score, confidence, findings, certificates, cbom_components, roadmap } = data
+  const { meta, score, confidence, findings, certificates, cbom_components, roadmap, coverage } = data
+  const coveragePhases = coverage && coverage.recorded ? coverage.phases : []
+  const showCoverage = coveragePhases.some((p) => p.status !== "ran")
+  const actionablePhases = coveragePhases.filter((p) => p.status !== "ran" && p.reason !== "disabled-by-config")
+  const disabledPhases = coveragePhases.filter((p) => p.status !== "ran" && p.reason === "disabled-by-config")
   // D-13: /print is a client deliverable and must not depend on which laptop rendered it — the
   // four Python renderers already emit "%Y-%m-%d %H:%M UTC" (quirk/reports/executive.py,
   // technical.py), so this fixes the zone to UTC and adds the label rather than following the
@@ -586,6 +593,31 @@ export function PrintPage() {
           <p className="meta">
             Confidence: {confidence.confidence_rating} ({confidence.confidence_score}%)
           </p>
+          {showCoverage && coverage && (
+            <div className="print-coverage" data-testid="print-scan-coverage">
+              <h3>Scan Coverage</h3>
+              <p>
+                <strong>
+                  {coverage.ran} ran / {coverage.skipped} skipped
+                </strong>
+              </p>
+              <p className="meta">
+                Some scan phases did not run or did not finish. Findings and scores in this report cover only the phases that ran.
+              </p>
+              {actionablePhases.length > 0 && (
+                <ul className="coverage-list">
+                  {actionablePhases.map((p) => (
+                    <li key={p.phase_name}>{phaseRecordText(p)}</li>
+                  ))}
+                </ul>
+              )}
+              {disabledPhases.length > 0 && (
+                <p className="meta">
+                  Not enabled in this scan's configuration: {disabledPhases.map((p) => p.label).join(", ")}.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Section 3: Findings */}
