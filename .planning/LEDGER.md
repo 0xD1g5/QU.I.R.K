@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (303)
+## Open (305)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -350,6 +350,8 @@ the Evidence cell.
 | 261116-legacy-tls-count-ignores-ssl-max-tier | OPEN | P3 | scoring | Evidence legacy_tls_count does not count the SSLv2/SSLv3-only HIGH tier, so SSLv3-only scores 63 vs TLS 1.0-only 62 | .planning/todos/pending/261116-legacy-tls-count-ignores-ssl-max-tier.md | verified open at the 236-09 fix commit (WR-01): identical on both surfaces, not a parity defect; owner 999.132 |
 | 261116-max-legacy-tls-missing-version-falls-to-low-tier | OPEN | P3 | scoring | is_max_legacy_tls returns False for empty tls_version, so a legacy-only supported list gets LOW not HIGH on both surfaces | .planning/todos/pending/261116-max-legacy-tls-missing-version-falls-to-low-tier.md | verified open at the 236-09 fix commit (WR-07): quirk/util/weak_crypto.py; family legacy_supported_only pins today's LOW; owner 999.132 |
 | 261116-divergence-gate-title-blind-and-disposition-absorbs-residuals | OPEN | P3 | tests | Divergence gate keys on severity not canonical title and one disposition absorbs every residual at its key | .planning/todos/pending/261116-divergence-gate-title-blind-and-disposition-absorbs-residuals.md | verified open at the 236-09 fix commit (WR-04, WR-05): tests/test_severity_divergence_behaviour.py; owner 999.132 |
+| 261116-post-handshake-tls-failure-drops-observed-findings | OPEN | P2 | scoring | A TLS failure after a successful handshake sets scan_error, so observed findings (legacy version, expired cert CRITICAL) appear on neither surface and the report says the handshake was blocked | .planning/todos/pending/261116-post-handshake-tls-failure-drops-observed-findings.md | 236-09 review WR-02 at 992e52bf: quirk/scanner/tls_scanner.py _scan_one_fallback; guard quirk/dashboard/api/finding_derivation.py:90 mirrors evaluate_endpoints; owner 999.132 |
+| 261116-errored-tls-http-rows-absent-from-dashboard-findings | OPEN | P3 | dashboard | Errored TLS/HTTP rows get a MEDIUM/INFO scan-error finding in the report but no row on the dashboard Findings page | .planning/todos/pending/261116-errored-tls-http-rows-absent-from-dashboard-findings.md | 236-09 review WR-01 at 992e52bf: routes/scan.py _derive_dar_findings covers POSTGRESQL/MYSQL only; score unaffected; owner 999.132 |
 
 ## Deferred (18)
 

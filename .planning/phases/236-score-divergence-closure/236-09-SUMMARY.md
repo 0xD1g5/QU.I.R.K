@@ -52,7 +52,7 @@ Added: tls_scan_error_with_fields, http_scan_error, legacy_inconsistent_max, leg
 
 ## New LEDGER IDs
 
-261116-rsa-undersized-key-predicate-differs-across-surfaces (P2, WR-03), 261116-legacy-tls-count-ignores-ssl-max-tier (P3, WR-01), 261116-max-legacy-tls-missing-version-falls-to-low-tier (P3, WR-07, names the `is_max_legacy_tls(None, ...)` predicate-level lock and does not rely on the legacy_supported_only family), 261116-divergence-gate-title-blind-and-disposition-absorbs-residuals (P3, WR-04/05). Open count 299 -> 303. No row was added for the report-only MEDIUM/INFO scan-error findings: the dashboard already emits INFO rows for scan_error protocols in `routes/scan.py` (~:213-252), so that observation is recorded here instead.
+261116-rsa-undersized-key-predicate-differs-across-surfaces (P2, WR-03), 261116-legacy-tls-count-ignores-ssl-max-tier (P3, WR-01), 261116-max-legacy-tls-missing-version-falls-to-low-tier (P3, WR-07, names the `is_max_legacy_tls(None, ...)` predicate-level lock and does not rely on the legacy_supported_only family), 261116-divergence-gate-title-blind-and-disposition-absorbs-residuals (P3, WR-04/05). Open count 299 -> 303. Correction (orchestrator, post-review): the original text here skipped a row for the report-only MEDIUM/INFO scan-error findings, citing `routes/scan.py` (~:213-252). That block is `_derive_dar_findings` and covers POSTGRESQL/MYSQL only, so the skip was wrong (236-09-REVIEW.md WR-01). Rows 261116-errored-tls-http-rows-absent-from-dashboard-findings (P3) and 261116-post-handshake-tls-failure-drops-observed-findings (P2, WR-02) were added. Open count 303 -> 305.
 
 ## Deviations from Plan
 
