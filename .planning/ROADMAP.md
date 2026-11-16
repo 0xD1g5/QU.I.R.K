@@ -159,7 +159,21 @@ Plans:
   3. The Executive Skipped badge lists every skipped connector, including those after a connector row with no error category, and Export PDF shows the skip reasons whenever skips lowered the score.
   4. While a scan is running it is marked as running, and the dashboard and the latest-scan API keep showing the last completed scan until it finishes.
   5. A scan in which the JWT, SAML or DNSSEC connector fails on every target shows that outage in Trends and in the notify message.
-**Plans**: TBD
+**Plans**: 8 plans
+Plans:
+**Wave 1**
+- [ ] 237-01-PLAN.md — Trends delta keyed on derived findings (host, port, canonical title), derive once per session, Optional protocol + title on samples (COUNT-02, D-01..D-03, D-12, D-18)
+- [ ] 237-02-PLAN.md — Null-category partial failures fixed on writer and reader; scan_completion helper; checkpoints for every scan; job run id stamped at start (COUNT-04, COUNT-06, D-05, D-07, D-14, D-15)
+- [ ] 237-03-PLAN.md — UI: /print Scan Coverage, Compare Finding/Port columns, History Running/Incomplete status, sidebar badge; build + bundle (COUNT-03/05/06, D-04, D-06, D-09, D-17)
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 237-04-PLAN.md — /api/scans derived counts + status, /api/compare finding identity, /api/scan/latest skips incomplete scans (COUNT-01/03/06, D-01, D-04, D-08, D-09)
+- [ ] 237-05-PLAN.md — Full connector outage counts in Trends; notify text, trigger and outage wording (COUNT-07, D-10, D-11, D-16, D-21)
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 237-06-PLAN.md — Trends timeline counts from derived findings; complete-only session listers, notify session pair and exposure map (COUNT-01/06, D-08, D-13, D-17)
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 237-07-PLAN.md — Live core-lab evidence for criteria 1, 2, 4, 5 and the operator's visual check (checkpoint)
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 237-08-PLAN.md — Docs, Series 237 UAT, vault sync, ledger rows and closure, full suite, branch CI (D-19, D-20)
 **UI hint**: yes
 
 ### Phase 238: Identity and Certificate Findings
