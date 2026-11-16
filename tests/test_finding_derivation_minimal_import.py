@@ -87,3 +87,28 @@ def test_finding_derivation_single_import_without_fastapi():
         "from quirk.dashboard.api.finding_derivation import derive_dashboard_scoring_findings\n"
         "assert derive_dashboard_scoring_findings([]) == []\n"
     ))
+
+
+def test_dispatch_path_resolves_dashboard_deriver_without_fastapi():
+    """The dispatcher imports the deriver at call time (pydantic import hygiene), so
+    module import alone proves nothing: drive dispatch_notifications itself."""
+    _assert_ok(_run(
+        "from datetime import datetime\n"
+        "import quirk.notify.dispatcher as d\n"
+        "from quirk.notify.config import NotifyCfg\n"
+        "seen = {}\n"
+        "class _Stop(Exception):\n"
+        "    pass\n"
+        "def _fake(cur, prev, db, **kw):\n"
+        "    seen.update(kw)\n"
+        "    raise _Stop()\n"
+        "d.load_notifications_config = lambda: NotifyCfg(trigger_score_floor=-1000)\n"
+        "d._find_two_sessions = lambda db: (datetime(2026, 1, 2), None)\n"
+        "d.compute_trend_report = _fake\n"
+        "try:\n"
+        "    d.dispatch_notifications(run=None, schedule=None, db=None)\n"
+        "except _Stop:\n"
+        "    pass\n"
+        "assert seen['findings_deriver'].__name__ == 'derive_dashboard_scoring_findings'\n"
+        "assert seen['findings_deriver']([]) == []\n"
+    ))

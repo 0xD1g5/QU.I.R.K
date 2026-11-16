@@ -185,7 +185,17 @@ def dispatch_notifications(
         return  # No scan data yet — nothing to report
 
     # Compute the trend report for this scan pair
-    report: TrendReport = compute_trend_report(current_ts, previous_ts, db)
+    # Phase 236 D-11: score the drift report with the dashboard recipe so the Slack
+    # score equals the /api/trends page it links to.  The deriver module is
+    # FastAPI-free (D-10, proven by tests/test_finding_derivation_minimal_import.py)
+    # but pulls pydantic via the dashboard schemas, so it is imported at call time:
+    # tests/test_notify_session_identity.py::test_import_hygiene_no_fastapi_or_pydantic
+    # keeps importing quirk.notify.dispatcher itself free of both.
+    from quirk.dashboard.api.finding_derivation import derive_dashboard_scoring_findings
+
+    report: TrendReport = compute_trend_report(
+        current_ts, previous_ts, db, findings_deriver=derive_dashboard_scoring_findings
+    )
 
     # Evaluate the conservative trigger (NOTIFY-02, T-101-12)
     threshold = abs(notify_cfg.trigger_score_floor)
