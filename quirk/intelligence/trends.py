@@ -143,7 +143,9 @@ class TrendReport:
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def list_session_timestamps(db: Session, limit: int = 10) -> List[datetime]:
+def list_session_timestamps(
+    db: Session, limit: int = 10, *, complete_only: bool = False
+) -> List[datetime]:
     """Return up to `limit` most recent distinct session timestamps (newest first).
 
     RVW-003: a session is one `scan_run_id`, represented by its *earliest*
@@ -156,6 +158,13 @@ def list_session_timestamps(db: Session, limit: int = 10) -> List[datetime]:
     so two scans started in different milliseconds stay distinct (CR-05). NULL
     scanned_at rows are excluded (D-13). The returned datetimes are real stored
     values, so _fetch_session_endpoints can match them exactly (FIND-12).
+
+    Phase 237 D-08/D-09: with ``complete_only=True`` sessions whose scan_run_id
+    is incomplete (checkpoint rows but no completed 'reports' checkpoint, see
+    quirk.intelligence.scan_completion) are dropped BEFORE the ``limit`` slice,
+    so a running or interrupted scan is never a trend session. Legacy NULL-run
+    keys are always kept (D-07/D-14). The default False leaves every other
+    importer's behaviour unchanged.
 
     Shared by the dashboard routes and the notifier (Phase 229 D-08); it must
     stay free of dashboard-extra imports.
@@ -184,6 +193,14 @@ def list_session_timestamps(db: Session, limit: int = 10) -> List[datetime]:
         prev = earliest.get(key)
         if prev is None or row_ts < prev:
             earliest[key] = row_ts
+    if complete_only:
+        from quirk.intelligence.scan_completion import incomplete_scan_run_ids
+
+        incomplete = incomplete_scan_run_ids(db)
+        earliest = {
+            k: v for k, v in earliest.items()
+            if not (isinstance(k, str) and k in incomplete)
+        }
     return sorted(earliest.values(), reverse=True)[:limit]
 
 

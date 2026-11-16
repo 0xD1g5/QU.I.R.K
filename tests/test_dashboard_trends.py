@@ -295,6 +295,7 @@ def test_trends_timeline_one_point_per_scan_run_microsecond_stamps():
     several microsecond timestamps inside one run are ONE timeline point with
     a non-zero endpoint count."""
     from quirk.models import CryptoEndpoint
+    from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 
     client, SessionFactory = _make_trend64_client_and_session()
     db = SessionFactory()
@@ -309,6 +310,13 @@ def test_trends_timeline_one_point_per_scan_run_microsecond_stamps():
                     severity=sev, scan_run_id=run_id,
                     scanned_at=base + _td_t64(milliseconds=3 * i),
                 ))
+            # Phase 237 D-13: timeline counts are derived findings, not row
+            # severity, so seed one finding-producing endpoint per run.
+            db.add(CryptoEndpoint(
+                host=f"{run_id}-adv.example", port=443, protocol="ADVISORY",
+                service_detail=ADVISORY_JWKS_VERIFY_DISABLED, scan_run_id=run_id,
+                scanned_at=base + _td_t64(milliseconds=7),
+            ))
         db.commit()
     finally:
         db.close()

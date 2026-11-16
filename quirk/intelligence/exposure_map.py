@@ -327,10 +327,19 @@ def latest_scan_run_id(session: Any) -> Any:
     database), which callers treat as "do not scope" rather than "scope to
     nothing" — scoping to nothing would render an empty map and read as
     verified zero exposure.
+
+    Phase 237 D-17: run ids that are incomplete (checkpoint rows but no
+    completed 'reports' checkpoint) are skipped, so a running or interrupted
+    scan never becomes "the latest". An explicit scan_run_id passed to
+    ``derive_exposure_map`` is unaffected.
     """
-    return (
-        session.query(func.max(CryptoEndpoint.scan_run_id)).scalar()
-    )
+    from quirk.intelligence.scan_completion import incomplete_scan_run_ids
+
+    query = session.query(func.max(CryptoEndpoint.scan_run_id))
+    incomplete = incomplete_scan_run_ids(session)
+    if incomplete:
+        query = query.filter(CryptoEndpoint.scan_run_id.notin_(incomplete))
+    return query.scalar()
 
 
 def derive_exposure_map(

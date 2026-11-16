@@ -123,9 +123,10 @@ def _find_two_sessions(db: Session) -> Tuple[Optional[datetime], Optional[dateti
 
     Thin wrapper over the shared list_session_timestamps() (Phase 229 D-10):
     sessions are identified by scan_run_id, not by a millisecond string key
-    (FIND-12). NULL scanned_at rows excluded (D-13).
+    (FIND-12). NULL scanned_at rows excluded (D-13). Phase 237 D-08: running or
+    interrupted scans are skipped (complete_only=True).
     """
-    sessions = list_session_timestamps(db, limit=2)
+    sessions = list_session_timestamps(db, limit=2, complete_only=True)
     current = sessions[0] if sessions else None
     previous = sessions[1] if len(sessions) > 1 else None
     return current, previous
@@ -173,6 +174,31 @@ def should_notify(report: TrendReport, threshold: int = 5) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _newest_session_is_incomplete(db: Session) -> bool:
+    """True when the newest scan session overall is running or interrupted (D-22).
+
+    Fail-soft: any error (a mock or broken db) reads as False so the guard can
+    never suppress or crash the fan-out by itself.
+    """
+    try:
+        from quirk.intelligence.scan_completion import incomplete_scan_run_ids
+        from quirk.models import CryptoEndpoint
+
+        row = (
+            db.query(CryptoEndpoint.scan_run_id)
+            .filter(CryptoEndpoint.scanned_at.isnot(None))
+            .order_by(CryptoEndpoint.scanned_at.desc())
+            .first()
+        )
+        if row is None or not row[0]:
+            return False
+        return row[0] in incomplete_scan_run_ids(db)
+    except Exception as exc:  # noqa: BLE001
+        import logging as _logging
+        _logging.getLogger(__name__).debug("newest-session check failed: %s", exc)
+        return False
+
+
 def dispatch_notifications(
     run: ScheduledRun,
     schedule: ScheduledScan,
@@ -198,6 +224,13 @@ def dispatch_notifications(
     notify_cfg: Optional[NotifyCfg] = load_notifications_config()
     if notify_cfg is None:
         return  # Notifications not configured — exit cleanly
+
+    # Phase 237 D-22: a failed or interrupted run must not re-send the previous
+    # complete pair's alert (complete_only below would otherwise fall back to it).
+    if getattr(run, "status", None) != "completed":
+        return
+    if _newest_session_is_incomplete(db):
+        return
 
     # Discover the two most recent scan sessions
     current_ts, previous_ts = _find_two_sessions(db)

@@ -24,6 +24,7 @@ from quirk.models import MergeRun
 def _make_run(scan_id=None):
     run = MagicMock(spec=MergeRun)
     run.scan_id = scan_id
+    run.status = "completed"  # Phase 237 D-22: dispatch only for completed runs
     return run
 
 
@@ -73,6 +74,7 @@ def test_scan_id_commit_failure_does_not_drop_slack_fanout():
     _some_dt = datetime(2026, 6, 13, 12, 0, 0, tzinfo=timezone.utc)
     with patch.object(dispatcher, "load_notifications_config", return_value=notify_cfg), \
          patch.object(dispatcher, "_find_two_sessions", return_value=(_some_dt, None)), \
+         patch.object(dispatcher, "_newest_session_is_incomplete", return_value=False), \
          patch.object(dispatcher, "compute_trend_report", return_value=report), \
          patch.object(dispatcher, "should_notify", return_value=True), \
          patch.object(dispatcher, "_channel_send_slack") as mock_slack, \
