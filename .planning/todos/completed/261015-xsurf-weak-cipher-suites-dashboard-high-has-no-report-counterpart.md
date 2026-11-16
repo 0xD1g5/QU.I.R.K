@@ -37,3 +37,7 @@ to carry a `SEVERITY_DIVERGENCES` entry, and this todo is that entry's target.
 - Effort **M**: new evaluator site, title in the compliance map, remediation theme decision, parity fixture. Unknown:
   whether `tls_weak_ciphers_present` and `tls_legacy_suites_present` should be merged (they are set from different
   capability checks, `quirk/scanner/tls_scanner.py:323-324`). No spike needed.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 236 (XSURF-10): report HIGH "Weak TLS cipher suites accepted" on tls_weak_ciphers_present, bridged to the dashboard "Weak cipher suites enabled". Commit main 405925d5 (PR #82 merge). Test: tests/test_cross_surface_parity.py::test_xsurf236_family_headline_parity[weak_cipher]. Score movement: report scores drop for RC4/3DES/NULL/EXPORT/MD5 or SSLv2/3 endpoints.

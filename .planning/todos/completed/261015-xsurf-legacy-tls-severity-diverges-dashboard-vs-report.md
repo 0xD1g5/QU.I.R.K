@@ -34,3 +34,7 @@ now reads both severities from source at run time and carries this pair in `SEVE
   finding exactly this pair.
 - Effort **S** for the severity literal, **M** if the dashboard condition also moves to offered-versions (needs
   `tls_supported_versions` parity and a fixture). Unknown: which severity the product wants. No spike needed.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 236 (XSURF-09): shared `is_max_legacy_tls`; HIGH "Only legacy TLS versions offered (no TLS 1.2+)" and LOW "Legacy TLS versions allowed (TLS 1.0/1.1)" on both surfaces. Commits main 405925d5 (PR #82 merge). Tests: tests/test_weak_crypto_helper.py::test_is_max_legacy_tls, tests/test_ticketing_fingerprint_stability.py::test_max_legacy_title_keeps_legacy_tls_fingerprint, tests/test_severity_divergence_behaviour.py, tests/test_cross_surface_parity.py::test_xsurf236_scan_error_tls_row_headline_parity, tests/test_severity_divergence_behaviour.py::test_injected_mutations_turn_new_gate_red[M3_drop_scan_error_guard]. Score movement: report scores drop for endpoints with no TLS 1.2+ (incl. SSLv2/SSLv3-only); dashboard gains a LOW for legacy alongside TLS 1.2+. Also (236-09): dashboard scores rise for TLS or HTTP rows whose scan errored after populating columns (they no longer raise dashboard HIGH/CRITICAL findings, matching the report).

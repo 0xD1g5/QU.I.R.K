@@ -109,7 +109,7 @@ the same findings, counts and score, and connector targets cannot get past the t
 Requirements are in `.planning/REQUIREMENTS.md` (25, all mapped). Phases 236–239 are independent of
 each other and can run in any order. Phase 240 depends on all four, because 5.29.0 ships their fixes.
 
-- [ ] **Phase 236: Score Divergence Closure** - The dashboard and the report give the same severities and the same headline score for the same scan, and a new divergence fails CI
+- [x] **Phase 236: Score Divergence Closure** - The dashboard and the report give the same severities and the same headline score for the same scan, and a new divergence fails CI
 - [ ] **Phase 237: History and Count Truth** - Scan History, Trends, Compare, the Executive Skipped badge, Export PDF and notify count and show every finding, skip and outage
 - [ ] **Phase 238: Identity and Certificate Findings** - Weak JWKS algorithms, non-metadata SAML answers, TLS 1.3 mTLS rejections and SHA-1-signed certificates each produce the right finding or skip
 - [ ] **Phase 239: Connector Target Trust-Gate Hardening** - The trust gate checks exactly the targets each connector scans, including scalar target values, directory referrals and non-ASCII IP literals

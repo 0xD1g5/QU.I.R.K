@@ -81,3 +81,7 @@ merge fixture, and 84 vs 69 for a single weak-cipher endpoint. The core lab simp
 Scheduled: ROADMAP.md "Next Milestone Candidates (v5.29)", Phase 236 (v5.29 candidate, early): Dashboard/Report Score Divergence
 Closure, which carries the four score-affecting todos; the gate and Slack/Trends parts (items 1 and 2 above) are referenced from there
 and are not yet planned as separate work.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 236 (XSURF-13): behaviour-derived gate tests/test_severity_divergence_behaviour.py replaces the AST-literal gate; Slack drift score uses the Trends recipe (tests/test_notify_dispatcher.py::test_dispatcher_score_matches_trends_page_trends_parity). Commits main 405925d5 (PR #82 merge). Remaining dispositioned divergences: Kerberos weak etype, DNSSEC, Unencrypted HTTP service (own todos, owner 999.132).
