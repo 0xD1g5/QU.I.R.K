@@ -39,6 +39,20 @@ def _ep(ts, run_id, host, severity="LOW"):
     )
 
 
+def _ep_deriver(endpoints):
+    """237-01 re-seed: Trends now diffs DERIVED findings, not CryptoEndpoint.severity.
+    These legacy fixtures encode a finding as an endpoint's severity, so this
+    stub derives one finding per non-errored endpoint (title = its protocol) and
+    carries ep.severity through. Real TLS derivation is covered by
+    tests/test_trends_finding_delta.py."""
+    return [
+        {"host": ep.host, "port": ep.port, "protocol": ep.protocol,
+         "title": f"{ep.protocol} finding", "severity": ep.severity}
+        for ep in endpoints
+        if ep.scan_error is None
+    ]
+
+
 DAY0 = datetime(2026, 10, 1, 12, 0, 0, 123456)
 DAY1 = datetime(2026, 10, 2, 12, 0, 0, 654321)
 DAY2 = datetime(2026, 10, 3, 12, 0, 0, 111111)
@@ -60,7 +74,7 @@ def test_probe_two_runs_microsecond_timestamps_fires(db):
     assert len(prev_eps) == 1
     assert {e.scan_run_id for e in cur_eps} != {e.scan_run_id for e in prev_eps}
 
-    report = compute_trend_report(current, previous, db)
+    report = compute_trend_report(current, previous, db, findings_deriver=_ep_deriver)
     assert should_notify(report) is True
 
 

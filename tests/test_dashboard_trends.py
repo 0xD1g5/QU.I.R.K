@@ -107,23 +107,28 @@ def test_uat_31_trends_two_sessions_flat_wire_format():
     client, SessionFactory = _make_uat31_client_and_session()
     db = SessionFactory()
     try:
+        # 237-01 re-seed: Trends diffs DERIVED findings (CryptoEndpoint.severity
+        # is not read). HTTP -> "Unencrypted HTTP service" HIGH; a TLS 1.3 ECDSA
+        # endpoint -> "Quantum-vulnerable algorithm: ECDSA" MEDIUM.
+        _med = dict(
+            protocol="TLS", tls_version="TLSv1.3",
+            cipher_suite="TLS_AES_256_GCM_SHA384", tls_supported_versions="TLSv1.3",
+            cert_pubkey_alg="ECDSA", cert_pubkey_size=256,
+            cert_subject="CN=b", cert_issuer="CN=CA",
+        )
         # Previous session: a HIGH, b MEDIUM
         db.add(CryptoEndpoint(
-            host="a.example", port=443, protocol="TLS",
-            severity="HIGH", scanned_at=_PREV_TS_UAT31,
+            host="a.example", port=80, protocol="HTTP", scanned_at=_PREV_TS_UAT31,
         ))
         db.add(CryptoEndpoint(
-            host="b.example", port=443, protocol="TLS",
-            severity="MEDIUM", scanned_at=_PREV_TS_UAT31,
+            host="b.example", port=443, scanned_at=_PREV_TS_UAT31, **_med,
         ))
         # Current session: a HIGH (unchanged), c HIGH (new), b absent (resolved)
         db.add(CryptoEndpoint(
-            host="a.example", port=443, protocol="TLS",
-            severity="HIGH", scanned_at=_CURR_TS_UAT31,
+            host="a.example", port=80, protocol="HTTP", scanned_at=_CURR_TS_UAT31,
         ))
         db.add(CryptoEndpoint(
-            host="c.example", port=22, protocol="SSH",
-            severity="HIGH", scanned_at=_CURR_TS_UAT31,
+            host="c.example", port=80, protocol="HTTP", scanned_at=_CURR_TS_UAT31,
         ))
         db.commit()
     finally:
@@ -457,15 +462,16 @@ def test_trends_does_not_500_when_severity_is_null():
     client, SessionFactory = _make_uat31_client_and_session()
     db = SessionFactory()
     try:
-        # Previous session: one NULL-severity endpoint.
+        # Previous session: one NULL-severity endpoint that derives a finding
+        # (237-01 re-seed: Trends diffs derived findings, not the severity column).
         db.add(CryptoEndpoint(
-            host="prev.example", port=443, protocol="TLS",
+            host="prev.example", port=80, protocol="HTTP",
             severity=None, scanned_at=_PREV_TS_UAT31,
         ))
         # Current session: prev.example resolved, new.example arrives. Both
         # NULL-severity, exactly as a TLS-only scan produces.
         db.add(CryptoEndpoint(
-            host="new.example", port=443, protocol="TLS",
+            host="new.example", port=80, protocol="HTTP",
             severity=None, scanned_at=_CURR_TS_UAT31,
         ))
         db.commit()
@@ -490,10 +496,10 @@ def test_trends_does_not_500_when_severity_is_null():
         f"NULL-severity resolved endpoint missing. Got: {data['resolved_findings_sample']}"
     )
     for sample in data["new_findings_sample"] + data["resolved_findings_sample"]:
-        assert sample["severity"] is None, (
-            "severity must round-trip as null, not be coerced to a string "
-            f"placeholder. Got: {sample!r}"
-        )
+        # 237-01: the sample carries the DERIVED finding severity (the endpoint
+        # column is NULL) and its title; protocol is Optional on the schema.
+        assert sample["severity"] == "HIGH", f"Got: {sample!r}"
+        assert sample["title"] == "Unencrypted HTTP service", f"Got: {sample!r}"
 
 
 def _clean_tls_kwargs(i: int, ts, cert_not_after):
