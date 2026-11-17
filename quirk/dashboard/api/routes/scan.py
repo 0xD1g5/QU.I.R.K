@@ -1608,10 +1608,27 @@ def get_latest_scan(
     # rows are keyed by scan_run_id = started_utc (tz-aware ISO, different event).
     # Resolve the correct scan_run_id via ScanJob: find the completed ScanJob
     # whose completed_at is closest to latest_ts — its scan_run_id is the checkpoint key.
+    # 237 review WR-03: D-14 writes checkpoints for every CLI and scheduled
+    # scan under the endpoints' own scan_run_id, so prefer that exact id
+    # whenever it has checkpoint rows. The ScanJob +/-30 min window below is
+    # only the legacy fallback (it misses scans with no ScanJob and can bind a
+    # neighbouring job's checkpoints).
     _checkpoint_scan_run_id: Optional[str] = None
+    if _coverage_run_id:
+        try:
+            from quirk.models import ScanCheckpoint as _ScanCheckpoint
+            if (
+                db.query(_ScanCheckpoint.scan_run_id)
+                .filter(_ScanCheckpoint.scan_run_id == _coverage_run_id)
+                .first()
+                is not None
+            ):
+                _checkpoint_scan_run_id = _coverage_run_id
+        except Exception as exc:
+            logger.debug("checkpoint id lookup failed (non-fatal): %s", safe_str(exc))
     try:
         _latest_ts_naive = latest_ts if isinstance(latest_ts, datetime) else None
-        if _latest_ts_naive is not None:
+        if _checkpoint_scan_run_id is None and _latest_ts_naive is not None:
             # Search window: scan completed within 30 minutes of latest_ts
             _window = timedelta(minutes=30)
             _job = (

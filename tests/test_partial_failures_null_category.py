@@ -127,3 +127,63 @@ def test_db_then_vault_ordering_in_process(tmp_path):
     vault = next(e for e in got if e.scanner == "vault_scanner")
     assert vault.error_category == "targets_unreachable"
     assert next(e for e in got if e.scanner == "db1").error_category == "exception"
+
+
+# ---------------------------------------------------------------------------
+# 237 review WR-03: /api/scan/latest resolves partial_failures by the scan's
+# own run id (D-14 checkpoints), not only via a completed ScanJob window.
+# ---------------------------------------------------------------------------
+
+_CLI_RUN = "2026-11-16T09:00:00+00:00"
+_OTHER_RUN = "2026-11-16T08:55:00+00:00"
+_CLI_TS = datetime(2026, 11, 16, 9, 10, 0)
+
+
+def _seed_cli_scan(Session, with_neighbour_job: bool):
+    from quirk.models import ScanJob
+
+    db = Session()
+    try:
+        db.add(CryptoEndpoint(host="h", port=443, protocol="TLS",
+                              scanned_at=_CLI_TS, scan_run_id=_CLI_RUN))
+        db.add(ScanCheckpoint(
+            scan_run_id=_CLI_RUN, stage="inventory", status="completed",
+            partial_failure=True, completed_at=_CLI_TS,
+            error_summary=json.dumps([_valid("vault_scanner")]),
+        ))
+        db.add(ScanCheckpoint(scan_run_id=_CLI_RUN, stage="reports",
+                              status="completed", completed_at=_CLI_TS))
+        if with_neighbour_job:
+            # A different dashboard job completed inside the old +/-30 min
+            # window, with its own partial failure. It must not be bound.
+            db.add(ScanJob(job_id="job-other", status="completed", target="x",
+                           profile="quick", calibration="balanced",
+                           scan_run_id=_OTHER_RUN, completed_at=_CLI_TS))
+            db.add(ScanCheckpoint(
+                scan_run_id=_OTHER_RUN, stage="inventory", status="completed",
+                partial_failure=True, completed_at=_CLI_TS,
+                error_summary=json.dumps([_valid("db_scanner")]),
+            ))
+            db.add(ScanCheckpoint(scan_run_id=_OTHER_RUN, stage="reports",
+                                  status="completed", completed_at=_CLI_TS))
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_latest_cli_scan_without_scanjob_has_partial_failures():
+    from tests.test_dashboard_scan_history import _make_client_and_session
+
+    client, Session = _make_client_and_session()
+    _seed_cli_scan(Session, with_neighbour_job=False)
+    body = client.get("/api/scan/latest").json()
+    assert [e["scanner"] for e in body["partial_failures"]] == ["vault_scanner"]
+
+
+def test_latest_prefers_exact_run_id_over_neighbouring_job():
+    from tests.test_dashboard_scan_history import _make_client_and_session
+
+    client, Session = _make_client_and_session()
+    _seed_cli_scan(Session, with_neighbour_job=True)
+    body = client.get("/api/scan/latest").json()
+    assert [e["scanner"] for e in body["partial_failures"]] == ["vault_scanner"]
