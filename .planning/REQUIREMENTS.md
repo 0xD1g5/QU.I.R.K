@@ -60,17 +60,17 @@ tracked file.
 
 ### Identity and certificate findings (IDENT, DETECT)
 
-- [ ] **IDENT-05**: JWKS keys using `alg: none`, RSA-1024 or HS256 produce a finding on the dashboard
+- [x] **IDENT-05**: JWKS keys using `alg: none`, RSA-1024 or HS256 produce a finding on the dashboard
   and in the report, and lower the score. Source: `261110-jwks-weak-alg-no-finding-no-score` (P1).
-- [ ] **IDENT-06**: The Identity page shows JWT results whenever JWT scanning ran. Source:
+- [x] **IDENT-06**: The Identity page shows JWT results whenever JWT scanning ran. Source:
   `261110-jwt-weakness-absent-from-identity-page`.
-- [ ] **IDENT-07**: A SAML URL that answers with something other than SAML metadata reads as skipped
+- [x] **IDENT-07**: A SAML URL that answers with something other than SAML metadata reads as skipped
   or failed with a named reason, not `ran`; the JWT connector is measured for the same defect and
   fixed if affected. Source: `261108-saml-non-metadata-answer-reads-ran` (P1, disclosed S8b).
-- [ ] **DETECT-06**: An mTLS-required endpoint is reported as MTLS_REQUIRED when the handshake is TLS
+- [x] **DETECT-06**: An mTLS-required endpoint is reported as MTLS_REQUIRED when the handshake is TLS
   1.3 and the rejection comes at the HTTP layer (regression; UAT-4-11 PASS 2026-04-17). Source:
   `261110-reg-mtls-required-undetected-under-tls13`.
-- [ ] **DETECT-07**: A SHA-1-signed TLS certificate produces a finding. Source:
+- [x] **DETECT-07**: A SHA-1-signed TLS certificate produces a finding. Source:
   `261110-sha1-cert-signature-no-finding`.
 
 ### Trust gate (TRUST)
@@ -132,11 +132,11 @@ tracked file.
 | COUNT-05 | Phase 237 | Complete |
 | COUNT-06 | Phase 237 | Complete |
 | COUNT-07 | Phase 237 | Complete |
-| IDENT-05 | Phase 238 | Pending |
-| IDENT-06 | Phase 238 | Pending |
-| IDENT-07 | Phase 238 | Pending |
-| DETECT-06 | Phase 238 | Pending |
-| DETECT-07 | Phase 238 | Pending |
+| IDENT-05 | Phase 238 | Complete |
+| IDENT-06 | Phase 238 | Complete |
+| IDENT-07 | Phase 238 | Complete |
+| DETECT-06 | Phase 238 | Complete |
+| DETECT-07 | Phase 238 | Complete |
 | TRUST-01 | Phase 239 | Pending |
 | TRUST-02 | Phase 239 | Pending |
 | TRUST-03 | Phase 239 | Pending |

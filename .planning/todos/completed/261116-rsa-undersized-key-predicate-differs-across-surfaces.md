@@ -23,3 +23,7 @@ dashboard (review WR-03).
 ## Feasibility & Effort
 
 **Feasibility: HIGH.** One predicate, a few lines. **Effort: S.** Score-moving on both sides for the odd rows, so pin the new headline numbers.
+
+## Resolution (2026-11-17)
+
+Fixed by Phase 238 (D-20): both surfaces use one predicate, `quirk.util.weak_crypto.is_undersized_rsa` (RSA or RSA-PSS, integer size, 0 < size < 2048). Size 0 is undetermined and raises no HIGH on either surface; an RSA-PSS key under 2048 bits is HIGH on both. This departs from the todo's "report predicate verbatim" on purpose (238 D-20). Families rsa_size_0 and rsa_pss_1024 added to FAMILY_ROWS with no residual. Commits main 82ebe634 (PR #86 merge; ba1df9aa, 78f0a7e2, 6039349a). Tests: tests/test_rsa_undersized_parity.py (3 nodes), tests/test_weak_crypto_helper.py. Behaviour change: report-mode scans of RSA size-0 rows lose a HIGH; RSA-PSS rows under 2048 bits gain one. Related open rows: 261117-rsa-pss-keys-reported-as-rsa, 261117-rsa-pss-large-key-no-quantum-vulnerable-finding.
