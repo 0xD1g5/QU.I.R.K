@@ -3,7 +3,7 @@ target's published JWKS yields exactly one finding per key, on the CLI report
 and the dashboard alike, through the one shared evaluator
 (``quirk.engine.findings_evaluator.evaluate_identity_endpoints``).
 
-Rule table (D-02), first match wins, one finding per (host, kid):
+Rule table (D-02), first match wins, one finding per distinct key:
   1. ``alg`` is exactly "none" (any case) -> CRITICAL "JWKS key declares alg:none"
   2. the JWKS publishes private or symmetric key material (the scanner's
      marker, or a non-empty secret member such as ``k``) -> CRITICAL
@@ -185,6 +185,52 @@ def test_kid_dedupe():
     two = [_jwt_row(_JWKS_HOST, jwk, None), _jwt_row(_JWKS_HOST, dict(jwk, kid="b"), None)]
     for triples in (_report(two), _dash(two), _ident(two)):
         assert len(_jwt_only(triples)) == 2
+
+
+def test_keys_sharing_a_kid_are_evaluated_separately():
+    """RFC 7517 allows keys of different types to share a kid. A healthy
+    RS256-2048 key and an alg:none key both published as kid "1" on one host
+    must still yield the alg:none CRITICAL, on all three derivers."""
+    healthy = {"kty": "RSA", "alg": "RS256", "kid": "1", "n": _N_2048, "e": "AQAB"}
+    unsigned = {"kty": "oct", "alg": "none", "kid": "1"}
+    for pair in ([healthy, unsigned], [unsigned, healthy]):
+        eps = [
+            _jwt_row(_JWKS_HOST, pair[0], 2048 if pair[0] is healthy else None),
+            _jwt_row(_JWKS_HOST, pair[1], 2048 if pair[1] is healthy else None),
+        ]
+        for triples in (_report(eps), _dash(eps), _ident(eps)):
+            assert _jwt_only(triples) == [(ALG_NONE, "CRITICAL", "JWT")]
+            assert len([t for t in triples if t[1] == "CRITICAL"]) == 1
+        scored = _scores([_tls_row()] + eps)
+        assert [s["score"] for s in scored] == [31, 31]
+
+
+def test_three_keys_sharing_a_kid_each_get_their_own_rule():
+    healthy = {"kty": "RSA", "alg": "RS256", "kid": "1", "n": _N_2048, "e": "AQAB"}
+    unsigned = {"kty": "oct", "alg": "none", "kid": "1"}
+    material = {"kty": "oct", "alg": "HS256", "kid": "1", "secret_material_present": True}
+    eps = [
+        _jwt_row(_JWKS_HOST, healthy, 2048),
+        _jwt_row(_JWKS_HOST, unsigned, None),
+        _jwt_row(_JWKS_HOST, material, 128),
+    ]
+    for triples in (_report(eps), _dash(eps), _ident(eps)):
+        assert sorted(_jwt_only(triples)) == [
+            (ALG_NONE, "CRITICAL", "JWT"),
+            (KEY_MATERIAL, "CRITICAL", "JWT"),
+        ]
+
+
+def test_identical_keys_without_a_kid_yield_one_finding():
+    """The same weak key reached twice (no kid) is one finding, not two."""
+    jwk = {"kty": "RSA", "alg": "RS256", "n": _N_1024, "e": "AQAB"}
+    eps = [_jwt_row(_JWKS_HOST, jwk, 1024), _jwt_row(_JWKS_HOST, dict(jwk), 1024)]
+    for triples in (_report(eps), _dash(eps), _ident(eps)):
+        assert _jwt_only(triples) == [(RSA_SMALL, "HIGH", "JWT")]
+    other = dict(jwk, n=_modulus_b64(1024))
+    eps = [_jwt_row(_JWKS_HOST, jwk, 1024), _jwt_row(_JWKS_HOST, other, 1024)]
+    for triples in (_report(eps), _dash(eps), _ident(eps)):
+        assert _jwt_only(triples) == [(RSA_SMALL, "HIGH", "JWT"), (RSA_SMALL, "HIGH", "JWT")]
 
 
 def test_findings_for_endpoint_never_sees_jwt_rows():
