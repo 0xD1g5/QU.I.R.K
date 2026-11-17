@@ -235,3 +235,131 @@ def test_probe_failure_leaves_row_unchanged(server):
     assert ep.tls_version == "TLSv1.3"
     assert ep.tls_blocker_reason is None
     assert ep.scan_error is None
+
+
+# ---------------------------------------------------------------------------
+# D-39 (code review WR-01/WR-02): read first, send GET only to HTTP-shaped
+# services, and send a well-formed Host header.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def raw_server(pki):
+    """Factory: a TLS 1.3 CERT_NONE server that, after the handshake, sends
+    *greeting* (may be empty) and then holds the connection open for up to
+    3 s, recording every byte the client sends in ``received``."""
+    listeners = []
+    received: list[bytes] = []
+
+    def _server(greeting: bytes) -> int:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(pki["cert"], pki["key"])
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind((_HOST, 0))
+        srv.listen(8)
+        srv.settimeout(1)
+        listeners.append(srv)
+
+        def handle(conn):
+            try:
+                conn.settimeout(3)
+                s = ctx.wrap_socket(conn, server_side=True)
+                try:
+                    if greeting:
+                        s.sendall(greeting)
+                    while True:
+                        chunk = s.recv(65536)
+                        if not chunk:
+                            break
+                        received.append(chunk)
+                finally:
+                    s.close()
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+        def serve():
+            while True:
+                try:
+                    conn, _ = srv.accept()
+                except socket.timeout:
+                    continue
+                except Exception:
+                    return
+                threading.Thread(target=handle, args=(conn,), daemon=True).start()
+
+        threading.Thread(target=serve, daemon=True).start()
+        return srv.getsockname()[1]
+
+    _server.received = received
+    yield _server
+    for srv in listeners:
+        try:
+            srv.close()
+        except Exception:
+            pass
+
+
+def test_banner_first_server_ends_the_probe_without_a_request(raw_server):
+    import time
+
+    port = raw_server(b"* OK IMAP4rev1 ready\r\n")
+    started = time.monotonic()
+    result = tls_scanner._post_handshake_mtls_probe(_HOST, port, 5, False)
+    elapsed = time.monotonic() - started
+    assert result is None
+    assert elapsed < 1.0
+    time.sleep(0.2)
+    assert raw_server.received == []
+
+
+def test_well_known_non_http_port_gets_no_request(raw_server):
+    import time
+
+    port = raw_server(b"")
+    with patch.object(tls_scanner, "_NON_HTTP_TLS_PORTS", frozenset({port})):
+        started = time.monotonic()
+        result = tls_scanner._post_handshake_mtls_probe(_HOST, port, 5, False)
+        elapsed = time.monotonic() - started
+    assert result is None
+    assert elapsed < 1.0
+    time.sleep(0.2)
+    assert raw_server.received == []
+
+
+def test_silent_http_port_gets_one_get_request(raw_server):
+    import time
+
+    port = raw_server(b"")
+    assert tls_scanner._post_handshake_mtls_probe(_HOST, port, 1, False) is None
+    time.sleep(0.2)
+    sent = b"".join(raw_server.received)
+    assert sent.startswith(b"GET / HTTP/1.1\r\n")
+    assert f"\r\nHost: {_HOST}:{port}\r\n".encode() in sent
+
+
+def test_well_known_non_http_ports_include_mail_and_directory_ports():
+    for port in (465, 563, 636, 853, 989, 990, 992, 993, 994, 995, 3269, 5061, 5223, 6697, 8883):
+        assert port in tls_scanner._NON_HTTP_TLS_PORTS
+    for port in (443, 8443, 11443):
+        assert port not in tls_scanner._NON_HTTP_TLS_PORTS
+
+
+@pytest.mark.parametrize(
+    "host, port, expected",
+    [
+        ("::1", 443, b"[::1]"),
+        ("2001:db8::1", 8443, b"[2001:db8::1]:8443"),
+        ("10.0.0.1", 443, b"10.0.0.1"),
+        ("10.0.0.1", 11443, b"10.0.0.1:11443"),
+        ("idp.example.com", 443, b"idp.example.com"),
+        ("idp.example.com", 8443, b"idp.example.com:8443"),
+        ("bücher.example", 443, b"xn--bcher-kva.example"),
+    ],
+)
+def test_probe_host_header_formatting(host, port, expected):
+    assert tls_scanner._probe_host_header(host, port) == expected
