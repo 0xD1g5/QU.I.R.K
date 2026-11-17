@@ -133,6 +133,116 @@ def _as_csv(items: List[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Phase 238 DETECT-06: post-handshake mTLS probe (D-13)
+# ---------------------------------------------------------------------------
+
+# HTTP statuses a server uses to reject a client that sent no certificate.
+# 400 / 495 / 496: nginx (``ssl_verify_client on``; 495 "SSL Certificate
+# Error", 496 "SSL Certificate Required" are nginx-internal codes usually
+# rewritten to 400). 403: IIS 403.7 and generic proxies.
+_MTLS_HTTP_STATUSES = frozenset({400, 403, 495, 496})
+
+# Closed list of "client certificate missing" texts (lowercase). A response
+# counts only when its status is in _MTLS_HTTP_STATUSES AND it contains one of
+# these, so a wrong or missing phrase can only ever cause a false negative.
+_MTLS_HTTP_PHRASES = (
+    # nginx 400 / 496 page body ("400 No required SSL certificate was sent").
+    "no required ssl certificate was sent",
+    # nginx 496 reason phrase and common proxy texts ("SSL Certificate Required").
+    "ssl certificate required",
+    # Generic gateway / application text ("Client certificate required").
+    "client certificate required",
+    # IIS 403.7 page ("The page you are attempting to access requires your
+    # browser to have a Secure Sockets Layer (SSL) client certificate ...").
+    "requires your browser to have a secure sockets layer (ssl) client certificate",
+)
+
+_MTLS_PROBE_READ_CAP = 8192
+
+
+def _post_handshake_mtls_probe(
+    host: str,
+    port: int,
+    timeout: int,
+    include_sni: bool,
+) -> Optional[str]:
+    """Phase 238 D-13: one HTTP request after the handshake, looking for an mTLS rejection.
+
+    TLS 1.3 servers that require a client certificate complete the handshake and
+    reject the client afterwards, so the rejection is only visible on the first
+    read. Returns ``"MTLS_REQUIRED"`` when either:
+
+    - the read (or the wrap) raises an ``ssl.SSLError`` that
+      ``_categorize_tls_error`` maps to ``MTLS_REQUIRED`` (the TLS 1.3
+      ``certificate required`` alert), or
+    - the server answers with a status in ``_MTLS_HTTP_STATUSES`` whose
+      response contains a phrase from ``_MTLS_HTTP_PHRASES``.
+
+    Otherwise returns None. Never raises, never retries, reads at most 8 KiB
+    with a read timeout of ``min(timeout, 3)`` seconds. The caller only ever
+    sets ``tls_blocker_reason`` from the result, never ``scan_error`` (D-14).
+    """
+    try:
+        if "\r" in host or "\n" in host:
+            return None
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        is_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(host)
+            is_ip = True
+        except Exception:
+            is_ip = False
+        server_hostname = host if (include_sni and not is_ip) else None
+
+        data = b""
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            try:
+                with ctx.wrap_socket(sock, server_hostname=server_hostname) as ssock:
+                    ssock.settimeout(min(timeout, 3))
+                    ssock.sendall(
+                        b"GET / HTTP/1.1\r\nHost: "
+                        + host.encode("ascii", errors="ignore")
+                        + b"\r\nConnection: close\r\n\r\n"
+                    )
+                    while len(data) < _MTLS_PROBE_READ_CAP:
+                        chunk = ssock.recv(_MTLS_PROBE_READ_CAP - len(data))
+                        if not chunk:
+                            break
+                        data += chunk
+            except ssl.SSLError as e:
+                if _categorize_tls_error(e) == "MTLS_REQUIRED":
+                    return "MTLS_REQUIRED"
+                if not data:
+                    return None
+            except OSError:
+                # Read timeout or reset after a partial response (a server that
+                # ignores "Connection: close"): judge whatever was received.
+                if not data:
+                    return None
+
+        first_line = data.split(b"\r\n", 1)[0].decode("latin-1")
+        parts = first_line.split()
+        if len(parts) < 2 or not parts[0].startswith("HTTP/"):
+            return None
+        try:
+            status = int(parts[1])
+        except ValueError:
+            return None
+        if status not in _MTLS_HTTP_STATUSES:
+            return None
+        text = data.decode("latin-1").lower()
+        if any(phrase in text for phrase in _MTLS_HTTP_PHRASES):
+            return "MTLS_REQUIRED"
+        return None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # sslyze primary scanner
 # ---------------------------------------------------------------------------
 
@@ -235,6 +345,21 @@ def _scan_one_sslyze(
             scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
             sni_used=bool(include_sni and not is_ip),
         )
+
+        # Phase 238 D-13 signal 1 (and the OPTIONAL probe trigger). Exact
+        # equality on a str-checked value only (D-32): a MagicMock result must
+        # never look REQUIRED/OPTIONAL and open a real probe socket.
+        req = getattr(
+            getattr(server_result, "connectivity_result", None),
+            "client_auth_requirement",
+            None,
+        )
+        req = getattr(req, "value", req)
+        if isinstance(req, str) and req == "REQUIRED":
+            ep.tls_blocker_reason = "MTLS_REQUIRED"
+        elif isinstance(req, str) and req == "OPTIONAL":
+            if _post_handshake_mtls_probe(host, port, timeout, include_sni) == "MTLS_REQUIRED":
+                ep.tls_blocker_reason = "MTLS_REQUIRED"
 
         # ----------------------------------------------------------------
         # Certificate info
@@ -350,7 +475,9 @@ def _scan_one_sslyze(
         curve_names: List[str] = []
         ec_attempt = getattr(scan, "elliptic_curves", None)
         if ec_attempt is not None and ec_attempt.status == ScanCommandAttemptStatusEnum.COMPLETED:
-            curve_names = [c.name for c in ec_attempt.result.supported_curves]
+            # Phase 238 D-32: sslyze reports supported_curves=None against a TLS 1.2
+            # server that requires a client certificate; guard so the row survives.
+            curve_names = [c.name for c in (ec_attempt.result.supported_curves or [])]
 
         # ----------------------------------------------------------------
         # tls_capabilities_json
@@ -524,6 +651,17 @@ def _scan_one_fallback(
         ep.scan_error = f"{cat}: {safe_str(e)}"
         if logger:
             logger.v(f"TLS {host}:{port} {cat} ({e})")
+
+    # Phase 238 D-13: the fallback cannot see a CertificateRequest, so after any
+    # successful handshake it probes once for a post-handshake mTLS rejection.
+    # Outside the try above, so a probe failure can never become a scan_error
+    # (D-14); the probe only ever sets tls_blocker_reason.
+    if ep.tls_version and ep.scan_error is None:
+        try:
+            if _post_handshake_mtls_probe(host, port, timeout, include_sni) == "MTLS_REQUIRED":
+                ep.tls_blocker_reason = "MTLS_REQUIRED"
+        except Exception:
+            pass
 
     return ep
 
