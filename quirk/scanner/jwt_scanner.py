@@ -24,7 +24,7 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
-from quirk.util.jwt_alg import JWK_SECRET_MARKER, JWK_SECRET_MEMBERS
+from quirk.util.jwt_alg import public_jwk_record
 from quirk.util.outbound_fetch import fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.scanner.target_outcome import (
@@ -527,10 +527,9 @@ def scan_jwt_endpoint(
         elif kty == "oct":
             key_bits = _b64url_len_bits(key_entry.get("k"))
 
-        # Phase 238 D-03: the JWT scan record keeps only the key metadata it
-        # needs, plus a boolean marker the JWKS evaluator reads.
-        stored = {m: v for m, v in key_entry.items() if m not in JWK_SECRET_MEMBERS}
-        stored[JWK_SECRET_MARKER] = any(bool(key_entry.get(m)) for m in JWK_SECRET_MEMBERS)
+        # Phase 238 D-03 / WR-04: the JWT scan record keeps only public key
+        # metadata (an allowlist), plus a boolean marker the JWKS evaluator reads.
+        stored = public_jwk_record(key_entry)
 
         ep = CryptoEndpoint(
             host=base_url,
