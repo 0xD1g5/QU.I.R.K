@@ -490,9 +490,22 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # mail port by keeping its protocol label and setting only
                 # tls_blocker_reason (no CLOSED protocol, no scan_error). Surveyed
                 # values: email TIMEOUT / CONNECTION_REFUSED (failures) and tls_scanner's
-                # categories, which always co-occur with scan_error. None marks a
-                # successful probe, so ANY non-empty value is a failed row.
-                _blocked = bool(ep.tls_blocker_reason) and ep.protocol not in NON_ASSET_PROTOCOLS
+                # categories, which co-occur with scan_error. None marks a successful
+                # probe, so a non-empty value is a failed row, with one exception:
+                # a post-handshake MTLS_REQUIRED (Phase 238 D-14/D-15/D-31). That row
+                # completed the handshake, has a tls_version and no scan_error, so it
+                # is an observed, assessed row at both sites below.
+                _observed_mtls = (
+                    ep.protocol == "TLS"
+                    and ep.tls_blocker_reason == "MTLS_REQUIRED"
+                    and bool(ep.tls_version)
+                    and ep.scan_error is None
+                )
+                _blocked = (
+                    bool(ep.tls_blocker_reason)
+                    and not _observed_mtls
+                    and ep.protocol not in NON_ASSET_PROTOCOLS
+                )
                 if ep.protocol == "CLOSED" or _blocked or (
                     ep.protocol not in NON_ASSET_PROTOCOLS and ep.scan_error is not None
                 ):
@@ -506,7 +519,7 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                     ep.protocol
                     and ep.protocol not in NON_ASSET_PROTOCOLS
                     and ep.scan_error is None
-                    and not ep.tls_blocker_reason
+                    and (not ep.tls_blocker_reason or _observed_mtls)
                 ):
                     current_asset[key].add(ep.protocol)
                     if family_for_protocol(ep.protocol) is not None:
