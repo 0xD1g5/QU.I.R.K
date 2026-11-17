@@ -52,7 +52,7 @@ def test_chip_colours_every_skip_reason():
 
 def test_ts_target_outcome_kinds_mirror_python():
     """238 UI review fix 1: phaseRecordText strips these codes from user-facing
-    text, so a kind added only on the Python side would leak into a sentence."""
+    text, so a kind added only on the Python side would reach a sentence."""
     from quirk.scanner.target_outcome import OUTCOME_KINDS
 
     src = _read("lib/coverage-reason.ts")
