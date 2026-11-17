@@ -159,6 +159,64 @@ _MTLS_HTTP_PHRASES = (
 
 _MTLS_PROBE_READ_CAP = 8192
 
+# D-39: how long the probe listens before sending anything. A TLS 1.3
+# ``certificate required`` alert arrives unprompted inside this window, and a
+# server-speaks-first service (SMTP/IMAP/POP3/FTP/XMPP/IRC banner) answers in it.
+_MTLS_PROBE_LISTEN_SECONDS = 0.5
+
+# D-39: well-known implicit-TLS ports whose service is not HTTP. The probe never
+# sends ``GET /`` to these unless ALPN negotiated an HTTP protocol, so mail,
+# directory and other services never see protocol-inappropriate bytes.
+_NON_HTTP_TLS_PORTS = frozenset({
+    465,   # SMTPS / submissions
+    563,   # NNTPS
+    636,   # LDAPS
+    853,   # DNS over TLS
+    989,   # FTPS data
+    990,   # FTPS control
+    992,   # telnet over TLS
+    993,   # IMAPS
+    994,   # IRC over TLS (legacy)
+    995,   # POP3S
+    3269,  # LDAPS global catalog
+    5061,  # SIP over TLS
+    5223,  # XMPP over TLS (legacy)
+    5671,  # AMQPS
+    6514,  # syslog over TLS
+    6697,  # IRC over TLS
+    8883,  # MQTT over TLS
+})
+
+# ALPN protocols that mean "this connection speaks HTTP". Only http/1.1 is
+# offered, so a server never selects h2 and then receives HTTP/1.1 bytes.
+_HTTP_ALPN = frozenset({"http/1.1", "h2"})
+
+
+def _probe_host_header(host: str, port: int) -> bytes:
+    """D-39 (WR-02): the probe's Host header value.
+
+    IPv6 literals are bracketed (a zone id is percent-encoded per RFC 6874),
+    ``:port`` is appended when the port is not 443, and a hostname is
+    IDNA-encoded. A name the IDNA codec rejects falls back to its ASCII part.
+    """
+    import ipaddress
+
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        addr = None
+    if addr is not None:
+        text = f"[{host.replace('%', '%25')}]" if addr.version == 6 else host
+        value = text.encode("ascii", errors="ignore")
+    else:
+        try:
+            value = host.encode("idna")
+        except UnicodeError:
+            value = host.encode("ascii", errors="ignore")
+    if int(port) != 443:
+        value += b":" + str(int(port)).encode("ascii")
+    return value
+
 
 def _post_handshake_mtls_probe(
     host: str,
@@ -166,17 +224,21 @@ def _post_handshake_mtls_probe(
     timeout: int,
     include_sni: bool,
 ) -> Optional[str]:
-    """Phase 238 D-13: one HTTP request after the handshake, looking for an mTLS rejection.
+    """Phase 238 D-13, narrowed by D-39: look for an mTLS rejection after the handshake.
 
     TLS 1.3 servers that require a client certificate complete the handshake and
     reject the client afterwards, so the rejection is only visible on the first
-    read. Returns ``"MTLS_REQUIRED"`` when either:
+    read. The probe:
 
-    - the read (or the wrap) raises an ``ssl.SSLError`` that
-      ``_categorize_tls_error`` maps to ``MTLS_REQUIRED`` (the TLS 1.3
-      ``certificate required`` alert), or
-    - the server answers with a status in ``_MTLS_HTTP_STATUSES`` whose
-      response contains a phrase from ``_MTLS_HTTP_PHRASES``.
+    1. listens for ``_MTLS_PROBE_LISTEN_SECONDS`` without sending anything. An
+       ``ssl.SSLError`` that ``_categorize_tls_error`` maps to ``MTLS_REQUIRED``
+       (the TLS 1.3 ``certificate required`` alert) returns ``"MTLS_REQUIRED"``;
+       any server-sent bytes (a banner) or a closed connection returns None;
+    2. only then sends one ``GET /`` request, and only when the port is not in
+       ``_NON_HTTP_TLS_PORTS`` or ALPN negotiated an HTTP protocol, and returns
+       ``"MTLS_REQUIRED"`` when the server answers with an alert as above, or a
+       status in ``_MTLS_HTTP_STATUSES`` whose response contains a phrase from
+       ``_MTLS_HTTP_PHRASES``.
 
     Otherwise returns None. Never raises, never retries, reads at most 8 KiB
     with a read timeout of ``min(timeout, 3)`` seconds. The caller only ever
@@ -188,6 +250,10 @@ def _post_handshake_mtls_probe(
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
+        try:
+            ctx.set_alpn_protocols(["http/1.1"])
+        except (NotImplementedError, ssl.SSLError):
+            pass
 
         is_ip = False
         try:
@@ -202,10 +268,31 @@ def _post_handshake_mtls_probe(
         with socket.create_connection((host, port), timeout=timeout) as sock:
             try:
                 with ctx.wrap_socket(sock, server_hostname=server_hostname) as ssock:
+                    # Step 1 (D-39): listen first, send nothing.
+                    ssock.settimeout(min(float(timeout), _MTLS_PROBE_LISTEN_SECONDS))
+                    try:
+                        unprompted = ssock.recv(_MTLS_PROBE_READ_CAP)
+                    except ssl.SSLError:
+                        raise
+                    except (socket.timeout, TimeoutError):
+                        unprompted = None
+                    if unprompted is not None:
+                        # A banner, or the server closed the connection.
+                        return None
+
+                    # Step 2 (D-39): GET only to HTTP-shaped services.
+                    alpn = None
+                    try:
+                        alpn = ssock.selected_alpn_protocol()
+                    except Exception:
+                        alpn = None
+                    if int(port) in _NON_HTTP_TLS_PORTS and alpn not in _HTTP_ALPN:
+                        return None
+
                     ssock.settimeout(min(timeout, 3))
                     ssock.sendall(
                         b"GET / HTTP/1.1\r\nHost: "
-                        + host.encode("ascii", errors="ignore")
+                        + _probe_host_header(host, port)
                         + b"\r\nConnection: close\r\n\r\n"
                     )
                     while len(data) < _MTLS_PROBE_READ_CAP:
