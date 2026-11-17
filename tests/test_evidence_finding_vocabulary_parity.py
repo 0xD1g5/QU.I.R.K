@@ -210,9 +210,10 @@ class TestMtlsEndpointFieldContributionPreserved:
     it, never replaces it."""
 
     def test_mtls_present_count_counts_endpoint_with_no_mtls_finding(self):
-        # No mTLS finding in this list at all (dashboard has no "mTLS
-        # required" equivalent finding generator) -- the endpoint-field path
-        # alone must count it.
+        # Since Phase 238 D-14 the dashboard emits INFO "mTLS required" for
+        # this row too, but the count must not depend on it: the
+        # endpoint-field path alone already counts the endpoint, and the
+        # finding path adds the same (host, port), so the value stays 1.
         summary = build_evidence_summary(_ALL_ENDPOINTS, _dashboard_findings(_ALL_ENDPOINTS))
         assert summary["mtls_present_count"] == 1, (
             f"expected the MTLS_REQUIRED-blocked endpoint to be counted via "

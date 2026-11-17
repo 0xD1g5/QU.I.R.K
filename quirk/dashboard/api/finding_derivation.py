@@ -21,6 +21,7 @@ from quirk.engine.findings_evaluator import (
     evaluate_container_endpoints,
     evaluate_identity_endpoints,
     evaluate_protocol_service_endpoints,
+    mtls_required_variant,
     runs_tls_certificate_checks,
 )
 from quirk.dashboard.api.schemas import FindingItem, IdentityFinding
@@ -83,6 +84,34 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
             quantum_risk=None,
             category="config_advisory",
             source="jwt",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # Phase 238 D-14: one INFO "mTLS required" for both stored mTLS shapes
+    # (handshake-blocked and post-handshake), from the predicate the report
+    # uses. It sits above the scan-error guard because the handshake variant
+    # carries a scan_error; the post-handshake row falls through and keeps
+    # its certificate findings.
+    if mtls_required_variant(ep):
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="INFO",
+            title="mTLS required",
+            protocol="TLS",
+            description=(
+                "The endpoint requires a client certificate (mTLS). QUIRK "
+                "presented none, so the trust chain and onboarding flow should "
+                "be validated out-of-band."
+            ),
+            remediation=(
+                "Confirm client certificate requirements and document trust "
+                "chain and onboarding process."
+            ),
+            quantum_risk=None,
+            source="tls",
             sensor_id=ep.sensor_id,
             segment=ep.segment,
         ))

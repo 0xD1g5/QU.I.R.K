@@ -148,6 +148,11 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # scan.py JWKS verify-disabled ADVISORY row and findings_evaluator.py emit
     # the byte-identical title on the same service_detail marker. identity.
     "JWKS fetched with TLS certificate verification disabled": "JWKS fetched with TLS certificate verification disabled",
+
+    # Phase 238 D-14/D-28: both pipelines emit INFO "mTLS required" on the
+    # shared predicate findings_evaluator.mtls_required_variant (handshake
+    # and post-handshake variants). Byte-identical title. identity.
+    "mTLS required": "mTLS required",
 }
 
 # ---------------------------------------------------------------------------
@@ -303,6 +308,9 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # category is config_advisory, which is score-neutral (D-25) and never
     # constitutes the high-impact-findings catch-all -> no theme at all.
     "JWKS fetched with TLS certificate verification disabled": "unreachable",
+    # Phase 238 D-28: INFO, in no fingerprint tuple, below the HIGH/CRITICAL
+    # catch-all threshold -> constitutes no theme at all.
+    "mTLS required": "unreachable",
 }
 
 

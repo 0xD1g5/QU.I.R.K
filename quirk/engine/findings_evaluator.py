@@ -300,6 +300,38 @@ def runs_tls_certificate_checks(ep: Any) -> bool:
     return getattr(ep, "protocol", None) == "TLS"
 
 
+# Phase 238 D-14: the recommendation _postprocess_findings gives the HTTP
+# sibling it rewrites to "mTLS required". The post-handshake INFO reuses it so
+# _dedupe_findings (keyed on host, port, title, recommendation) collapses the
+# pair into one finding.
+_MTLS_POSTPROCESS_RECOMMENDATION = (
+    "Service appears to require client authentication for TLS handshake. "
+    "Validate client certificate requirements, trust chain, and onboarding flow."
+)
+
+
+def mtls_required_variant(ep: Any) -> Optional[str]:
+    """Which stored mTLS shape ``ep`` is, or None (Phase 238 D-14).
+
+    ``"handshake"``: the handshake failed for lack of a client certificate,
+    so ``scan_error`` carries the ``MTLS_REQUIRED`` category and nothing was
+    observed. ``"post_handshake"``: the handshake completed and the server
+    then rejected the client, so ``tls_blocker_reason`` is ``MTLS_REQUIRED``
+    and ``scan_error`` is empty; the observed fields are kept. Both
+    pipelines call this, never an inline copy.
+    """
+    if not runs_tls_certificate_checks(ep):
+        return None
+    if _error_category(getattr(ep, "scan_error", "") or "") == "MTLS_REQUIRED":
+        return "handshake"
+    if (
+        not getattr(ep, "scan_error", None)
+        and getattr(ep, "tls_blocker_reason", None) == "MTLS_REQUIRED"
+    ):
+        return "post_handshake"
+    return None
+
+
 EMAIL_PROTOCOLS = frozenset({
     "SMTP-STARTTLS", "SMTPS", "IMAP-STARTTLS", "IMAPS", "POP3-STARTTLS", "POP3S",
 })
@@ -455,10 +487,7 @@ def _postprocess_findings(cfg, endpoints, findings: List[Dict[str, Any]]) -> Lis
             if proto == "TLS" and detail == "MTLS_REQUIRED":
                 f["severity"] = "INFO"
                 f["title"] = "mTLS required"
-                f["recommendation"] = (
-                    "Service appears to require client authentication for TLS handshake. "
-                    "Validate client certificate requirements, trust chain, and onboarding flow."
-                )
+                f["recommendation"] = _MTLS_POSTPROCESS_RECOMMENDATION
             elif proto == "TLS" and detail in {"TLS_HANDSHAKE_FAILED", "TIMEOUT"}:
                 f["severity"] = "MEDIUM"
                 f["title"] = "TLS handshake blocked assessment"
@@ -690,6 +719,25 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     "trivially intercepted by anyone on the network path."
                 ),
                 recommendation="Migrate management/application endpoints to HTTPS/TLS where feasible.",
+            ))
+
+        # Phase 238 D-14: the post-handshake mTLS variant was observed, so
+        # it gets the INFO and then every certificate check below (no
+        # `continue`). The handshake variant is handled in the scan-error
+        # branch above.
+        if mtls_required_variant(e) == "post_handshake":
+            findings.append(_build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="mTLS required",
+                description=(
+                    "The endpoint completed a TLS handshake and then rejected "
+                    "the connection because no client certificate was "
+                    "presented (mTLS). The certificate and protocol details "
+                    "below were observed before the rejection."
+                ),
+                recommendation=_MTLS_POSTPROCESS_RECOMMENDATION,
             ))
 
         if runs_tls_certificate_checks(e):
