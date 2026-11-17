@@ -102,4 +102,7 @@ def get_exposure_map(
             ),
         )
 
-    return ExposureMapResponse(nodes=nodes, edges=edges)
+    # 237 WR-01: "keyed scans exist but none is complete" is not zero exposure.
+    return ExposureMapResponse(
+        nodes=nodes, edges=edges, unavailable_reason=result.get("unavailable_reason")
+    )

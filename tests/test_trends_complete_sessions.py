@@ -176,6 +176,52 @@ def test_exposure_latest_skips_incomplete(db):
     assert latest_scan_run_id(db) == "2026-03-01T10:00:00"
 
 
+def _shared_key_pair(db, run_id, ts, complete):
+    """Two endpoints sharing one key (a key-reuse edge) in one session."""
+    for host in ("10.0.0.11", "10.0.0.12"):
+        db.add(CryptoEndpoint(
+            host=host, port=443, protocol="TLS", scanned_at=ts, scan_run_id=run_id,
+            cert_spki_fingerprint="a" * 64, cert_subject="CN=x",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+        ))
+    stage = "reports" if complete else "discovery"
+    db.add(ScanCheckpoint(scan_run_id=run_id, stage=stage, status="completed", completed_at=ts))
+    db.commit()
+
+
+def test_exposure_map_all_incomplete_scopes_to_nothing(db):
+    """WR-01 (237 review): keyed scans exist but none is complete (the first
+    dashboard scan, still running). The default map must NOT fall back to
+    unscoped and draw the running scan's partial rows (D-17); it returns an
+    empty map that says why, so it never reads as verified zero exposure."""
+    from quirk.intelligence.exposure_map import derive_exposure_map, latest_scan_run_id
+
+    _shared_key_pair(db, "2026-03-01T10:00:00", _ts(0), complete=False)
+    assert latest_scan_run_id(db) is None
+    # Non-vacuity: pinned explicitly, the running scan's rows DO draw an edge.
+    assert derive_exposure_map(db, scan_run_id="2026-03-01T10:00:00")["edges"]
+    result = derive_exposure_map(db)
+    assert result["nodes"] == [] and result["edges"] == []
+    assert result.get("unavailable_reason")
+
+
+def test_exposure_map_legacy_unkeyed_rows_stay_unscoped(db):
+    """WR-01 control: an all-legacy DB (no scan_run_id anywhere) keeps the
+    documented "do not scope" behaviour."""
+    from quirk.intelligence.exposure_map import derive_exposure_map
+
+    for host in ("10.0.0.11", "10.0.0.12"):
+        db.add(CryptoEndpoint(
+            host=host, port=443, protocol="TLS", scanned_at=_ts(0), scan_run_id=None,
+            cert_spki_fingerprint="a" * 64, cert_subject="CN=x",
+            cert_pubkey_alg="RSA", cert_pubkey_size=2048,
+        ))
+    db.commit()
+    result = derive_exposure_map(db)
+    assert result["edges"]
+    assert result.get("unavailable_reason") is None
+
+
 def _notify_setup(db, monkeypatch, newest_incomplete: bool):
     from quirk.cli.scheduler_cmd import _utcnow_naive
     from quirk.models import ScheduledScan
