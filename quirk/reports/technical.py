@@ -7,6 +7,7 @@ from quirk.reports._md_escape import md_cell
 # Plan 81-02 lands quirk/compliance/cmvp.py.
 from quirk.reports.html_renderer import build_algorithm_inventory
 from quirk.reports.content_model import FALLBACK_QUANTUM_RISK
+from quirk.util.tls_rows import is_observed_mtls
 
 # Phase 99 CTX-01: fallback for findings with no quantum_risk field.
 # Imported from the shared content model (single source of truth).
@@ -27,7 +28,9 @@ def _service_detail(ep) -> str:
         return detail
     if getattr(ep, "protocol", "") == "TLS":
         blocker = getattr(ep, "tls_blocker_reason", "") or ""
-        if blocker:
+        # Phase 238 IN-03: an observed (post-handshake) mTLS row completed the
+        # handshake, so its observed version is the detail, not the blocker.
+        if blocker and not (is_observed_mtls(ep) and getattr(ep, "tls_version", None)):
             return blocker
     return getattr(ep, "tls_version", "") or ""
 
@@ -198,6 +201,9 @@ def build_tech_markdown(
     tls_blocked = []
     for e in endpoints:
         if getattr(e, "protocol", "") != "TLS":
+            continue
+        # Phase 238 IN-03: an observed-mTLS row is assessed, not blocked.
+        if is_observed_mtls(e):
             continue
         blocker = getattr(e, "tls_blocker_reason", None) or _scan_error_category(getattr(e, "scan_error", "") or "")
         if blocker in blocker_allowed:
