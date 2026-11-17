@@ -24,6 +24,7 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.jwt_alg import JWK_SECRET_MARKER, JWK_SECRET_MEMBERS
 from quirk.util.outbound_fetch import fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.scanner.target_outcome import (
@@ -227,6 +228,22 @@ def _rsa_key_bits_from_n(n_b64url: str) -> Optional[int]:
         return len(base64.b64decode(padded)) * 8
     except Exception:
         return None
+
+
+def _b64url_len_bits(value) -> Optional[int]:
+    """Bit length of a base64url value (Phase 238 D-03: oct key size from ``k``).
+
+    Returns None for an empty, non-string or undecodable value.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        padded = value.replace("-", "+").replace("_", "/")
+        padded += "=" * (-len(padded) % 4)
+        raw = base64.b64decode(padded, validate=True)
+    except Exception:
+        return None
+    return len(raw) * 8 or None
 
 
 def _fetch_jwks(
@@ -493,6 +510,8 @@ def scan_jwt_endpoint(
     endpoints: List[CryptoEndpoint] = []
 
     for key_entry in keys:
+        if not isinstance(key_entry, dict):
+            continue
         kty = key_entry.get("kty", "")
         alg = key_entry.get("alg") or kty  # fall back to kty if alg absent
 
@@ -505,6 +524,13 @@ def scan_jwt_endpoint(
         elif kty == "EC":
             crv = key_entry.get("crv", "")
             key_bits = _EC_CRV_BITS.get(crv)
+        elif kty == "oct":
+            key_bits = _b64url_len_bits(key_entry.get("k"))
+
+        # Phase 238 D-03: the JWT scan record keeps only the key metadata it
+        # needs, plus a boolean marker the JWKS evaluator reads.
+        stored = {m: v for m, v in key_entry.items() if m not in JWK_SECRET_MEMBERS}
+        stored[JWK_SECRET_MARKER] = any(bool(key_entry.get(m)) for m in JWK_SECRET_MEMBERS)
 
         ep = CryptoEndpoint(
             host=base_url,
@@ -512,7 +538,7 @@ def scan_jwt_endpoint(
             protocol="JWT",
             cert_pubkey_alg=alg,
             cert_pubkey_size=key_bits,
-            jwt_scan_json=json.dumps(key_entry),
+            jwt_scan_json=json.dumps(stored),
             service_detail=jwks_path,
             scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
