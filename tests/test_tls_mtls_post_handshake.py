@@ -363,3 +363,51 @@ def test_well_known_non_http_ports_include_mail_and_directory_ports():
 )
 def test_probe_host_header_formatting(host, port, expected):
     assert tls_scanner._probe_host_header(host, port) == expected
+
+
+# ---------------------------------------------------------------------------
+# WR-03: the half-populated-sslyze merge path keeps the fallback's verdict.
+# ---------------------------------------------------------------------------
+
+
+def _half_populated(port: int, blocker=None):
+    from quirk.models import CryptoEndpoint
+
+    return CryptoEndpoint(
+        host=_HOST, port=port, protocol="TLS", tls_version="TLSv1.3",
+        tls_blocker_reason=blocker,
+    )
+
+
+def test_merge_path_carries_fallback_mtls_required(server):
+    port = server("required", "TLSv1.3", 200, "ok")
+    with patch.object(tls_scanner, "SSLYZE_AVAILABLE", True), patch.object(
+        tls_scanner, "_scan_one_sslyze", return_value=_half_populated(port)
+    ):
+        ep = tls_scanner.scan_one(_HOST, port, 5, False)
+    assert ep.cert_not_after is not None
+    assert ep.tls_blocker_reason == "MTLS_REQUIRED"
+    assert ep.scan_error is None
+
+
+def test_merge_path_does_not_probe_again_when_sslyze_decided(server):
+    port = server("required", "TLSv1.3", 200, "ok")
+    with patch.object(tls_scanner, "SSLYZE_AVAILABLE", True), patch.object(
+        tls_scanner, "_scan_one_sslyze",
+        return_value=_half_populated(port, blocker="MTLS_REQUIRED"),
+    ), patch.object(tls_scanner, "_post_handshake_mtls_probe") as probe:
+        ep = tls_scanner.scan_one(_HOST, port, 5, False)
+    assert ep.cert_not_after is not None
+    assert ep.tls_blocker_reason == "MTLS_REQUIRED"
+    probe.assert_not_called()
+
+
+def test_merge_path_without_mtls_leaves_blocker_unset(server):
+    port = server("none", "TLSv1.3", 200, "ok")
+    with patch.object(tls_scanner, "SSLYZE_AVAILABLE", True), patch.object(
+        tls_scanner, "_scan_one_sslyze", return_value=_half_populated(port)
+    ):
+        ep = tls_scanner.scan_one(_HOST, port, 5, False)
+    assert ep.cert_not_after is not None
+    assert ep.tls_blocker_reason is None
+    assert ep.scan_error is None
