@@ -511,6 +511,10 @@ export function PrintPage() {
   const showCoverage = coveragePhases.some((p) => p.status !== "ran")
   const actionablePhases = coveragePhases.filter((p) => p.status !== "ran" && p.reason !== "disabled-by-config")
   const disabledPhases = coveragePhases.filter((p) => p.status !== "ran" && p.reason === "disabled-by-config")
+  // IN-03 (237 UI review): coverage.py counts only "ran" and "skipped", so a failed phase would
+  // vanish from the headline while still appearing as a "Failed: ..." bullet below it. Derive the
+  // failed count here rather than changing the ScanCoverageResponse payload contract.
+  const failedCount = coveragePhases.filter((p) => p.status !== "ran" && p.status !== "skipped").length
   // D-13: /print is a client deliverable and must not depend on which laptop rendered it — the
   // four Python renderers already emit "%Y-%m-%d %H:%M UTC" (quirk/reports/executive.py,
   // technical.py), so this fixes the zone to UTC and adds the label rather than following the
@@ -599,6 +603,7 @@ export function PrintPage() {
               <p>
                 <strong>
                   {coverage.ran} ran / {coverage.skipped} skipped
+                  {failedCount > 0 && ` / ${failedCount} failed`}
                 </strong>
               </p>
               <p className="meta">
