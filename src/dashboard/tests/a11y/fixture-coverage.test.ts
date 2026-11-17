@@ -140,6 +140,10 @@ describe("a11y fixture table covers every /api/ fetch target (D-14, 221 D-06)", 
     expect(fc.high).toBeGreaterThan(0)
     expect(fc.medium).toBeGreaterThan(0)
     expect(fc.low).toBeGreaterThan(0)
+    // 237 UI review: scan-history.tsx renders the HIGH/MEDIUM/LOW badges only for a complete
+    // session (running/incomplete rows show a status badge and "—"), so a non-complete status here
+    // silently drops the severity badges from the /scans axe sweep (fb7e6a10 did exactly that).
+    expect(scans[0].status ?? "complete", "fixture-scans.json session must be complete so /scans renders severity badges").toBe("complete")
 
     const reg = JSON.parse(readFileSync(path.resolve(__dirname, "fixture-sensor-registry.json"), "utf-8"))
     expect(Array.isArray(reg.sensors)).toBe(true)
