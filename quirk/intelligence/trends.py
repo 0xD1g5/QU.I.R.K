@@ -28,10 +28,7 @@ from quirk.models import CryptoEndpoint
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.dashboard.api.finding_title_bridge import canonical_cli_title
-from quirk.scanner.target_outcome import (
-    COVERAGE_SKIP_ADVISORY_CATEGORIES,
-    failed_target_count,
-)
+from quirk.scanner.target_outcome import failed_target_count
 
 FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 
@@ -46,7 +43,7 @@ FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 # regressions, otherwise a FULL connector outage collapses to one advisory row
 # and reads as zero while a partial outage shows. The shared
 # COVERAGE_SKIP_ADVISORY_CATEGORIES (scoring, findings_evaluator, sensor_cmd) is
-# deliberately unchanged (235.3 P-02) and is still imported for reference.
+# deliberately unchanged (235.3 P-02) and is not used here.
 # target_unanswered is NOT in either set.
 _ADVISORY_ONLY_CATEGORIES: frozenset = frozenset(
     {"missing_extra", "missing_binary", "internal_target_refused"}
