@@ -80,6 +80,8 @@ describe("IdentityPage — JWT/JWKS card (IDENT-06)", () => {
     expect(within(card).getByText("Skipped")).toBeInTheDocument()
     expect(within(card).getByText("a target answered with something other than the expected document")).toBeInTheDocument()
     expect(card.textContent).not.toContain("unexpected-response")
+    expect(card.textContent).not.toContain("unexpected_response")
+    expect(card.textContent).not.toMatch(/\b[a-z]+[-_][a-z]+(?:[-_][a-z]+)*:/)
   })
 
   it("lays the four identity cards out in a one, two and four column grid", async () => {
@@ -121,8 +123,13 @@ describe("IdentityPage — JWT/JWKS card (IDENT-06)", () => {
     const { IdentityPage } = await import("@/pages/identity")
     render(<IdentityPage />)
 
-    const sentence = `Skipped: a target answered with something other than the expected document (JWT) — ${detail}`
-    expect(screen.getByText(sentence)).toBeInTheDocument()
-    expect(sentence).not.toContain("unexpected-response")
+    const sentence =
+      "Skipped (JWT) — 1 of 1 targets answered with something other than the expected document: https://idp.example (not a JWKS (no keys array))"
+    const el = screen.getByText(sentence)
+    expect(el).toBeInTheDocument()
+    expect(el.textContent).not.toContain("unexpected-response")
+    expect(el.textContent).not.toContain("unexpected_response")
+    expect(el.textContent).not.toMatch(/\b[a-z]+[-_][a-z]+(?:[-_][a-z]+)*:/)
+    expect(document.body.textContent).not.toContain("unexpected_response")
   })
 })

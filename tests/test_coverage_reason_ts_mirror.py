@@ -48,3 +48,20 @@ def test_chip_colours_every_skip_reason():
     keys = re.findall(r'^\s*"?([a-z-]+)"?\s*:', m.group(1), re.M)
     assert len(keys) == 10  # "ran" plus the nine skip reasons
     assert set(SCAN_PHASE_SKIP_REASONS) <= set(keys)
+
+
+def test_ts_target_outcome_kinds_mirror_python():
+    """238 UI review fix 1: phaseRecordText strips these codes from user-facing
+    text, so a kind added only on the Python side would leak into a sentence."""
+    from quirk.scanner.target_outcome import OUTCOME_KINDS
+
+    src = _read("lib/coverage-reason.ts")
+    m = re.search(
+        r"export const TARGET_OUTCOME_KINDS: readonly string\[\] = \[(.*?)\]",
+        src,
+        re.S,
+    )
+    assert m, "TARGET_OUTCOME_KINDS not found in coverage-reason.ts"
+    ts_kinds = re.findall(r'"([a-z_]+)"', m.group(1))
+    assert len(ts_kinds) == 6
+    assert sorted(ts_kinds) == sorted(OUTCOME_KINDS)

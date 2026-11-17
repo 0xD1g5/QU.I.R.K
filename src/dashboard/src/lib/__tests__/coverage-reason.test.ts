@@ -25,6 +25,10 @@ function cov(phases: ScanCoveragePhase[], recorded = true): ScanCoverageResponse
   return { recorded, ran: 0, skipped: 0, phases }
 }
 
+// UI review fix 2: a machine code followed by a colon (`unexpected_response:`,
+// `auth-failed:`), in either spelling.
+const RAW_KIND_TOKEN = /\b[a-z]+[-_][a-z]+(?:[-_][a-z]+)*:/
+
 describe("emptyStateFor", () => {
   it("returns the fallback when there is no coverage", () => {
     expect(emptyStateFor(undefined, ["db_scanning"], "FALLBACK")).toBe("FALLBACK")
@@ -99,7 +103,7 @@ describe("emptyStateFor", () => {
       }),
     ])
     expect(emptyStateFor(c, ["db_scanning"], "F")).toBe(
-      "Skipped: no target answered (Database) — 2 of 2 targets did not answer: db1:5432 (unreachable: timed out), db2:5432 (unreachable)",
+      "Skipped: no target answered (Database) — 2 of 2 targets did not answer: db1:5432 (timed out), db2:5432 (unreachable)",
     )
   })
 
@@ -131,10 +135,32 @@ describe("humanSkipReason", () => {
     }
     const text = phaseRecordText(record)
     expect(text).toBe(
-      "Skipped: a target answered with something other than the expected document (SAML) — 1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (unexpected_response: not SAML metadata (HTML page))",
+      "Skipped (SAML) — 1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (not SAML metadata (HTML page))",
     )
     expect(text).not.toContain("unexpected-response")
+    expect(text).not.toContain("unexpected_response")
+    expect(text).not.toMatch(RAW_KIND_TOKEN)
+    expect(text.split("answered with something other than the expected document").length - 1).toBe(1)
     expect(isPhaseError(record)).toBe(false)
+  })
+
+  it("strips every per-target outcome code from a phase record sentence", () => {
+    // UI review fix 1/2 (237 lesson 2): `<kind>: ` inside the per-target
+    // parentheses is a machine code, so no user-facing sentence shows it.
+    const record = {
+      label: "JWT",
+      reason: "auth-failed",
+      detail:
+        "2 of 4 targets failed authentication (2 more did not answer for other reasons): https://a.example (auth_failed: HTTP 401: configured credentials rejected), https://b.example (missing_credentials), https://c.example (unexpected_response: HTTP 404), https://d.example (unreachable: timed out)",
+    }
+    const text = phaseRecordText(record)
+    expect(text).toBe(
+      "Skipped: credentials rejected (JWT) — 2 of 4 targets failed authentication (2 more did not answer for other reasons): https://a.example (HTTP 401: configured credentials rejected), https://b.example (missing credentials), https://c.example (HTTP 404), https://d.example (timed out)",
+    )
+    expect(text).not.toMatch(RAW_KIND_TOKEN)
+    for (const kind of ["auth_failed", "missing_credentials", "unexpected_response", "unreachable:"]) {
+      expect(text).not.toContain(kind)
+    }
   })
 })
 
