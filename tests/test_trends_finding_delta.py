@@ -47,16 +47,19 @@ def _by_session(prev_findings, cur_findings):
 def test_new_tls_high_counted(tmp_path) -> None:
     from quirk.dashboard.api.finding_derivation import derive_dashboard_scoring_findings
 
+    # The ONLY new HIGH is TLS-derived: the current session's cert turns
+    # self-signed (no cert_not_after, so no wall-clock dependence).
     with _db(tmp_path) as db:
         db.add(_ep(PREV, "prev", protocol="TLS", tls_version="TLSv1.3"))
-        db.add(_ep(CUR, "cur", protocol="TLS", tls_version="TLSv1.3"))
-        db.add(_ep(CUR, "cur", host="10.0.0.9", port=80, protocol="HTTP"))
+        db.add(_ep(CUR, "cur", protocol="TLS", tls_version="TLSv1.3",
+                   cert_subject="CN=x", cert_issuer="CN=x"))
         db.commit()
         r = compute_trend_report(
             CUR, PREV, db, findings_deriver=derive_dashboard_scoring_findings
         )
-    assert r.new_high >= 1, f"new_high={r.new_high}"
-    assert r.new_total >= 1
+    assert r.new_high == 1, f"new_high={r.new_high}"
+    assert r.new_total == 1
+    assert [s.title for s in r.new_findings_sample] == ["TLS certificate is self-signed"]
 
 
 def test_counts_are_per_finding_not_per_endpoint(tmp_path) -> None:

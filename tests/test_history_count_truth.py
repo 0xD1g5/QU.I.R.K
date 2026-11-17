@@ -61,7 +61,8 @@ def test_history_counts_equal_findings_page():
 
 def test_history_counts_per_finding():
     client, Session = _make_client_and_session()
-    # self-signed + HTTP on separate rows; one TLS row with self-signed AND expiring
+    # One TLS row that is self-signed (HIGH) AND expiring (MEDIUM): two
+    # findings from one endpoint, counted per finding.
     ep = _selfsigned("h1", RUN_A)
     ep["cert_not_after"] = datetime.utcnow() + timedelta(days=5)
     _seed_session(Session, T_A, [ep])
