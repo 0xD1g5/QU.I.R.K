@@ -43,19 +43,19 @@ tracked file.
 
 ### Count truth (COUNT)
 
-- [ ] **COUNT-01**: Scan History's High/Medium/Low counts include every finding, TLS-derived ones too.
+- [x] **COUNT-01**: Scan History's High/Medium/Low counts include every finding, TLS-derived ones too.
   Source: `261110-scan-history-trends-compare-count-endpoint-severities` (P1).
-- [ ] **COUNT-02**: Trends' new-finding counts include TLS-derived findings. Source: same row.
-- [ ] **COUNT-03**: Compare lists the added and removed findings between two scans that differ.
+- [x] **COUNT-02**: Trends' new-finding counts include TLS-derived findings. Source: same row.
+- [x] **COUNT-03**: Compare lists the added and removed findings between two scans that differ.
   Source: same row.
-- [ ] **COUNT-04**: The Executive Skipped badge lists every skipped connector, including those after a
+- [x] **COUNT-04**: The Executive Skipped badge lists every skipped connector, including those after a
   connector row with no error category. Source: `261109-executive-skipped-badge-drops-null-category-entries`
   (P1, v5.28.2 audit F1).
-- [ ] **COUNT-05**: Export PDF shows the skip reasons whenever skips lowered the score. Source:
+- [x] **COUNT-05**: Export PDF shows the skip reasons whenever skips lowered the score. Source:
   `261109-dashboard-export-pdf-omits-coverage-skip-reasons` (v5.28.2 audit F2).
-- [ ] **COUNT-06**: An in-progress scan is marked as running and is not published as the latest scan.
+- [x] **COUNT-06**: An in-progress scan is marked as running and is not published as the latest scan.
   Source: `261110-running-scan-published-as-latest`.
-- [ ] **COUNT-07**: Trends and notify show a full JWT/SAML/DNSSEC connector outage. Source:
+- [x] **COUNT-07**: Trends and notify show a full JWT/SAML/DNSSEC connector outage. Source:
   `261107-trends-hide-full-connector-outage` (B-WR-07).
 
 ### Identity and certificate findings (IDENT, DETECT)
@@ -125,13 +125,13 @@ tracked file.
 | XSURF-12 | Phase 236 | Complete |
 | XSURF-13 | Phase 236 | Complete |
 | XSURF-14 | Phase 236 | Complete |
-| COUNT-01 | Phase 237 | Pending |
-| COUNT-02 | Phase 237 | Pending |
-| COUNT-03 | Phase 237 | Pending |
-| COUNT-04 | Phase 237 | Pending |
-| COUNT-05 | Phase 237 | Pending |
-| COUNT-06 | Phase 237 | Pending |
-| COUNT-07 | Phase 237 | Pending |
+| COUNT-01 | Phase 237 | Complete |
+| COUNT-02 | Phase 237 | Complete |
+| COUNT-03 | Phase 237 | Complete |
+| COUNT-04 | Phase 237 | Complete |
+| COUNT-05 | Phase 237 | Complete |
+| COUNT-06 | Phase 237 | Complete |
+| COUNT-07 | Phase 237 | Complete |
 | IDENT-05 | Phase 238 | Pending |
 | IDENT-06 | Phase 238 | Pending |
 | IDENT-07 | Phase 238 | Pending |

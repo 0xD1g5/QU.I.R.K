@@ -44,3 +44,7 @@ deriver should also emit the coverage_gap finding, for findings-list parity with
 
 Medium (half a day). Writing the print section is straightforward. The parity test across the two pipelines is
 the larger part. It needs `npm run build` and the bundle-freshness gate.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 237 (COUNT-05): `/print` renders a Scan Coverage subsection with ran/skipped (and, after the UI review, failed) counts and each skip reason via the shared phaseRecordText wording. Commits main e99ffdd3 (PR #84 merge; da032d53, 8b725c40). Tests: tests/test_report_coverage_parity.py::TestPrintScanCoverageSourceLeg and src/dashboard/src/pages/__tests__/print-scan-coverage.test.tsx (8 cases). Live: POST /api/export/pdf, pdftotext finds "Scan Coverage". Behaviour change: Export PDF gains a section. Follow-up: 261116-print-coverage-raw-reasons-and-disabled-count.

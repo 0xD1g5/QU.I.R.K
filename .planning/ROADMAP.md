@@ -110,7 +110,7 @@ Requirements are in `.planning/REQUIREMENTS.md` (25, all mapped). Phases 236–2
 each other and can run in any order. Phase 240 depends on all four, because 5.29.0 ships their fixes.
 
 - [x] **Phase 236: Score Divergence Closure** - The dashboard and the report give the same severities and the same headline score for the same scan, and a new divergence fails CI
-- [ ] **Phase 237: History and Count Truth** - Scan History, Trends, Compare, the Executive Skipped badge, Export PDF and notify count and show every finding, skip and outage
+- [x] **Phase 237: History and Count Truth** - Scan History, Trends, Compare, the Executive Skipped badge, Export PDF and notify count and show every finding, skip and outage
 - [ ] **Phase 238: Identity and Certificate Findings** - Weak JWKS algorithms, non-metadata SAML answers, TLS 1.3 mTLS rejections and SHA-1-signed certificates each produce the right finding or skip
 - [ ] **Phase 239: Connector Target Trust-Gate Hardening** - The trust gate checks exactly the targets each connector scans, including scalar target values, directory referrals and non-ASCII IP literals
 - [ ] **Phase 240: Regressions and Release 5.29.0** - Scan confidence reflects a high probe error rate, and 5.29.0 is published with its fixed known-defect wording withdrawn
@@ -162,18 +162,18 @@ Plans:
 **Plans**: 8 plans
 Plans:
 **Wave 1**
-- [ ] 237-01-PLAN.md — Trends delta keyed on derived findings (host, port, canonical title), derive once per session, Optional protocol + title on samples (COUNT-02, D-01..D-03, D-12, D-18)
-- [ ] 237-02-PLAN.md — Null-category partial failures fixed on writer and reader; scan_completion helper; checkpoints for every scan; job run id stamped at start (COUNT-04, COUNT-06, D-05, D-07, D-14, D-15)
-- [ ] 237-03-PLAN.md — UI: /print Scan Coverage, Compare Finding/Port columns, History Running/Incomplete status, sidebar badge; build + bundle (COUNT-03/05/06, D-04, D-06, D-09, D-17)
+- [x] 237-01-PLAN.md — Trends delta keyed on derived findings (host, port, canonical title), derive once per session, Optional protocol + title on samples (COUNT-02, D-01..D-03, D-12, D-18)
+- [x] 237-02-PLAN.md — Null-category partial failures fixed on writer and reader; scan_completion helper; checkpoints for every scan; job run id stamped at start (COUNT-04, COUNT-06, D-05, D-07, D-14, D-15)
+- [x] 237-03-PLAN.md — UI: /print Scan Coverage, Compare Finding/Port columns, History Running/Incomplete status, sidebar badge; build + bundle (COUNT-03/05/06, D-04, D-06, D-09, D-17)
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 237-04-PLAN.md — /api/scans derived counts + status, /api/compare finding identity, /api/scan/latest skips incomplete scans (COUNT-01/03/06, D-01, D-04, D-08, D-09)
-- [ ] 237-05-PLAN.md — Full connector outage counts in Trends; notify text, trigger and outage wording (COUNT-07, D-10, D-11, D-16, D-21)
+- [x] 237-04-PLAN.md — /api/scans derived counts + status, /api/compare finding identity, /api/scan/latest skips incomplete scans (COUNT-01/03/06, D-01, D-04, D-08, D-09)
+- [x] 237-05-PLAN.md — Full connector outage counts in Trends; notify text, trigger and outage wording (COUNT-07, D-10, D-11, D-16, D-21)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 237-06-PLAN.md — Trends timeline counts from derived findings; complete-only session listers, notify session pair and exposure map (COUNT-01/06, D-08, D-13, D-17)
+- [x] 237-06-PLAN.md — Trends timeline counts from derived findings; complete-only session listers, notify session pair and exposure map (COUNT-01/06, D-08, D-13, D-17)
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 237-07-PLAN.md — Live core-lab evidence for criteria 1, 2, 4, 5 and the operator's visual check (checkpoint)
+- [x] 237-07-PLAN.md — Live core-lab evidence for criteria 1, 2, 4, 5 and the operator's visual check (checkpoint)
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 237-08-PLAN.md — Docs, Series 237 UAT, vault sync, ledger rows and closure, full suite, branch CI (D-19, D-20)
+- [x] 237-08-PLAN.md — Docs, Series 237 UAT, vault sync, ledger rows and closure, full suite, branch CI (D-19, D-20)
 **UI hint**: yes
 
 ### Phase 238: Identity and Certificate Findings
