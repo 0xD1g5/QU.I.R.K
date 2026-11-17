@@ -462,12 +462,75 @@ def test_jwt_outcome_closed_port_unreachable():
     assert [r.kind for r in sink.resolved()] == ["unreachable"]
 
 
-def test_jwt_outcome_non_200_everywhere_is_answered():
+def test_jwt_outcome_non_200_everywhere_is_unexpected_response():
+    """Phase 238 D-08/D-11: a 404 at every path is an answer, but not a JWKS."""
     with _stub_server({}) as port:
         target = f"http://127.0.0.1:{port}"
         sink = TargetOutcomes([target])
         assert scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink) == []
-        assert [r.kind for r in sink.resolved()] == ["answered"]
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "HTTP 404")
+        ]
+
+
+@contextlib.contextmanager
+def _raw_server(body: bytes, content_type: str):
+    """127.0.0.1 ephemeral-port server answering 200 with ``body`` at every path."""
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):  # noqa: D401
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        yield srv.server_port
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_jwt_outcome_html_200_is_unexpected_response():
+    page = b"<!DOCTYPE html><html><body>login</body></html>"
+    with _raw_server(page, "text/html") as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        assert scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink) == []
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "not JSON")
+        ]
+
+
+def test_jwt_outcome_json_without_keys_is_unexpected_response():
+    with _stub_server({"/.well-known/jwks.json": {"hello": "world"}}) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        assert scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink) == []
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "not a JWKS (no keys array)")
+        ]
+
+
+def test_jwt_probe_log_discovery_without_jwks_uri():
+    from quirk.scanner.jwt_scanner import _fetch_jwks
+
+    with _stub_server({"/.well-known/openid-configuration": {"issuer": "x"}}) as port:
+        log = []
+        result = _fetch_jwks(f"http://127.0.0.1:{port}", 2, allow_internal=True, probe_log=log)
+    assert result[:2] == (None, None)
+    assert log == [
+        ("unexpected_response", "HTTP 404"),
+        ("unexpected_response", "HTTP 404"),
+        ("unexpected_response", "discovery document has no jwks_uri"),
+    ]
 
 
 def test_jwt_outcome_empty_keys_is_answered_with_no_rows():
@@ -555,14 +618,16 @@ def test_jwt_outcome_401_403_with_credentials_is_auth_failed(status):
 
 
 @pytest.mark.parametrize("status", [401, 403])
-def test_jwt_outcome_401_403_without_credentials_is_answered(status):
-    """No credentials configured: the server still responded (D-06 auth_failed
-    needs credentials present), so the target answered."""
+def test_jwt_outcome_401_403_without_credentials_is_missing_credentials(status):
+    """Phase 238 D-08/D-30: no credentials configured and the base origin asks
+    for them, so the operator can act by configuring --auth-* credentials."""
     with _status_server(status) as port:
         target = f"http://127.0.0.1:{port}"
         sink = TargetOutcomes([target])
         scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink)
-        assert [r.kind for r in sink.resolved()] == ["answered"]
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("missing_credentials", f"HTTP {status}: no credentials configured")
+        ]
 
 
 def test_jwt_outcome_401_on_one_path_200_on_another_with_credentials_is_answered():
