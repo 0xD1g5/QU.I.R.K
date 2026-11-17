@@ -171,8 +171,8 @@ describe("ScanCoverageChip", () => {
     fireEvent.click(await screen.findByText("Show detail"))
 
     const cell = await screen.findByText("skipped: unexpected-response")
-    expect(cell.className).toContain("text-[var(--ds-high)]")
-    expect(cell.className).not.toContain("text-[var(--ds-medium)]")
+    expect(cell.className).toContain("--ds-high")
+    expect(cell.className).not.toContain("--ds-medium")
   })
 
   it("still falls back to the medium colour for an unknown skip reason", async () => {
