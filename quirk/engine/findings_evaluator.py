@@ -591,7 +591,11 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 port=port,
                 title="Connector skipped — no target answered",
                 description=(
-                    "A QUIRK connector phase was skipped because none of its targets answered"
+                    # Phase 238 D-35: reason-neutral, so it stays true for
+                    # unexpected_response (a target answered with the wrong
+                    # document). The title is test- and UAT-cited; unchanged.
+                    "A QUIRK connector phase was skipped because none of its "
+                    "targets returned a usable answer"
                     + (f" ({scan_err_msg})" if scan_err_msg else "")
                     + ". This surface was not assessed; the gap counts as a scan "
                     "error in the readiness score."
@@ -600,6 +604,8 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     "Check the connector targets: for refused internal targets set "
                     "security.allow_internal_targets in the server config.yaml; for "
                     "credential failures start quirk serve with the right credentials; "
+                    "for a target that answered with something other than the "
+                    "expected document, check the configured URL; "
                     "otherwise confirm the targets are reachable, then re-run the scan."
                 ),
             )

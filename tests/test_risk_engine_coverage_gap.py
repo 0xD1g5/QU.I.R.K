@@ -134,3 +134,24 @@ def test_coverage_skip_advisory_becomes_titled_coverage_gap_finding(category):
     assert f["title"] == "Connector skipped \u2014 no target answered"
     assert detail in f["description"]
     assert "Informational protocol observation" not in f["title"]
+
+
+def test_connector_skipped_description_is_reason_neutral():
+    """Phase 238 D-35: an ``unexpected_response`` skip means a target DID
+    answer, with the wrong document. The title is test- and UAT-cited and
+    stays byte-identical; the description must not claim no target answered."""
+    detail = (
+        "1 of 1 targets answered with something other than the expected "
+        "document: https://idp.example/metadata (unexpected_response: HTTP 404)"
+    )
+    ep = _ep(
+        host="saml_scanner", port=0, protocol="ADVISORY",
+        scan_error=detail, scan_error_category="unexpected_response",
+    )
+    findings = evaluate_endpoints(_cfg(), [ep])
+    assert len(findings) == 1, f"expected one finding, got {findings!r}"
+    f = findings[0]
+    assert f["category"] == "coverage_gap"
+    assert f["title"] == "Connector skipped — no target answered"
+    assert detail in f["description"]
+    assert "none of its targets answered" not in f["description"]

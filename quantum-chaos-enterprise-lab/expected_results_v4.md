@@ -26,7 +26,7 @@ These services have **no profile tag** in `docker-compose.yml` — Compose bring
 | 8443 | tls-legacy | TLS | LEGACY_TLS | May negotiate TLS 1.2 on modern OpenSSL |
 | 9443 | tls-expired | TLS | CERT_EXPIRED_OR_EXPIRING | Cert validity failure/near-expiry datapoint |
 | 10443 | tls-selfsigned | TLS | CERT_SELFSIGNED | Untrusted/self-signed datapoint |
-| 11443 | tls-mtls-required | TLS | MTLS_REQUIRED | Handshake blocked without client cert |
+| 11443 | tls-mtls-required | TLS | MTLS_REQUIRED | Detected after a completed TLS handshake (a TLS 1.3 certificate-required alert, or the HTTP 400 "No required SSL certificate was sent" reply to a post-handshake probe); stored as `tls_blocker_reason` MTLS_REQUIRED with no `scan_error`; INFO "mTLS required" on the dashboard and in the report; certificate fields kept (Phase 238) |
 | 12443 | tls-slow-proxy | TLS | TLS_SLOW_PROXY | Useful for timeout/concurrency testing |
 | 8444 | http-on-8444 | HTTP | HTTP_ON_TLS_LIKE_PORT | Wrong protocol on "TLS-like" port |
 | 8000 | legacy-http | HTTP | PLAINTEXT_HTTP | Hygiene datapoint |
