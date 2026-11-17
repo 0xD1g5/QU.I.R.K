@@ -255,9 +255,31 @@ def _ecdsa_256():
 
 
 def _rsa_2048():
-    # rsa_size_0 / rsa_pss_1024 are deliberately NOT families: they diverge
-    # (WR-03), tracked by LEDGER 261116-rsa-undersized-key-predicate-differs-across-surfaces.
     return [_tls(_fam_host(39), cert_pubkey_alg="RSA", cert_pubkey_size=2048)]
+
+
+def _cert_sha1_leaf():
+    # Phase 238 D-18: CA-issued leaf (_tls defaults: issuer "CN=Real CA" !=
+    # subject "CN=ok.example") -> HIGH weak signature hash on both surfaces.
+    return [_tls(_fam_host(44), cert_sig_alg="sha1",
+                 cert_subject="CN=ok.example", cert_issuer="CN=Real CA")]
+
+
+def _cert_sha1_self_signed():
+    # Phase 238 D-18: self-signed leaf -> LOW weak signature hash plus the
+    # HIGH self-signed finding on both surfaces.
+    return [_tls(_fam_host(45), cert_sig_alg="sha1",
+                 cert_subject="CN=s", cert_issuer="CN=s")]
+
+
+def _rsa_size_0():
+    # Phase 238 D-20: size 0 is undetermined, never undersized, on both surfaces.
+    return [_tls(_fam_host(46), cert_pubkey_alg="RSA", cert_pubkey_size=0)]
+
+
+def _rsa_pss_1024():
+    # Phase 238 D-20: RSA-PSS below 2048 bits is undersized on both surfaces.
+    return [_tls(_fam_host(47), cert_pubkey_alg="RSA-PSS", cert_pubkey_size=1024)]
 
 
 FAMILY_ROWS: Dict[str, Callable[[], List[CryptoEndpoint]]] = {
@@ -300,6 +322,10 @@ FAMILY_ROWS: Dict[str, Callable[[], List[CryptoEndpoint]]] = {
     "legacy_supported_only": _legacy_supported_only,
     "ecdsa_256": _ecdsa_256,
     "rsa_2048": _rsa_2048,
+    "cert_sha1_leaf": _cert_sha1_leaf,
+    "cert_sha1_self_signed": _cert_sha1_self_signed,
+    "rsa_size_0": _rsa_size_0,
+    "rsa_pss_1024": _rsa_pss_1024,
 }
 
 

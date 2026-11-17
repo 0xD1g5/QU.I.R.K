@@ -63,7 +63,7 @@ PROFILE_ARGS="--profile phaseA" ./lab.sh up
 |---:|---|---|---|---|
 | 13443 | tls-missing-intermediate | TLS | CERT_CHAIN_INCOMPLETE | Leaf presented without required intermediate |
 | 14443 | tls-rsa1024 | TLS | CERT_RSA_1024 | Weak RSA key size |
-| 15443 | tls-sha1 | TLS | CERT_SHA1_SIG | SHA1-signed cert (legacy) |
+| 15443 | tls-sha1 | TLS | CERT_SHA1_SIG | SHA1-signed cert (legacy). Phase 238 (DETECT-07): emits HIGH `TLS certificate uses a weak signature hash` (CA-issued leaf) on both the report and the dashboard |
 
 **Notes**
 - Some clients may treat SHA1 as unacceptable; this is intended for detection.
@@ -576,7 +576,7 @@ so detection here is reproducible and the scoring-model change moved no finding.
 | 10.80.0.10 | mh-edge-legacy | nginx, TLS 1.0/1.1 + weak ciphers | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.11 | mh-edge-expired | nginx, expired certificate | **expired cert**, untrusted CA, QV RSA key, legacy ciphers | **CRITICAL:1** MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.12 | mh-edge-rsa1024 | nginx, RSA-1024 key | **undersized RSA key**, untrusted CA, legacy ciphers | **HIGH:1** MEDIUM:1 LOW:1 INFO:11 |
-| 10.80.0.13 | mh-edge-sha1 | nginx, SHA-1 signed cert | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
+| 10.80.0.13 | mh-edge-sha1 | nginx, SHA-1 signed cert | untrusted CA, QV RSA key, legacy ciphers. Phase 238 note: gains the same HIGH `TLS certificate uses a weak signature hash`; severity counts not re-measured, see ledger 261109-multihost-oracle-remeasure-39-targets | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.14 | mh-edge-chainbroken | nginx, missing intermediate | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.15 | mh-legacy-intranet | plaintext HTTP only | **plaintext HTTP** | **HIGH:1** INFO:10 |
 | 10.80.0.16 | mh-intranet-wiki | plaintext HTTP | **plaintext HTTP** | **HIGH:1** INFO:10 |

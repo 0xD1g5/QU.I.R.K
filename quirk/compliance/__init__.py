@@ -339,6 +339,12 @@ COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
         _fips("Not-Approved (SP 800-131A R2: RSA <2048)"),
         _soc2("CC6.6"), _iso("8.24"),
     ],
+    # Phase 238 D-34 (DETECT-07): weak leaf signature hash (SHA-1/MD5/MD4/MD2).
+    "TLS certificate uses a weak signature hash": [
+        _pci("4.2.1.1"),
+        _fips("Not-Approved (SP 800-131A R2: SHA-1 signatures)"),
+        _soc2("CC6.6"), _iso("8.24"),
+    ],
     "TLS certificate uses undersized ECDSA key": [
         _pci("6.3.3"),
         _hipaa("§164.312(a)(2)(iv)"),
