@@ -69,13 +69,16 @@ def http_ep(i, sid=None):
     )
 
 
-def tls_ep(i, sid=None, *, port=80, legacy=False, caps=True, scan_error=None):
+def tls_ep(i, sid=None, *, port=80, legacy=False, caps=True, scan_error=None,
+           blocker=None, sig_alg=None, issuer=None, subject=None):
     return CryptoEndpoint(
         host=f"h{i}", port=port, protocol="TLS",
         tls_version="TLSv1" if legacy else "TLSv1.3",
         tls_supported_versions="TLSv1,TLSv1.2" if legacy else "TLSv1.2,TLSv1.3",
         tls_capabilities_json=json.dumps({"ok": True}) if caps else None,
         scan_error=scan_error, scan_run_id=sid,
+        tls_blocker_reason=blocker, cert_sig_alg=sig_alg,
+        cert_issuer=issuer, cert_subject=subject,
     )
 
 
@@ -289,6 +292,64 @@ def test_tls_fast_mode_refuses_fixed_host(db):
     assert counters["refused_probe"] >= 1
     assert counters["closed"] == 0
     assert "closed" not in _fp_states(db, S2, TLS_SLUG)
+
+
+# ---------------------------------------------------------------------------
+# Phase 238 D-14/D-15/D-31: an observed (post-handshake) mTLS row is assessed
+# ---------------------------------------------------------------------------
+SHA1_SLUG = "high-impact-findings"
+
+
+def _mtls_ep(i, *, sig_alg="sha1", legacy=False, scan_error=None):
+    """A 238-03 post-handshake mTLS row: handshake completed, version and
+    CA-issued leaf observed, tls_blocker_reason MTLS_REQUIRED, no scan_error."""
+    return tls_ep(i, port=443, legacy=legacy, scan_error=scan_error,
+                  blocker="MTLS_REQUIRED", sig_alg=sig_alg,
+                  issuer="CN=ca", subject=f"CN=h{i}")
+
+
+def test_mtls_row_fixed_sha1_leaf_closes(db):
+    _run_scan(db, S1, 0, [_mtls_ep(i) for i in range(N)], tls_mode="deep")
+    assert _fp_states(db, S1, SHA1_SLUG) == ["open"] * N
+    counters = _run_scan(
+        db, S2, 1,
+        [_mtls_ep(i, sig_alg="sha256" if i == 7 else "sha1") for i in range(N)],
+        tls_mode="deep",
+    )
+    # The SHA-1 HIGH is the only HIGH on these rows and lands in the
+    # high-impact-findings catch-all alone (BRIDGE_REACHABILITY
+    # "catchall-only"), so fixing h7 closes exactly one fingerprint.
+    assert counters["closed"] == 1
+    assert _fp_states(db, S2, SHA1_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, SHA1_SLUG) == ["closed"] + ["open"] * 7
+
+
+def test_mtls_row_fixed_legacy_tls_closes(db):
+    _run_scan(db, S1, 0, [_mtls_ep(i, sig_alg="sha256", legacy=True) for i in range(N)],
+              tls_mode="deep")
+    assert _fp_states(db, S1, TLS_SLUG) == ["open"] * N
+    counters = _run_scan(
+        db, S2, 1,
+        [_mtls_ep(i, sig_alg="sha256", legacy=(i != 7)) for i in range(N)],
+        tls_mode="deep",
+    )
+    # Offered-with-TLS-1.2 legacy is LOW, so it lands in legacy-tls-versions
+    # only: one closed fingerprint.
+    assert counters["closed"] == 1
+    assert _fp_states(db, S2, TLS_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, TLS_SLUG) == ["closed"] + ["open"] * 7
+
+
+def test_mtls_handshake_variant_still_refuses(db):
+    _run_scan(db, S1, 0, [_mtls_ep(i) for i in range(N)], tls_mode="deep")
+    counters = _run_scan(
+        db, S2, 1,
+        [_mtls_ep(i) for i in range(7)]
+        + [_mtls_ep(7, sig_alg="sha256", scan_error="MTLS_REQUIRED: alert")],
+        tls_mode="deep",
+    )
+    assert counters["closed"] == 0
+    assert "closed" not in _fp_states(db, S2, SHA1_SLUG, host="h7")
 
 
 # ---------------------------------------------------------------------------
