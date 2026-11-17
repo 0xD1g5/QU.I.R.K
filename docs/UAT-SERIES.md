@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.28.2
-**Last Updated:** 2026-11-16 (Phase 237 -- History and Count Truth, COUNT-01..07. Series 237 added: 13 cases, all PASS on cited test nodes, vitest cases or the live evidence files; UAT-44-04, UAT-178-02 and UAT-229-06 Notes updated for finding-level trends semantics with names and Result lines unchanged. No version bump. Prior: 2026-11-16 (Phase 236 plan 09 gap closure -- UAT-236-07 added (scan_error TLS row headline parity, PASS on cited nodes). Prior: 2026-11-16 (Phase 236 -- Score Divergence Closure, XSURF-09..14. Series 236 added: 6 cases, all PASS on cited test nodes (two-tier legacy TLS, weak cipher HIGH, undersized ECDSA HIGH on the dashboard, container findings on the dashboard, drift score equals Trends, remaining divergences dispositioned). No version bump. Prior: 2026-11-08 (Phase 235.4 post-release -- v5.28.2 published. UAT-1-02 re-executed against the published 5.28.2 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-08 (Phase 235.4 plan 05 -- UAT-235.3-13, the live GUI leg, moves from SKIP DEFERRED to PASS on the operator-confirmed LAUNCH-10 walkthrough. Prior: 2026-11-07 (Phase 235.4 -- Release 5.28.2. Version bumped to 5.28.2: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.1 run) to SKIP DEFERRED until it is re-executed against the published 5.28.2. Prior: 2026-11-06 (Phase 235.3 -- Connector Coverage Truth Fixes. Series 235.3 added: 13 cases, 12 PASS on cited nodes executed in plan 19 and 1 SKIP (UAT-235.3-13, the live GUI leg, DEFERRED to Phase 235.4 LAUNCH-10); UAT-192-01 corrected from six to eight skip reasons (internal-target-refused and target-unanswered added). No version bump. Prior: 2026-11-05 (Phase 235.2 post-release -- v5.28.1 published. UAT-1-02 re-executed against the published 5.28.1 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-05 (Phase 235.2 -- Release 5.28.1. Version bumped to 5.28.1: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.0 run) to SKIP DEFERRED until it is re-executed against the published 5.28.1. Prior: 2026-11-04 (Phase 235.1 -- Install, Source-Scan Truth Fixes. Series 235.1 added: 7 cases, all PASS on cited test nodes (missing-binary skip for semgrep and syft, doctor configured-but-missing warning, doctor Python range, doctor DB check, source-scan partial failure, 3.15 unpinned-resolve verdict); UAT-192-01 corrected from five to six skip reasons (missing-binary added). No version bump. Prior: 2026-10-30 (Phase 235 post-release, plan 16 -- v5.28.0 published. UAT-1-02 re-executed against the published 5.28.0 PyPI install and moves from SKIP DEFERRED to PASS; UAT-235-11..17 (macOS, Linux 3.11, Linux 3.10, Python 3.15 negative, attestation, live README links, release body) and UAT-232-08 (live PyPI README links) move from SKIP DEFERRED to PASS on the plan 235-14/235-15 evidence. Prior: 2026-10-29 (Phase 235 — Release & Launch Gate, LAUNCH-01/LAUNCH-04. Version bumped to 5.28.0: header and UAT-1-02 Pass Criteria. Series 235 added: 17 cases, 10 PASS on cited test nodes and 7 SKIP (DEFERRED, live legs owed to plans 235-15 and 235-16). UAT-1-02 moves from PASS (a 5.27.0 run) to SKIP DEFERRED until plan 235-16 re-executes it against the published 5.28.0; UAT-232-08's owner label corrected from LAUNCH-03 to LAUNCH-04; UAT-5-15 annotated in Notes (the Semgrep ruleset is gone), Result unchanged. Prior: 2026-10-27 (Phase 234 — P2b Scan-Depth Fix & Ladder Re-measurement, SCORE-09/SCORE-10. Series 234 added: 13 cases, 12 PASS and 1 SKIP, covering scoring 4.0 (absolute-count penalties at N_REF 40, the classical-key rule, the PQC certificate bucket, Kerberos placeholder and scan-error rows), the QRAMM overall over assessed dimensions with its stale and pre-upgrade states, and the code-review fixes D-27..D-31; UAT-234-13, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. UAT-233-07 and UAT-212-02 re-dispositioned as resolved by Phase 234 (PASS on the un-xfailed P2b node, their known-open-defect dispositions kept in Notes as history); UAT-233-03's probe count and UAT-233-04's continuity wording updated; UAT-60-04's Expected corrected for "Below Basic". No version bump. Prior: 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-11-17 (Phase 238 -- Identity and Certificate Findings, IDENT-05..07, DETECT-06/07. Series 238 added: 12 cases, all PASS on cited test nodes, vitest cases or the live evidence files; UAT-4-11 re-run and re-dispositioned PASS on the 238 live evidence; UAT-5-10 steps corrected to `connectors.jwt_targets` and flipped from SKIP to PASS on the same evidence; UAT-7-34 and UAT-7-35 updated from three identity cards to four with Result lines unchanged; UAT-192-01 and UAT-235.3-12 text updated from eight to nine skip reasons; UAT-235.3-07's recorded node count updated. No version bump. Prior: 2026-11-16 (Phase 237 -- History and Count Truth, COUNT-01..07. Series 237 added: 13 cases, all PASS on cited test nodes, vitest cases or the live evidence files; UAT-44-04, UAT-178-02 and UAT-229-06 Notes updated for finding-level trends semantics with names and Result lines unchanged. No version bump. Prior: 2026-11-16 (Phase 236 plan 09 gap closure -- UAT-236-07 added (scan_error TLS row headline parity, PASS on cited nodes). Prior: 2026-11-16 (Phase 236 -- Score Divergence Closure, XSURF-09..14. Series 236 added: 6 cases, all PASS on cited test nodes (two-tier legacy TLS, weak cipher HIGH, undersized ECDSA HIGH on the dashboard, container findings on the dashboard, drift score equals Trends, remaining divergences dispositioned). No version bump. Prior: 2026-11-08 (Phase 235.4 post-release -- v5.28.2 published. UAT-1-02 re-executed against the published 5.28.2 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-08 (Phase 235.4 plan 05 -- UAT-235.3-13, the live GUI leg, moves from SKIP DEFERRED to PASS on the operator-confirmed LAUNCH-10 walkthrough. Prior: 2026-11-07 (Phase 235.4 -- Release 5.28.2. Version bumped to 5.28.2: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.1 run) to SKIP DEFERRED until it is re-executed against the published 5.28.2. Prior: 2026-11-06 (Phase 235.3 -- Connector Coverage Truth Fixes. Series 235.3 added: 13 cases, 12 PASS on cited nodes executed in plan 19 and 1 SKIP (UAT-235.3-13, the live GUI leg, DEFERRED to Phase 235.4 LAUNCH-10); UAT-192-01 corrected from six to eight skip reasons (internal-target-refused and target-unanswered added). No version bump. Prior: 2026-11-05 (Phase 235.2 post-release -- v5.28.1 published. UAT-1-02 re-executed against the published 5.28.1 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-05 (Phase 235.2 -- Release 5.28.1. Version bumped to 5.28.1: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.0 run) to SKIP DEFERRED until it is re-executed against the published 5.28.1. Prior: 2026-11-04 (Phase 235.1 -- Install, Source-Scan Truth Fixes. Series 235.1 added: 7 cases, all PASS on cited test nodes (missing-binary skip for semgrep and syft, doctor configured-but-missing warning, doctor Python range, doctor DB check, source-scan partial failure, 3.15 unpinned-resolve verdict); UAT-192-01 corrected from five to six skip reasons (missing-binary added). No version bump. Prior: 2026-10-30 (Phase 235 post-release, plan 16 -- v5.28.0 published. UAT-1-02 re-executed against the published 5.28.0 PyPI install and moves from SKIP DEFERRED to PASS; UAT-235-11..17 (macOS, Linux 3.11, Linux 3.10, Python 3.15 negative, attestation, live README links, release body) and UAT-232-08 (live PyPI README links) move from SKIP DEFERRED to PASS on the plan 235-14/235-15 evidence. Prior: 2026-10-29 (Phase 235 — Release & Launch Gate, LAUNCH-01/LAUNCH-04. Version bumped to 5.28.0: header and UAT-1-02 Pass Criteria. Series 235 added: 17 cases, 10 PASS on cited test nodes and 7 SKIP (DEFERRED, live legs owed to plans 235-15 and 235-16). UAT-1-02 moves from PASS (a 5.27.0 run) to SKIP DEFERRED until plan 235-16 re-executes it against the published 5.28.0; UAT-232-08's owner label corrected from LAUNCH-03 to LAUNCH-04; UAT-5-15 annotated in Notes (the Semgrep ruleset is gone), Result unchanged. Prior: 2026-10-27 (Phase 234 — P2b Scan-Depth Fix & Ladder Re-measurement, SCORE-09/SCORE-10. Series 234 added: 13 cases, 12 PASS and 1 SKIP, covering scoring 4.0 (absolute-count penalties at N_REF 40, the classical-key rule, the PQC certificate bucket, Kerberos placeholder and scan-error rows), the QRAMM overall over assessed dimensions with its stale and pre-upgrade states, and the code-review fixes D-27..D-31; UAT-234-13, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. UAT-233-07 and UAT-212-02 re-dispositioned as resolved by Phase 234 (PASS on the un-xfailed P2b node, their known-open-defect dispositions kept in Notes as history); UAT-233-03's probe count and UAT-233-04's continuity wording updated; UAT-60-04's Expected corrected for "Below Basic". No version bump. Prior: 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -1716,9 +1716,9 @@ All of these services show status `Up` or `running`:
 - Port 5555 → protocol: `UNKNOWN`
 - Total findings count ≥ 5
 
-**Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
-**Date:** 2026-04-17  **Tester:** Digs  
-**Notes:** 18 total findings. Protocols: 443/8443/9443/10443/11443/12443=TLS, 8444/8000=HTTP, 2222=SSH, 5555=UNKNOWN. Key findings: expired cert (9443), self-signed (10443), mTLS-HTTP-400 (11443), HTTP on port 8000/8444.
+**Result:** - [x] PASS (2026-11-17 Phase 238 re-run on the live core plus phaseA plus jwt lab, all ten criteria hold, evidence in `238-evidence/live-identity-cert.txt`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 08)  
+**Notes:** 2026-11-17 (Phase 238, DETECT-06): re-run with `run_scan.py --config` on an explicit config (profile recorded as standard) that also listed 13443, 14443 and 15443. 443 TLSv1.3 modern; 8443 TLSv1.2 legacy; 9443 CRITICAL certificate expired; 10443 HIGH self-signed; 11443 TLS row TLSv1.3 with `tls_blocker_reason` MTLS_REQUIRED and no scan_error, detected after the handshake (nginx answers HTTP 400 "No required SSL certificate was sent"), INFO "mTLS required" on the report and the dashboard; 8444 and 8000 HTTP; 2222 SSH; 5555 UNKNOWN; 38 findings in the findings JSON (18 on the dashboard). Evidence: `.planning/phases/238-identity-and-certificate-findings/238-evidence/live-identity-cert.txt` (gitignored phase directory). Earlier record, 2026-04-17: 18 total findings. Protocols: 443/8443/9443/10443/11443/12443=TLS, 8444/8000=HTTP, 2222=SSH, 5555=UNKNOWN. Key findings: expired cert (9443), self-signed (10443), mTLS-HTTP-400 (11443), HTTP on port 8000/8444.
 
 ---
 
@@ -1887,19 +1887,22 @@ All of these services show status `Up` or `running`:
 ### UAT-5-10: Full JWT Lab Scan
 
 **Steps:**
-1. Run `quirk init --output lab-jwt.yaml`, then edit the `targets` and `scan` sections:
+1. Start the profile: `PROFILE_ARGS="--profile jwt" ./lab.sh up` (from `quantum-chaos-enterprise-lab/`).
+2. Run `quirk init --output lab-jwt.yaml`, then set the JWT connector targets (the JWT scanner reads
+   `connectors.jwt_targets`, not `scan.ports_tls`):
    ```yaml
-   targets:
-     include_ips:
-       - "127.0.0.1"
-     fqdns: []
-     cidrs: []
-     exclude_ips: []
-   scan:
-     ports_tls: [20001, 20002, 20003, 20004]
+   connectors:
+     enable_jwt: true
+     jwt_targets:
+       - "http://127.0.0.1:20001"
+       - "http://127.0.0.1:20002"
+       - "http://127.0.0.1:20003"
+       - "http://127.0.0.1:20004"
+   security:
+     allow_internal_targets: true
    ```
-2. Run: `quirk --config lab-jwt.yaml`
-3. Check findings for JWT-specific results
+3. Run: `quirk --config lab-jwt.yaml`
+4. Check findings for JWT-specific results
 
 **Expected:** At least 3 JWT findings: HS256, RSA-1024, alg:none.
 
@@ -1909,9 +1912,9 @@ All of these services show status `Up` or `running`:
 - Findings include RSA-1024 weak key finding
 - Total JWT-related findings ≥ 3
 
-**Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 uat_runner.py SKIP: JWT ports not reachable)
-**Date:** __________  **Tester:** __________  
-**Notes:**
+**Result:** - [x] PASS (2026-11-17 Phase 238 live jwt profile run with corrected steps, evidence in `238-evidence/live-identity-cert.txt`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 08)  
+**Notes:** 2026-11-17 (Phase 238, IDENT-05): steps corrected to `connectors.jwt_targets` plus `security.allow_internal_targets` (the old steps put 20001-20004 in `scan.ports_tls`, which the JWT scanner never reads). Exactly three JWKS findings on the findings JSON, the report HTML and `/api/scan/latest`: CRITICAL "JWKS key declares alg:none" (20004), CRITICAL "JWKS publishes secret key material" (20002, the lab's HS256 key), HIGH "JWKS key uses undersized RSA key" (20003, 1024-bit); 20001 (RS256 2048) no finding. The HS256 case is reported as published key material, which outranks the HMAC rule. Evidence: `.planning/phases/238-identity-and-certificate-findings/238-evidence/live-identity-cert.txt`. Earlier SKIP, 2026-08-27: uat_runner.py SKIP: JWT ports not reachable.
 
 ---
 
@@ -4347,20 +4350,20 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 
 **Steps:**
 1. Navigate to `http://127.0.0.1:8512/identity`
-2. Observe the three protocol summary cards at the top of the page
+2. Observe the four protocol summary cards at the top of the page
 3. Note the status badge on each card
 
-**Expected:** Three cards rendered: Kerberos, SAML/OIDC, DNSSEC — each showing "Not Scanned" empty state.
+**Expected:** Four cards rendered: Kerberos, SAML/OIDC, JWT/JWKS, DNSSEC — each showing "Not Scanned" empty state (four "Not Scanned" badges), and the fallback copy "No identity protocol findings in this scan — enable Kerberos, SAML, JWT, or DNSSEC scanners in config.yaml and run a scan."
 
 **Pass Criteria:**
-- Three cards visible: "Kerberos", "SAML/OIDC", "DNSSEC"
-- Each card shows a "Not Scanned" or neutral status badge (not an error)
+- Four cards visible: "Kerberos", "SAML/OIDC", "JWT/JWKS", "DNSSEC"
+- Each card shows a "Not Scanned" or neutral status badge (not an error): four "Not Scanned" badges
 - No JavaScript errors in console
 - Cards do not crash when `identity_findings` array is empty or absent from API response
 
 **Result:** - [x] PASS (2026-09-21 Phase 206 — converted to vitest coverage; the cited node covers every Pass Criteria bullet of this case and was red-proved by a production-source mutation, see .planning 206-RED-PROOF.md)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-21  **Tester:** automated  
-**Notes:** DEFERRED — covered by `src/dashboard/src/pages/__tests__/identity-empty-state.test.tsx::"renders a Not Scanned state for each identity protocol card when identity findings are absent (no-coverage static fallback)"`.
+**Notes:** DEFERRED — covered by `src/dashboard/src/pages/__tests__/identity-empty-state.test.tsx::"renders a Not Scanned state for each identity protocol card when identity findings are absent (no-coverage static fallback)"`. 2026-11-17 (Phase 238, IDENT-06): the page now has four cards; the cited node asserts the JWT/JWKS card and four Not Scanned badges and passed in the plan 238-09 run.
 
 ---
 
@@ -4373,23 +4376,24 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 **Steps:**
 1. Run: `python run_scan.py --config labs/quirk-chaos.yaml` (or equivalent full lab scan)
 2. Navigate to `http://127.0.0.1:8512/identity`
-3. Observe the three protocol summary cards
+3. Observe the four protocol summary cards (Kerberos, SAML/OIDC, JWT/JWKS, DNSSEC)
 4. Check each card's status badge and finding count
 5. Click a finding row in the findings table below the cards
 
 **Expected:** Cards show per-protocol finding counts and severity. Clicking a row opens a detail Sheet.
 
 **Pass Criteria:**
-- At least one card shows a non-zero finding count (Kerberos or DNSSEC expected from chaos lab)
+- At least one card shows a non-zero finding count (Kerberos or DNSSEC expected from chaos lab; JWT/JWKS on the `jwt` profile)
+- Four cards visible, in the order Kerberos, SAML/OIDC, JWT/JWKS, DNSSEC
 - Card status badge reflects highest severity finding for that protocol (e.g., "Critical", "High")
 - "Safe" badge shown if no issues detected for a protocol
 - Findings table below cards lists identity findings with Severity, Protocol, Host, Algorithm columns
 - Clicking a row opens a slide-out detail Sheet showing finding description and recommendation
-- Table shows "No identity protocol findings" empty state if API returns no identity data
+- Table shows "No identity protocol findings" empty state if API returns no identity data; with no coverage data the copy reads "No identity protocol findings in this scan — enable Kerberos, SAML, JWT, or DNSSEC scanners in config.yaml and run a scan."
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires chaos lab Kerberos/SAML/DNSSEC targets, not available in this environment)
 **Date:** __________  **Tester:** __________  
-**Notes:**
+**Notes:** 2026-11-17 (Phase 238, IDENT-06): Steps and Pass Criteria updated from three cards to four. Result left unchanged: the Phase 238 operator walkthrough (UAT-238-12) confirmed the four cards, the JWT/JWKS card's count and Critical badge and the JWT rows of the findings table on the `jwt` profile, but did not exercise the detail Sheet, the Safe badge or Kerberos/DNSSEC targets, so this case is not re-dispositioned from it.
 
 ---
 
@@ -25545,18 +25549,18 @@ was checked to satisfy the gate without a corresponding real result — the brow
 were auto-mode pre-approved; the live-browser walkthrough was then performed and operator-approved
 on 2026-09-09, flipping UAT-192-07 to PASS (evidence in the phase's 192-HUMAN-UAT.md).
 
-### UAT-192-01: `ScanPhaseRecord` captures exactly eight skip reasons per scanner phase (OBS-01)
+### UAT-192-01: `ScanPhaseRecord` captures exactly nine skip reasons per scanner phase (OBS-01)
 
 **ID:** UAT-192-01
 **Title:** Every eligible scanner phase writes a `ScanPhaseRecord` row (ran or skipped), the
-skip-reason set is exactly the eight frozen values (`disabled-by-config`, `missing-extra`,
+skip-reason set is exactly the nine frozen values (`disabled-by-config`, `missing-extra`,
 `no-eligible-targets`, `missing-credentials`, `missing-binary`, `failed`, `internal-target-refused`,
-`auth-failed`; `missing-binary` added in Phase 235.1, the last two in Phase 235.3), and the absence of a row is never itself
+`auth-failed`, `unexpected-response`; `missing-binary` added in Phase 235.1, `internal-target-refused` and `auth-failed` in Phase 235.3, `unexpected-response` in Phase 238), and the absence of a row is never itself
 a signal
 **Maps to:** OBS-01
 
 **What to test:** the schema/migration correctness in `tests/test_scan_phase_records.py`
-(round-trip persistence, unique-constraint enforcement, exact 8-member reason-set membership,
+(round-trip persistence, unique-constraint enforcement, exact 9-member reason-set membership,
 additive-only migration) plus the precedence-ordered guard tests added across Plans 03-05
 (disabled/missing-extra/no-eligible-targets/missing-credentials/failed classification, and the
 vault/db `missing-credentials` pre-flight guards specifically).
@@ -25566,18 +25570,19 @@ vault/db `missing-credentials` pre-flight guards specifically).
 .venv/bin/python -m pytest tests/test_scan_phase_records.py -q
 ```
 
-**Pass Criteria:** all tests pass; the reason set contains exactly 8 members; a vault phase with
+**Pass Criteria:** all tests pass; the reason set contains exactly 9 members; a vault phase with
 no token set records `missing-credentials` and never calls `scan_vault_targets`; a db phase with
 one usable credentialed target group still runs (does not over-skip a mixed group).
 
-**Falsifiability:** this case turns red if a ninth reason value is ever accepted, if a duplicate
+**Falsifiability:** this case turns red if a tenth reason value is ever accepted, if a duplicate
 `(scan_run_id, phase_name)` row is allowed, or if a credentialed target group is skipped anyway.
 
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-09-08  **Tester:** Automated (192-11 phase-close plan execution)
 **Notes:** `tests/test_scan_phase_records.py` re-run live during this plan — 59 tests passing
 (schema tests from 192-01 plus the writer/guard tests accumulated through 192-02..05), per those
-plans' own SUMMARY.md self-checks.
+plans' own SUMMARY.md self-checks. 2026-11-17 (Phase 238): the reason set grew to nine with
+`unexpected-response`; `tests/test_scan_phase_records.py` re-run in plan 238-09: 42 passed.
 
 ---
 
@@ -34999,7 +35004,7 @@ gh release view v5.28.0 --json body -q .body
 
 **Pass Criteria:** All nodes pass; skipped score < answered-empty score on every surface; the baseline TLS set is identical and non-empty.
 
-**Result:** - [x] PASS (2026-11-06 10 passed, including the slow paired-scan nodes -- covered by `tests/test_connector_coverage_truth.py::test_coverage_skip_advisory_lowers_score_through_real_pipeline` and `tests/test_connector_coverage_truth.py::test_answered_empty_baseline_estate_identical_and_assessed` and `tests/test_connector_coverage_truth.py::test_answered_empty_intel_score_skipped_lower` and `tests/test_connector_coverage_truth.py::test_answered_empty_html_report_score_and_coverage_row` and `tests/test_connector_coverage_truth.py::test_answered_empty_api_scan_latest_score_and_coverage` and `tests/test_report_coverage_parity.py::TestFourSurfaceCoverageParity::test_new_reason_skip_matches_across_four_surfaces`)  - [ ] FAIL  - [ ] SKIP
+**Result:** - [x] PASS (2026-11-06 10 passed, including the slow paired-scan nodes; 2026-11-17 re-run 11 passed after Phase 238 added an unexpected-response parameter -- covered by `tests/test_connector_coverage_truth.py::test_coverage_skip_advisory_lowers_score_through_real_pipeline` and `tests/test_connector_coverage_truth.py::test_answered_empty_baseline_estate_identical_and_assessed` and `tests/test_connector_coverage_truth.py::test_answered_empty_intel_score_skipped_lower` and `tests/test_connector_coverage_truth.py::test_answered_empty_html_report_score_and_coverage_row` and `tests/test_connector_coverage_truth.py::test_answered_empty_api_scan_latest_score_and_coverage` and `tests/test_report_coverage_parity.py::TestFourSurfaceCoverageParity::test_new_reason_skip_matches_across_four_surfaces`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-11-06  **Tester:** Automated (Phase 235.3 plan 19)
 **Notes:** Plans 235.3-09, 235.3-14. Known limitation P-05: the merged sensor score does not see these skips (todo filed by plan 01).
 
@@ -35084,24 +35089,24 @@ cd src/dashboard && npx vitest run src/lib/__tests__/coverage-reason.test.ts src
 **Notes:** Plans 235.3-13 and 235.3-16.
 
 
-### UAT-235.3-12: Docs tell the truth: before-a-client-scan checklist, eight skip reasons, CHANGELOG 5.28.2
+### UAT-235.3-12: Docs tell the truth: before-a-client-scan checklist, nine skip reasons, CHANGELOG 5.28.2
 
 **ID:** UAT-235.3-12
-**Title:** Docs tell the truth: before-a-client-scan checklist, eight skip reasons, CHANGELOG 5.28.2
+**Title:** Docs tell the truth: before-a-client-scan checklist, nine skip reasons, CHANGELOG 5.28.2
 **Maps to:** COVTRUTH-06, D-06, D-12
 
-**What to test:** The operators guide carries the "Before a client scan" checklist and the new coverage reasons, report-interpretation lists eight skip reasons, the CHANGELOG has a gated `[5.28.2]` section, and every claim ledger anchor still resolves after the doc edits.
+**What to test:** The operators guide carries the "Before a client scan" checklist and the new coverage reasons, report-interpretation lists nine skip reasons (eight at 5.28.2; Phase 238 added `unexpected-response`), the CHANGELOG has a gated `[5.28.2]` section, and every claim ledger anchor still resolves after the doc edits.
 
 **Steps:**
 ```
 .venv/bin/python -m pytest -q -m "" tests/test_doc_claim_ledger_gate.py::test_ledger_anchors_resolve tests/test_doc_claim_ledger_gate.py::test_classification_matches_tracked_docs tests/test_changelog_5282_section.py::test_required_terms_present tests/test_scan_phase_records.py::test_scan_phase_skip_reasons_exact_membership
 ```
 
-**Pass Criteria:** All nodes pass; the reason set has exactly eight members; ledger anchors resolve.
+**Pass Criteria:** All nodes pass; the reason set has exactly nine members; ledger anchors resolve.
 
 **Result:** - [x] PASS (2026-11-06 4 passed -- covered by `tests/test_doc_claim_ledger_gate.py::test_ledger_anchors_resolve` and `tests/test_doc_claim_ledger_gate.py::test_classification_matches_tracked_docs` and `tests/test_changelog_5282_section.py::test_required_terms_present` and `tests/test_scan_phase_records.py::test_scan_phase_skip_reasons_exact_membership`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-11-06  **Tester:** Automated (Phase 235.3 plan 19)
-**Notes:** Plans 235.3-17 and 235.3-18. No version bump (D-01); `docs/api-reference.md` still does not exist, so the new endpoint is documented in operators-guide 3.0.
+**Notes:** Plans 235.3-17 and 235.3-18. No version bump (D-01); `docs/api-reference.md` still does not exist, so the new endpoint is documented in operators-guide 3.0. 2026-11-17 (Phase 238): reason count updated to nine; the four cited nodes re-run in plan 238-09 and passed (the membership node now pins nine).
 
 
 ### UAT-235.3-13: Live GUI repro of the 2026-11-05 shape: Executive, Data at Rest and New Scan on a running server
@@ -35512,3 +35517,237 @@ see .planning/phases/237-history-and-count-truth/237-evidence/human-verify.txt
 **Result:** - [x] PASS (2026-11-16 Phase 237 -- operator reply recorded verbatim in Notes)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-11-16  **Tester:** Digs
 **Notes:** Operator reply recorded verbatim in `237-evidence/human-verify.txt`: "Approved, all looked right" (2026-11-16).
+
+## Series 238: Identity and Certificate Findings (Phase 238 — v5.29)
+
+**Last Updated:** 2026-11-17 (Phase 238)
+
+### UAT-238-01: A weak JWKS key is a finding on the report and the dashboard and lowers the score
+
+**ID:** UAT-238-01
+**Title:** A weak JWKS key is a finding on the report and the dashboard and lowers the score
+**Maps to:** IDENT-05, D-01, D-02, D-04, D-27
+
+**What to test:** A JWKS key with alg:none or published key material gives one CRITICAL, an HMAC key or an RSA key under 2048 bits gives one HIGH, on the report deriver and the dashboard deriver alike, and a one-row TLS estate that scores 77 drops to exactly 31 (CRITICAL) or 63 (HIGH) on both. Healthy RS256, ES256 and EdDSA keys give no finding and keep 77.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_jwks_findings.py::test_report_and_dashboard_emit_one_finding_per_weak_key tests/test_jwks_findings.py::test_weak_jwks_key_lowers_score_on_both_surfaces tests/test_jwks_findings.py::test_healthy_keys_produce_no_finding tests/test_jwks_findings.py::test_rule_order_first_match_wins tests/test_severity_divergence_behaviour.py::test_fixture_families_cover_every_high_critical_title_site
+```
+
+**Pass Criteria:** All nodes pass; exact scores 77 -> 31 and 77 -> 63 on both derivers; every new HIGH/CRITICAL title is emitted by a divergence family.
+
+**Result:** - [x] PASS (2026-11-17 12 passed in the plan 238-09 run -- covered by `tests/test_jwks_findings.py::test_report_and_dashboard_emit_one_finding_per_weak_key` and `tests/test_jwks_findings.py::test_weak_jwks_key_lowers_score_on_both_surfaces` and `tests/test_jwks_findings.py::test_healthy_keys_produce_no_finding` and `tests/test_jwks_findings.py::test_rule_order_first_match_wins` and `tests/test_severity_divergence_behaviour.py::test_fixture_families_cover_every_high_critical_title_site`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-04. The score moves only through the severity ceiling: an estate that already holds an open CRITICAL keeps its score (live: 29 with and without the JWT targets on the full lab, 45 -> 29 with 9443 left out; see UAT-238-11). No new score weight; SCORING_VERSION stays 4.0.
+
+### UAT-238-02: JWKS keys sharing a kid are each evaluated, and the JWT scan record keeps only the key metadata it needs
+
+**ID:** UAT-238-02
+**Title:** JWKS keys sharing a kid are each evaluated, and the JWT scan record keeps only the key metadata it needs
+**Maps to:** IDENT-05, D-02, D-03
+
+**What to test:** Two different keys sharing a kid each get their own rule, identical keys listed twice give one finding, the JWT scan record keeps only the key metadata it needs plus a key-material marker, and an oct key's size comes from its key length.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_jwks_findings.py::test_keys_sharing_a_kid_are_evaluated_separately tests/test_jwks_findings.py::test_three_keys_sharing_a_kid_each_get_their_own_rule tests/test_jwks_findings.py::test_identical_keys_without_a_kid_yield_one_finding tests/test_jwt_scanner.py::test_jwt_scan_record_keeps_only_public_key_metadata tests/test_jwt_scanner.py::test_jwt_oct_key_with_empty_k_has_no_size
+```
+
+**Pass Criteria:** All nodes pass.
+
+**Result:** - [x] PASS (2026-11-17 5 passed in the plan 238-09 run -- covered by `tests/test_jwks_findings.py::test_keys_sharing_a_kid_are_evaluated_separately` and `tests/test_jwks_findings.py::test_three_keys_sharing_a_kid_each_get_their_own_rule` and `tests/test_jwks_findings.py::test_identical_keys_without_a_kid_yield_one_finding` and `tests/test_jwt_scanner.py::test_jwt_scan_record_keeps_only_public_key_metadata` and `tests/test_jwt_scanner.py::test_jwt_oct_key_with_empty_k_has_no_size`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-05 and code-review fixes CR-01 and WR-04. Live: the lab's HS256 key reads 128 bits and gets only the key-material finding, no size rule fires on it.
+
+### UAT-238-03: The Identity page shows a JWT/JWKS card whenever JWT scanning ran
+
+**ID:** UAT-238-03
+**Title:** The Identity page shows a JWT/JWKS card whenever JWT scanning ran
+**Maps to:** IDENT-06, D-06
+
+**What to test:** `/api/scan/latest` carries the JWT findings in `identity_findings`, and the Identity page shows a fourth JWT/JWKS card that counts JWT findings (not bearer tokens), reads Ran, Skipped or Failed from the `jwt_scanning` coverage record, shows reasons in words and lays four cards out in one, two or four columns.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_jwks_findings.py::test_scan_latest_identity_findings_carry_jwt
+cd src/dashboard && npx vitest run src/pages/__tests__/identity-jwt-card.test.tsx
+```
+
+**Pass Criteria:** The pytest node and all six vitest cases pass.
+
+**Result:** - [x] PASS (2026-11-17 1 pytest node and the 6 identity-jwt-card vitest cases passed in the plan 238-09 run -- covered by `tests/test_jwks_findings.py::test_scan_latest_identity_findings_carry_jwt` and `src/dashboard/src/pages/__tests__/identity-jwt-card.test.tsx::"shows the JWT/JWKS card with a Critical badge for one JWT finding"` and `src/dashboard/src/pages/__tests__/identity-jwt-card.test.tsx::"shows Ran on the JWT/JWKS card when jwt_scanning ran with no findings"` and `src/dashboard/src/pages/__tests__/identity-jwt-card.test.tsx::"shows the unexpected-response skip on the JWT/JWKS card as human text"` and `src/dashboard/src/pages/__tests__/identity-jwt-card.test.tsx::"lays the four identity cards out in a one, two and four column grid"` and `src/dashboard/src/pages/__tests__/identity-jwt-card.test.tsx::"does not count a BEARER_TOKEN finding on the JWT/JWKS card"` and `src/dashboard/src/pages/__tests__/identity-jwt-card.test.tsx::"shows the exact empty-state sentence for an unexpected-response JWT skip"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plans 238-04 and 238-06; UI-review fixes UI-1 and UI-2 keep the internal outcome code out of the sentences. Live: `identity_findings` held exactly the three JWT findings (UAT-238-11).
+
+### UAT-238-04: A SAML target that answers with something other than metadata reads skipped, unexpected-response
+
+**ID:** UAT-238-04
+**Title:** A SAML target that answers with something other than metadata reads skipped, unexpected-response
+**Maps to:** IDENT-07, D-07, D-09
+
+**What to test:** A SAML target that answers 404, an HTML page or non-metadata XML records unexpected_response with a named detail, and end to end the SAML phase reads skipped with reason unexpected-response. Metadata with a byte-order mark, or served from a .well-known URL, still reads answered.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_saml_scanner.py::test_saml_outcome_non_200_is_unexpected_response tests/test_saml_scanner.py::test_saml_outcome_html_page_is_unexpected_response tests/test_saml_scanner.py::test_saml_outcome_non_metadata_xml_is_unexpected_response tests/test_saml_scanner.py::test_saml_outcome_bom_metadata_is_answered tests/test_saml_scanner.py::test_saml_outcome_metadata_at_well_known_url_is_answered tests/test_connector_coverage_e2e.py::test_saml_html_target_skips_unexpected_response
+```
+
+**Pass Criteria:** All nodes pass; the e2e scan reads skipped / unexpected-response.
+
+**Result:** - [x] PASS (2026-11-17 6 passed in the plan 238-09 run -- covered by `tests/test_saml_scanner.py::test_saml_outcome_non_200_is_unexpected_response` and `tests/test_saml_scanner.py::test_saml_outcome_html_page_is_unexpected_response` and `tests/test_saml_scanner.py::test_saml_outcome_non_metadata_xml_is_unexpected_response` and `tests/test_saml_scanner.py::test_saml_outcome_bom_metadata_is_answered` and `tests/test_saml_scanner.py::test_saml_outcome_metadata_at_well_known_url_is_answered` and `tests/test_connector_coverage_e2e.py::test_saml_html_target_skips_unexpected_response`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-05 and code-review fix WR-05. Live: an HTML target read `saml_scanning|skipped|unexpected-response` with detail "not SAML metadata (HTML page)" (UAT-238-11).
+
+### UAT-238-05: A JWT target answers only with a JWKS; an uncredentialed 401/403 reads missing-credentials
+
+**ID:** UAT-238-05
+**Title:** A JWT target answers only with a JWKS; an uncredentialed 401/403 reads missing-credentials
+**Maps to:** IDENT-07, D-08, D-30
+
+**What to test:** A JWT target that answers 404 everywhere or JSON without a keys list reads unexpected_response; one that answers 401 or 403 with no credential configured reads missing_credentials (also for a same-origin jwks_uri); a cross-origin jwks_uri 401 stays unexpected_response; an empty JWKS still reads ran with no phantom row.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_jwt_scanner.py::test_jwt_outcome_non_200_everywhere_is_unexpected_response tests/test_jwt_scanner.py::test_jwt_outcome_json_without_keys_is_unexpected_response tests/test_jwt_scanner.py::test_jwt_outcome_401_403_without_credentials_is_missing_credentials tests/test_jwt_scanner.py::test_jwt_outcome_same_origin_jwks_uri_401_403_without_credentials_is_missing_credentials tests/test_jwt_scanner.py::test_jwt_outcome_cross_origin_jwks_uri_401_stays_unexpected_response tests/test_connector_coverage_e2e.py::test_jwt_answered_empty_stays_ran_with_no_phantom_row
+```
+
+**Pass Criteria:** All nodes pass.
+
+**Result:** - [x] PASS (2026-11-17 8 passed in the plan 238-09 run -- covered by `tests/test_jwt_scanner.py::test_jwt_outcome_non_200_everywhere_is_unexpected_response` and `tests/test_jwt_scanner.py::test_jwt_outcome_json_without_keys_is_unexpected_response` and `tests/test_jwt_scanner.py::test_jwt_outcome_401_403_without_credentials_is_missing_credentials` and `tests/test_jwt_scanner.py::test_jwt_outcome_same_origin_jwks_uri_401_403_without_credentials_is_missing_credentials` and `tests/test_jwt_scanner.py::test_jwt_outcome_cross_origin_jwks_uri_401_stays_unexpected_response` and `tests/test_connector_coverage_e2e.py::test_jwt_answered_empty_stays_ran_with_no_phantom_row`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-05 and code-review fix WR-06. Three locked tests were renamed to say what they now assert. On the live jwt lab all four targets served a JWKS and read ran.
+
+### UAT-238-06: The unexpected-response reason exists at every vocabulary site, Python and TypeScript
+
+**ID:** UAT-238-06
+**Title:** The unexpected-response reason exists at every vocabulary site, Python and TypeScript
+**Maps to:** IDENT-07, D-09, D-10, D-36
+
+**What to test:** The skip-reason set has nine members; the outcome kind maps to skip reason unexpected-response and category unexpected_response and sits after refused and before unreachable; a junk-only connector skips with a named detail and a junk target beside a good one adds one error row; a four-target outage weighs 4 in trends; the TypeScript category, chip-colour and outcome-kind lists mirror Python; the chip is orange, /print shows the reason without a code or a repeated phrase, and the Executive badge reads Skipped, not Partial.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_scan_phase_records.py::test_scan_phase_skip_reasons_exact_membership tests/test_target_outcome.py::test_unexpected_response_kind_maps tests/test_target_outcome.py::test_unexpected_response_priority tests/test_connector_coverage_truth.py::test_classifier_all_unexpected_response_skips_with_named_detail tests/test_connector_coverage_truth.py::test_classifier_unexpected_response_beside_answered_runs_with_one_error_row tests/test_trends_full_outage.py::test_full_unexpected_response_outage_weighs_n tests/test_coverage_reason_ts_mirror.py::test_ts_advisory_categories_mirror_python tests/test_coverage_reason_ts_mirror.py::test_chip_colours_every_skip_reason tests/test_coverage_reason_ts_mirror.py::test_ts_target_outcome_kinds_mirror_python
+cd src/dashboard && npx vitest run src/components/__tests__/ScanCoverageChip.test.tsx src/pages/__tests__/print-scan-coverage.test.tsx src/pages/__tests__/executive-scanner-status.test.tsx
+```
+
+**Pass Criteria:** All pytest nodes and the three vitest cases pass.
+
+**Result:** - [x] PASS (2026-11-17 9 pytest nodes and the 3 vitest cases passed in the plan 238-09 run -- covered by `tests/test_scan_phase_records.py::test_scan_phase_skip_reasons_exact_membership` and `tests/test_target_outcome.py::test_unexpected_response_kind_maps` and `tests/test_target_outcome.py::test_unexpected_response_priority` and `tests/test_connector_coverage_truth.py::test_classifier_all_unexpected_response_skips_with_named_detail` and `tests/test_connector_coverage_truth.py::test_classifier_unexpected_response_beside_answered_runs_with_one_error_row` and `tests/test_trends_full_outage.py::test_full_unexpected_response_outage_weighs_n` and `tests/test_coverage_reason_ts_mirror.py::test_ts_advisory_categories_mirror_python` and `tests/test_coverage_reason_ts_mirror.py::test_chip_colours_every_skip_reason` and `tests/test_coverage_reason_ts_mirror.py::test_ts_target_outcome_kinds_mirror_python` and `src/dashboard/src/components/__tests__/ScanCoverageChip.test.tsx::"colours an unexpected-response skip with --ds-high"` and `src/dashboard/src/pages/__tests__/print-scan-coverage.test.tsx::"prints an unexpected-response skip without a reason code or a repeated phrase"` and `src/dashboard/src/pages/__tests__/executive-scanner-status.test.tsx::"labels an unexpected_response failure Skipped and never Partial"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-02, UI-review fixes UI-1 and UI-2. No QRK error code was added, so `docs/error-codes.md` is unchanged.
+
+### UAT-238-07: mTLS required is detected after a completed TLS 1.3 or TLS 1.2 handshake, without false positives
+
+**ID:** UAT-238-07
+**Title:** mTLS required is detected after a completed TLS 1.3 or TLS 1.2 handshake, without false positives
+**Maps to:** DETECT-06, D-12, D-13, D-32, D-39
+
+**What to test:** Against loopback TLS servers built at test time: a TLS 1.3 certificate-required alert and an nginx-style HTTP 400 "No required SSL certificate was sent" (TLS 1.3 and 1.2) set MTLS_REQUIRED; TLS 1.2 strict mTLS comes through sslyze; a plain 400 and sslyze OPTIONAL alone do not; a banner-first server ends the probe with no request and a well-known non-HTTP port gets none; the Host header is formatted for IPv6, ports and IDN names.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_tls_mtls_post_handshake.py::test_tls13_certificate_required_alert_is_mtls_required tests/test_tls_mtls_post_handshake.py::test_nginx_style_400_phrase_is_mtls_required tests/test_tls_mtls_post_handshake.py::test_plain_400_is_not_mtls tests/test_tls_mtls_post_handshake.py::test_sslyze_optional_alone_is_not_mtls tests/test_tls_mtls_post_handshake.py::test_tls12_certificate_required_is_mtls_required_via_sslyze tests/test_tls_mtls_post_handshake.py::test_banner_first_server_ends_the_probe_without_a_request tests/test_tls_mtls_post_handshake.py::test_well_known_non_http_port_gets_no_request tests/test_tls_mtls_post_handshake.py::test_probe_host_header_formatting
+```
+
+**Pass Criteria:** All nodes pass.
+
+**Result:** - [x] PASS (2026-11-17 15 passed in the plan 238-09 run -- covered by `tests/test_tls_mtls_post_handshake.py::test_tls13_certificate_required_alert_is_mtls_required` and `tests/test_tls_mtls_post_handshake.py::test_nginx_style_400_phrase_is_mtls_required` and `tests/test_tls_mtls_post_handshake.py::test_plain_400_is_not_mtls` and `tests/test_tls_mtls_post_handshake.py::test_sslyze_optional_alone_is_not_mtls` and `tests/test_tls_mtls_post_handshake.py::test_tls12_certificate_required_is_mtls_required_via_sslyze` and `tests/test_tls_mtls_post_handshake.py::test_banner_first_server_ends_the_probe_without_a_request` and `tests/test_tls_mtls_post_handshake.py::test_well_known_non_http_port_gets_no_request` and `tests/test_tls_mtls_post_handshake.py::test_probe_host_header_formatting`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-03 and code-review fixes WR-01 and WR-02 (the probe listens first and sends `GET /` only on non-mail, non-directory ports or ALPN http/1.1). Live: 11443 read MTLS_REQUIRED via the probe in 0.014 s (UAT-238-11).
+
+### UAT-238-08: An observed mTLS row keeps its certificate findings, shows INFO mTLS required on both surfaces and can close
+
+**ID:** UAT-238-08
+**Title:** An observed mTLS row keeps its certificate findings, shows INFO mTLS required on both surfaces and can close
+**Maps to:** DETECT-06, D-14, D-15, D-31
+
+**What to test:** A post-handshake mTLS row gets one INFO "mTLS required" and keeps its certificate findings; the dashboard also emits the INFO for the handshake variant; an HTTP and mTLS pair gives one report INFO; the technical report shows the observed version and does not list the row under TLS Blockers; a fixed SHA-1 leaf on an observed mTLS row closes while the handshake variant still refuses closure.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_mtls_required_findings.py::test_post_handshake_mtls_row_keeps_cert_findings tests/test_mtls_required_findings.py::test_handshake_mtls_row_dashboard_info tests/test_mtls_required_findings.py::test_http_mtls_pair_reports_one_mtls_info tests/test_mtls_required_findings.py::test_technical_report_shows_observed_version_and_no_blocker_for_observed_mtls tests/test_closure_state_model_e2e.py::test_mtls_row_fixed_sha1_leaf_closes tests/test_closure_state_model_e2e.py::test_mtls_handshake_variant_still_refuses
+```
+
+**Pass Criteria:** All nodes pass.
+
+**Result:** - [x] PASS (2026-11-17 6 passed in the plan 238-09 run -- covered by `tests/test_mtls_required_findings.py::test_post_handshake_mtls_row_keeps_cert_findings` and `tests/test_mtls_required_findings.py::test_handshake_mtls_row_dashboard_info` and `tests/test_mtls_required_findings.py::test_http_mtls_pair_reports_one_mtls_info` and `tests/test_mtls_required_findings.py::test_technical_report_shows_observed_version_and_no_blocker_for_observed_mtls` and `tests/test_closure_state_model_e2e.py::test_mtls_row_fixed_sha1_leaf_closes` and `tests/test_closure_state_model_e2e.py::test_mtls_handshake_variant_still_refuses`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-07 and code-review fixes WR-03, WR-07 and IN-03. The +6 mTLS presence credit is unchanged. The dashboard-only HTTP/mTLS pair residual stays dispositioned (ledger 261115-http-mtls-pair-dashboard-only-score-divergence); the core lab has no HTTP row at 11443.
+
+### UAT-238-09: A SHA-1 signed TLS leaf gives TLS certificate uses a weak signature hash on both surfaces
+
+**ID:** UAT-238-09
+**Title:** A SHA-1 signed TLS leaf gives TLS certificate uses a weak signature hash on both surfaces
+**Maps to:** DETECT-07, D-17, D-18, D-19
+
+**What to test:** A CA-issued SHA-1 leaf gives HIGH "TLS certificate uses a weak signature hash" on the report and the dashboard, a self-signed SHA-1 leaf gives LOW, MD5 is weak too, and an unknown or missing hash name is not weak.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_sha1_signature_finding.py::test_sha1_ca_issued_leaf_high_on_both_surfaces tests/test_sha1_signature_finding.py::test_sha1_self_signed_leaf_low tests/test_sha1_signature_finding.py::test_md5_leaf_is_weak_too tests/test_sha1_signature_finding.py::test_unknown_sig_alg_is_not_weak
+```
+
+**Pass Criteria:** All nodes pass.
+
+**Result:** - [x] PASS (2026-11-17 4 passed in the plan 238-09 run -- covered by `tests/test_sha1_signature_finding.py::test_sha1_ca_issued_leaf_high_on_both_surfaces` and `tests/test_sha1_signature_finding.py::test_sha1_self_signed_leaf_low` and `tests/test_sha1_signature_finding.py::test_md5_leaf_is_weak_too` and `tests/test_sha1_signature_finding.py::test_unknown_sig_alg_is_not_weak`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-01; the `cert_sha1_leaf` divergence family shows no residual. Leaf only: intermediate and email/broker certificates are deferred (ledger rows). Live: 15443 HIGH on the report and the dashboard (UAT-238-11).
+
+### UAT-238-10: One undersized-RSA predicate on both surfaces: size 0 is undetermined, RSA-PSS under 2048 is HIGH
+
+**ID:** UAT-238-10
+**Title:** One undersized-RSA predicate on both surfaces: size 0 is undetermined, RSA-PSS under 2048 is HIGH
+**Maps to:** D-20 (ledger 261116-rsa-undersized-key-predicate-differs-across-surfaces)
+
+**What to test:** An RSA certificate key with recorded size 0 raises no undersized-RSA HIGH on either surface (the report used to raise one), an RSA-PSS 1024-bit key raises the HIGH on both (the report used to miss it), and RSA-1024 is unchanged.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_rsa_undersized_parity.py::test_rsa_size_0_no_undersized_high_either_surface tests/test_rsa_undersized_parity.py::test_rsa_pss_1024_high_on_both_surfaces tests/test_rsa_undersized_parity.py::test_rsa_1024_unchanged
+```
+
+**Pass Criteria:** All nodes pass.
+
+**Result:** - [x] PASS (2026-11-17 3 passed in the plan 238-09 run -- covered by `tests/test_rsa_undersized_parity.py::test_rsa_size_0_no_undersized_high_either_surface` and `tests/test_rsa_undersized_parity.py::test_rsa_pss_1024_high_on_both_surfaces` and `tests/test_rsa_undersized_parity.py::test_rsa_1024_unchanged`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 09)
+**Notes:** Plan 238-01. Report-mode scans of RSA size-0 rows lose a HIGH and RSA-PSS rows under 2048 bits gain one.
+
+### UAT-238-11: Live core plus phaseA plus jwt lab: JWKS, SAML junk target, mTLS and SHA-1 on every surface
+
+**ID:** UAT-238-11
+**Title:** Live core plus phaseA plus jwt lab: JWKS, SAML junk target, mTLS and SHA-1 on every surface
+**Maps to:** IDENT-05, IDENT-06, IDENT-07, DETECT-06, DETECT-07, D-24, D-37
+
+**What to test:** One fresh scan of chaos-lab profiles core, phaseA and jwt, with a SAML target pointed at the plain HTTP service, read on the findings JSON, the report HTML and a dashboard serving a snapshot: the three JWKS findings, the Identity findings, the SAML unexpected-response skip, MTLS_REQUIRED on 11443 and the SHA-1 HIGH on 15443.
+
+**Steps:**
+```
+see .planning/phases/238-identity-and-certificate-findings/238-evidence/live-identity-cert.txt (core + phaseA + jwt lab, evidence DB and snapshot outside the repo, canonical DB untouched)
+```
+
+**Pass Criteria:** SC#1-SC#5 hold on all three surfaces; score triple equal.
+
+**Result:** - [x] PASS (2026-11-17 live lab run, evidence in `238-evidence/live-identity-cert.txt`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Automated (Phase 238 plan 08)
+**Notes:** Evidence lives in the gitignored phase directory (not a CI gate). Score 29 on intel, HTML and dashboard; the full estate is already capped by the 9443 expired-certificate CRITICAL, so the JWKS findings show their score effect on the same lab with 9443 left out (45 -> 29 on all three surfaces). 11443 has no HTTP sibling row. Scan wall time 45.24 s; the post-handshake probe took 0.014 s on 11443.
+
+### UAT-238-12: Operator visual walkthrough of the Identity JWT/JWKS card, the unexpected-response chip and the new findings
+
+**ID:** UAT-238-12
+**Title:** Operator visual walkthrough of the Identity JWT/JWKS card, the unexpected-response chip and the new findings
+**Maps to:** IDENT-06, IDENT-07, DETECT-06, DETECT-07
+
+**What to test:** The operator opens the Identity page, Scan History coverage detail, Findings and Executive pages on the live snapshot and confirms the four cards with the JWT/JWKS card's count and Critical badge, the orange unexpected-response row with its detail, the JWKS, SHA-1 and mTLS findings, and the Executive SAML badge reading Skipped.
+
+**Steps:**
+```
+see .planning/phases/238-identity-and-certificate-findings/238-evidence/human-verify.txt
+```
+
+**Pass Criteria:** Operator confirms all four steps look right.
+
+**Result:** - [x] PASS (2026-11-17 Phase 238 -- operator reply recorded verbatim in Notes)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-17  **Tester:** Digs
+**Notes:** Operator reply recorded verbatim in `238-evidence/human-verify.txt`: "Approved" (2026-11-17).
