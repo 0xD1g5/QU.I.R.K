@@ -126,3 +126,47 @@ def test_mtls_presence_credit_unchanged():
                      derive_dashboard_scoring_findings(eps)):
         summary = build_evidence_summary(endpoints=eps, findings=findings)
         assert summary["mtls_present_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# WR-07: one shared observed-mTLS predicate for the evaluator, the dashboard
+# deriver and closure.
+# ---------------------------------------------------------------------------
+
+
+def test_shared_observed_mtls_predicate_shapes():
+    from quirk.util.tls_rows import is_observed_mtls, mtls_required_variant
+
+    assert is_observed_mtls(_post_handshake()) is True
+    assert is_observed_mtls(_post_handshake(scan_error="")) is True
+    assert is_observed_mtls(_post_handshake(tls_version=None)) is True
+    assert is_observed_mtls(_handshake()) is False
+    assert is_observed_mtls(_row(tls_blocker_reason="TIMEOUT")) is False
+    assert is_observed_mtls(_row()) is False
+    assert is_observed_mtls(_post_handshake(protocol="tls")) is False
+    assert mtls_required_variant(_post_handshake(scan_error="")) == "post_handshake"
+    assert mtls_required_variant(_handshake()) == "handshake"
+
+
+def test_all_three_sites_use_the_shared_predicate():
+    import inspect
+
+    from quirk.dashboard.api import finding_derivation
+    from quirk.engine import findings_evaluator
+    from quirk.intelligence import closure
+    from quirk.util import tls_rows
+
+    assert findings_evaluator.mtls_required_variant is tls_rows.mtls_required_variant
+    assert finding_derivation.mtls_required_variant is tls_rows.mtls_required_variant
+    src = inspect.getsource(closure)
+    assert src.count("is_observed_mtls(ep)") == 1
+    assert '"MTLS_REQUIRED"' not in src
+
+
+def test_empty_scan_error_and_missing_version_rows_get_findings_on_both_surfaces():
+    for ep in (_post_handshake(scan_error="", cert_sig_alg="sha1"),
+               _post_handshake(tls_version=None, cert_sig_alg="sha1")):
+        assert _of(_report([ep]), MTLS) == ["INFO"]
+        assert _of(_dash([ep]), MTLS) == ["INFO"]
+        assert _of(_report([ep]), SHA1) == ["HIGH"]
+        assert _of(_dash([ep]), SHA1) == ["HIGH"]

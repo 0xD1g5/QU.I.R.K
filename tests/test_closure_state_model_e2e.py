@@ -352,6 +352,45 @@ def test_mtls_handshake_variant_still_refuses(db):
     assert "closed" not in _fp_states(db, S2, SHA1_SLUG, host="h7")
 
 
+def _mtls_no_version_ep(i, *, sig_alg="sha1"):
+    ep = _mtls_ep(i, sig_alg=sig_alg)
+    ep.tls_version = None
+    return ep
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        pytest.param(lambda i, **kw: _mtls_ep(i, scan_error="", **kw), id="empty_scan_error"),
+        pytest.param(_mtls_no_version_ep, id="no_tls_version"),
+    ],
+)
+def test_mtls_row_shapes_the_evaluator_assesses_also_close(db, make):
+    """WR-07: closure and both finding pipelines share one observed-mTLS
+    predicate, so a row shape that gets findings can also close them."""
+    _run_scan(db, S1, 0, [make(i) for i in range(N)], tls_mode="deep")
+    assert _fp_states(db, S1, SHA1_SLUG) == ["open"] * N
+    counters = _run_scan(
+        db, S2, 1,
+        [make(i, sig_alg="sha256" if i == 7 else "sha1") for i in range(N)],
+        tls_mode="deep",
+    )
+    assert counters["closed"] == 1
+    assert _fp_states(db, S2, SHA1_SLUG, host="h7") == ["closed"]
+    assert _fp_states(db, S2, SHA1_SLUG) == ["closed"] + ["open"] * 7
+
+
+def test_non_mtls_blocker_row_without_scan_error_still_refuses(db):
+    _run_scan(db, S1, 0, [_mtls_ep(i) for i in range(N)], tls_mode="deep")
+    timeout_row = tls_ep(7, port=443, blocker="TIMEOUT", sig_alg="sha256",
+                         issuer="CN=ca", subject="CN=h7")
+    counters = _run_scan(
+        db, S2, 1, [_mtls_ep(i) for i in range(7)] + [timeout_row], tls_mode="deep",
+    )
+    assert counters["closed"] == 0
+    assert "closed" not in _fp_states(db, S2, SHA1_SLUG, host="h7")
+
+
 # ---------------------------------------------------------------------------
 # Task 2: guardrail negatives built from real probe health (D-20, D-22)
 # ---------------------------------------------------------------------------
