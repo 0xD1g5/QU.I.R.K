@@ -443,6 +443,13 @@ UNMAPPED_TITLES: FrozenSet[str] = frozenset({
     # against a source (D-16a). Do not add via _pci()/_soc2()/_iso() without reading
     # the control text and stamping a new verified date.
     "Bearer token is unsigned (alg:none)",
+    # Phase 238 IDENT-05: JWKS key findings; no control mapping verified against a
+    # source. Do not add via _pci()/_soc2()/_iso() without reading the control text
+    # and stamping a new verified date.
+    "JWKS key declares alg:none",
+    "JWKS publishes secret key material",
+    "JWKS key uses a symmetric (HMAC) algorithm",
+    "JWKS key uses undersized RSA key",
 })
 
 

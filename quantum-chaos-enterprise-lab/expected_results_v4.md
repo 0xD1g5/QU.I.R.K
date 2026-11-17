@@ -160,17 +160,34 @@ PROFILE_ARGS="--profile jwt" ./lab.sh up
 
 | Port | Service | Algorithm | Expected Finding | Key Size | Notes |
 |-----:|---------|-----------|-----------------|----------|-------|
-| 20001 | jwt-rs256 | RS256 (RSA) | WEAK_QUANTUM (quantum-vulnerable asymmetric) | 2048-bit | RS256 is classically safe but quantum-vulnerable; scanner should return RSA finding |
-| 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | WEAK_KEY_SIZE | 128-bit | 16-byte HMAC key — below minimum 256-bit; scanner flags short symmetric key |
-| 20003 | jwt-rsa1024 | RS256 (RSA) | WEAK_KEY_SIZE + WEAK_QUANTUM | 1024-bit | RSA-1024 is classically weak and quantum-vulnerable; scanner flags key size |
-| 20004 | jwt-algnone | none | CRITICAL_NO_SIGNATURE | 0 | alg:none = no signature verification; scanner classifies as UNKNOWN/critical |
+| 20001 | jwt-rs256 | RS256 (RSA) | no finding; inventoried in the CBOM (healthy-key finding deferred, ledger 261116-healthy-quantum-vulnerable-jwks-key-finding) | 2048-bit | RS256 at 2048 bits is classically safe; the key is quantum-vulnerable and shows in the CBOM, not as a finding (Phase 238 D-33) |
+| 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | CRITICAL "JWKS publishes secret key material" | 128-bit | The lab publishes the HMAC key's `k` member in its JWKS, so the key-material rule fires before the HMAC rule (Phase 238 D-02 rule 2) |
+| 20003 | jwt-rsa1024 | RS256 (RSA) | HIGH "JWKS key uses undersized RSA key" | 1024-bit | RSA-1024 is below the 2048-bit minimum (Phase 238 D-02 rule 4) |
+| 20004 | jwt-algnone | none | CRITICAL "JWKS key declares alg:none" | 0 | The key declares alg none; its `k` member is empty, and rule 1 wins first in any case (Phase 238 D-02 rule 1) |
 
-**Scanner validation command:**
+**Scanner validation command:** the JWT scanner reads its targets from `connectors.jwt_targets`,
+not from `--targets-file` (see `docs/chaos-lab.md` section 3.6). Put this in the config file you
+scan with:
+
+```yaml
+connectors:
+  enable_jwt: true
+  jwt_targets:
+    - "http://localhost:20001"
+    - "http://localhost:20002"
+    - "http://localhost:20003"
+    - "http://localhost:20004"
+
+security:
+  allow_internal_targets: true
 ```
-printf '%s\n' http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004 > targets.txt
-quirk --targets-file targets.txt
+
 ```
-**Expected:** JWT scanner returns >= 2 weak-algorithm findings (HS256-weak + RSA-1024 + alg:none = 3 findings).
+quirk --config config.yaml
+```
+**Expected:** exactly three JWKS findings, the same on the dashboard and in the report, with
+the titles in the table above: 2 CRITICAL (20002 and 20004) and 1 HIGH (20003). 20001 produces
+no finding.
 
 ---
 
