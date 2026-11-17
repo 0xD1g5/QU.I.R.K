@@ -170,3 +170,42 @@ def test_empty_scan_error_and_missing_version_rows_get_findings_on_both_surfaces
         assert _of(_dash([ep]), MTLS) == ["INFO"]
         assert _of(_report([ep]), SHA1) == ["HIGH"]
         assert _of(_dash([ep]), SHA1) == ["HIGH"]
+
+
+# ---------------------------------------------------------------------------
+# IN-03: the CLI technical report treats an observed-mTLS row as assessed.
+# ---------------------------------------------------------------------------
+
+
+def _section_rows(md: str, heading: str) -> list:
+    lines = md.splitlines()
+    if heading not in lines:
+        return []
+    start = lines.index(heading)
+    rows = []
+    for line in lines[start + 1:]:
+        if line.startswith("## "):
+            break
+        if line.startswith("| ") and not line.startswith("| Host"):
+            rows.append(line)
+    return rows
+
+
+def test_technical_report_shows_observed_version_and_no_blocker_for_observed_mtls():
+    from types import SimpleNamespace
+
+    from quirk.reports.technical import build_tech_markdown
+
+    observed = _post_handshake(host="10.238.7.10")
+    blocked = _handshake(host="10.238.7.11")
+    md = build_tech_markdown(
+        SimpleNamespace(assessment=SimpleNamespace(name="238")), [observed, blocked], []
+    )
+    inventory = _section_rows(md, "## Service Inventory")
+    assert inventory == [
+        "| 10.238.7.10 | 443 | TLS | TLSv1.3 |",
+        "| 10.238.7.11 | 443 | TLS |  |",
+    ]
+    blockers = _section_rows(md, "## TLS Blockers")
+    assert len(blockers) == 1
+    assert blockers[0].startswith("| 10.238.7.11 | 443 | MTLS_REQUIRED |")
