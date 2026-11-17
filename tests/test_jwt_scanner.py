@@ -680,6 +680,46 @@ def test_jwt_scan_record_keeps_only_key_metadata(caplog):
     assert "AAAA" not in caplog.text
 
 
+def test_jwt_scan_record_keeps_only_public_key_metadata():
+    """the JWT scan record keeps only public key metadata: an allowlist of
+    public JWK members with scalar values (key_ops: a list of strings), plus
+    the marker. Nested and non-standard members are not kept."""
+    n_value = _b64url(b"\xc5" * 256)
+    jwks = {"keys": [
+        {
+            "kty": "RSA", "alg": "RS256", "kid": "r", "use": "sig",
+            "key_ops": ["verify", {"k": "nested"}, 7],
+            "n": n_value, "e": "AQAB",
+            "x5t": "dGh1bWI", "x5t#S256": "dGh1bWIy", "x5u": "https://idp.test/c.pem",
+            "x5c": ["MIIB"],
+            "ext": {"k": "nested-value", "d": "nested-value"},
+            "custom_member": "custom-value",
+            "crv": {"nested": True},
+        },
+        {
+            "kty": "EC", "alg": "ES256", "kid": "e", "crv": "P-256",
+            "x": "eA", "y": "eQ", "private_hint": "custom-value",
+        },
+    ]}
+    with _stub_server({"/.well-known/jwks.json": jwks}) as port:
+        rows = scan_jwt_targets([f"http://127.0.0.1:{port}"], timeout=2, allow_internal=True)
+    assert len(rows) == 2
+    records = {json.loads(ep.jwt_scan_json)["kid"]: json.loads(ep.jwt_scan_json) for ep in rows}
+    assert records["r"] == {
+        "kty": "RSA", "alg": "RS256", "kid": "r", "use": "sig",
+        "key_ops": ["verify"], "n": n_value, "e": "AQAB",
+        "x5t": "dGh1bWI", "x5t#S256": "dGh1bWIy", "x5u": "https://idp.test/c.pem",
+        "secret_material_present": False,
+    }
+    assert records["e"] == {
+        "kty": "EC", "alg": "ES256", "kid": "e", "crv": "P-256", "x": "eA", "y": "eQ",
+        "secret_material_present": False,
+    }
+    for ep in rows:
+        assert "nested-value" not in ep.jwt_scan_json
+        assert "custom-value" not in ep.jwt_scan_json
+
+
 def test_jwt_oct_key_with_empty_k_has_no_size():
     jwks = {"keys": [{"kty": "oct", "alg": "HS256", "kid": "e", "k": ""}]}
     with _stub_server({"/.well-known/jwks.json": jwks}) as port:
