@@ -3,6 +3,8 @@ import { describe, it, expect } from "vitest"
 import {
   emptyStateFor,
   humanSkipReason,
+  isPhaseError,
+  phaseRecordText,
   COVERAGE_SKIP_ADVISORY_CATEGORIES,
 } from "../coverage-reason"
 import type { ScanCoverageResponse, ScanCoveragePhase } from "@/types/api"
@@ -115,10 +117,29 @@ describe("humanSkipReason", () => {
     expect(humanSkipReason("missing-extra")).toBe("missing-extra")
     expect(humanSkipReason(null)).toBe("unclassified")
   })
+
+  it("explains an unexpected-response skip without the raw slug", () => {
+    // Phase 238 D-10 / UI-SPEC U3: the detail carries the underscore kind, never the slug.
+    expect(humanSkipReason("unexpected-response")).toBe(
+      "a target answered with something other than the expected document",
+    )
+    const record = {
+      label: "SAML",
+      reason: "unexpected-response",
+      detail:
+        "1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (unexpected_response: not SAML metadata (HTML page))",
+    }
+    const text = phaseRecordText(record)
+    expect(text).toBe(
+      "Skipped: a target answered with something other than the expected document (SAML) — 1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (unexpected_response: not SAML metadata (HTML page))",
+    )
+    expect(text).not.toContain("unexpected-response")
+    expect(isPhaseError(record)).toBe(false)
+  })
 })
 
 describe("COVERAGE_SKIP_ADVISORY_CATEGORIES", () => {
-  it("contains exactly the six Python categories", () => {
+  it("contains exactly the seven Python categories", () => {
     expect([...COVERAGE_SKIP_ADVISORY_CATEGORIES].sort()).toEqual(
       [
         "auth_failed",
@@ -127,6 +148,7 @@ describe("COVERAGE_SKIP_ADVISORY_CATEGORIES", () => {
         "missing_credentials",
         "missing_extra",
         "targets_unreachable",
+        "unexpected_response",
       ],
     )
   })

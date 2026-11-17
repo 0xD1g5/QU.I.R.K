@@ -34,6 +34,8 @@ const STATUS_COLOR_CLASS: Record<string, string> = {
   // 235.3 D-06: both are actionable operator gaps, same token as missing-credentials (not the medium fallback).
   "internal-target-refused": "text-[var(--ds-high)]",
   "auth-failed": "text-[var(--ds-high)]",
+  // 238 D-10: the server answered, but not with the expected document — an actionable URL fix.
+  "unexpected-response": "text-[var(--ds-high)]",
   failed: "text-[var(--ds-critical)]",
 }
 

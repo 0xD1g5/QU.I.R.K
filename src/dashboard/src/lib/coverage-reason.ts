@@ -15,6 +15,7 @@ export const COVERAGE_SKIP_ADVISORY_CATEGORIES: readonly string[] = [
   "auth_failed",
   "missing_credentials",
   "targets_unreachable",
+  "unexpected_response", // 238 D-09; mirror of target_outcome.py
 ]
 
 const HUMAN_REASON: Record<string, string> = {
@@ -23,6 +24,7 @@ const HUMAN_REASON: Record<string, string> = {
   "auth-failed": "credentials rejected",
   // C-WR-04: "failed" has two writers, so the bare wording claims no cause.
   failed: "failed or no target answered",
+  "unexpected-response": "a target answered with something other than the expected document",
 }
 
 /**

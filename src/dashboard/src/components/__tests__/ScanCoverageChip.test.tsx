@@ -155,6 +155,26 @@ describe("ScanCoverageChip", () => {
     }
   })
 
+  it("colours an unexpected-response skip with --ds-high", async () => {
+    // Phase 238 D-10 / UI-SPEC U4: an actionable URL fix, same token as auth-failed.
+    mockFetchApi.mockResolvedValue(
+      jsonResponse({
+        recorded: true,
+        ran: 0,
+        skipped: 1,
+        phases: [
+          { phase_name: "saml_scanning", label: "SAML", status: "skipped", reason: "unexpected-response", detail: "1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (unexpected_response: HTTP 404)", duration_sec: null },
+        ],
+      }),
+    )
+    render(<ScanCoverageChip scanRunId="run-1" />)
+    fireEvent.click(await screen.findByText("Show detail"))
+
+    const cell = await screen.findByText("skipped: unexpected-response")
+    expect(cell.className).toContain("text-[var(--ds-high)]")
+    expect(cell.className).not.toContain("text-[var(--ds-medium)]")
+  })
+
   it("still falls back to the medium colour for an unknown skip reason", async () => {
     mockFetchApi.mockResolvedValue(
       jsonResponse({
