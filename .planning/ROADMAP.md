@@ -111,7 +111,7 @@ each other and can run in any order. Phase 240 depends on all four, because 5.29
 
 - [x] **Phase 236: Score Divergence Closure** - The dashboard and the report give the same severities and the same headline score for the same scan, and a new divergence fails CI
 - [x] **Phase 237: History and Count Truth** - Scan History, Trends, Compare, the Executive Skipped badge, Export PDF and notify count and show every finding, skip and outage
-- [ ] **Phase 238: Identity and Certificate Findings** - Weak JWKS algorithms, non-metadata SAML answers, TLS 1.3 mTLS rejections and SHA-1-signed certificates each produce the right finding or skip
+- [x] **Phase 238: Identity and Certificate Findings** - Weak JWKS algorithms, non-metadata SAML answers, TLS 1.3 mTLS rejections and SHA-1-signed certificates each produce the right finding or skip
 - [ ] **Phase 239: Connector Target Trust-Gate Hardening** - The trust gate checks exactly the targets each connector scans, including scalar target values, directory referrals and non-ASCII IP literals
 - [ ] **Phase 240: Regressions and Release 5.29.0** - Scan confidence reflects a high probe error rate, and 5.29.0 is published with its fixed known-defect wording withdrawn
 
@@ -189,19 +189,19 @@ Plans:
 **Plans**: 9 plans
 Plans:
 **Wave 1**
-- [ ] 238-01-PLAN.md — Shared weak-signature-hash and undersized-RSA predicates; SHA-1 leaf finding (HIGH CA-issued, LOW self-signed) on both surfaces; bridge, divergence families, compliance, oracle rows (DETECT-07, D-17..D-20, D-28, D-29, D-34)
-- [ ] 238-02-PLAN.md — `unexpected_response` outcome kind, skip reason and advisory category at every Python and TS site; Python-reads-TS mirror test; chip colour; Executive badge (IDENT-07, D-09..D-11, D-36)
-- [ ] 238-03-PLAN.md — mTLS detection under TLS 1.3 and 1.2: sslyze client-auth REQUIRED, post-handshake probe, curves guard; ledger-first rows (DETECT-06, D-12..D-14, D-32, D-38)
+- [x] 238-01-PLAN.md — Shared weak-signature-hash and undersized-RSA predicates; SHA-1 leaf finding (HIGH CA-issued, LOW self-signed) on both surfaces; bridge, divergence families, compliance, oracle rows (DETECT-07, D-17..D-20, D-28, D-29, D-34)
+- [x] 238-02-PLAN.md — `unexpected_response` outcome kind, skip reason and advisory category at every Python and TS site; Python-reads-TS mirror test; chip colour; Executive badge (IDENT-07, D-09..D-11, D-36)
+- [x] 238-03-PLAN.md — mTLS detection under TLS 1.3 and 1.2: sslyze client-auth REQUIRED, post-handshake probe, curves guard; ledger-first rows (DETECT-06, D-12..D-14, D-32, D-38)
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 238-04-PLAN.md — Weak JWKS keys become scored findings on both surfaces (exact 77 to 31/63), JWT dispatched before the OIDC map; identity_findings carry JWT (IDENT-05, IDENT-06, D-01..D-05, D-27, D-33, D-34)
-- [ ] 238-05-PLAN.md — SAML and JWT read `answered` only on the expected document; uncredentialed 401/403 is missing_credentials; JWT scan record keeps only key metadata (IDENT-07, IDENT-05, D-03, D-07, D-08, D-11, D-30)
-- [ ] 238-06-PLAN.md — Identity page JWT/JWKS card, 1/2/4 grid, JWT empty state; build + bundle (IDENT-06, D-06, UI-SPEC U1-U5)
+- [x] 238-04-PLAN.md — Weak JWKS keys become scored findings on both surfaces (exact 77 to 31/63), JWT dispatched before the OIDC map; identity_findings carry JWT (IDENT-05, IDENT-06, D-01..D-05, D-27, D-33, D-34)
+- [x] 238-05-PLAN.md — SAML and JWT read `answered` only on the expected document; uncredentialed 401/403 is missing_credentials; JWT scan record keeps only key metadata (IDENT-07, IDENT-05, D-03, D-07, D-08, D-11, D-30)
+- [x] 238-06-PLAN.md — Identity page JWT/JWKS card, 1/2/4 grid, JWT empty state; build + bundle (IDENT-06, D-06, UI-SPEC U1-U5)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 238-07-PLAN.md — INFO "mTLS required" finding on both surfaces keeping cert findings; closure at both sites; skip-description wording; 11443 oracle row (DETECT-06, IDENT-07, D-14, D-15, D-31, D-35)
+- [x] 238-07-PLAN.md — INFO "mTLS required" finding on both surfaces keeping cert findings; closure at both sites; skip-description wording; 11443 oracle row (DETECT-06, IDENT-07, D-14, D-15, D-31, D-35)
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 238-08-PLAN.md — Live core + phaseA + jwt evidence for all five criteria, UAT-4-11, and the operator's visual check (checkpoint)
+- [x] 238-08-PLAN.md — Live core + phaseA + jwt evidence for all five criteria, UAT-4-11, and the operator's visual check (checkpoint)
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 238-09-PLAN.md — Docs, Series 238 UAT, generator regen, vault sync, ledger rows and staged closure, full suite, branch CI (D-16, D-21..D-26)
+- [x] 238-09-PLAN.md — Docs, Series 238 UAT, generator regen, vault sync, ledger rows and staged closure, full suite, branch CI (D-16, D-21..D-26)
 **UI hint**: yes
 
 ### Phase 239: Connector Target Trust-Gate Hardening
