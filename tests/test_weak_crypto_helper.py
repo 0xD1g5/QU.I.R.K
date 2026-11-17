@@ -85,3 +85,47 @@ def test_is_max_legacy_tls(ver, supported, expected):
     from quirk.util.weak_crypto import is_max_legacy_tls
 
     assert is_max_legacy_tls(ver, supported) is expected
+
+
+# Phase 238 D-17: weak certificate signature hash (exact membership).
+@_pytest_236.mark.parametrize(
+    "name,expected",
+    [
+        ("sha1", True),
+        ("SHA1", True),
+        (" md5 ", True),
+        ("md4", True),
+        ("md2", True),
+        (None, False),
+        ("", False),
+        ("unknown", False),
+        ("sha256", False),
+        ("sha1WithRSAEncryption", False),
+    ],
+)
+def test_is_weak_signature_hash(name, expected):
+    from quirk.util.weak_crypto import is_weak_signature_hash
+
+    assert is_weak_signature_hash(name) is expected
+
+
+# Phase 238 D-20: one undersized-RSA predicate for both finding pipelines.
+@_pytest_236.mark.parametrize(
+    "alg,size,expected",
+    [
+        ("RSA", 1024, True),
+        ("rsa-pss", 1024, True),
+        ("RSA", 2047, True),
+        ("RSA", 0, False),
+        ("RSA", None, False),
+        ("RSA", 2048, False),
+        ("RSA", True, False),
+        ("RSASSA-PSS", 1024, False),
+        ("ECDSA", 1024, False),
+        (None, 1024, False),
+    ],
+)
+def test_is_undersized_rsa(alg, size, expected):
+    from quirk.util.weak_crypto import is_undersized_rsa
+
+    assert is_undersized_rsa(alg, size) is expected
