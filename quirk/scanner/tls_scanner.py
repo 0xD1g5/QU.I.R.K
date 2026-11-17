@@ -618,6 +618,7 @@ def _scan_one_fallback(
     include_sni: bool,
     logger: Optional[Logger] = None,
     tls_enum_mode: str = "fast",
+    mtls_probe: bool = True,
 ) -> CryptoEndpoint:
     ep = CryptoEndpoint(
         host=host,
@@ -743,7 +744,9 @@ def _scan_one_fallback(
     # successful handshake it probes once for a post-handshake mTLS rejection.
     # Outside the try above, so a probe failure can never become a scan_error
     # (D-14); the probe only ever sets tls_blocker_reason.
-    if ep.tls_version and ep.scan_error is None:
+    # ``mtls_probe=False`` is the scan_one merge path when sslyze already set
+    # MTLS_REQUIRED, so the same target is not probed twice (WR-03).
+    if mtls_probe and ep.tls_version and ep.scan_error is None:
         try:
             if _post_handshake_mtls_probe(host, port, timeout, include_sni) == "MTLS_REQUIRED":
                 ep.tls_blocker_reason = "MTLS_REQUIRED"
@@ -780,7 +783,10 @@ def scan_one(
                 # merge any missing fields (chain_verified included) so the row that
                 # reaches the DB is never half-populated.
                 if ep.cert_not_after is None or not (ep.cert_subject or "").strip():
-                    fb = _scan_one_fallback(host, port, timeout, include_sni, logger, tls_enum_mode)
+                    fb = _scan_one_fallback(
+                        host, port, timeout, include_sni, logger, tls_enum_mode,
+                        mtls_probe=ep.tls_blocker_reason != "MTLS_REQUIRED",
+                    )
                     if ep.cert_not_after is None:
                         ep.cert_not_after = fb.cert_not_after
                     if not (ep.cert_subject or "").strip():
@@ -794,6 +800,14 @@ def scan_one(
                         ep.chain_verified = fb.chain_verified
                     if ep.cert_eku_oids is None:
                         ep.cert_eku_oids = fb.cert_eku_oids
+                    # Phase 238 WR-03: keep the fallback's post-handshake mTLS
+                    # verdict (D-13/D-14) when sslyze set no blocker of its own.
+                    if (
+                        not ep.tls_blocker_reason
+                        and fb.scan_error is None
+                        and fb.tls_blocker_reason == "MTLS_REQUIRED"
+                    ):
+                        ep.tls_blocker_reason = "MTLS_REQUIRED"
                 return ep
         except Exception as e:
             if logger:
