@@ -133,6 +133,27 @@ def _fetch_metadata(
         return None
 
 
+_UTF8_BOM = b"\xef\xbb\xbf"
+
+
+def _strip_bom(content):
+    """Drop a leading UTF-8 byte-order mark (common in ADFS metadata) so the
+    JSON/XML sniff sees the document's first real character (WR-05)."""
+    if isinstance(content, (bytes, bytearray)) and bytes(content[:3]) == _UTF8_BOM:
+        return bytes(content[3:])
+    if isinstance(content, str) and content.startswith("\ufeff"):
+        return content[1:]
+    return content
+
+
+def _looks_like_xml(content) -> bool:
+    if isinstance(content, str):
+        return content.lstrip().startswith("<")
+    if isinstance(content, (bytes, bytearray)):
+        return bytes(content).lstrip().startswith(b"<")
+    return False
+
+
 def _classify_target(url: str, content: bytes) -> str:
     """Determine whether a URL/content is a SAML metadata document or OIDC discovery doc.
 
@@ -565,12 +586,18 @@ def scan_saml_targets(
                     scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 ))
 
+        content = _strip_bom(content)
         target_type = _classify_target(target_url, content)
 
         # Phase 238 D-07: the target is answered only when its document
         # qualifies; anything else records unexpected_response with a detail.
         if target_type == "oidc":
             detail = _oidc_discovery_detail(content)
+            # WR-05: content decides before the URL. A .well-known URL that
+            # serves SAML 2.0 metadata is SAML, not a failed OIDC document.
+            if detail is not None and _looks_like_xml(content):
+                if _saml_root_detail(content) is None:
+                    target_type, detail = "saml", None
         elif target_type == "saml":
             detail = _saml_root_detail(content)
         else:
