@@ -34,6 +34,14 @@ const DB: Phase = {
   detail: "no db_targets credentials configured",
   duration_sec: null,
 }
+const MOTION_FAILED: Phase = {
+  phase_name: "motion",
+  label: "Data in Motion",
+  status: "failed",
+  reason: "error",
+  detail: "connection reset",
+  duration_sec: 2,
+}
 const OFF1: Phase = { phase_name: "k8s", label: "Kubernetes", status: "skipped", reason: "disabled-by-config", detail: null, duration_sec: null }
 const OFF2: Phase = { phase_name: "vault", label: "Vault", status: "skipped", reason: "disabled-by-config", detail: null, duration_sec: null }
 
@@ -100,6 +108,18 @@ describe("PrintPage Scan Coverage (COUNT-05)", () => {
     expect(el).not.toBeNull()
     expect(el.querySelector("ul.coverage-list")).toBeNull()
     expect(el.textContent).toContain("Not enabled in this scan's configuration: Kubernetes.")
+  })
+
+  it("counts a failed phase in the Scan Coverage headline", async () => {
+    const { container } = await renderWith({ recorded: true, ran: 1, skipped: 1, phases: [TLS, DB, MOTION_FAILED] })
+    const el = container.querySelector(sel)!
+    expect(el.querySelector("p strong")!.textContent).toBe("1 ran / 1 skipped / 1 failed")
+  })
+
+  it("omits the failed count from the headline when no phase failed", async () => {
+    const { container } = await renderWith({ recorded: true, ran: 1, skipped: 1, phases: [TLS, DB] })
+    const el = container.querySelector(sel)!
+    expect(el.querySelector("p strong")!.textContent).toBe("1 ran / 1 skipped")
   })
 
   it("is absent when every phase ran", async () => {
