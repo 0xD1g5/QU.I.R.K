@@ -213,10 +213,15 @@ PROFILE_ARGS="--profile pki" ./lab.sh up
 
 | Port  | Service       | Algorithm          | Expected Finding              | Key Size           |
 |-------|---------------|--------------------|-------------------------------|--------------------|
-| 20001 | jwt-rs256     | RS256 (RSA)        | quantum-vulnerable asymmetric | 2048-bit           |
-| 20002 | jwt-hs256     | HS256 (HMAC-SHA256)| WEAK_KEY_SIZE                 | 128-bit (16-byte key) |
-| 20003 | jwt-rsa1024   | RS256 (RSA)        | WEAK_KEY_SIZE + quantum-vulnerable | 1024-bit      |
-| 20004 | jwt-algnone   | none               | CRITICAL_NO_SIGNATURE         | 0 bits             |
+| 20001 | jwt-rs256     | RS256 (RSA)        | no finding; key inventoried in the CBOM (quantum-vulnerable, healthy-key finding deferred) | 2048-bit           |
+| 20002 | jwt-hs256     | HS256 (HMAC-SHA256)| CRITICAL "JWKS publishes secret key material" (the lab publishes the HMAC key) | 128-bit (16-byte key) |
+| 20003 | jwt-rsa1024   | RS256 (RSA)        | HIGH "JWKS key uses undersized RSA key" | 1024-bit      |
+| 20004 | jwt-algnone   | none               | CRITICAL "JWKS key declares alg:none" | none recorded (empty key) |
+
+Measured on 2026-11-17 (Phase 238): exactly these three JWKS findings, the same on the report and the
+dashboard, and all four targets read `ran` in Scan Coverage. A JWT target that answers 404 everywhere
+would read `unexpected-response`, and one that answers 401 or 403 with no credential configured would
+read `missing-credentials`; none of the four lab targets does either.
 
 **Start:**
 
@@ -1481,8 +1486,9 @@ running, and read `5.21.0` in both the stale and the current case. See
 **The oracle records three classes of honest gap** — hosts that return INFO only; postures that are
 *scored but not in the CLI findings* (the unencrypted S3 bucket and the plaintext Postgres both reach
 `evidence_summary` but have no entry in `findings-*.json`; the dashboard's Data at Rest page does list
-both); and postures with no distinguishing detection (SHA-1 and
-broken-chain hosts are indistinguishable from a generic host). It also records a **CLI-vs-dashboard
+both); and postures with no distinguishing detection (broken-chain hosts are indistinguishable from a
+generic host; the SHA-1 host gains a weak-signature-hash finding from Phase 238, not yet re-measured
+on this profile). It also records a **CLI-vs-dashboard
 score divergence** measured on the same run. Read those sections before quoting any number from this
 profile in front of a client.
 
@@ -1612,7 +1618,7 @@ Every host port a compose service publishes (80 port/protocol pairs across all p
 | 8444      | http-on-8444               | core             | HTTP_ON_TLS_LIKE_PORT                                                                         |
 | 9443      | tls-expired                | core             | CERT_EXPIRED_OR_EXPIRING                                                                      |
 | 10443     | tls-selfsigned             | core             | CERT_SELFSIGNED                                                                               |
-| 11443     | tls-mtls-required          | core             | MTLS_REQUIRED                                                                                 |
+| 11443     | tls-mtls-required          | core             | MTLS_REQUIRED: INFO "mTLS required", read after the TLS 1.3 handshake; certificate findings kept (Phase 238) |
 | 12443     | tls-slow-proxy             | core             | TLS_SLOW_PROXY                                                                                |
 | 13443     | tls-missing-intermediate   | phaseA           | CERT_CHAIN_INCOMPLETE                                                                         |
 | 13444     | tls-cert-expired           | tls-cert-defects | TLS certificate expired CRITICAL                                                              |
@@ -1625,7 +1631,7 @@ Every host port a compose service publishes (80 port/protocol pairs across all p
 | 15353/tcp | bind9-dnssec               | dnssec           | none of its own: TCP only retries a truncated UDP reply (see §3.12)                           |
 | 15353/udp | bind9-dnssec               | dnssec           | RSASHA1 weak-algo CRITICAL, unsigned zone HIGH, NSEC MEDIUM (needs `dnssec_resolver`)         |
 | 15432     | postgres-plain             | phaseA           | DB_PLAINTEXT_POSTGRES                                                                         |
-| 15443     | tls-sha1                   | phaseA           | CERT_SHA1_SIG                                                                                 |
+| 15443     | tls-sha1                   | phaseA           | CERT_SHA1_SIG: HIGH "TLS certificate uses a weak signature hash" (CA-issued SHA-1 leaf, Phase 238) |
 | 15449     | keycloak-tls               | identity         | IDP_TLS                                                                                       |
 | 15672     | rabbitmq-mgmt              | phaseA           | RABBITMQ_MGMT_HTTP                                                                            |
 | 16379     | redis-plain                | phaseA           | DB_PLAINTEXT_REDIS                                                                            |
@@ -1634,10 +1640,10 @@ Every host port a compose service publishes (80 port/protocol pairs across all p
 | 18000     | http-redirect              | phaseA           | HTTP_REDIRECT_302                                                                             |
 | 18082     | phpldapadmin               | identity         | LDAP_ADMIN_HTTP                                                                               |
 | 19000     | step-ca                    | identity         | PRIVATE_CA_TLS                                                                                |
-| 20001     | jwt-rs256                  | jwt              | JWT quantum-vulnerable asymmetric                                                             |
-| 20002     | jwt-hs256                  | jwt              | JWT WEAK_KEY_SIZE                                                                             |
-| 20003     | jwt-rsa1024                | jwt              | JWT WEAK_KEY_SIZE + quantum-vulnerable                                                        |
-| 20004     | jwt-algnone                | jwt              | JWT CRITICAL_NO_SIGNATURE                                                                     |
+| 20001     | jwt-rs256                  | jwt              | no finding (RS256 2048-bit key inventoried in the CBOM)                                       |
+| 20002     | jwt-hs256                  | jwt              | CRITICAL "JWKS publishes secret key material"                                                |
+| 20003     | jwt-rsa1024                | jwt              | HIGH "JWKS key uses undersized RSA key"                                                      |
+| 20004     | jwt-algnone                | jwt              | CRITICAL "JWKS key declares alg:none"                                                        |
 | 20005     | registry                   | registry         | OUTDATED_CRYPTO_LIB                                                                           |
 | 20006     | gitea                      | source           | ERROR row, ruleset unavailable (known defect, Semgrep installed), zero SOURCE findings, domain Not assessed |
 | 20022     | ssh-weak                   | ssh-weak         | SSH_WEAK_ALGORITHMS                                                                           |

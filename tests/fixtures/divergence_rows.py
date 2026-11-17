@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import datetime
 import itertools
+import json
 from typing import Callable, Dict, List
 
 from quirk.models import CryptoEndpoint
@@ -255,9 +256,58 @@ def _ecdsa_256():
 
 
 def _rsa_2048():
-    # rsa_size_0 / rsa_pss_1024 are deliberately NOT families: they diverge
-    # (WR-03), tracked by LEDGER 261116-rsa-undersized-key-predicate-differs-across-surfaces.
     return [_tls(_fam_host(39), cert_pubkey_alg="RSA", cert_pubkey_size=2048)]
+
+
+def _cert_sha1_leaf():
+    # Phase 238 D-18: CA-issued leaf (_tls defaults: issuer "CN=Real CA" !=
+    # subject "CN=ok.example") -> HIGH weak signature hash on both surfaces.
+    return [_tls(_fam_host(44), cert_sig_alg="sha1",
+                 cert_subject="CN=ok.example", cert_issuer="CN=Real CA")]
+
+
+def _cert_sha1_self_signed():
+    # Phase 238 D-18: self-signed leaf -> LOW weak signature hash plus the
+    # HIGH self-signed finding on both surfaces.
+    return [_tls(_fam_host(45), cert_sig_alg="sha1",
+                 cert_subject="CN=s", cert_issuer="CN=s")]
+
+
+def _rsa_size_0():
+    # Phase 238 D-20: size 0 is undetermined, never undersized, on both surfaces.
+    return [_tls(_fam_host(46), cert_pubkey_alg="RSA", cert_pubkey_size=0)]
+
+
+def _rsa_pss_1024():
+    # Phase 238 D-20: RSA-PSS below 2048 bits is undersized on both surfaces.
+    return [_tls(_fam_host(47), cert_pubkey_alg="RSA-PSS", cert_pubkey_size=1024)]
+
+
+# Phase 238 IDENT-05 (D-05): one family per JWKS key rule. Each is a single
+# JWT row shaped like jwt_scanner's: the JWK the target publishes in
+# jwt_scan_json, its alg (or kty) in cert_pubkey_alg and its size in bits.
+def _jwks_row(n: int, body: dict, bits) -> CryptoEndpoint:
+    return _ep(_fam_host(n), port=443, protocol="JWT",
+               cert_pubkey_alg=body.get("alg") or body["kty"],
+               cert_pubkey_size=bits, jwt_scan_json=json.dumps(body),
+               service_detail="/.well-known/jwks.json")
+
+
+def _jwks_alg_none() -> List[CryptoEndpoint]:
+    return [_jwks_row(40, {"kty": "oct", "alg": "none", "kid": "k40"}, None)]
+
+
+def _jwks_secret_material() -> List[CryptoEndpoint]:
+    return [_jwks_row(41, {"kty": "oct", "alg": "HS256", "kid": "k41",
+                           "secret_material_present": True}, 128)]
+
+
+def _jwks_hmac_no_material() -> List[CryptoEndpoint]:
+    return [_jwks_row(42, {"kty": "oct", "alg": "HS256", "kid": "k42"}, None)]
+
+
+def _jwks_rsa_1024() -> List[CryptoEndpoint]:
+    return [_jwks_row(43, {"kty": "RSA", "alg": "RS256", "kid": "k43"}, 1024)]
 
 
 FAMILY_ROWS: Dict[str, Callable[[], List[CryptoEndpoint]]] = {
@@ -300,6 +350,14 @@ FAMILY_ROWS: Dict[str, Callable[[], List[CryptoEndpoint]]] = {
     "legacy_supported_only": _legacy_supported_only,
     "ecdsa_256": _ecdsa_256,
     "rsa_2048": _rsa_2048,
+    "cert_sha1_leaf": _cert_sha1_leaf,
+    "cert_sha1_self_signed": _cert_sha1_self_signed,
+    "rsa_size_0": _rsa_size_0,
+    "rsa_pss_1024": _rsa_pss_1024,
+    "jwks_alg_none": _jwks_alg_none,
+    "jwks_secret_material": _jwks_secret_material,
+    "jwks_hmac_no_material": _jwks_hmac_no_material,
+    "jwks_rsa_1024": _jwks_rsa_1024,
 }
 
 

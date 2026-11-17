@@ -323,11 +323,16 @@ The table below maps common finding titles to their plain-English explanation an
 | TLS certificate expired | CRITICAL | Certificate past its `Not After` date | Renew certificate immediately |
 | TLS certificate is self-signed | HIGH | Certificate not issued by a trusted CA | Replace with CA-issued cert |
 | TLS certificate issued by untrusted CA | MEDIUM | Certificate chain does not validate to a trusted root | Replace with a cert from a trusted CA, or install the correct chain |
+| TLS certificate uses a weak signature hash | HIGH / LOW | (5.29) The server's leaf certificate is signed with SHA-1, MD5, MD4 or MD2, hashes with practical collision attacks. HIGH for a CA-issued leaf; LOW for a self-signed leaf, which already carries the HIGH "TLS certificate is self-signed". Only the leaf is checked: intermediate certificates are not stored | Reissue the certificate with a SHA-256 or stronger signature |
 | TLS handshake blocked assessment | MEDIUM | The TLS handshake failed or timed out, so the negotiated version, cipher suite and certificate could not be assessed | Validate service config; add to exclusions if expected |
 | SSH quantum planning advisory | INFO | Emitted once for every SSH endpoint whose probe recorded no error (an SSH probe that errored gets an INFO "Informational protocol observation" instead). Its text says the host key or key exchange relies on RSA or classical ECDH, but the finding does not check which algorithms the server offers, so it also appears for a server that already uses a post-quantum hybrid key exchange | Plan migration to post-quantum SSH key exchange using ML-KEM (FIPS 203). OpenSSH has offered the hybrid `mlkem768x25519-sha256` key exchange since 9.9 and uses it by default since 10.0 |
 | Unknown open service | MEDIUM | Open port did not respond to TLS, HTTP, or SSH probes | Inventory this service; close if unneeded |
-| mTLS required | INFO | Service requires client certificate — positive signal | No action; note for zero-trust posture documentation |
+| mTLS required | INFO | Service requires client certificate — positive signal. Raised when the handshake itself is refused, and (5.29) when the handshake completes and the server then rejects the connection because no client certificate was sent; in that case the endpoint's certificate findings are kept. Shown on the dashboard Findings page too (5.29) | No action; note for zero-trust posture documentation |
 | JWKS fetched with TLS certificate verification disabled | HIGH | A JWKS URL was fetched with `allow_insecure_jwks` on, so its TLS certificate check was turned off. One finding per URL fetched | Turn off `security.allow_insecure_jwks` (or `--allow-insecure-jwks`) and fix the endpoint certificate. Counted in the findings totals, but does not change the readiness score |
+| JWKS key declares alg:none | CRITICAL | (5.29) A key in the target's published JWKS declares `alg: none` (any case). A verifier that honours it accepts tokens with no signature | Remove the alg:none key from the published key set and reject unsigned tokens at every verifier |
+| JWKS publishes secret key material | CRITICAL | (5.29) A key in the target's published JWKS carries private or symmetric key members (for example `k` on an `oct` key, or `d` on an RSA or EC key). Anyone who fetches the key set can sign valid tokens | Remove private and symmetric members from the published key set and rotate the exposed key |
+| JWKS key uses a symmetric (HMAC) algorithm | HIGH | (5.29) A key in the published JWKS uses an HMAC algorithm (`HS256` and similar) or is an `oct` key without key material. Every party that can verify these tokens can also sign them | Sign tokens with an asymmetric algorithm (ES256 or EdDSA) and publish only the public key |
+| JWKS key uses undersized RSA key | HIGH | (5.29) A key in the published JWKS is an RSA key below 2048 bits | Replace the key with RSA-2048 or larger, or move token signing to ECDSA (ES256) or EdDSA |
 | Bearer token is unsigned (alg:none) | CRITICAL | The JWT supplied with `--auth-bearer` declares `alg: none` (any case) or carries no `alg`, so it carries no signature a server could verify. Ordinary CRITICAL for scoring: it caps the rating at the top of POOR through the consequence ceiling, like any open CRITICAL | Do not use unsigned tokens; make the issuer sign with a real algorithm and have the API reject `none` |
 | Code-signing certificate uses weak algorithm: *subject* | HIGH | Code-signing certificate uses a weak key or hash: RSA < 2048-bit, EC < 256-bit, or a weak signature hash such as SHA-1 or MD5 | Replace the signing certificate with RSA ≥ 2048-bit / SHA-256 or an ECDSA P-256+ key; re-sign artifacts with the new cert |
 
@@ -1267,8 +1272,8 @@ for it.
 
 **Scan-error counts and the category split.** The scan-error figure is a net count of error rows
 that weighs outages. The categories `missing_extra`, `missing_binary` and `internal_target_refused`
-stay advisory: they describe your environment and never count. `targets_unreachable`, `auth_failed`
-and `missing_credentials` count as scan-error regressions. A connector that failed against all of
+stay advisory: they describe your environment and never count. `targets_unreachable`, `auth_failed`,
+`missing_credentials` and (5.29) `unexpected_response` count as scan-error regressions. A connector that failed against all of
 its targets ("4 of 4 targets unreachable") counts as N failed targets, so a full JWT, SAML or DNSSEC
 outage reads as N, not 1. Database, Kubernetes and cloud connectors also forward their in-band
 error rows, which count too, so a full outage there can read up to 2N. A connector error row that
@@ -2009,7 +2014,7 @@ all, which is what this section discloses.
 The heading is followed by a `{N} ran / {M} skipped` summary line, then one row per phase: ran
 rows show the phase's wall-clock duration; skipped rows show the skip reason plus a short,
 non-secret detail string (e.g. `connectors.vault_token / VAULT_TOKEN not set`). There are exactly
-eight skip reasons, each implying a specific operator action:
+nine skip reasons, each implying a specific operator action:
 
 | Skip reason | What it means | What to do |
 |---|---|---|
@@ -2020,12 +2025,16 @@ eight skip reasons, each implying a specific operator action:
 | `missing-binary` | A required external tool (semgrep for source code, syft for container images) is not installed. The domain is Not assessed and the missing tool is counted as a scan error. | Install the tool and re-scan; run `quirk doctor` to see which binary is missing. |
 | `internal-target-refused` | Every target of the connector is an internal address that server policy refuses to scan (for example an internal IdP on a `10.x` address). Nothing was attempted against it. | Run the scan from a host whose policy allows internal targets, or change the server's internal-target policy; the New Scan page warns about this before you submit. |
 | `auth-failed` | Every target answered but rejected the credentials. The domain is Not assessed and the skip counts as a scan error. | Renew or replace the credential (for example after an expired SSO session) and re-scan. |
+| `unexpected-response` | (5.29) Every target that answered sent something other than the expected document: for a SAML target, neither SAML 2.0 metadata nor an OIDC discovery document (an HTML login page, a 404, other XML); for a JWT target, no JWKS (no `keys` list, an HTTP error, a discovery document whose `jwks_uri` gives no JWKS). The detail names each target and what it returned, for example `not SAML metadata (HTML page)`, `HTTP 404` or `not a JWKS (no keys array)`. The domain is Not assessed and the skip counts as a scan error. | Check the configured URL: point the SAML target at the IdP's metadata or discovery URL, and the JWT target at the API base URL that publishes the JWKS. |
 | `failed` | Either the phase started and aborted with an error, or (5.28.2) none of its targets answered and no more specific reason applies. The detail tells them apart: a no-answer row reads `N of N targets did not answer`, and the dashboard empty state says "no target answered" rather than "the scanner stopped with an error". | For a no-answer row, check that the targets are reachable from the scanning host. For an aborted phase, check the error rows / logs for that phase; that case is a runtime failure, not a configuration gap. |
 
 Since 5.28.0, when Semgrep is installed, source code scanning records its phase as `failed`, with a reason such as `SourceRulesetUnavailable: ruleset unavailable: semgrep exited 7: ...`, because the upstream Semgrep ruleset it used no longer exists. The source domain reads *Not assessed*. When Semgrep is not installed and `source_targets` is set (or Syft is not installed and `container_targets` is set), the phase is recorded as skipped with reason `missing-binary` (5.28.1), the domain reads *Not assessed*, and the missing tool counts as a scan error. Before 5.28.1 that case was recorded as ran with no findings. The ruleset-unavailable case is a known defect, not a configuration gap, and no config change fixes it.
 
 A connector reads `ran` only if at least one of its targets answered. A target that answers with
-nothing (an empty bucket, a JWT endpoint with no tokens) still counts as answering. Each coverage
+nothing (an empty bucket, a JWT endpoint whose JWKS lists no keys) still counts as answering. From
+5.29 a SAML or JWT target counts as answered only when it returned the expected document: SAML 2.0
+metadata or an OIDC discovery document for SAML, and a JWKS (directly, or through a discovery
+document whose `jwks_uri` yields one) for JWT. Any other answer reads `unexpected-response`. Each coverage
 skip counts as one scan error and lowers the score; against an answered-empty connector in a
 one-endpoint TLSv1.3 fixture the headline moved from 84 to 81. A source scan where every target
 fails is recorded `failed` (with a counted error row), not `skipped`, unchanged from 5.28.1, while
@@ -2037,6 +2046,14 @@ other connectors with no answering target read `skipped` with a named reason.
   `internal-target-refused`; Scan Coverage and the dashboard empty state show that reason.
 - **`quirk serve` started under an expired SSO session:** the cloud phase reads `missing-credentials`
   (or `auth-failed` if the service rejected the credential).
+- **A SAML target that serves an HTML login page, or a JWT target that answers 404 (5.29):** the
+  phase reads `unexpected-response`, and the detail names the target and what it returned, for example
+  `not SAML metadata (HTML page)`. Scan Coverage and the HTML report's Scan Coverage table show it; the
+  report's TLS Capabilities "Not assessed" note is TLS-only and does not carry it.
+- **A JWT target that answers 401 or 403 when no `--auth-*` credential is configured (5.29):** the phase
+  reads `missing-credentials` (detail `HTTP 401: no credentials configured`). With a credential
+  configured, the same answer reads `auth-failed`. A `jwks_uri` on the target's own origin that answers
+  401 or 403 is treated the same way.
 - **A database target that fails to connect:** the Data at Rest page shows a failed row (for example
   "PostgreSQL connection failed") for that target, and the phase reads `failed` or `auth-failed`
   when no target answered.
@@ -2053,7 +2070,9 @@ visible as such. **Empty states.** Dashboard pages that have no data for a domai
 Identity, Motion) state the reason recorded in Scan Coverage rather than a generic "no data" line.
 **In the report.** Each connector skipped this way also adds one INFO advisory, "Connector skipped
 — no target answered" (category `coverage_gap`), which the HTML and DOCX reports list under
-Coverage Gaps and keep out of the findings tables, the same way as a `missing_extra` row.
+Coverage Gaps and keep out of the findings tables, the same way as a `missing_extra` row. From 5.29
+its description says none of the targets returned a usable answer, which stays true for
+`unexpected-response` (a target did answer, with the wrong document); the title is unchanged.
 
 ### A skipped phase never fabricates a zero
 
@@ -2638,3 +2657,76 @@ The accepted accessibility exception that previously covered this gap (`scrollab
 in `src/dashboard/tests/a11y/ACCEPTED-VIOLATIONS.md`) was **withdrawn** in Phase 219, not renewed —
 the underlying behavior is now fixed at the source, in the shared `Table` component, rather than
 accepted as ongoing debt.
+
+## 31. Identity and Certificate Findings (Phase 238, 5.29)
+
+Phase 238 added findings for weak JWKS keys and weak certificate signature hashes, reads mTLS
+rejections that arrive after the TLS handshake, and stops reading a wrong answer from a SAML or JWT
+target as a successful scan. Every finding below comes from one shared rule set, so the report and the
+dashboard show the same title and severity.
+
+### Weak JWKS keys (IDENT-05)
+
+The JWT/API connector inventories every key in a target's published JWKS. Each key is checked once,
+first match wins: `alg: none` (CRITICAL), published private or symmetric key material (CRITICAL), an
+HMAC algorithm or an `oct` key without material (HIGH), an RSA key below 2048 bits (HIGH). The titles
+and actions are in §5. Healthy RS256, ES256 and EdDSA keys produce no finding; they appear in the CBOM.
+Keys that share a `kid` are each checked; an identical key listed twice at the same target is
+counted once.
+The findings appear on the report, on the dashboard Findings page and on the Identity page's
+JWT/JWKS card. The JWT scan record keeps only the key metadata it needs.
+
+The score moves only through the existing severity ceiling (§19): one open CRITICAL caps the score at
+the top of POOR, one open HIGH at the top of MODERATE. A weak JWKS key therefore lowers the score
+only where no other finding already applies an equal or tighter cap. On the Phase 238 lab run the
+full estate already held an expired-certificate CRITICAL, so its score stayed 29 with or without the
+JWT targets; with that port left out, the JWKS findings lowered it from 45 to 29 on the report, the
+intelligence JSON and the dashboard alike. No new score weight was added and `SCORING_VERSION` stays
+4.0.
+
+### Weak certificate signature hash (DETECT-07)
+
+"TLS certificate uses a weak signature hash" is raised for a TLS leaf certificate signed with SHA-1,
+MD5, MD4 or MD2: HIGH for a CA-issued leaf, LOW for a self-signed one (the self-signed finding already
+carries the HIGH). Only the leaf certificate is stored and checked. A weak hash on an intermediate
+certificate, or on an email or broker certificate, raises nothing yet (tracked in the ledger).
+Dashboard scores of existing scans that hold such a leaf drop the next time they are viewed, because
+the dashboard derives findings when the page loads.
+
+The same phase made the undersized-RSA rule identical on both surfaces: an RSA or RSA-PSS key from 1
+to 2047 bits is HIGH. A recorded key size of 0 means the size could not be determined, not a 0-bit
+key, so it no longer raises the HIGH on the report; an RSA-PSS key under 2048 bits now does.
+
+### mTLS required after the handshake (DETECT-06)
+
+A server that requires a client certificate under TLS 1.3 usually completes the handshake and rejects
+the client afterwards. QUIRK now reads that rejection in three ways: sslyze's client-authentication
+result when it reports the certificate as required; a TLS `certificate required` alert received after
+the handshake; or an HTTP answer with status 400, 403, 495 or 496 whose text says a client certificate
+is missing (for example nginx's "No required SSL certificate was sent"). A plain 400 or 403 without
+such text is never read as mTLS.
+
+The post-handshake check first listens for about half a second without sending anything. An alert in
+that window counts; any bytes the server sends first (a mail or directory banner) end the check with
+no result. Only then does QUIRK send one `GET /` request, and only on a port that is not a well-known
+non-HTTP TLS port (465, 563, 636, 853, 989, 990, 992-995, 3269, 5061, 5223, 5671, 6514, 6697, 8883)
+or when the server negotiated HTTP through ALPN. The read is capped at three seconds and never fails
+the row. On the lab run the check took 0.014 s on the mTLS port.
+
+Such a row keeps everything observed before the rejection: the TLS version, cipher data and
+certificate, and every certificate finding. It carries the INFO "mTLS required", which the dashboard
+now shows too, and still earns the +6 mTLS presence credit (§3.3). Closure treats it as assessed, so a
+fixed certificate finding on an mTLS endpoint can close (§16). TLS 1.2 endpoints that require a client
+certificate now also come through as a full TLS row with the INFO "mTLS required", instead of the
+MEDIUM "TLS handshake blocked assessment", so their findings and score can move. In the technical
+report such a row shows its observed TLS version in the Service Inventory and is no longer listed
+under TLS Blockers; a row whose handshake itself was refused is still listed there.
+
+### SAML and JWT targets that answer with the wrong document (IDENT-07)
+
+A SAML or JWT target counts as answered only when it returned the expected document (§22). Anything
+else reads `unexpected-response` with a named detail, the phase is skipped when no target qualified,
+and the skip counts as a scan error. SAML metadata served with a byte-order mark, or SAML metadata
+served from a `.well-known` URL, still reads answered. The dashboard and the Export PDF show the reason
+in words; they do not show the internal outcome code. Scans of SAML or JWT targets that used to read
+`ran` with no results can therefore read skipped from 5.29, with a lower score.

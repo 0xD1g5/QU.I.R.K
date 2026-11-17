@@ -462,12 +462,75 @@ def test_jwt_outcome_closed_port_unreachable():
     assert [r.kind for r in sink.resolved()] == ["unreachable"]
 
 
-def test_jwt_outcome_non_200_everywhere_is_answered():
+def test_jwt_outcome_non_200_everywhere_is_unexpected_response():
+    """Phase 238 D-08/D-11: a 404 at every path is an answer, but not a JWKS."""
     with _stub_server({}) as port:
         target = f"http://127.0.0.1:{port}"
         sink = TargetOutcomes([target])
         assert scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink) == []
-        assert [r.kind for r in sink.resolved()] == ["answered"]
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "HTTP 404")
+        ]
+
+
+@contextlib.contextmanager
+def _raw_server(body: bytes, content_type: str):
+    """127.0.0.1 ephemeral-port server answering 200 with ``body`` at every path."""
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):  # noqa: D401
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        yield srv.server_port
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+def test_jwt_outcome_html_200_is_unexpected_response():
+    page = b"<!DOCTYPE html><html><body>login</body></html>"
+    with _raw_server(page, "text/html") as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        assert scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink) == []
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "not JSON")
+        ]
+
+
+def test_jwt_outcome_json_without_keys_is_unexpected_response():
+    with _stub_server({"/.well-known/jwks.json": {"hello": "world"}}) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        assert scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink) == []
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "not a JWKS (no keys array)")
+        ]
+
+
+def test_jwt_probe_log_discovery_without_jwks_uri():
+    from quirk.scanner.jwt_scanner import _fetch_jwks
+
+    with _stub_server({"/.well-known/openid-configuration": {"issuer": "x"}}) as port:
+        log = []
+        result = _fetch_jwks(f"http://127.0.0.1:{port}", 2, allow_internal=True, probe_log=log)
+    assert result[:2] == (None, None)
+    assert log == [
+        ("unexpected_response", "HTTP 404"),
+        ("unexpected_response", "HTTP 404"),
+        ("unexpected_response", "discovery document has no jwks_uri"),
+    ]
 
 
 def test_jwt_outcome_empty_keys_is_answered_with_no_rows():
@@ -555,14 +618,16 @@ def test_jwt_outcome_401_403_with_credentials_is_auth_failed(status):
 
 
 @pytest.mark.parametrize("status", [401, 403])
-def test_jwt_outcome_401_403_without_credentials_is_answered(status):
-    """No credentials configured: the server still responded (D-06 auth_failed
-    needs credentials present), so the target answered."""
+def test_jwt_outcome_401_403_without_credentials_is_missing_credentials(status):
+    """Phase 238 D-08/D-30: no credentials configured and the base origin asks
+    for them, so the operator can act by configuring --auth-* credentials."""
     with _status_server(status) as port:
         target = f"http://127.0.0.1:{port}"
         sink = TargetOutcomes([target])
         scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink)
-        assert [r.kind for r in sink.resolved()] == ["answered"]
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("missing_credentials", f"HTTP {status}: no credentials configured")
+        ]
 
 
 def test_jwt_outcome_401_on_one_path_200_on_another_with_credentials_is_answered():
@@ -572,3 +637,167 @@ def test_jwt_outcome_401_on_one_path_200_on_another_with_credentials_is_answered
         scan_jwt_targets([target], timeout=2, allow_internal=True,
                          cred_ctx=_bearer_ctx(), outcomes=sink)
         assert [r.kind for r in sink.resolved()] == ["answered"]
+
+
+@contextlib.contextmanager
+def _jwks_uri_server(jwks_uri_status: int, jwks_uri_host: str = "127.0.0.1"):
+    """Base JWKS paths 404; the discovery document points at ``/keys`` on
+    *jwks_uri_host* (same origin when it is 127.0.0.1), which answers
+    *jwks_uri_status*."""
+    state = {}
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path == "/.well-known/openid-configuration":
+                raw = json.dumps({
+                    "issuer": "https://idp.test",
+                    "jwks_uri": f"http://{jwks_uri_host}:{state['port']}/keys",
+                }).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
+            self.send_response(jwks_uri_status if self.path == "/keys" else 404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *a):  # noqa: D401
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+    state["port"] = srv.server_port
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        yield srv.server_port
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_jwt_outcome_same_origin_jwks_uri_401_403_with_credentials_is_auth_failed(status):
+    """WR-06: credentials go to a same-origin jwks_uri, so its 401/403 follows
+    the base-path rule."""
+    with _jwks_uri_server(status) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True,
+                         cred_ctx=_bearer_ctx(), outcomes=sink)
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("auth_failed", f"jwks_uri HTTP {status}: configured credentials rejected")
+        ]
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_jwt_outcome_same_origin_jwks_uri_401_403_without_credentials_is_missing_credentials(status):
+    with _jwks_uri_server(status) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink)
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("missing_credentials", f"jwks_uri HTTP {status}: no credentials configured")
+        ]
+
+
+def test_jwt_outcome_cross_origin_jwks_uri_401_stays_unexpected_response():
+    with _jwks_uri_server(401, jwks_uri_host="localhost") as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True,
+                         cred_ctx=_bearer_ctx(), outcomes=sink)
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "HTTP 404")
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Phase 238 D-03: the JWT scan record keeps only the key metadata it needs
+# ---------------------------------------------------------------------------
+import base64 as _b64
+import logging as _logging
+
+_KEY_MEMBERS = {"k", "d", "p", "q", "dp", "dq", "qi", "oth"}
+
+
+def _b64url(raw: bytes) -> str:
+    return _b64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def test_jwt_scan_record_keeps_only_key_metadata(caplog):
+    """the JWT scan record keeps only the key metadata it needs"""
+    k_value = _b64url(bytes(range(1, 17)))  # 16 bytes
+    n_value = _b64url(b"\xc5" * 256)  # 2048-bit modulus
+    jwks = {"keys": [
+        {"kty": "oct", "alg": "HS256", "kid": "x", "k": k_value},
+        {"kty": "RSA", "alg": "RS256", "kid": "r", "n": n_value, "e": "AQAB", "d": "AAAA"},
+        {"kty": "RSA", "alg": "RS256", "kid": "p", "n": n_value, "e": "AQAB"},
+    ]}
+    caplog.set_level(_logging.DEBUG)
+    with _stub_server({"/.well-known/jwks.json": jwks}) as port:
+        rows = scan_jwt_targets([f"http://127.0.0.1:{port}"], timeout=2, allow_internal=True)
+    assert len(rows) == 3
+    by_kid = {}
+    for ep in rows:
+        record = json.loads(ep.jwt_scan_json)
+        assert set(record) & _KEY_MEMBERS == set()
+        by_kid[record["kid"]] = (record, ep)
+    assert sorted(by_kid) == ["p", "r", "x"]
+    assert by_kid["x"][0]["secret_material_present"] is True
+    assert by_kid["r"][0]["secret_material_present"] is True
+    assert by_kid["p"][0]["secret_material_present"] is False
+    assert by_kid["x"][1].cert_pubkey_size == 128
+    assert by_kid["r"][1].cert_pubkey_size == 2048
+    assert k_value not in caplog.text
+    assert "AAAA" not in caplog.text
+
+
+def test_jwt_scan_record_keeps_only_public_key_metadata():
+    """the JWT scan record keeps only public key metadata: an allowlist of
+    public JWK members with scalar values (key_ops: a list of strings), plus
+    the marker. Nested and non-standard members are not kept."""
+    n_value = _b64url(b"\xc5" * 256)
+    jwks = {"keys": [
+        {
+            "kty": "RSA", "alg": "RS256", "kid": "r", "use": "sig",
+            "key_ops": ["verify", {"k": "nested"}, 7],
+            "n": n_value, "e": "AQAB",
+            "x5t": "dGh1bWI", "x5t#S256": "dGh1bWIy", "x5u": "https://idp.test/c.pem",
+            "x5c": ["MIIB"],
+            "ext": {"k": "nested-value", "d": "nested-value"},
+            "custom_member": "custom-value",
+            "crv": {"nested": True},
+        },
+        {
+            "kty": "EC", "alg": "ES256", "kid": "e", "crv": "P-256",
+            "x": "eA", "y": "eQ", "private_hint": "custom-value",
+        },
+    ]}
+    with _stub_server({"/.well-known/jwks.json": jwks}) as port:
+        rows = scan_jwt_targets([f"http://127.0.0.1:{port}"], timeout=2, allow_internal=True)
+    assert len(rows) == 2
+    records = {json.loads(ep.jwt_scan_json)["kid"]: json.loads(ep.jwt_scan_json) for ep in rows}
+    assert records["r"] == {
+        "kty": "RSA", "alg": "RS256", "kid": "r", "use": "sig",
+        "key_ops": ["verify"], "n": n_value, "e": "AQAB",
+        "x5t": "dGh1bWI", "x5t#S256": "dGh1bWIy", "x5u": "https://idp.test/c.pem",
+        "secret_material_present": False,
+    }
+    assert records["e"] == {
+        "kty": "EC", "alg": "ES256", "kid": "e", "crv": "P-256", "x": "eA", "y": "eQ",
+        "secret_material_present": False,
+    }
+    for ep in rows:
+        assert "nested-value" not in ep.jwt_scan_json
+        assert "custom-value" not in ep.jwt_scan_json
+
+
+def test_jwt_oct_key_with_empty_k_has_no_size():
+    jwks = {"keys": [{"kty": "oct", "alg": "HS256", "kid": "e", "k": ""}]}
+    with _stub_server({"/.well-known/jwks.json": jwks}) as port:
+        rows = scan_jwt_targets([f"http://127.0.0.1:{port}"], timeout=2, allow_internal=True)
+    assert len(rows) == 1
+    assert rows[0].cert_pubkey_size is None
+    assert json.loads(rows[0].jwt_scan_json)["secret_material_present"] is False

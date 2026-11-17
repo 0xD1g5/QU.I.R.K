@@ -1,12 +1,18 @@
 """Phase 235.3 D-05: the single source for the per-target outcome shape.
 
-Every connector scanner records, per configured target, one of five outcome
-kinds (answered / refused / missing_credentials / auth_failed / unreachable)
-into a ``TargetOutcomes`` sink; ``run_scan._classify_connector_outcomes`` turns
+Every connector scanner records, per configured target, one of six outcome
+kinds (answered / refused / missing_credentials / auth_failed /
+unexpected_response / unreachable) into a ``TargetOutcomes`` sink; ``run_scan._classify_connector_outcomes`` turns
 the sink into ``ran`` or a named ``skipped`` phase. Keeping the vocabulary, the
 skip-reason mapping and the advisory categories in ONE module follows
 ``quirk/util/scanner_binaries.py``: hand-maintained parallel lists have drifted
 repeatedly in this project.
+
+The unexpected_response kind (Phase 238 D-09) is a target that answered with
+something other than the expected document (an HTTP 404, an HTML login page,
+XML that is not SAML metadata, JSON that is not a JWKS). It is a stronger fact
+than a timeout, hence its priority directly after refused and before
+unreachable.
 
 Import discipline: stdlib plus ``quirk.util`` only. Optional-extra packages
 (botocore, hvac, psycopg2, pymysql, ldap3, azure, google) are NEVER imported
@@ -39,12 +45,14 @@ OUTCOME_ANSWERED: Final[str] = "answered"
 OUTCOME_REFUSED: Final[str] = "refused"
 OUTCOME_MISSING_CREDENTIALS: Final[str] = "missing_credentials"
 OUTCOME_AUTH_FAILED: Final[str] = "auth_failed"
+OUTCOME_UNEXPECTED_RESPONSE: Final[str] = "unexpected_response"
 OUTCOME_UNREACHABLE: Final[str] = "unreachable"
 OUTCOME_KINDS: Final[frozenset] = frozenset({
     OUTCOME_ANSWERED,
     OUTCOME_REFUSED,
     OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_AUTH_FAILED,
+    OUTCOME_UNEXPECTED_RESPONSE,
     OUTCOME_UNREACHABLE,
 })
 
@@ -52,6 +60,7 @@ OUTCOME_TO_SKIP_REASON: Final[Dict[str, str]] = {
     OUTCOME_REFUSED: "internal-target-refused",
     OUTCOME_MISSING_CREDENTIALS: "missing-credentials",
     OUTCOME_AUTH_FAILED: "auth-failed",
+    OUTCOME_UNEXPECTED_RESPONSE: "unexpected-response",
     OUTCOME_UNREACHABLE: "failed",
 }
 
@@ -60,6 +69,7 @@ SKIP_REASON_TO_ADVISORY_CATEGORY: Final[Dict[str, str]] = {
     "auth-failed": "auth_failed",
     "missing-credentials": "missing_credentials",
     "failed": "targets_unreachable",
+    "unexpected-response": "unexpected_response",
 }
 
 COVERAGE_SKIP_ADVISORY_CATEGORIES: Final[frozenset] = frozenset({
@@ -90,10 +100,12 @@ def failed_target_count(detail: Optional[str]) -> Optional[int]:
 PER_TARGET_ERROR_CATEGORY: Final[str] = "target_unanswered"
 
 # P-06 priority (highest first) when no target answered and kinds are mixed.
+# Phase 238 D-09: a wrong-document answer sits after refused, before unreachable.
 _FAILURE_PRIORITY: Final[Tuple[str, ...]] = (
     OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_AUTH_FAILED,
     OUTCOME_REFUSED,
+    OUTCOME_UNEXPECTED_RESPONSE,
     OUTCOME_UNREACHABLE,
 )
 

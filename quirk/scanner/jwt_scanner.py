@@ -24,11 +24,14 @@ except ImportError:
     HTTPX_AVAILABLE = False
 
 from quirk.models import CryptoEndpoint
+from quirk.util.jwt_alg import public_jwk_record
 from quirk.util.outbound_fetch import fetch_validated
 from quirk.util.safe_exc import safe_str
 from quirk.scanner.target_outcome import (
     OUTCOME_ANSWERED,
     OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_UNEXPECTED_RESPONSE,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
     outcome_for_url_guard,
@@ -227,6 +230,22 @@ def _rsa_key_bits_from_n(n_b64url: str) -> Optional[int]:
         return None
 
 
+def _b64url_len_bits(value) -> Optional[int]:
+    """Bit length of a base64url value (Phase 238 D-03: oct key size from ``k``).
+
+    Returns None for an empty, non-string or undecodable value.
+    """
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        padded = value.replace("-", "+").replace("_", "/")
+        padded += "=" * (-len(padded) % 4)
+        raw = base64.b64decode(padded, validate=True)
+    except Exception:
+        return None
+    return len(raw) * 8 or None
+
+
 def _fetch_jwks(
     base_url: str,
     timeout: int,
@@ -256,8 +275,15 @@ def _fetch_jwks(
       D-12: auth is attached to this existing fetch only — no new probe targets.
 
     235.3 D-05: when ``probe_log`` is a list, every probe appends one
-    ``(outcome_kind, detail)`` tuple (guard refusal, any HTTP response, or a
-    fetch exception). The caller folds them into the shared TargetOutcomes sink.
+    ``(outcome_kind, detail)`` tuple (guard refusal, HTTP answer, or a fetch
+    exception). The caller folds them into the shared TargetOutcomes sink.
+    Phase 238 D-08: ``answered`` is appended only for a JSON object with a
+    ``keys`` list (an empty list is valid), directly or via a discovery
+    document's ``jwks_uri``. Every other answer is ``unexpected_response``
+    with a detail made of status codes and fixed phrases (never a URL); an
+    uncredentialed 401/403 at the base origin (a base path, or a same-origin
+    ``jwks_uri``) is ``missing_credentials``; with credentials it is
+    ``auth_failed``.
 
     230-REVIEW CR-01: credentials (headers AND the query-param key) are attached
     only to URLs with the same origin (scheme, host, port) as ``base_url``. A
@@ -317,6 +343,10 @@ def _fetch_jwks(
             allow_internal=allow_internal,
         )
 
+    def _note(kind: str, detail: str) -> None:
+        if probe_log is not None:
+            probe_log.append((kind, detail))
+
     for path in JWKS_PATHS:
         url = base_url + path
         # CR-03: validate every base probe URL before fetching — SSRF guard, materially
@@ -340,31 +370,39 @@ def _fetch_jwks(
             # each fetched URL when allow_insecure_jwks is true (Phase 57 HARDEN-SCAN-01).
             # validate_external_url() runs on every probe URL above and every jwks_uri below.
             resp = _get(url)
-            if probe_log is not None:
+            status = resp.status_code
+            if status != 200:
                 # 235.3 review A-WR-05 (D-06): a 401/403 to a request that
                 # carried the configured credentials is "credentials present
-                # but rejected". With no credentials configured the server
-                # still responded, so it stays answered.
-                if (
-                    _has_creds
-                    and _norm_origin(url) == _base_origin
-                    and resp.status_code in (401, 403)
-                ):
-                    probe_log.append((
-                        OUTCOME_AUTH_FAILED,
-                        f"HTTP {resp.status_code}: configured credentials rejected",
-                    ))
+                # but rejected". Phase 238 D-08: with no credentials
+                # configured, the same answer is missing_credentials.
+                if status in (401, 403) and _norm_origin(url) == _base_origin:
+                    if _has_creds:
+                        _note(OUTCOME_AUTH_FAILED,
+                              f"HTTP {status}: configured credentials rejected")
+                    else:
+                        _note(OUTCOME_MISSING_CREDENTIALS,
+                              f"HTTP {status}: no credentials configured")
                 else:
-                    probe_log.append((OUTCOME_ANSWERED, ""))
-            if resp.status_code != 200:
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, f"HTTP {status}")
                 continue
 
-            data = resp.json()
+            # Phase 238 D-08: a body that is not JSON is a wrong-document
+            # answer, not a network failure.
+            try:
+                data = resp.json()
+            except Exception:
+                _note(OUTCOME_UNEXPECTED_RESPONSE, "not JSON")
+                continue
+            if not isinstance(data, dict):
+                _note(OUTCOME_UNEXPECTED_RESPONSE, "not a JSON object")
+                continue
 
             # OIDC discovery document — follow jwks_uri
             if path == "/.well-known/openid-configuration":
                 jwks_uri = data.get("jwks_uri")
-                if not jwks_uri:
+                if not jwks_uri or not isinstance(jwks_uri, str):
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, "discovery document has no jwks_uri")
                     continue
                 _vr = validate_external_url(jwks_uri, allow_internal=allow_internal)
                 if not _vr.ok:
@@ -375,13 +413,39 @@ def _fetch_jwks(
                 # WHY: same verify=verify_tls rationale as above — passive inventory
                 # scanner; allow_insecure_jwks defaults false; advisory finding emitted
                 # when enabled; validate_external_url() already ran on jwks_uri above.
+                # A cross-origin jwks_uri is fetched without credentials, so its
+                # 401/403 is reported as a status code, not as a credential state.
+                # A same-origin jwks_uri gets the credentials, so its 401/403
+                # follows the base-path rule (Phase 238 WR-06).
                 resp2 = _get(jwks_uri)
-                if resp2.status_code != 200:
+                status2 = resp2.status_code
+                if status2 != 200:
+                    if status2 in (401, 403) and _norm_origin(jwks_uri) == _base_origin:
+                        if _has_creds:
+                            _note(OUTCOME_AUTH_FAILED,
+                                  f"jwks_uri HTTP {status2}: configured credentials rejected")
+                        else:
+                            _note(OUTCOME_MISSING_CREDENTIALS,
+                                  f"jwks_uri HTTP {status2}: no credentials configured")
+                    else:
+                        _note(OUTCOME_UNEXPECTED_RESPONSE, f"jwks_uri HTTP {status2}")
                     continue
-                data = resp2.json()
+                try:
+                    data = resp2.json()
+                except Exception:
+                    data = None
+                if not isinstance(data, dict) or not isinstance(data.get("keys"), list):
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, "jwks_uri not a JWKS")
+                    continue
                 path = jwks_uri  # store actual JWKS URL as service_detail
+            elif not isinstance(data.get("keys"), list):
+                _note(OUTCOME_UNEXPECTED_RESPONSE, "not a JWKS (no keys array)")
+                continue
 
-            keys = data.get("keys", [])
+            # Phase 238 D-07/D-08: the one place a JWT target is answered.
+            if probe_log is not None:
+                probe_log.append((OUTCOME_ANSWERED, ""))
+            keys = data["keys"]
             if keys:
                 return keys, path, fetched_urls
 
@@ -459,6 +523,8 @@ def scan_jwt_endpoint(
     endpoints: List[CryptoEndpoint] = []
 
     for key_entry in keys:
+        if not isinstance(key_entry, dict):
+            continue
         kty = key_entry.get("kty", "")
         alg = key_entry.get("alg") or kty  # fall back to kty if alg absent
 
@@ -471,6 +537,12 @@ def scan_jwt_endpoint(
         elif kty == "EC":
             crv = key_entry.get("crv", "")
             key_bits = _EC_CRV_BITS.get(crv)
+        elif kty == "oct":
+            key_bits = _b64url_len_bits(key_entry.get("k"))
+
+        # Phase 238 D-03 / WR-04: the JWT scan record keeps only public key
+        # metadata (an allowlist), plus a boolean marker the JWKS evaluator reads.
+        stored = public_jwk_record(key_entry)
 
         ep = CryptoEndpoint(
             host=base_url,
@@ -478,7 +550,7 @@ def scan_jwt_endpoint(
             protocol="JWT",
             cert_pubkey_alg=alg,
             cert_pubkey_size=key_bits,
-            jwt_scan_json=json.dumps(key_entry),
+            jwt_scan_json=json.dumps(stored),
             service_detail=jwks_path,
             scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )

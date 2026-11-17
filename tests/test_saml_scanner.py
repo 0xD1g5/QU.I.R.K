@@ -458,14 +458,127 @@ def test_saml_outcome_metadata_service_unreachable_always_blocked():
     assert "always blocked" in res[0].detail
 
 
-def test_saml_outcome_non_200_is_answered():
+def test_saml_outcome_non_200_is_unexpected_response():
+    """Phase 238 D-07/D-11: a 404 is an answer, but not metadata."""
     target = "https://idp.example.com/metadata"
     sink = TargetOutcomes([target])
     with patch("quirk.scanner.saml_scanner.httpx.get", return_value=_fake_resp(404)), \
          patch("quirk.util.url_allowlist.socket.getaddrinfo",
                return_value=[(2, 1, 6, "", ("93.184.216.34", 0))]):
         assert scan_saml_targets([target], outcomes=sink) == []
-    assert [r.kind for r in sink.resolved()] == ["answered"]
+    assert [(r.kind, r.detail) for r in sink.resolved()] == [
+        ("unexpected_response", "HTTP 404")
+    ]
+
+
+def _saml_outcome_for(content, target="https://idp.example.com/metadata"):
+    """Run one SAML target whose server answers 200 with *content*."""
+    sink = TargetOutcomes([target])
+    with patch("quirk.scanner.saml_scanner.httpx.get",
+               return_value=_fake_resp(200, content)), \
+         patch("quirk.util.url_allowlist.socket.getaddrinfo",
+               return_value=[(2, 1, 6, "", ("93.184.216.34", 0))]):
+        rows = scan_saml_targets([target], outcomes=sink)
+    return rows, [(r.kind, r.detail) for r in sink.resolved()]
+
+
+def test_saml_outcome_html_page_is_unexpected_response():
+    rows, res = _saml_outcome_for(b"<!DOCTYPE html><html><body>login</body></html>")
+    assert res == [("unexpected_response", "not SAML metadata (HTML page)")]
+    assert rows == []
+
+
+def test_saml_outcome_non_metadata_xml_is_unexpected_response():
+    rows, res = _saml_outcome_for(
+        b'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"/>'
+    )
+    assert res == [("unexpected_response", "not SAML metadata (root element feed)")]
+    assert rows == []
+
+
+def test_saml_outcome_well_known_json_not_discovery_is_unexpected_response():
+    rows, res = _saml_outcome_for(
+        b'{"hello": "world"}',
+        target="https://idp.example.com/.well-known/openid-configuration",
+    )
+    assert res == [("unexpected_response", "not an OIDC discovery document")]
+    assert rows == []
+
+
+def test_saml_outcome_long_root_name_truncated():
+    name = "a" * 60
+    rows, res = _saml_outcome_for(f"<{name}/>".encode())
+    assert res == [("unexpected_response", f"not SAML metadata (root element {'a' * 40})")]
+    detail_name = res[0][1][len("not SAML metadata (root element "):-1]
+    assert len(detail_name) == 40
+
+
+def test_saml_outcome_unparseable_xml_is_unexpected_response():
+    rows, res = _saml_outcome_for(b"<EntityDescriptor><unclosed></EntityDescriptor>")
+    assert res == [("unexpected_response", "unparseable XML")]
+    assert rows == []
+
+
+def test_saml_outcome_neither_json_nor_xml_is_unexpected_response():
+    rows, res = _saml_outcome_for(b"plain text answer")
+    assert res == [("unexpected_response", "not JSON or XML")]
+    assert rows == []
+
+
+def test_saml_outcome_valid_metadata_is_answered():
+    rows, res = _saml_outcome_for(
+        b'<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" '
+        b'entityID="https://idp.example.com"/>'
+    )
+    assert res == [("answered", "")]
+
+
+def test_saml_outcome_valid_discovery_is_answered():
+    rows, res = _saml_outcome_for(
+        b'{"issuer": "https://idp.example", "jwks_uri": "https://idp.example/jwks"}',
+        target="https://idp.example.com/.well-known/openid-configuration",
+    )
+    assert res == [("answered", "")]
+
+
+def test_saml_outcome_bom_metadata_is_answered():
+    """WR-05: metadata that starts with a UTF-8 byte-order mark is still SAML."""
+    plain_rows, plain = _saml_outcome_for(SAMPLE_SAML_METADATA_XML)
+    rows, res = _saml_outcome_for(b"\xef\xbb\xbf" + SAMPLE_SAML_METADATA_XML)
+    assert plain == [("answered", "")]
+    assert res == [("answered", "")]
+    assert len(plain_rows) == 3
+    assert len(rows) == 3
+    assert {ep.protocol for ep in rows} == {"SAML"}
+
+
+def test_saml_outcome_bom_discovery_is_answered():
+    rows, res = _saml_outcome_for(
+        b"\xef\xbb\xbf" + SAMPLE_OIDC_MINIMAL_JSON,
+        target="https://idp.example.com/.well-known/openid-configuration",
+    )
+    assert res == [("answered", "")]
+
+
+def test_saml_outcome_metadata_at_well_known_url_is_answered():
+    """WR-05: content decides before the URL, so SAML metadata served from a
+    .well-known path is answered and parsed as SAML."""
+    rows, res = _saml_outcome_for(
+        SAMPLE_SAML_METADATA_XML,
+        target="https://idp.example.com/.well-known/saml-metadata.xml",
+    )
+    assert res == [("answered", "")]
+    assert len(rows) == 3
+    assert {ep.protocol for ep in rows} == {"SAML"}
+
+
+def test_saml_outcome_non_metadata_xml_at_well_known_url_is_not_answered():
+    rows, res = _saml_outcome_for(
+        b'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"/>',
+        target="https://idp.example.com/.well-known/openid-configuration",
+    )
+    assert res == [("unexpected_response", "not an OIDC discovery document")]
+    assert rows == []
 
 
 def test_saml_outcome_closed_port_unreachable():

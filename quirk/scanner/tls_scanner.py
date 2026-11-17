@@ -133,6 +133,203 @@ def _as_csv(items: List[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Phase 238 DETECT-06: post-handshake mTLS probe (D-13)
+# ---------------------------------------------------------------------------
+
+# HTTP statuses a server uses to reject a client that sent no certificate.
+# 400 / 495 / 496: nginx (``ssl_verify_client on``; 495 "SSL Certificate
+# Error", 496 "SSL Certificate Required" are nginx-internal codes usually
+# rewritten to 400). 403: IIS 403.7 and generic proxies.
+_MTLS_HTTP_STATUSES = frozenset({400, 403, 495, 496})
+
+# Closed list of "client certificate missing" texts (lowercase). A response
+# counts only when its status is in _MTLS_HTTP_STATUSES AND it contains one of
+# these, so a wrong or missing phrase can only ever cause a false negative.
+_MTLS_HTTP_PHRASES = (
+    # nginx 400 / 496 page body ("400 No required SSL certificate was sent").
+    "no required ssl certificate was sent",
+    # nginx 496 reason phrase and common proxy texts ("SSL Certificate Required").
+    "ssl certificate required",
+    # Generic gateway / application text ("Client certificate required").
+    "client certificate required",
+    # IIS 403.7 page ("The page you are attempting to access requires your
+    # browser to have a Secure Sockets Layer (SSL) client certificate ...").
+    "requires your browser to have a secure sockets layer (ssl) client certificate",
+)
+
+_MTLS_PROBE_READ_CAP = 8192
+
+# D-39: how long the probe listens before sending anything. A TLS 1.3
+# ``certificate required`` alert arrives unprompted inside this window, and a
+# server-speaks-first service (SMTP/IMAP/POP3/FTP/XMPP/IRC banner) answers in it.
+_MTLS_PROBE_LISTEN_SECONDS = 0.5
+
+# D-39: well-known implicit-TLS ports whose service is not HTTP. The probe never
+# sends ``GET /`` to these unless ALPN negotiated an HTTP protocol, so mail,
+# directory and other services never see protocol-inappropriate bytes.
+_NON_HTTP_TLS_PORTS = frozenset({
+    465,   # SMTPS / submissions
+    563,   # NNTPS
+    636,   # LDAPS
+    853,   # DNS over TLS
+    989,   # FTPS data
+    990,   # FTPS control
+    992,   # telnet over TLS
+    993,   # IMAPS
+    994,   # IRC over TLS (legacy)
+    995,   # POP3S
+    3269,  # LDAPS global catalog
+    5061,  # SIP over TLS
+    5223,  # XMPP over TLS (legacy)
+    5671,  # AMQPS
+    6514,  # syslog over TLS
+    6697,  # IRC over TLS
+    8883,  # MQTT over TLS
+})
+
+# ALPN protocols that mean "this connection speaks HTTP". Only http/1.1 is
+# offered, so a server never selects h2 and then receives HTTP/1.1 bytes.
+_HTTP_ALPN = frozenset({"http/1.1", "h2"})
+
+
+def _probe_host_header(host: str, port: int) -> bytes:
+    """D-39 (WR-02): the probe's Host header value.
+
+    IPv6 literals are bracketed (a zone id is percent-encoded per RFC 6874),
+    ``:port`` is appended when the port is not 443, and a hostname is
+    IDNA-encoded. A name the IDNA codec rejects falls back to its ASCII part.
+    """
+    import ipaddress
+
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        addr = None
+    if addr is not None:
+        text = f"[{host.replace('%', '%25')}]" if addr.version == 6 else host
+        value = text.encode("ascii", errors="ignore")
+    else:
+        try:
+            value = host.encode("idna")
+        except UnicodeError:
+            value = host.encode("ascii", errors="ignore")
+    if int(port) != 443:
+        value += b":" + str(int(port)).encode("ascii")
+    return value
+
+
+def _post_handshake_mtls_probe(
+    host: str,
+    port: int,
+    timeout: int,
+    include_sni: bool,
+) -> Optional[str]:
+    """Phase 238 D-13, narrowed by D-39: look for an mTLS rejection after the handshake.
+
+    TLS 1.3 servers that require a client certificate complete the handshake and
+    reject the client afterwards, so the rejection is only visible on the first
+    read. The probe:
+
+    1. listens for ``_MTLS_PROBE_LISTEN_SECONDS`` without sending anything. An
+       ``ssl.SSLError`` that ``_categorize_tls_error`` maps to ``MTLS_REQUIRED``
+       (the TLS 1.3 ``certificate required`` alert) returns ``"MTLS_REQUIRED"``;
+       any server-sent bytes (a banner) or a closed connection returns None;
+    2. only then sends one ``GET /`` request, and only when the port is not in
+       ``_NON_HTTP_TLS_PORTS`` or ALPN negotiated an HTTP protocol, and returns
+       ``"MTLS_REQUIRED"`` when the server answers with an alert as above, or a
+       status in ``_MTLS_HTTP_STATUSES`` whose response contains a phrase from
+       ``_MTLS_HTTP_PHRASES``.
+
+    Otherwise returns None. Never raises, never retries, reads at most 8 KiB
+    with a read timeout of ``min(timeout, 3)`` seconds. The caller only ever
+    sets ``tls_blocker_reason`` from the result, never ``scan_error`` (D-14).
+    """
+    try:
+        if "\r" in host or "\n" in host:
+            return None
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        try:
+            ctx.set_alpn_protocols(["http/1.1"])
+        except (NotImplementedError, ssl.SSLError):
+            pass
+
+        is_ip = False
+        try:
+            import ipaddress
+            ipaddress.ip_address(host)
+            is_ip = True
+        except Exception:
+            is_ip = False
+        server_hostname = host if (include_sni and not is_ip) else None
+
+        data = b""
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            try:
+                with ctx.wrap_socket(sock, server_hostname=server_hostname) as ssock:
+                    # Step 1 (D-39): listen first, send nothing.
+                    ssock.settimeout(min(float(timeout), _MTLS_PROBE_LISTEN_SECONDS))
+                    try:
+                        unprompted = ssock.recv(_MTLS_PROBE_READ_CAP)
+                    except ssl.SSLError:
+                        raise
+                    except (socket.timeout, TimeoutError):
+                        unprompted = None
+                    if unprompted is not None:
+                        # A banner, or the server closed the connection.
+                        return None
+
+                    # Step 2 (D-39): GET only to HTTP-shaped services.
+                    alpn = None
+                    try:
+                        alpn = ssock.selected_alpn_protocol()
+                    except Exception:
+                        alpn = None
+                    if int(port) in _NON_HTTP_TLS_PORTS and alpn not in _HTTP_ALPN:
+                        return None
+
+                    ssock.settimeout(min(timeout, 3))
+                    ssock.sendall(
+                        b"GET / HTTP/1.1\r\nHost: "
+                        + _probe_host_header(host, port)
+                        + b"\r\nConnection: close\r\n\r\n"
+                    )
+                    while len(data) < _MTLS_PROBE_READ_CAP:
+                        chunk = ssock.recv(_MTLS_PROBE_READ_CAP - len(data))
+                        if not chunk:
+                            break
+                        data += chunk
+            except ssl.SSLError as e:
+                if _categorize_tls_error(e) == "MTLS_REQUIRED":
+                    return "MTLS_REQUIRED"
+                if not data:
+                    return None
+            except OSError:
+                # Read timeout or reset after a partial response (a server that
+                # ignores "Connection: close"): judge whatever was received.
+                if not data:
+                    return None
+
+        first_line = data.split(b"\r\n", 1)[0].decode("latin-1")
+        parts = first_line.split()
+        if len(parts) < 2 or not parts[0].startswith("HTTP/"):
+            return None
+        try:
+            status = int(parts[1])
+        except ValueError:
+            return None
+        if status not in _MTLS_HTTP_STATUSES:
+            return None
+        text = data.decode("latin-1").lower()
+        if any(phrase in text for phrase in _MTLS_HTTP_PHRASES):
+            return "MTLS_REQUIRED"
+        return None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # sslyze primary scanner
 # ---------------------------------------------------------------------------
 
@@ -235,6 +432,21 @@ def _scan_one_sslyze(
             scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
             sni_used=bool(include_sni and not is_ip),
         )
+
+        # Phase 238 D-13 signal 1 (and the OPTIONAL probe trigger). Exact
+        # equality on a str-checked value only (D-32): a MagicMock result must
+        # never look REQUIRED/OPTIONAL and open a real probe socket.
+        req = getattr(
+            getattr(server_result, "connectivity_result", None),
+            "client_auth_requirement",
+            None,
+        )
+        req = getattr(req, "value", req)
+        if isinstance(req, str) and req == "REQUIRED":
+            ep.tls_blocker_reason = "MTLS_REQUIRED"
+        elif isinstance(req, str) and req == "OPTIONAL":
+            if _post_handshake_mtls_probe(host, port, timeout, include_sni) == "MTLS_REQUIRED":
+                ep.tls_blocker_reason = "MTLS_REQUIRED"
 
         # ----------------------------------------------------------------
         # Certificate info
@@ -350,7 +562,9 @@ def _scan_one_sslyze(
         curve_names: List[str] = []
         ec_attempt = getattr(scan, "elliptic_curves", None)
         if ec_attempt is not None and ec_attempt.status == ScanCommandAttemptStatusEnum.COMPLETED:
-            curve_names = [c.name for c in ec_attempt.result.supported_curves]
+            # Phase 238 D-32: sslyze reports supported_curves=None against a TLS 1.2
+            # server that requires a client certificate; guard so the row survives.
+            curve_names = [c.name for c in (ec_attempt.result.supported_curves or [])]
 
         # ----------------------------------------------------------------
         # tls_capabilities_json
@@ -404,6 +618,7 @@ def _scan_one_fallback(
     include_sni: bool,
     logger: Optional[Logger] = None,
     tls_enum_mode: str = "fast",
+    mtls_probe: bool = True,
 ) -> CryptoEndpoint:
     ep = CryptoEndpoint(
         host=host,
@@ -525,6 +740,19 @@ def _scan_one_fallback(
         if logger:
             logger.v(f"TLS {host}:{port} {cat} ({e})")
 
+    # Phase 238 D-13: the fallback cannot see a CertificateRequest, so after any
+    # successful handshake it probes once for a post-handshake mTLS rejection.
+    # Outside the try above, so a probe failure can never become a scan_error
+    # (D-14); the probe only ever sets tls_blocker_reason.
+    # ``mtls_probe=False`` is the scan_one merge path when sslyze already set
+    # MTLS_REQUIRED, so the same target is not probed twice (WR-03).
+    if mtls_probe and ep.tls_version and ep.scan_error is None:
+        try:
+            if _post_handshake_mtls_probe(host, port, timeout, include_sni) == "MTLS_REQUIRED":
+                ep.tls_blocker_reason = "MTLS_REQUIRED"
+        except Exception:
+            pass
+
     return ep
 
 
@@ -555,7 +783,10 @@ def scan_one(
                 # merge any missing fields (chain_verified included) so the row that
                 # reaches the DB is never half-populated.
                 if ep.cert_not_after is None or not (ep.cert_subject or "").strip():
-                    fb = _scan_one_fallback(host, port, timeout, include_sni, logger, tls_enum_mode)
+                    fb = _scan_one_fallback(
+                        host, port, timeout, include_sni, logger, tls_enum_mode,
+                        mtls_probe=ep.tls_blocker_reason != "MTLS_REQUIRED",
+                    )
                     if ep.cert_not_after is None:
                         ep.cert_not_after = fb.cert_not_after
                     if not (ep.cert_subject or "").strip():
@@ -569,6 +800,14 @@ def scan_one(
                         ep.chain_verified = fb.chain_verified
                     if ep.cert_eku_oids is None:
                         ep.cert_eku_oids = fb.cert_eku_oids
+                    # Phase 238 WR-03: keep the fallback's post-handshake mTLS
+                    # verdict (D-13/D-14) when sslyze set no blocker of its own.
+                    if (
+                        not ep.tls_blocker_reason
+                        and fb.scan_error is None
+                        and fb.tls_blocker_reason == "MTLS_REQUIRED"
+                    ):
+                        ep.tls_blocker_reason = "MTLS_REQUIRED"
                 return ep
         except Exception as e:
             if logger:

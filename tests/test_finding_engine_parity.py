@@ -324,6 +324,7 @@ _TLS_TITLE_PREFIXES = (
     "Certificate expiring in", "TLS certificate uses undersized RSA key",
     "TLS certificate is self-signed", "TLS certificate issued by untrusted CA",
     "Quantum-", "TLS certificate uses undersized ECDSA key",
+    "TLS certificate uses a weak signature hash",
 )
 
 

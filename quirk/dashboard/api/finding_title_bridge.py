@@ -114,14 +114,17 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # applied to an un-translated dashboard title.
     "Certificate expiring in ": "TLS certificate expiring within 30 days",
 
-    # scan.py:230-255 "TLS certificate uses undersized RSA key" fires on
-    # `cert_pubkey_alg.upper().startswith("RSA") and cert_pubkey_size < 2048`.
-    # findings_evaluator.py:676-697, same title, fires on
-    # `cert_pubkey_alg.upper() == "RSA" and cert_pubkey_size < 2048`.
-    # Byte-identical title; near-identical condition (startswith vs exact
-    # "RSA" -- in practice cert_pubkey_alg is always exactly "RSA" for RSA
-    # certs, so this does not change real-world behaviour). identity.
+    # Phase 238 D-20: finding_derivation.py and findings_evaluator.py both
+    # fire "TLS certificate uses undersized RSA key" on the one shared
+    # predicate quirk.util.weak_crypto.is_undersized_rsa (RSA / RSA-PSS,
+    # int size, 0 < size < 2048). Byte-identical title, identical
+    # condition. identity.
     "TLS certificate uses undersized RSA key": "TLS certificate uses undersized RSA key",
+
+    # Phase 238 D-17/D-18/D-28 (DETECT-07): both pipelines fire on
+    # quirk.util.weak_crypto.is_weak_signature_hash(cert_sig_alg), HIGH for a
+    # CA-issued leaf and LOW for a self-signed one. Same title. identity.
+    "TLS certificate uses a weak signature hash": "TLS certificate uses a weak signature hash",
 
     # Phase 236 D-04 (XSURF-11): finding_derivation.py fires on
     # `cert_pubkey_alg.upper() == "ECDSA" and cert_pubkey_size < 256`;
@@ -145,6 +148,11 @@ DASHBOARD_TITLE_BRIDGE: Dict[str, str] = {
     # scan.py JWKS verify-disabled ADVISORY row and findings_evaluator.py emit
     # the byte-identical title on the same service_detail marker. identity.
     "JWKS fetched with TLS certificate verification disabled": "JWKS fetched with TLS certificate verification disabled",
+
+    # Phase 238 D-14/D-28: both pipelines emit INFO "mTLS required" on the
+    # shared predicate findings_evaluator.mtls_required_variant (handshake
+    # and post-handshake variants). Byte-identical title. identity.
+    "mTLS required": "mTLS required",
 }
 
 # ---------------------------------------------------------------------------
@@ -289,6 +297,9 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # Phase 236 D-04: HIGH, in no fingerprint tuple (like undersized RSA) ->
     # constitutes the "high-impact-findings" catch-all only.
     "TLS certificate uses undersized ECDSA key": "catchall-only",
+    # Phase 238 D-28: HIGH on a CA-issued leaf, in no fingerprint tuple ->
+    # constitutes the "high-impact-findings" catch-all only.
+    "TLS certificate uses a weak signature hash": "catchall-only",
     # NOT in any fingerprint tuple. Dashboard severity is MEDIUM
     # (scan.py:292-293), below the HIGH/CRITICAL catch-all threshold ->
     # constitutes no theme at all.
@@ -297,6 +308,9 @@ BRIDGE_REACHABILITY: Dict[str, str] = {
     # category is config_advisory, which is score-neutral (D-25) and never
     # constitutes the high-impact-findings catch-all -> no theme at all.
     "JWKS fetched with TLS certificate verification disabled": "unreachable",
+    # Phase 238 D-28: INFO, in no fingerprint tuple, below the HIGH/CRITICAL
+    # catch-all threshold -> constitutes no theme at all.
+    "mTLS required": "unreachable",
 }
 
 

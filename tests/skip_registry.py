@@ -694,4 +694,5 @@ ALLOWED_SKIPS = [
         "check has nothing to read. A skip is not evidence the vault is in sync; run "
         "scripts/sync_vault_guides.py --check locally.",
     ),
+    ("test_jwks_findings.py", "test_scan_latest_identity_findings_carry_jwt", "optional_extra", "fastapi TestClient + dashboard app are [dashboard]; Phase 238-04 identity_findings API leg"),
 ]

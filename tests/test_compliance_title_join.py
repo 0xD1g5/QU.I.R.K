@@ -137,3 +137,33 @@ def test_max_legacy_tls_title_has_compliance_controls():
 
     key = normalize_finding_title("Only legacy TLS versions offered (no TLS 1.2+)")
     assert COMPLIANCE_MAP.get(key), key
+
+
+def test_weak_signature_hash_title_has_compliance_controls():
+    """Phase 238 D-34: non-xfail guard that the DETECT-07 weak-signature-hash
+    title resolves to exactly its four COMPLIANCE_MAP controls."""
+    from quirk.compliance import COMPLIANCE_MAP, normalize_finding_title
+
+    key = normalize_finding_title("TLS certificate uses a weak signature hash")
+    assert len(COMPLIANCE_MAP.get(key) or []) == 4, key
+
+
+def test_jwks_titles_are_explicitly_unmapped():
+    """Phase 238 D-34: the four IDENT-05 JWKS key titles are dispositioned as
+    unmapped (no control mapping verified against a source), never silently
+    orphaned and never in COMPLIANCE_MAP."""
+    from quirk.compliance import COMPLIANCE_MAP, UNMAPPED_TITLES, normalize_finding_title
+
+    titles = [
+        "JWKS key declares alg:none",
+        "JWKS publishes secret key material",
+        "JWKS key uses a symmetric (HMAC) algorithm",
+        "JWKS key uses undersized RSA key",
+    ]
+    checked = 0
+    for title in titles:
+        key = normalize_finding_title(title)
+        assert key in UNMAPPED_TITLES, key
+        assert key not in COMPLIANCE_MAP, key
+        checked += 1
+    assert checked == 4

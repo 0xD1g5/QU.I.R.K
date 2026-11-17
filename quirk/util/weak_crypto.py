@@ -17,6 +17,9 @@ Public surface:
   is_pfs_cipher(cipher: str | None) -> bool                    # Phase 77 D-05
   is_weak_cipher_classification(cipher: str | None) -> bool   # Phase 77 D-05
   has_legacy_tls_versions_signal(tls_version, tls_supported_versions) -> bool  # Phase 211-03
+  is_max_legacy_tls(tls_version, tls_supported_versions) -> bool  # Phase 236 D-01
+  is_weak_signature_hash(name: str | None) -> bool             # Phase 238 D-17
+  is_undersized_rsa(alg: str | None, size) -> bool             # Phase 238 D-20
 """
 from __future__ import annotations
 
@@ -166,3 +169,43 @@ def is_weak_cipher_classification(cipher: str | None) -> bool:
         return False
     upper = cipher.upper()
     return any(token in upper for token in _WEAK_CLASSIFICATION_TOKENS)
+
+
+_WEAK_SIGNATURE_HASHES: Final[frozenset[str]] = frozenset(
+    {"sha1", "md5", "md4", "md2"}
+)
+
+
+def is_weak_signature_hash(name: str | None) -> bool:
+    """Return True iff *name* is a weak certificate signature hash (Phase 238 D-17).
+
+    Exact membership after ``.strip().lower()`` against sha1 / md5 / md4 /
+    md2 -- the short hash-name shape the TLS scanner stores in
+    ``cert_sig_alg``. ``None``, empty and ``"unknown"`` are never weak, and
+    there is no substring match: the OID-name shape some scanners store
+    (``sha1WithRSAEncryption``, email/broker) is deliberately NOT matched and
+    is deferred. Do not reuse :func:`is_weak_cipher` for this; it is a
+    substring cipher-token check with a different audience.
+    """
+    if not name:
+        return False
+    return name.strip().lower() in _WEAK_SIGNATURE_HASHES
+
+
+_RSA_FAMILY: Final[frozenset[str]] = frozenset({"RSA", "RSA-PSS"})
+
+
+def is_undersized_rsa(alg: str | None, size) -> bool:
+    """Return True iff *alg* is RSA / RSA-PSS with a key below 2048 bits
+    (Phase 238 D-20).
+
+    One predicate shared by the report and the dashboard so the two surfaces
+    cannot disagree on an undersized RSA key. *size* must be an ``int`` (a
+    ``bool`` is rejected) with ``0 < size < 2048``: a size of 0 is an
+    undetermined value, not a 0-bit key, and never counts as undersized.
+    """
+    if (alg or "").strip().upper() not in _RSA_FAMILY:
+        return False
+    if not isinstance(size, int) or isinstance(size, bool):
+        return False
+    return 0 < size < 2048

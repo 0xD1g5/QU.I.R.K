@@ -154,11 +154,45 @@ def test_outcome_vault_exception_classification():
 
 def test_outcome_advisory_categories_and_skip_reasons():
     c = to.COVERAGE_SKIP_ADVISORY_CATEGORIES
-    assert {"missing_extra", "missing_binary"} <= c and len(c) == 6
+    # Phase 238 D-09: 6 -> 7 categories (unexpected_response added).
+    assert {"missing_extra", "missing_binary"} <= c and len(c) == 7
+    assert "unexpected_response" in c
     assert all(len(x) <= 32 for x in c)
     assert to.PER_TARGET_ERROR_CATEGORY not in c
     from quirk.models import SCAN_PHASE_SKIP_REASONS as R
-    assert len(R) == 8 and {"internal-target-refused", "auth-failed"} <= R
+    # Phase 238 D-10: 8 -> 9 skip reasons (unexpected-response added).
+    assert len(R) == 9 and {"internal-target-refused", "auth-failed"} <= R
+    assert "unexpected-response" in R
+
+
+def test_unexpected_response_kind_maps():
+    """Phase 238 D-09: a target that answered with the wrong document."""
+    from quirk.scanner.target_outcome import OUTCOME_UNEXPECTED_RESPONSE
+
+    assert OUTCOME_UNEXPECTED_RESPONSE == "unexpected_response"
+    assert OUTCOME_UNEXPECTED_RESPONSE in to.OUTCOME_KINDS
+    assert len(to.OUTCOME_KINDS) == 6
+    assert to.OUTCOME_TO_SKIP_REASON[OUTCOME_UNEXPECTED_RESPONSE] == "unexpected-response"
+    assert to.SKIP_REASON_TO_ADVISORY_CATEGORY["unexpected-response"] == "unexpected_response"
+
+
+def _resolve_one(records):
+    o = to.TargetOutcomes(["https://idp.example/metadata"])
+    for kind, detail in records:
+        o.record("https://idp.example/metadata", kind, detail)
+    resolved = o.resolved()
+    assert len(resolved) == 1
+    return resolved[0]
+
+
+def test_unexpected_response_priority():
+    """Phase 238 D-09: after refused, before unreachable (an answer beats a timeout)."""
+    r = _resolve_one([(OUTCOME_UNREACHABLE, "timed out"), ("unexpected_response", "HTTP 404")])
+    assert r.kind == "unexpected_response" and r.detail == "HTTP 404"
+    r = _resolve_one([(to.OUTCOME_REFUSED, "loopback"), ("unexpected_response", "HTTP 404")])
+    assert r.kind == "refused"
+    r = _resolve_one([("unexpected_response", "HTTP 404"), (to.OUTCOME_ANSWERED, "")])
+    assert r.kind == "answered"
 
 
 # ---------------------------------------------------------------------------

@@ -32,6 +32,7 @@ from quirk.scanner.target_outcome import (  # Phase 235.3 D-05
     OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_REFUSED,
     OUTCOME_TO_SKIP_REASON,
+    OUTCOME_UNEXPECTED_RESPONSE,
     OUTCOME_UNREACHABLE,
     PER_TARGET_ERROR_CATEGORY,
     SKIP_REASON_TO_ADVISORY_CATEGORY,
@@ -486,11 +487,14 @@ _COVERAGE_PHRASE = {
     "auth-failed": "failed authentication",
     "missing-credentials": "had no usable credentials",
     "failed": "did not answer",
+    # Phase 238 D-10: the server answered, but not with the expected document.
+    "unexpected-response": "answered with something other than the expected document",
 }
 _COVERAGE_PRIORITY = (
     OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_AUTH_FAILED,
     OUTCOME_REFUSED,
+    OUTCOME_UNEXPECTED_RESPONSE,  # Phase 238 D-09: after refused, before unreachable
     OUTCOME_UNREACHABLE,
 )
 

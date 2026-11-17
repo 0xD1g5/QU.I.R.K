@@ -339,6 +339,12 @@ COMPLIANCE_MAP: Dict[str, List[Dict[str, Any]]] = {
         _fips("Not-Approved (SP 800-131A R2: RSA <2048)"),
         _soc2("CC6.6"), _iso("8.24"),
     ],
+    # Phase 238 D-34 (DETECT-07): weak leaf signature hash (SHA-1/MD5/MD4/MD2).
+    "TLS certificate uses a weak signature hash": [
+        _pci("4.2.1.1"),
+        _fips("Not-Approved (SP 800-131A R2: SHA-1 signatures)"),
+        _soc2("CC6.6"), _iso("8.24"),
+    ],
     "TLS certificate uses undersized ECDSA key": [
         _pci("6.3.3"),
         _hipaa("§164.312(a)(2)(iv)"),
@@ -437,6 +443,13 @@ UNMAPPED_TITLES: FrozenSet[str] = frozenset({
     # against a source (D-16a). Do not add via _pci()/_soc2()/_iso() without reading
     # the control text and stamping a new verified date.
     "Bearer token is unsigned (alg:none)",
+    # Phase 238 IDENT-05: JWKS key findings; no control mapping verified against a
+    # source. Do not add via _pci()/_soc2()/_iso() without reading the control text
+    # and stamping a new verified date.
+    "JWKS key declares alg:none",
+    "JWKS publishes secret key material",
+    "JWKS key uses a symmetric (HMAC) algorithm",
+    "JWKS key uses undersized RSA key",
 })
 
 

@@ -94,6 +94,25 @@ describe("PrintPage Scan Coverage (COUNT-05)", () => {
     expect(items).toEqual([phaseRecordText(DB)])
   })
 
+  it("prints an unexpected-response skip without a reason code or a repeated phrase", async () => {
+    // 238 UI review fix 1: /print uses the same phaseRecordText as /identity.
+    const SAML: Phase = {
+      phase_name: "saml_scanning",
+      label: "SAML",
+      status: "skipped",
+      reason: "unexpected-response",
+      detail: "1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (unexpected_response: not SAML metadata (HTML page))",
+      duration_sec: null,
+    }
+    const { container } = await renderWith({ recorded: true, ran: 1, skipped: 1, phases: [TLS, SAML] })
+    const items = Array.from(container.querySelectorAll(`${sel} ul.coverage-list li`)).map((li) => li.textContent)
+    expect(items).toEqual([
+      "Skipped (SAML) — 1 of 1 targets answered with something other than the expected document: https://idp.example/metadata (not SAML metadata (HTML page))",
+    ])
+    expect(items[0]).not.toContain("unexpected_response")
+    expect(items[0]).not.toMatch(/\b[a-z]+[-_][a-z]+(?:[-_][a-z]+)*:/)
+  })
+
   it("collapses disabled-by-config phases into one line, not bullets", async () => {
     const { container } = await renderWith({ recorded: true, ran: 1, skipped: 3, phases: [TLS, OFF1, DB, OFF2] })
     const el = container.querySelector(sel)!

@@ -384,11 +384,13 @@ require the dashboard API token like every other `/api/scans`/`/api/jobs` route.
 Expanding "Show detail" reveals one row per scanner phase — ran rows show duration, skipped rows
 show the reason and detail exactly as described in `docs/report-interpretation.md` §22's skip-reason
 table, colored by severity (`ran` green; `missing-credentials`, `missing-binary`,
-`internal-target-refused` and `auth-failed` in the high-severity orange; `failed` red; the other
+`internal-target-refused`, `auth-failed` and (5.29) `unexpected-response` in the high-severity orange; `failed` red; the other
 three skip reasons `disabled-by-config`, `missing-extra` and `no-eligible-targets` neutral).
 `internal-target-refused` means every target of that connector is an internal address that server
 policy refuses (§3.0 checklist); `auth-failed` means every target answered but rejected the
-credentials (for example an expired SSO session or a rejected Vault token). A connector reads `ran`
+credentials (for example an expired SSO session or a rejected Vault token); `unexpected-response`
+(5.29) means every SAML or JWT target that answered sent something other than the expected document
+(§3.1.9). A connector reads `ran`
 only if at least one target answered, and a source scan where every target fails reads `failed`,
 not `skipped`, as in 5.28.1. Dashboard pages with no data for a domain state the recorded reason
 instead of a generic empty line, and Data at Rest lists a database target that failed to connect as
@@ -699,7 +701,7 @@ From 5.29 the dashboard's count surfaces agree with the Findings page:
 - **Trends** keys findings by host, port and canonical title, so a severity change is one transition and a
   certificate-expiry day count is not churn. See `docs/report-interpretation.md` §15.
 - **Compare** shows **Finding** and **Port** columns on its Added and Removed tables.
-- **Trends scan errors:** `targets_unreachable`, `auth_failed` and `missing_credentials` are regressions;
+- **Trends scan errors:** `targets_unreachable`, `auth_failed`, `missing_credentials` and (Phase 238) `unexpected_response` are regressions;
   `missing_extra`, `missing_binary` and `internal_target_refused` stay advisory. A connector that failed
   against all N of its targets counts N. For database, Kubernetes and cloud connectors, a full outage may read up to 2N because
   the forwarded in-band error rows count as well.
@@ -725,6 +727,38 @@ subject names the new scan errors. Notify also now fires on new TLS HIGH finding
 did before 5.29 because the old delta ignored them. Notify skips a failed or interrupted scheduled run (D-22) so the
 previous pair is not re-alerted, and never alerts on scan errors when there is no previous scan (D-23). Known limit: a scheduled
 run that completes while a newer dashboard scan is running has its alert skipped and not re-sent.
+
+### 3.1.9 Identity page JWT/JWKS card, JWKS and certificate findings, and unexpected-response (Phase 238, IDENT-05..07, DETECT-06/07)
+
+**Identity page.** The Identity page now shows four protocol cards in this order: Kerberos,
+SAML/OIDC, JWT/JWKS and DNSSEC (one column on a narrow window, a 2x2 grid at medium widths, one row
+of four on a wide window). The JWT/JWKS card counts the JWT findings of the scan and reads the
+`jwt_scanning` coverage record, so it shows Ran, Skipped or Failed even when no key was weak. A
+scan recorded before the card existed reads Not Scanned. When the page has no identity findings,
+the empty state lists the Kerberos, SAML, JWT and DNSSEC phases; with no coverage data it reads "No
+identity protocol findings in this scan — enable Kerberos, SAML, JWT, or DNSSEC scanners in
+config.yaml and run a scan."
+
+**JWKS findings.** A key in a target's published JWKS raises "JWKS key declares alg:none" (CRITICAL),
+"JWKS publishes secret key material" (CRITICAL), "JWKS key uses a symmetric (HMAC) algorithm" (HIGH)
+or "JWKS key uses undersized RSA key" (HIGH), one finding per key, on the report, the Findings page
+and the Identity page. They lower the score only through the severity ceiling, so an estate that
+already holds an open CRITICAL keeps the same score (see `docs/report-interpretation.md` §31).
+
+**Certificate and mTLS findings.** A TLS leaf signed with SHA-1, MD5, MD4 or MD2 raises "TLS
+certificate uses a weak signature hash" (HIGH for a CA-issued leaf, LOW for a self-signed one). An
+endpoint that requires a client certificate reads INFO "mTLS required" on the Findings page as well
+as the report, including TLS 1.3 servers that reject the client only after the handshake; such a row
+keeps its certificate findings. The post-handshake check listens first and sends one `GET /` only on
+ports that are not well-known non-HTTP TLS ports, so mail, directory and similar TLS services get no
+HTTP request.
+
+**`unexpected-response`.** A SAML or JWT target that answered with something other than the expected
+document reads `skipped` with reason `unexpected-response` when no target qualified. The Scan Coverage
+chip shows it in orange, the detail names each target and what it returned, the Identity card note
+reads "a target answered with something other than the expected document", and the skip counts as a
+scan error. Fix the configured URL. Dashboard sentences show the reason in words, never the internal
+outcome code; the raw reason slug appears only in the Scan Coverage detail table.
 
 ### 3.2 Active REST fuzzing (`--fuzz`) — interactive-only by design
 
@@ -1286,6 +1320,17 @@ Iterates over `jwt_targets` (API base URLs), probes `/.well-known/jwks.json`,
 returns keys, and emits one `JWT` endpoint per key with the key's algorithm and, for RSA
 and EC keys, its size. Gated by `connectors.enable_jwt`.
 
+From 5.29 (Phase 238) a target counts as answered only when it returned a JWKS (a JSON object
+with a `keys` list, which may be empty), or an OIDC discovery document whose `jwks_uri` yields one.
+A target that answers 401 or 403 when no `--auth-*` credential is configured reads
+`missing-credentials` (with a credential configured it reads `auth-failed`); a `jwks_uri` on the
+target's own origin that answers 401 or 403 is treated the same way. Anything else (an HTTP error,
+an HTML page, JSON without a `keys` list) reads `unexpected-response` with a detail such as
+`HTTP 404` or `not a JWKS (no keys array)`: check that the URL is the API base URL that publishes
+the JWKS. Each published key is checked for `alg: none`, published private or symmetric key
+material, an HMAC algorithm and an RSA key under 2048 bits; see §3.1.9. An `oct` key's size is
+recorded from its key length, and the JWT scan record keeps only the key metadata it needs.
+
 **Security note — `allow_insecure_jwks`:** By default the JWT scanner verifies TLS
 certificates when fetching JWKS endpoints (`security.allow_insecure_jwks: false`). Set
 `security.allow_insecure_jwks: true` (or pass `--allow-insecure-jwks`) only when scanning
@@ -1487,6 +1532,13 @@ Fetches the SAML IdP metadata (or OIDC discovery document) for each entry in
 and size, and flags SHA-1 algorithm URIs in `SignatureMethod` and `alg:SigningMethod`
 elements ("SHA-1 algorithm URI detected in SAML metadata"). Requires no extra —
 `lxml` is a core dependency.
+
+From 5.29 (Phase 238) a SAML target counts as answered only when it returned SAML 2.0 metadata
+(an `EntityDescriptor` or `EntitiesDescriptor` root) or an OIDC discovery document. An HTML login
+page, an HTTP error, other XML or a non-discovery JSON document reads `unexpected-response` with a
+detail such as `not SAML metadata (HTML page)` or `HTTP 404`, and is not parsed into rows: point the
+target at the IdP's metadata or discovery URL. Metadata served with a byte-order mark, or from a
+`.well-known` URL, still reads answered.
 
 #### Email scanner
 

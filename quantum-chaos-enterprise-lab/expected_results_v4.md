@@ -26,7 +26,7 @@ These services have **no profile tag** in `docker-compose.yml` — Compose bring
 | 8443 | tls-legacy | TLS | LEGACY_TLS | May negotiate TLS 1.2 on modern OpenSSL |
 | 9443 | tls-expired | TLS | CERT_EXPIRED_OR_EXPIRING | Cert validity failure/near-expiry datapoint |
 | 10443 | tls-selfsigned | TLS | CERT_SELFSIGNED | Untrusted/self-signed datapoint |
-| 11443 | tls-mtls-required | TLS | MTLS_REQUIRED | Handshake blocked without client cert |
+| 11443 | tls-mtls-required | TLS | MTLS_REQUIRED | Detected after a completed TLS handshake (a TLS 1.3 certificate-required alert, or the HTTP 400 "No required SSL certificate was sent" reply to a post-handshake probe); stored as `tls_blocker_reason` MTLS_REQUIRED with no `scan_error`; INFO "mTLS required" on the dashboard and in the report; certificate fields kept (Phase 238) |
 | 12443 | tls-slow-proxy | TLS | TLS_SLOW_PROXY | Useful for timeout/concurrency testing |
 | 8444 | http-on-8444 | HTTP | HTTP_ON_TLS_LIKE_PORT | Wrong protocol on "TLS-like" port |
 | 8000 | legacy-http | HTTP | PLAINTEXT_HTTP | Hygiene datapoint |
@@ -63,7 +63,7 @@ PROFILE_ARGS="--profile phaseA" ./lab.sh up
 |---:|---|---|---|---|
 | 13443 | tls-missing-intermediate | TLS | CERT_CHAIN_INCOMPLETE | Leaf presented without required intermediate |
 | 14443 | tls-rsa1024 | TLS | CERT_RSA_1024 | Weak RSA key size |
-| 15443 | tls-sha1 | TLS | CERT_SHA1_SIG | SHA1-signed cert (legacy) |
+| 15443 | tls-sha1 | TLS | CERT_SHA1_SIG | SHA1-signed cert (legacy). Phase 238 (DETECT-07): emits HIGH `TLS certificate uses a weak signature hash` (CA-issued leaf) on both the report and the dashboard |
 
 **Notes**
 - Some clients may treat SHA1 as unacceptable; this is intended for detection.
@@ -160,17 +160,34 @@ PROFILE_ARGS="--profile jwt" ./lab.sh up
 
 | Port | Service | Algorithm | Expected Finding | Key Size | Notes |
 |-----:|---------|-----------|-----------------|----------|-------|
-| 20001 | jwt-rs256 | RS256 (RSA) | WEAK_QUANTUM (quantum-vulnerable asymmetric) | 2048-bit | RS256 is classically safe but quantum-vulnerable; scanner should return RSA finding |
-| 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | WEAK_KEY_SIZE | 128-bit | 16-byte HMAC key — below minimum 256-bit; scanner flags short symmetric key |
-| 20003 | jwt-rsa1024 | RS256 (RSA) | WEAK_KEY_SIZE + WEAK_QUANTUM | 1024-bit | RSA-1024 is classically weak and quantum-vulnerable; scanner flags key size |
-| 20004 | jwt-algnone | none | CRITICAL_NO_SIGNATURE | 0 | alg:none = no signature verification; scanner classifies as UNKNOWN/critical |
+| 20001 | jwt-rs256 | RS256 (RSA) | no finding; inventoried in the CBOM (healthy-key finding deferred, ledger 261116-healthy-quantum-vulnerable-jwks-key-finding) | 2048-bit | RS256 at 2048 bits is classically safe; the key is quantum-vulnerable and shows in the CBOM, not as a finding (Phase 238 D-33) |
+| 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | CRITICAL "JWKS publishes secret key material" | 128-bit | The lab publishes the HMAC key's `k` member in its JWKS, so the key-material rule fires before the HMAC rule (Phase 238 D-02 rule 2) |
+| 20003 | jwt-rsa1024 | RS256 (RSA) | HIGH "JWKS key uses undersized RSA key" | 1024-bit | RSA-1024 is below the 2048-bit minimum (Phase 238 D-02 rule 4) |
+| 20004 | jwt-algnone | none | CRITICAL "JWKS key declares alg:none" | none recorded (empty `k`; stored key size is NULL, measured 2026-11-17) | The key declares alg none; its `k` member is empty, and rule 1 wins first in any case (Phase 238 D-02 rule 1) |
 
-**Scanner validation command:**
+**Scanner validation command:** the JWT scanner reads its targets from `connectors.jwt_targets`,
+not from `--targets-file` (see `docs/chaos-lab.md` section 3.6). Put this in the config file you
+scan with:
+
+```yaml
+connectors:
+  enable_jwt: true
+  jwt_targets:
+    - "http://localhost:20001"
+    - "http://localhost:20002"
+    - "http://localhost:20003"
+    - "http://localhost:20004"
+
+security:
+  allow_internal_targets: true
 ```
-printf '%s\n' http://localhost:20001 http://localhost:20002 http://localhost:20003 http://localhost:20004 > targets.txt
-quirk --targets-file targets.txt
+
 ```
-**Expected:** JWT scanner returns >= 2 weak-algorithm findings (HS256-weak + RSA-1024 + alg:none = 3 findings).
+quirk --config config.yaml
+```
+**Expected:** exactly three JWKS findings, the same on the dashboard and in the report, with
+the titles in the table above: 2 CRITICAL (20002 and 20004) and 1 HIGH (20003). 20001 produces
+no finding.
 
 ---
 
@@ -576,7 +593,7 @@ so detection here is reproducible and the scoring-model change moved no finding.
 | 10.80.0.10 | mh-edge-legacy | nginx, TLS 1.0/1.1 + weak ciphers | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.11 | mh-edge-expired | nginx, expired certificate | **expired cert**, untrusted CA, QV RSA key, legacy ciphers | **CRITICAL:1** MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.12 | mh-edge-rsa1024 | nginx, RSA-1024 key | **undersized RSA key**, untrusted CA, legacy ciphers | **HIGH:1** MEDIUM:1 LOW:1 INFO:11 |
-| 10.80.0.13 | mh-edge-sha1 | nginx, SHA-1 signed cert | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
+| 10.80.0.13 | mh-edge-sha1 | nginx, SHA-1 signed cert | untrusted CA, QV RSA key, legacy ciphers. Phase 238 note: gains the same HIGH `TLS certificate uses a weak signature hash`; severity counts not re-measured, see ledger 261109-multihost-oracle-remeasure-39-targets | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.14 | mh-edge-chainbroken | nginx, missing intermediate | untrusted CA, QV RSA key, legacy ciphers | MEDIUM:2 LOW:1 INFO:11 |
 | 10.80.0.15 | mh-legacy-intranet | plaintext HTTP only | **plaintext HTTP** | **HIGH:1** INFO:10 |
 | 10.80.0.16 | mh-intranet-wiki | plaintext HTTP | **plaintext HTTP** | **HIGH:1** INFO:10 |
@@ -812,8 +829,8 @@ These hosts are indistinguishable in the findings from a generic RSA/untrusted-C
 may still be worth keeping as topology, but they do **not** demonstrate the capability their name
 implies:
 
-- `mh-edge-sha1` (10.80.0.13) — **no SHA-1 signature finding.** Emits `untrusted CA`, `QV RSA key`,
-  `legacy ciphers` — byte-identical to `mh-edge-chainbroken` and `mh-erp-frontend`.
+- `mh-edge-sha1` (10.80.0.13) — **moved out of this class by Phase 238.** Measured before it, it emitted only `untrusted CA`, `QV RSA key`, `legacy ciphers` (byte-identical to `mh-edge-chainbroken` and `mh-erp-frontend`);
+  from Phase 238 its CA-issued SHA-1 leaf also raises HIGH `TLS certificate uses a weak signature hash` on both surfaces. Not re-measured here; ledger 261109-multihost-oracle-remeasure-39-targets.
 - `mh-edge-chainbroken` (10.80.0.14) — **no broken-chain / missing-intermediate finding.**
 - `mh-edge-legacy` (10.80.0.10) — intended "TLS 1.0/1.1 + weak ciphers", but emits only a LOW
   `legacy ciphers`; no protocol-version finding. (Legacy TLS *does* reach the score — `Legacy TLS

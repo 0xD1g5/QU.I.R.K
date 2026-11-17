@@ -20,9 +20,23 @@ from quirk.reports.content_model import (
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.scanner.target_outcome import SKIP_REASON_TO_ADVISORY_CATEGORY
-from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
+from quirk.util.jwt_alg import (
+    BEARER_ALG_ABSENT_MARKER,
+    is_unsigned_jwt_alg,
+    jwk_has_secret_material,
+)
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
-from quirk.util.weak_crypto import has_legacy_tls_versions_signal, is_max_legacy_tls
+from quirk.util.tls_rows import (  # noqa: F401 - re-exported (Phase 238 WR-07)
+    is_observed_mtls,
+    mtls_required_variant,
+    runs_tls_certificate_checks,
+)
+from quirk.util.weak_crypto import (
+    has_legacy_tls_versions_signal,
+    is_max_legacy_tls,
+    is_undersized_rsa,
+    is_weak_signature_hash,
+)
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -281,14 +295,19 @@ def _error_category(desc: str) -> str:
     return desc.strip()
 
 
-def runs_tls_certificate_checks(ep: Any) -> bool:
-    """True when ``ep`` is a row that gets TLS/certificate checks (Phase 228 D-05).
+# Phase 228 D-05 / Phase 238 D-14 / WR-07: the TLS-row predicates live in
+# quirk.util.tls_rows so the evaluator, the dashboard deriver and closure share
+# one implementation (imported at the top of this module, re-exported here).
 
-    Exact-case ``== "TLS"`` on purpose: a case-variant protocol from a sensor
-    import must not widen the checks, and the report stays byte-identical.
-    Both pipelines must call this, never an inline ``== "TLS"`` copy.
-    """
-    return getattr(ep, "protocol", None) == "TLS"
+
+# Phase 238 D-14: the recommendation _postprocess_findings gives the HTTP
+# sibling it rewrites to "mTLS required". The post-handshake INFO reuses it so
+# _dedupe_findings (keyed on host, port, title, recommendation) collapses the
+# pair into one finding.
+_MTLS_POSTPROCESS_RECOMMENDATION = (
+    "Service appears to require client authentication for TLS handshake. "
+    "Validate client certificate requirements, trust chain, and onboarding flow."
+)
 
 
 EMAIL_PROTOCOLS = frozenset({
@@ -446,10 +465,7 @@ def _postprocess_findings(cfg, endpoints, findings: List[Dict[str, Any]]) -> Lis
             if proto == "TLS" and detail == "MTLS_REQUIRED":
                 f["severity"] = "INFO"
                 f["title"] = "mTLS required"
-                f["recommendation"] = (
-                    "Service appears to require client authentication for TLS handshake. "
-                    "Validate client certificate requirements, trust chain, and onboarding flow."
-                )
+                f["recommendation"] = _MTLS_POSTPROCESS_RECOMMENDATION
             elif proto == "TLS" and detail in {"TLS_HANDSHAKE_FAILED", "TIMEOUT"}:
                 f["severity"] = "MEDIUM"
                 f["title"] = "TLS handshake blocked assessment"
@@ -553,7 +569,11 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                 port=port,
                 title="Connector skipped — no target answered",
                 description=(
-                    "A QUIRK connector phase was skipped because none of its targets answered"
+                    # Phase 238 D-35: reason-neutral, so it stays true for
+                    # unexpected_response (a target answered with the wrong
+                    # document). The title is test- and UAT-cited; unchanged.
+                    "A QUIRK connector phase was skipped because none of its "
+                    "targets returned a usable answer"
                     + (f" ({scan_err_msg})" if scan_err_msg else "")
                     + ". This surface was not assessed; the gap counts as a scan "
                     "error in the readiness score."
@@ -562,6 +582,8 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     "Check the connector targets: for refused internal targets set "
                     "security.allow_internal_targets in the server config.yaml; for "
                     "credential failures start quirk serve with the right credentials; "
+                    "for a target that answered with something other than the "
+                    "expected document, check the configured URL; "
                     "otherwise confirm the targets are reachable, then re-run the scan."
                 ),
             )
@@ -681,6 +703,25 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     "trivially intercepted by anyone on the network path."
                 ),
                 recommendation="Migrate management/application endpoints to HTTPS/TLS where feasible.",
+            ))
+
+        # Phase 238 D-14: the post-handshake mTLS variant was observed, so
+        # it gets the INFO and then every certificate check below (no
+        # `continue`). The handshake variant is handled in the scan-error
+        # branch above.
+        if mtls_required_variant(e) == "post_handshake":
+            findings.append(_build_finding(
+                severity="INFO",
+                host=host,
+                port=port,
+                title="mTLS required",
+                description=(
+                    "The endpoint completed a TLS handshake and then rejected "
+                    "the connection because no client certificate was "
+                    "presented (mTLS). The certificate and protocol details "
+                    "below were observed before the rejection."
+                ),
+                recommendation=_MTLS_POSTPROCESS_RECOMMENDATION,
             ))
 
         if runs_tls_certificate_checks(e):
@@ -844,49 +885,87 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     ),
                 ))
 
-            # BUG-04: Quantum-vulnerable TLS certificate key algorithm
-            cert_pubkey_alg = (getattr(e, "cert_pubkey_alg", "") or "").strip().upper()
-            cert_pubkey_size = getattr(e, "cert_pubkey_size", None)
-            if cert_pubkey_alg == "RSA":
-                if cert_pubkey_size is not None and cert_pubkey_size < 2048:
+            # DETECT-07 (Phase 238 D-17..D-19): weak leaf signature hash. Only the
+            # stored leaf is evaluated (D-19). HIGH for a CA-issued leaf; LOW for a
+            # self-signed leaf, whose trust problem already carries its own HIGH.
+            sig_alg_name = (getattr(e, "cert_sig_alg", "") or "").strip()
+            if is_weak_signature_hash(sig_alg_name):
+                if not is_self_signed:
                     findings.append(_build_finding(
                         severity="HIGH",
                         host=host,
                         port=port,
-                        title="TLS certificate uses undersized RSA key",
+                        title="TLS certificate uses a weak signature hash",
                         description=(
-                            "This certificate uses an RSA key below the classical 2048-bit "
-                            "minimum, which is breakable by today's classical attackers and "
-                            "is also vulnerable to a sufficiently large quantum computer. "
-                            "Captured ciphertext today can be decrypted retroactively under "
-                            "a 'harvest now, decrypt later' threat model."
+                            f"This certificate is signed with {sig_alg_name.upper()}, a "
+                            "hash with practical collision attacks. A forged certificate "
+                            "with the same signature can impersonate this server."
                         ),
                         recommendation=(
-                            f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum. "
-                            "Migrate to RSA-2048+ or ECDSA P-256 immediately, and plan "
-                            "migration to ML-KEM (FIPS 203) for key exchange and ML-DSA "
-                            "(FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                            "Reissue the certificate with a SHA-256 or stronger signature."
                         ),
-                        quantum_vulnerable=True,
                     ))
                 else:
                     findings.append(_build_finding(
-                        severity="MEDIUM",
+                        severity="LOW",
                         host=host,
                         port=port,
-                        title="TLS certificate uses quantum-vulnerable RSA key",
+                        title="TLS certificate uses a weak signature hash",
                         description=(
-                            "This certificate uses RSA, an algorithm vulnerable to attack "
-                            "by a sufficiently large quantum computer via Shor's algorithm. "
-                            "Captured ciphertext today can be decrypted retroactively once "
-                            "such a computer exists ('harvest now, decrypt later')."
+                            f"This self-signed certificate is signed with "
+                            f"{sig_alg_name.upper()}, a hash with practical collision "
+                            "attacks. Clients do not rely on a self-signed signature for "
+                            "trust, so the self-signed finding carries the main risk."
                         ),
                         recommendation=(
-                            "Plan migration to ML-KEM (FIPS 203) for key exchange and "
-                            "ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                            "Reissue the certificate with a SHA-256 or stronger signature."
                         ),
-                        quantum_vulnerable=True,
                     ))
+
+            # BUG-04: Quantum-vulnerable TLS certificate key algorithm
+            cert_pubkey_alg = (getattr(e, "cert_pubkey_alg", "") or "").strip().upper()
+            cert_pubkey_size = getattr(e, "cert_pubkey_size", None)
+            # Phase 238 D-20: one undersized-RSA predicate shared with the
+            # dashboard (RSA / RSA-PSS, 0 < size < 2048; size 0 is undetermined).
+            if is_undersized_rsa(cert_pubkey_alg, cert_pubkey_size):
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="TLS certificate uses undersized RSA key",
+                    description=(
+                        "This certificate uses an RSA key below the classical 2048-bit "
+                        "minimum, which is breakable by today's classical attackers and "
+                        "is also vulnerable to a sufficiently large quantum computer. "
+                        "Captured ciphertext today can be decrypted retroactively under "
+                        "a 'harvest now, decrypt later' threat model."
+                    ),
+                    recommendation=(
+                        f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum. "
+                        "Migrate to RSA-2048+ or ECDSA P-256 immediately, and plan "
+                        "migration to ML-KEM (FIPS 203) for key exchange and ML-DSA "
+                        "(FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                    ),
+                    quantum_vulnerable=True,
+                ))
+            elif cert_pubkey_alg == "RSA":
+                findings.append(_build_finding(
+                    severity="MEDIUM",
+                    host=host,
+                    port=port,
+                    title="TLS certificate uses quantum-vulnerable RSA key",
+                    description=(
+                        "This certificate uses RSA, an algorithm vulnerable to attack "
+                        "by a sufficiently large quantum computer via Shor's algorithm. "
+                        "Captured ciphertext today can be decrypted retroactively once "
+                        "such a computer exists ('harvest now, decrypt later')."
+                    ),
+                    recommendation=(
+                        "Plan migration to ML-KEM (FIPS 203) for key exchange and "
+                        "ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                    ),
+                    quantum_vulnerable=True,
+                ))
             elif cert_pubkey_alg == "ECDSA":
                 if cert_pubkey_size is not None and cert_pubkey_size < 256:
                     findings.append(_build_finding(
@@ -1312,8 +1391,137 @@ def _saml_cert_serial(service_detail: str) -> Optional[str]:
     return None
 
 
+def _evaluate_jwks_key(e, seen: set) -> List[Dict[str, Any]]:
+    """Phase 238 IDENT-05 (D-01, D-02, D-33): findings for one published JWKS key.
+
+    One finding per key, first match wins, deduped on the key's full identity
+    (host, service_detail, kid, kty, alg, n or x, size):
+      1. ``alg`` is exactly "none" (any case) -> CRITICAL.
+      2. the JWKS publishes private or symmetric key material (the scanner's
+         marker, or a non-empty secret member) -> CRITICAL.
+      3. an HS* alg or ``kty: oct`` -> HIGH.
+      4. an RSA key under 2048 bits -> HIGH.
+    Any other key (RS256 2048, ES256, EdDSA, ...) yields nothing. JWT rows never
+    reach ``OIDC_ALG_SEVERITY`` (RS256 is HIGH there), and an absent alg is
+    not read as unsigned for a JWK (unlike a bearer token header).
+    ``jwt_scan_json`` comes from an untrusted server: malformed or non-dict
+    JSON reads as an empty key and the rules fall back to ``cert_pubkey_alg``.
+    """
+    host = getattr(e, "host", "") or ""
+    port = int(getattr(e, "port", 0) or 0)
+    try:
+        jwk = json.loads(getattr(e, "jwt_scan_json", None) or "{}")
+    except (TypeError, ValueError):
+        jwk = {}
+    if not isinstance(jwk, dict):
+        jwk = {}
+    alg = str(getattr(e, "cert_pubkey_alg", "") or "").strip()
+    kty = str(jwk.get("kty") or "")
+    kid = jwk.get("kid")
+    # Dedupe on the key's full identity, not on (host, kid): RFC 7517 lets
+    # keys of different types share a kid, and a healthy key must never hide
+    # a weak one published under the same kid (Phase 238 CR-01). The same key
+    # reached twice (with or without a kid) is still one finding.
+    identity = (
+        host,
+        str(getattr(e, "service_detail", "") or ""),
+        str(kid or ""),
+        kty,
+        alg,
+        str(jwk.get("n") or jwk.get("x") or ""),
+        str(getattr(e, "cert_pubkey_size", None)),
+    )
+    if identity in seen:
+        return []
+    seen.add(identity)
+
+    label = alg or kty or "unknown"
+    kid_text = f" (kid {kid})" if kid else ""
+    extra = dict(protocol="JWT", source="jwt", algorithm=alg or kty)
+
+    if alg.lower() == "none":
+        return [dict(
+            _build_finding(
+                severity="CRITICAL",
+                host=host,
+                port=port,
+                title="JWKS key declares alg:none",
+                description=(
+                    f"A key in this JWKS{kid_text} declares alg {alg}. A verifier "
+                    "that honours it accepts tokens with no signature."
+                ),
+                recommendation=(
+                    "Remove the alg:none key from the published key set and "
+                    "reject unsigned tokens at every verifier."
+                ),
+            ),
+            **extra,
+        )]
+    if jwk_has_secret_material(jwk):
+        return [dict(
+            _build_finding(
+                severity="CRITICAL",
+                host=host,
+                port=port,
+                title="JWKS publishes secret key material",
+                description=(
+                    "This JWKS publishes private or symmetric key material. "
+                    "Anyone who fetches it can sign valid tokens. "
+                    f"Key{kid_text}, alg {label}."
+                ),
+                recommendation=(
+                    "Remove private and symmetric members from the published "
+                    "key set and rotate the exposed key."
+                ),
+            ),
+            **extra,
+        )]
+    if alg.upper().startswith("HS") or kty == "oct":
+        return [dict(
+            _build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title="JWKS key uses a symmetric (HMAC) algorithm",
+                description=(
+                    f"A key in this JWKS{kid_text} uses {label}, a shared-secret "
+                    "algorithm. Every party that can verify these tokens can "
+                    "also sign them."
+                ),
+                recommendation=(
+                    "Sign tokens with an asymmetric algorithm (ES256 or EdDSA) "
+                    "and publish only the public key."
+                ),
+            ),
+            **extra,
+        )]
+    if kty == "RSA" or (not kty and alg.upper()[:2] in ("RS", "PS")):
+        size = getattr(e, "cert_pubkey_size", None)
+        if is_undersized_rsa("RSA", size):
+            return [dict(
+                _build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="JWKS key uses undersized RSA key",
+                    description=(
+                        f"A key in this JWKS{kid_text} is a {size}-bit RSA key "
+                        f"({label}), below the 2048-bit minimum."
+                    ),
+                    recommendation=(
+                        "Replace the key with RSA-2048 or larger, or move token "
+                        "signing to ECDSA (ES256) or EdDSA."
+                    ),
+                    quantum_vulnerable=True,
+                ),
+                **extra,
+            )]
+    return []
+
+
 def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
-    """Emit SAML identity findings (XSURF-01, XSURF-02) for SAML endpoints.
+    """Emit SAML identity findings (XSURF-01, XSURF-02) and JWKS key findings
+    (IDENT-05) for SAML and JWT endpoints.
 
     Phase 210, decisions D-05/D-08/D-01. This is the fifth `evaluate_*_endpoints()`
     sibling alongside `evaluate_email_endpoints` / `evaluate_broker_endpoints` /
@@ -1332,12 +1540,20 @@ def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
         certificate serial on the same host:port is never suppressed (XSURF-01
         safety property; see `.planning/decisions/
         XSURF-01-saml-dual-use-certificate-dedupe.md`).
+
+    Phase 238 D-01: JWT (JWKS key) rows are dispatched to ``_evaluate_jwks_key``
+    before the SAML gate, so they never reach the ``OIDC_ALG_SEVERITY`` lookup.
+    One finding per weak key, deduped on the key's full identity.
     """
     findings: List[Dict[str, Any]] = []
     seen: set = set()  # (host, port, serial) — dedupe guard, weak-key branch only
+    jwt_seen: set = set()  # full JWKS key identity — dedupe guard (238 D-02, CR-01)
 
     for e in endpoints:
         protocol = str(getattr(e, "protocol", "") or "").upper()
+        if protocol == "JWT":
+            findings.extend(_evaluate_jwks_key(e, jwt_seen))
+            continue
         if protocol != "SAML":
             continue
 

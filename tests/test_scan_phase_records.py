@@ -103,7 +103,8 @@ def test_scan_phase_skip_reasons_exact_membership() -> None:
     from quirk.models import SCAN_PHASE_SKIP_REASONS
 
     # Phase 235.3 D-06: 6 -> 8 (internal-target-refused, auth-failed added).
-    assert len(SCAN_PHASE_SKIP_REASONS) == 8
+    # 8 -> 9, Phase 238 D-10 (unexpected-response added).
+    assert len(SCAN_PHASE_SKIP_REASONS) == 9
     assert SCAN_PHASE_SKIP_REASONS == frozenset({
         "disabled-by-config",
         "missing-extra",
@@ -113,6 +114,7 @@ def test_scan_phase_skip_reasons_exact_membership() -> None:
         "failed",
         "internal-target-refused",
         "auth-failed",
+        "unexpected-response",
     })
 
 

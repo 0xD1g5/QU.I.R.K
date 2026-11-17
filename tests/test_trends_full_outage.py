@@ -95,6 +95,27 @@ def test_failed_target_count_contract():
     assert failed_target_count(None) is None
 
 
+def test_full_unexpected_response_outage_weighs_n(make_db):
+    """Phase 238 D-10: four SAML targets that all answered with the wrong document weigh 4."""
+    from quirk.scanner.target_outcome import failed_target_count
+
+    outcomes = TargetOutcomes([f"https://idp{i}.example/metadata" for i in range(4)])
+    for t in outcomes.expected:
+        outcomes.record(t, "unexpected_response", "HTTP 404")
+    rows: list = []
+    run_scan._classify_connector_outcomes(
+        "saml_scanner", outcomes, [], rows, run_scan._PhaseRecorder()
+    )
+    advisory = [r for r in rows if r.protocol == "ADVISORY"]
+    assert len(advisory) == 1
+    assert failed_target_count(advisory[0].scan_error) == 4
+
+    db = make_db
+    _persist(db, PREV_TS, "run-prev", [])
+    _persist(db, CUR_TS, "run-cur", rows)
+    assert _report(db).scan_errors_new_count == 4
+
+
 def test_vault_missing_token_counts_one(make_db):
     db = make_db
     _persist(db, PREV_TS, "run-prev", [])

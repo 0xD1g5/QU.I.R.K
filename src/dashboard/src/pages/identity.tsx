@@ -31,12 +31,13 @@ const SEVERITY_STYLES: Record<string, string> = {
   INFO: "bg-[hsl(var(--status-neutral))] text-white",
 }
 
-const PROTOCOLS = ["KERBEROS", "SAML", "DNSSEC"] as const
+const PROTOCOLS = ["KERBEROS", "SAML", "JWT", "DNSSEC"] as const
 
-// C-WR-08: the scan_phase_records row behind each protocol card.
+// C-WR-08: the scan_phase_records row behind each protocol card (JWT added by Phase 238 D-06).
 const PROTOCOL_PHASES: Record<string, string> = {
   KERBEROS: "kerberos_scanning",
   SAML: "saml_scanning",
+  JWT: "jwt_scanning",
   DNSSEC: "dnssec_scanning",
 }
 
@@ -91,6 +92,7 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 const PROTOCOL_LABELS: Record<string, string> = {
   KERBEROS: "Kerberos",
   SAML: "SAML/OIDC",
+  JWT: "JWT/JWKS",
   DNSSEC: "DNSSEC",
 }
 
@@ -145,8 +147,8 @@ export function IdentityPage() {
     <div className="space-y-6">
       <h1 style={{ fontSize: 20, fontWeight: 600 }}>Identity Protocols</h1>
 
-      {/* Per-protocol summary cards (D-10) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Per-protocol summary cards (D-10; four cards since Phase 238 D-06) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {PROTOCOLS.map((proto) => {
           const status = getProtocolStatus(identityFindings, proto, data?.coverage)
           return (
@@ -177,7 +179,7 @@ export function IdentityPage() {
 
       {/* Identity findings table (D-11) */}
       {identityFindings.length === 0 ? (
-        <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["kerberos_scanning", "saml_scanning", "dnssec_scanning"], "No identity protocol findings in this scan — enable Kerberos, SAML, or DNSSEC scanners in config.yaml and run a scan.")} />
+        <EmptyStateCard emptyFor="scan-latest" message={emptyStateFor(data?.coverage, ["kerberos_scanning", "saml_scanning", "jwt_scanning", "dnssec_scanning"], "No identity protocol findings in this scan — enable Kerberos, SAML, JWT, or DNSSEC scanners in config.yaml and run a scan.")} />
       ) : (
         <>
           <div className="flex gap-3 items-center">

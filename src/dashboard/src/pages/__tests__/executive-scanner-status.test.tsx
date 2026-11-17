@@ -37,6 +37,13 @@ describe("ScannerStatusCard skip classification", () => {
     }
   })
 
+  it("labels an unexpected_response failure Skipped and never Partial", () => {
+    // Phase 238 D-36: executive.tsx reads the TS advisory-category list.
+    render(<ScannerStatusCard failures={[entry("unexpected_response")]} />)
+    expect(screen.getByLabelText("status: Skipped")).toBeInTheDocument()
+    expect(screen.queryByLabelText("status: Partial")).not.toBeInTheDocument()
+  })
+
   it("does not label a target_unanswered failure Skipped", () => {
     render(<ScannerStatusCard failures={[entry("target_unanswered")]} />)
     expect(screen.queryByLabelText("status: Skipped")).not.toBeInTheDocument()

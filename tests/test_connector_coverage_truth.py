@@ -87,6 +87,42 @@ def test_classifier_partial_answer_runs_with_one_error_row_no_advisory():
     assert eps[0].scan_error_category == "target_unanswered"
 
 
+def test_classifier_all_unexpected_response_skips_with_named_detail():
+    """Phase 238 D-09/D-10: a target that answered with the wrong document is a named skip."""
+    o = TargetOutcomes(["https://idp.example/metadata"])
+    o.record("https://idp.example/metadata", "unexpected_response", "not SAML metadata (HTML page)")
+    result, rec, eps, _ = _run(o)
+    assert result is run_scan._PHASE_SKIPPED
+    assert rec._pending_reason == "unexpected-response"
+    adv = _advisories(eps)
+    assert len(adv) == 1
+    assert adv[0].scan_error_category == "unexpected_response"
+    assert adv[0].scan_error == (
+        "1 of 1 targets answered with something other than the expected document: "
+        "https://idp.example/metadata (unexpected_response: not SAML metadata (HTML page))"
+    )
+    assert rec._pending_detail == adv[0].scan_error
+
+
+def test_classifier_unexpected_response_beside_answered_runs_with_one_error_row():
+    """Phase 238 D-11: one answered target keeps the phase ran with one target_unanswered row."""
+    o = TargetOutcomes(["https://a.example/metadata", "https://b.example/metadata"])
+    o.answered("https://a.example/metadata")
+    o.record("https://b.example/metadata", "unexpected_response", "HTTP 404")
+    rows: list = []
+    rec = run_scan._PhaseRecorder()
+    eps: list = []
+    result = run_scan._classify_connector_outcomes("saml_scanner", o, rows, eps, rec)
+    assert result is rows
+    assert rec._pending_reason is None
+    assert _advisories(eps) == []
+    errors = [e for e in eps if e.protocol == "ERROR"]
+    assert len(eps) == 1 and len(errors) == 1
+    assert errors[0].host == "https://b.example/metadata"
+    assert errors[0].scan_error_category == "target_unanswered"
+    assert errors[0].scan_error == "saml_scanner: unexpected_response: HTTP 404"
+
+
 def test_classifier_row_emitted_adds_no_extra_row():
     o = TargetOutcomes(["a", "b"])
     o.answered("a")
@@ -198,7 +234,9 @@ import pytest  # noqa: E402
 
 
 @pytest.mark.parametrize(
-    "reason", ["internal-target-refused", "auth-failed", "missing-credentials", "failed"]
+    "reason",
+    ["internal-target-refused", "auth-failed", "missing-credentials", "failed",
+     "unexpected-response"],  # Phase 238 D-10
 )
 def test_coverage_skip_advisory_lowers_score_through_real_pipeline(reason, capsys):
     """Baseline is an ANSWERED-EMPTY connector (contributes nothing to evidence).

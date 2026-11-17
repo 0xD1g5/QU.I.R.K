@@ -18,6 +18,7 @@ LXML_AVAILABLE = True
 import base64
 import json
 import logging
+from typing import Optional
 
 # Module-level logger (Phase 71 WR-10)
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from quirk.models import CryptoEndpoint
 from quirk.scanner.target_outcome import (
     OUTCOME_ANSWERED,
+    OUTCOME_UNEXPECTED_RESPONSE,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
     outcome_for_url_guard,
@@ -90,8 +92,10 @@ def _fetch_metadata(
     Returns raw bytes on success, None on any error.
 
     235.3 D-05: when ``outcomes`` is given, the per-target outcome is recorded
-    against ``url`` (any HTTP response -> answered; guard refusal ->
-    outcome_for_url_guard; other exception -> unreachable).
+    against ``url`` (guard refusal -> outcome_for_url_guard; other exception
+    -> unreachable). Phase 238 D-07: a non-200 records unexpected_response
+    with ``HTTP <status>``; a 200 records nothing here, because the caller
+    decides from the document whether the target answered.
     """
     try:
         response = fetch_validated(
@@ -101,10 +105,12 @@ def _fetch_metadata(
             ),
             allow_internal=allow_internal,
         )
-        if outcomes is not None:
-            outcomes.record(url, OUTCOME_ANSWERED)
         if response.status_code == 200:
             return response.content
+        if outcomes is not None:
+            outcomes.record(
+                url, OUTCOME_UNEXPECTED_RESPONSE, f"HTTP {response.status_code}"
+            )
         logging.getLogger(__name__).warning(
             "SAML fetch %s returned HTTP %d", _redact_url_preview(url), response.status_code
         )
@@ -125,6 +131,27 @@ def _fetch_metadata(
             "SAML fetch failed for %r (%s)", _redact_url_preview(url), type(exc).__name__
         )
         return None
+
+
+_UTF8_BOM = b"\xef\xbb\xbf"
+
+
+def _strip_bom(content):
+    """Drop a leading UTF-8 byte-order mark (common in ADFS metadata) so the
+    JSON/XML sniff sees the document's first real character (WR-05)."""
+    if isinstance(content, (bytes, bytearray)) and bytes(content[:3]) == _UTF8_BOM:
+        return bytes(content[3:])
+    if isinstance(content, str) and content.startswith("\ufeff"):
+        return content[1:]
+    return content
+
+
+def _looks_like_xml(content) -> bool:
+    if isinstance(content, str):
+        return content.lstrip().startswith("<")
+    if isinstance(content, (bytes, bytearray)):
+        return bytes(content).lstrip().startswith(b"<")
+    return False
 
 
 def _classify_target(url: str, content: bytes) -> str:
@@ -164,6 +191,59 @@ def _classify_target(url: str, content: bytes) -> str:
     if stripped.startswith(b"<") or stripped.startswith(b"<?xml"):
         return "saml"
     return "unknown"
+
+
+# Phase 238 D-07: root elements that make a document SAML 2.0 metadata.
+_SAML_METADATA_ROOTS = frozenset({"EntityDescriptor", "EntitiesDescriptor"})
+# Phase 238 D-07: an attacker-chosen root name is cut to this length in details.
+_ROOT_NAME_MAX = 40
+
+
+def _saml_root_detail(content) -> Optional[str]:
+    """Return None when *content* is SAML 2.0 metadata, else the outcome detail.
+
+    Phase 238 D-07: the root must be EntityDescriptor or EntitiesDescriptor in
+    the SAML 2.0 metadata namespace. Parsing goes through the hardened parser.
+    """
+    head = bytes(content).lstrip()[:32].lower()
+    if head.startswith(b"<!doctype html") or head.startswith(b"<html"):
+        return "not SAML metadata (HTML page)"
+    try:
+        root = _safe_ET_fromstring(content)
+        qname = ET.QName(root)
+    except Exception:
+        return "unparseable XML"
+    localname = qname.localname or ""
+    if localname.lower() == "html":
+        return "not SAML metadata (HTML page)"
+    if localname in _SAML_METADATA_ROOTS and qname.namespace == SAML_NS["md"]:
+        return None
+    return f"not SAML metadata (root element {localname[:_ROOT_NAME_MAX]})"
+
+
+def _oidc_discovery_detail(content) -> Optional[str]:
+    """Return None when *content* is an OIDC discovery document, else the detail.
+
+    Phase 238 D-07: a JSON object with ``issuer`` plus ``jwks_uri`` or a
+    ``*_signing_alg_values_supported`` key.
+    """
+    try:
+        data = json.loads(content)
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError, TypeError):
+        return "not an OIDC discovery document"
+    if (
+        isinstance(data, dict)
+        and data.get("issuer")
+        and (
+            data.get("jwks_uri")
+            or any(
+                isinstance(k, str) and k.endswith("_signing_alg_values_supported")
+                for k in data
+            )
+        )
+    ):
+        return None
+    return "not an OIDC discovery document"
 
 
 def _parse_cert_element(cert_b64_text: str) -> "dict | None":
@@ -506,7 +586,29 @@ def scan_saml_targets(
                     scanned_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 ))
 
+        content = _strip_bom(content)
         target_type = _classify_target(target_url, content)
+
+        # Phase 238 D-07: the target is answered only when its document
+        # qualifies; anything else records unexpected_response with a detail.
+        if target_type == "oidc":
+            detail = _oidc_discovery_detail(content)
+            # WR-05: content decides before the URL. A .well-known URL that
+            # serves SAML 2.0 metadata is SAML, not a failed OIDC document.
+            if detail is not None and _looks_like_xml(content):
+                if _saml_root_detail(content) is None:
+                    target_type, detail = "saml", None
+        elif target_type == "saml":
+            detail = _saml_root_detail(content)
+        else:
+            detail = "not JSON or XML"
+        if detail is not None:
+            if outcomes is not None:
+                outcomes.record(target_url, OUTCOME_UNEXPECTED_RESPONSE, detail)
+            log.warning("SAML: %s at %s, skipping", detail, target_url)
+            continue
+        if outcomes is not None:
+            outcomes.record(target_url, OUTCOME_ANSWERED)
 
         if target_type == "oidc":
             try:
@@ -514,13 +616,11 @@ def scan_saml_targets(
                 all_endpoints.extend(endpoints)
             except Exception as exc:
                 log.warning("SAML: OIDC parse failed for %s: %s", target_url, exc)
-        elif target_type == "saml":
+        else:
             try:
                 endpoints, _scan_dict = _parse_saml_metadata(content, target_url, now=now)
                 all_endpoints.extend(endpoints)
             except Exception as exc:
                 log.warning("SAML: metadata parse failed for %s: %s", target_url, exc)
-        else:
-            log.warning("SAML: unrecognised content type for %s (not JSON or XML), skipping", target_url)
 
     return all_endpoints
