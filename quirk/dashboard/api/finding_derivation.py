@@ -25,7 +25,12 @@ from quirk.engine.findings_evaluator import (
 )
 from quirk.dashboard.api.schemas import FindingItem, IdentityFinding
 from quirk.models import CryptoEndpoint
-from quirk.util.weak_crypto import has_legacy_tls_versions_signal, is_max_legacy_tls
+from quirk.util.weak_crypto import (
+    has_legacy_tls_versions_signal,
+    is_max_legacy_tls,
+    is_undersized_rsa,
+    is_weak_signature_hash,
+)
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 
 _QS_DISPLAY = {
@@ -210,13 +215,10 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
     # findings_evaluator called the same condition "TLS certificate uses
     # undersized RSA key" at HIGH — the operator console and the client
     # deliverable disagreeing about the same endpoint. Parity is asserted by
-    # tests/test_finding_engine_parity.py.
-    if (
-        ep.cert_pubkey_alg
-        and ep.cert_pubkey_alg.upper().startswith("RSA")
-        and ep.cert_pubkey_size
-        and ep.cert_pubkey_size < 2048
-    ):
+    # tests/test_finding_engine_parity.py. Phase 238 D-20: the condition is
+    # the shared quirk.util.weak_crypto.is_undersized_rsa predicate (RSA /
+    # RSA-PSS, 0 < size < 2048), so the two surfaces cannot drift again.
+    if is_undersized_rsa(ep.cert_pubkey_alg, ep.cert_pubkey_size):
         findings.append(FindingItem(
             id=ep.id,
             host=ep.host,
@@ -284,6 +286,48 @@ def findings_for_endpoint(ep: CryptoEndpoint) -> list[FindingItem]:
                 "Replace with a certificate from a publicly trusted CA, or add the "
                 "issuing CA to the system trust store if it is an internal PKI."
             ),
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+
+    # DETECT-07 (Phase 238 D-17..D-19, D-28): weak leaf signature hash, as in
+    # the report. HIGH for a CA-issued leaf, LOW for a self-signed leaf (its
+    # trust problem already carries the HIGH above). Leaf only (D-19).
+    _self_signed = bool(_issuer and _subject and _issuer == _subject)
+    if is_weak_signature_hash(ep.cert_sig_alg) and not _self_signed:
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="HIGH",
+            title="TLS certificate uses a weak signature hash",
+            protocol="TLS",
+            description=(
+                f"Certificate is signed with {ep.cert_sig_alg.strip().upper()}, a hash "
+                f"with practical collision attacks."
+            ),
+            remediation="Reissue the certificate with a SHA-256 or stronger signature.",
+            quantum_risk=None,
+            source="tls",
+            sensor_id=ep.sensor_id,
+            segment=ep.segment,
+        ))
+    elif is_weak_signature_hash(ep.cert_sig_alg):
+        findings.append(FindingItem(
+            id=ep.id,
+            host=ep.host,
+            port=ep.port,
+            severity="LOW",
+            title="TLS certificate uses a weak signature hash",
+            protocol="TLS",
+            description=(
+                f"Self-signed certificate is signed with "
+                f"{ep.cert_sig_alg.strip().upper()}; clients do not rely on a "
+                f"self-signed signature for trust."
+            ),
+            remediation="Reissue the certificate with a SHA-256 or stronger signature.",
             quantum_risk=None,
             source="tls",
             sensor_id=ep.sensor_id,

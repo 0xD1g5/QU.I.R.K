@@ -22,7 +22,12 @@ from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.scanner.target_outcome import SKIP_REASON_TO_ADVISORY_CATEGORY
 from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
-from quirk.util.weak_crypto import has_legacy_tls_versions_signal, is_max_legacy_tls
+from quirk.util.weak_crypto import (
+    has_legacy_tls_versions_signal,
+    is_max_legacy_tls,
+    is_undersized_rsa,
+    is_weak_signature_hash,
+)
 
 
 # Phase 72 D-04 / D-04a: module-private severity rank used by _dedupe_findings sort
@@ -844,49 +849,87 @@ def evaluate_endpoints(cfg, endpoints) -> List[Dict[str, Any]]:
                     ),
                 ))
 
-            # BUG-04: Quantum-vulnerable TLS certificate key algorithm
-            cert_pubkey_alg = (getattr(e, "cert_pubkey_alg", "") or "").strip().upper()
-            cert_pubkey_size = getattr(e, "cert_pubkey_size", None)
-            if cert_pubkey_alg == "RSA":
-                if cert_pubkey_size is not None and cert_pubkey_size < 2048:
+            # DETECT-07 (Phase 238 D-17..D-19): weak leaf signature hash. Only the
+            # stored leaf is evaluated (D-19). HIGH for a CA-issued leaf; LOW for a
+            # self-signed leaf, whose trust problem already carries its own HIGH.
+            sig_alg_name = (getattr(e, "cert_sig_alg", "") or "").strip()
+            if is_weak_signature_hash(sig_alg_name):
+                if not is_self_signed:
                     findings.append(_build_finding(
                         severity="HIGH",
                         host=host,
                         port=port,
-                        title="TLS certificate uses undersized RSA key",
+                        title="TLS certificate uses a weak signature hash",
                         description=(
-                            "This certificate uses an RSA key below the classical 2048-bit "
-                            "minimum, which is breakable by today's classical attackers and "
-                            "is also vulnerable to a sufficiently large quantum computer. "
-                            "Captured ciphertext today can be decrypted retroactively under "
-                            "a 'harvest now, decrypt later' threat model."
+                            f"This certificate is signed with {sig_alg_name.upper()}, a "
+                            "hash with practical collision attacks. A forged certificate "
+                            "with the same signature can impersonate this server."
                         ),
                         recommendation=(
-                            f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum. "
-                            "Migrate to RSA-2048+ or ECDSA P-256 immediately, and plan "
-                            "migration to ML-KEM (FIPS 203) for key exchange and ML-DSA "
-                            "(FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                            "Reissue the certificate with a SHA-256 or stronger signature."
                         ),
-                        quantum_vulnerable=True,
                     ))
                 else:
                     findings.append(_build_finding(
-                        severity="MEDIUM",
+                        severity="LOW",
                         host=host,
                         port=port,
-                        title="TLS certificate uses quantum-vulnerable RSA key",
+                        title="TLS certificate uses a weak signature hash",
                         description=(
-                            "This certificate uses RSA, an algorithm vulnerable to attack "
-                            "by a sufficiently large quantum computer via Shor's algorithm. "
-                            "Captured ciphertext today can be decrypted retroactively once "
-                            "such a computer exists ('harvest now, decrypt later')."
+                            f"This self-signed certificate is signed with "
+                            f"{sig_alg_name.upper()}, a hash with practical collision "
+                            "attacks. Clients do not rely on a self-signed signature for "
+                            "trust, so the self-signed finding carries the main risk."
                         ),
                         recommendation=(
-                            "Plan migration to ML-KEM (FIPS 203) for key exchange and "
-                            "ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                            "Reissue the certificate with a SHA-256 or stronger signature."
                         ),
-                        quantum_vulnerable=True,
                     ))
+
+            # BUG-04: Quantum-vulnerable TLS certificate key algorithm
+            cert_pubkey_alg = (getattr(e, "cert_pubkey_alg", "") or "").strip().upper()
+            cert_pubkey_size = getattr(e, "cert_pubkey_size", None)
+            # Phase 238 D-20: one undersized-RSA predicate shared with the
+            # dashboard (RSA / RSA-PSS, 0 < size < 2048; size 0 is undetermined).
+            if is_undersized_rsa(cert_pubkey_alg, cert_pubkey_size):
+                findings.append(_build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="TLS certificate uses undersized RSA key",
+                    description=(
+                        "This certificate uses an RSA key below the classical 2048-bit "
+                        "minimum, which is breakable by today's classical attackers and "
+                        "is also vulnerable to a sufficiently large quantum computer. "
+                        "Captured ciphertext today can be decrypted retroactively under "
+                        "a 'harvest now, decrypt later' threat model."
+                    ),
+                    recommendation=(
+                        f"RSA-{cert_pubkey_size} is below the 2048-bit classical minimum. "
+                        "Migrate to RSA-2048+ or ECDSA P-256 immediately, and plan "
+                        "migration to ML-KEM (FIPS 203) for key exchange and ML-DSA "
+                        "(FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                    ),
+                    quantum_vulnerable=True,
+                ))
+            elif cert_pubkey_alg == "RSA":
+                findings.append(_build_finding(
+                    severity="MEDIUM",
+                    host=host,
+                    port=port,
+                    title="TLS certificate uses quantum-vulnerable RSA key",
+                    description=(
+                        "This certificate uses RSA, an algorithm vulnerable to attack "
+                        "by a sufficiently large quantum computer via Shor's algorithm. "
+                        "Captured ciphertext today can be decrypted retroactively once "
+                        "such a computer exists ('harvest now, decrypt later')."
+                    ),
+                    recommendation=(
+                        "Plan migration to ML-KEM (FIPS 203) for key exchange and "
+                        "ML-DSA (FIPS 204) or SLH-DSA (FIPS 205) for signatures."
+                    ),
+                    quantum_vulnerable=True,
+                ))
             elif cert_pubkey_alg == "ECDSA":
                 if cert_pubkey_size is not None and cert_pubkey_size < 256:
                     findings.append(_build_finding(
