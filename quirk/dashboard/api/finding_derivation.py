@@ -400,7 +400,7 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
     `findings_for_endpoint` (Phase 202 / 202-03, D-06) so there is exactly one
     implementation; this function retains only the two loop-level concerns
     that are properties of the endpoint LIST, not of any single endpoint:
-    the KERBEROS/SAML/DNSSEC identity-protocol skip (a cross-endpoint filter
+    the KERBEROS/SAML/DNSSEC/JWT identity-protocol skip (a cross-endpoint filter
     decision, handled exclusively by `_derive_identity_findings`) and the
     final severity sort (a property of the assembled list, not any one
     endpoint's findings).
@@ -411,7 +411,7 @@ def _derive_findings(endpoints: list[CryptoEndpoint]) -> list[FindingItem]:
         # D-03: skip identity protocol endpoints — handled exclusively by
         # _derive_identity_findings(); none of the TLS checks apply to them.
         proto = (ep.protocol or "").upper()
-        if proto in {"KERBEROS", "SAML", "DNSSEC"}:
+        if proto in {"KERBEROS", "SAML", "DNSSEC", "JWT"}:
             continue
 
         findings.extend(findings_for_endpoint(ep))
@@ -509,7 +509,10 @@ def finding_by_id_and_title(
 
 
 def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityFinding]:
-    """Synthesize identity protocol findings from KERBEROS/SAML/DNSSEC endpoints.
+    """Synthesize identity protocol findings from KERBEROS/SAML/DNSSEC/JWT endpoints.
+
+    SAML and JWT (JWKS key, Phase 238 IDENT-05/IDENT-06 D-01) rows are
+    delegated to the shared ``evaluate_identity_endpoints``.
 
     Per D-06: single derivation function returns IdentityFinding list.
     Per D-07: results are exposed as identity_findings AND converted to FindingItem
@@ -522,8 +525,13 @@ def _derive_identity_findings(endpoints: list[CryptoEndpoint]) -> list[IdentityF
     # so the CLI and dashboard pipelines share one implementation instead of
     # two. This block is a thin dict -> IdentityFinding adapter; it does not
     # own any SAML finding-synthesis logic itself.
-    saml_endpoints = [ep for ep in endpoints if (ep.protocol or "").upper() == "SAML"]
-    for d in evaluate_identity_endpoints(saml_endpoints):
+    # Phase 238 D-01: JWT (JWKS key) rows go through the same evaluator. They
+    # match no branch in the per-endpoint loop below on purpose (there is no
+    # fallthrough else), so they are evaluated exactly once.
+    identity_eval_endpoints = [
+        ep for ep in endpoints if (ep.protocol or "").upper() in ("SAML", "JWT")
+    ]
+    for d in evaluate_identity_endpoints(identity_eval_endpoints):
         results.append(IdentityFinding(
             host=d["host"],
             port=d["port"],

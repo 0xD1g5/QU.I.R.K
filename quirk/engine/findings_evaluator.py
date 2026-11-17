@@ -20,7 +20,11 @@ from quirk.reports.content_model import (
 from quirk.scanner.jwt_scanner import ADVISORY_JWKS_VERIFY_DISABLED
 from quirk.scanner.saml_scanner import OIDC_ALG_SEVERITY
 from quirk.scanner.target_outcome import SKIP_REASON_TO_ADVISORY_CATEGORY
-from quirk.util.jwt_alg import BEARER_ALG_ABSENT_MARKER, is_unsigned_jwt_alg
+from quirk.util.jwt_alg import (
+    BEARER_ALG_ABSENT_MARKER,
+    is_unsigned_jwt_alg,
+    jwk_has_secret_material,
+)
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
 from quirk.util.weak_crypto import (
     has_legacy_tls_versions_signal,
@@ -1355,8 +1359,126 @@ def _saml_cert_serial(service_detail: str) -> Optional[str]:
     return None
 
 
+def _evaluate_jwks_key(e, seen: set) -> List[Dict[str, Any]]:
+    """Phase 238 IDENT-05 (D-01, D-02, D-33): findings for one published JWKS key.
+
+    One finding per key, first match wins, deduped on (host, kid) when the key
+    has a kid:
+      1. ``alg`` is exactly "none" (any case) -> CRITICAL.
+      2. the JWKS publishes private or symmetric key material (the scanner's
+         marker, or a non-empty secret member) -> CRITICAL.
+      3. an HS* alg or ``kty: oct`` -> HIGH.
+      4. an RSA key under 2048 bits -> HIGH.
+    Any other key (RS256 2048, ES256, EdDSA, ...) yields nothing. JWT rows never
+    reach ``OIDC_ALG_SEVERITY`` (RS256 is HIGH there), and an absent alg is
+    not read as unsigned for a JWK (unlike a bearer token header).
+    ``jwt_scan_json`` comes from an untrusted server: malformed or non-dict
+    JSON reads as an empty key and the rules fall back to ``cert_pubkey_alg``.
+    """
+    host = getattr(e, "host", "") or ""
+    port = int(getattr(e, "port", 0) or 0)
+    try:
+        jwk = json.loads(getattr(e, "jwt_scan_json", None) or "{}")
+    except (TypeError, ValueError):
+        jwk = {}
+    if not isinstance(jwk, dict):
+        jwk = {}
+    alg = str(getattr(e, "cert_pubkey_alg", "") or "").strip()
+    kty = str(jwk.get("kty") or "")
+    kid = jwk.get("kid")
+    if kid:
+        key = (host, str(kid))
+        if key in seen:
+            return []
+        seen.add(key)
+
+    label = alg or kty or "unknown"
+    kid_text = f" (kid {kid})" if kid else ""
+    extra = dict(protocol="JWT", source="jwt", algorithm=alg or kty)
+
+    if alg.lower() == "none":
+        return [dict(
+            _build_finding(
+                severity="CRITICAL",
+                host=host,
+                port=port,
+                title="JWKS key declares alg:none",
+                description=(
+                    f"A key in this JWKS{kid_text} declares alg {alg}. A verifier "
+                    "that honours it accepts tokens with no signature."
+                ),
+                recommendation=(
+                    "Remove the alg:none key from the published key set and "
+                    "reject unsigned tokens at every verifier."
+                ),
+            ),
+            **extra,
+        )]
+    if jwk_has_secret_material(jwk):
+        return [dict(
+            _build_finding(
+                severity="CRITICAL",
+                host=host,
+                port=port,
+                title="JWKS publishes secret key material",
+                description=(
+                    "This JWKS publishes private or symmetric key material. "
+                    "Anyone who fetches it can sign valid tokens. "
+                    f"Key{kid_text}, alg {label}."
+                ),
+                recommendation=(
+                    "Remove private and symmetric members from the published "
+                    "key set and rotate the exposed key."
+                ),
+            ),
+            **extra,
+        )]
+    if alg.upper().startswith("HS") or kty == "oct":
+        return [dict(
+            _build_finding(
+                severity="HIGH",
+                host=host,
+                port=port,
+                title="JWKS key uses a symmetric (HMAC) algorithm",
+                description=(
+                    f"A key in this JWKS{kid_text} uses {label}, a shared-secret "
+                    "algorithm. Every party that can verify these tokens can "
+                    "also sign them."
+                ),
+                recommendation=(
+                    "Sign tokens with an asymmetric algorithm (ES256 or EdDSA) "
+                    "and publish only the public key."
+                ),
+            ),
+            **extra,
+        )]
+    if kty == "RSA" or (not kty and alg.upper()[:2] in ("RS", "PS")):
+        size = getattr(e, "cert_pubkey_size", None)
+        if is_undersized_rsa("RSA", size):
+            return [dict(
+                _build_finding(
+                    severity="HIGH",
+                    host=host,
+                    port=port,
+                    title="JWKS key uses undersized RSA key",
+                    description=(
+                        f"A key in this JWKS{kid_text} is a {size}-bit RSA key "
+                        f"({label}), below the 2048-bit minimum."
+                    ),
+                    recommendation=(
+                        "Replace the key with RSA-2048 or larger, or move token "
+                        "signing to ECDSA (ES256) or EdDSA."
+                    ),
+                    quantum_vulnerable=True,
+                ),
+                **extra,
+            )]
+    return []
+
+
 def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
-    """Emit SAML identity findings (XSURF-01, XSURF-02) for SAML endpoints.
+    """Emit SAML identity findings (XSURF-01, XSURF-02) and JWKS key findings
+    (IDENT-05) for SAML and JWT endpoints.
 
     Phase 210, decisions D-05/D-08/D-01. This is the fifth `evaluate_*_endpoints()`
     sibling alongside `evaluate_email_endpoints` / `evaluate_broker_endpoints` /
@@ -1375,12 +1497,20 @@ def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
         certificate serial on the same host:port is never suppressed (XSURF-01
         safety property; see `.planning/decisions/
         XSURF-01-saml-dual-use-certificate-dedupe.md`).
+
+    Phase 238 D-01: JWT (JWKS key) rows are dispatched to ``_evaluate_jwks_key``
+    before the SAML gate, so they never reach the ``OIDC_ALG_SEVERITY`` lookup.
+    One finding per weak key, deduped on (host, kid).
     """
     findings: List[Dict[str, Any]] = []
     seen: set = set()  # (host, port, serial) — dedupe guard, weak-key branch only
+    jwt_seen: set = set()  # (host, kid) — JWKS key dedupe guard (Phase 238 D-02)
 
     for e in endpoints:
         protocol = str(getattr(e, "protocol", "") or "").upper()
+        if protocol == "JWT":
+            findings.extend(_evaluate_jwks_key(e, jwt_seen))
+            continue
         if protocol != "SAML":
             continue
 
