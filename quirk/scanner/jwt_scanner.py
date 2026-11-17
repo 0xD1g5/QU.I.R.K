@@ -281,7 +281,9 @@ def _fetch_jwks(
     ``keys`` list (an empty list is valid), directly or via a discovery
     document's ``jwks_uri``. Every other answer is ``unexpected_response``
     with a detail made of status codes and fixed phrases (never a URL); an
-    uncredentialed 401/403 at the base origin is ``missing_credentials``.
+    uncredentialed 401/403 at the base origin (a base path, or a same-origin
+    ``jwks_uri``) is ``missing_credentials``; with credentials it is
+    ``auth_failed``.
 
     230-REVIEW CR-01: credentials (headers AND the query-param key) are attached
     only to URLs with the same origin (scheme, host, port) as ``base_url``. A
@@ -413,9 +415,20 @@ def _fetch_jwks(
                 # when enabled; validate_external_url() already ran on jwks_uri above.
                 # A cross-origin jwks_uri is fetched without credentials, so its
                 # 401/403 is reported as a status code, not as a credential state.
+                # A same-origin jwks_uri gets the credentials, so its 401/403
+                # follows the base-path rule (Phase 238 WR-06).
                 resp2 = _get(jwks_uri)
-                if resp2.status_code != 200:
-                    _note(OUTCOME_UNEXPECTED_RESPONSE, f"jwks_uri HTTP {resp2.status_code}")
+                status2 = resp2.status_code
+                if status2 != 200:
+                    if status2 in (401, 403) and _norm_origin(jwks_uri) == _base_origin:
+                        if _has_creds:
+                            _note(OUTCOME_AUTH_FAILED,
+                                  f"jwks_uri HTTP {status2}: configured credentials rejected")
+                        else:
+                            _note(OUTCOME_MISSING_CREDENTIALS,
+                                  f"jwks_uri HTTP {status2}: no credentials configured")
+                    else:
+                        _note(OUTCOME_UNEXPECTED_RESPONSE, f"jwks_uri HTTP {status2}")
                     continue
                 try:
                     data = resp2.json()
