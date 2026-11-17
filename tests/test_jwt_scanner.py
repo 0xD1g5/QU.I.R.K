@@ -639,6 +639,80 @@ def test_jwt_outcome_401_on_one_path_200_on_another_with_credentials_is_answered
         assert [r.kind for r in sink.resolved()] == ["answered"]
 
 
+@contextlib.contextmanager
+def _jwks_uri_server(jwks_uri_status: int, jwks_uri_host: str = "127.0.0.1"):
+    """Base JWKS paths 404; the discovery document points at ``/keys`` on
+    *jwks_uri_host* (same origin when it is 127.0.0.1), which answers
+    *jwks_uri_status*."""
+    state = {}
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path == "/.well-known/openid-configuration":
+                raw = json.dumps({
+                    "issuer": "https://idp.test",
+                    "jwks_uri": f"http://{jwks_uri_host}:{state['port']}/keys",
+                }).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+                return
+            self.send_response(jwks_uri_status if self.path == "/keys" else 404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *a):  # noqa: D401
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), _H)
+    state["port"] = srv.server_port
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        yield srv.server_port
+    finally:
+        srv.shutdown()
+        srv.server_close()
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_jwt_outcome_same_origin_jwks_uri_401_403_with_credentials_is_auth_failed(status):
+    """WR-06: credentials go to a same-origin jwks_uri, so its 401/403 follows
+    the base-path rule."""
+    with _jwks_uri_server(status) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True,
+                         cred_ctx=_bearer_ctx(), outcomes=sink)
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("auth_failed", f"jwks_uri HTTP {status}: configured credentials rejected")
+        ]
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_jwt_outcome_same_origin_jwks_uri_401_403_without_credentials_is_missing_credentials(status):
+    with _jwks_uri_server(status) as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True, outcomes=sink)
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("missing_credentials", f"jwks_uri HTTP {status}: no credentials configured")
+        ]
+
+
+def test_jwt_outcome_cross_origin_jwks_uri_401_stays_unexpected_response():
+    with _jwks_uri_server(401, jwks_uri_host="localhost") as port:
+        target = f"http://127.0.0.1:{port}"
+        sink = TargetOutcomes([target])
+        scan_jwt_targets([target], timeout=2, allow_internal=True,
+                         cred_ctx=_bearer_ctx(), outcomes=sink)
+        assert [(r.kind, r.detail) for r in sink.resolved()] == [
+            ("unexpected_response", "HTTP 404")
+        ]
+
+
 # ---------------------------------------------------------------------------
 # Phase 238 D-03: the JWT scan record keeps only the key metadata it needs
 # ---------------------------------------------------------------------------
