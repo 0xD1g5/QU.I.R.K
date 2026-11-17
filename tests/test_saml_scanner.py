@@ -541,6 +541,46 @@ def test_saml_outcome_valid_discovery_is_answered():
     assert res == [("answered", "")]
 
 
+def test_saml_outcome_bom_metadata_is_answered():
+    """WR-05: metadata that starts with a UTF-8 byte-order mark is still SAML."""
+    plain_rows, plain = _saml_outcome_for(SAMPLE_SAML_METADATA_XML)
+    rows, res = _saml_outcome_for(b"\xef\xbb\xbf" + SAMPLE_SAML_METADATA_XML)
+    assert plain == [("answered", "")]
+    assert res == [("answered", "")]
+    assert len(plain_rows) == 3
+    assert len(rows) == 3
+    assert {ep.protocol for ep in rows} == {"SAML"}
+
+
+def test_saml_outcome_bom_discovery_is_answered():
+    rows, res = _saml_outcome_for(
+        b"\xef\xbb\xbf" + SAMPLE_OIDC_MINIMAL_JSON,
+        target="https://idp.example.com/.well-known/openid-configuration",
+    )
+    assert res == [("answered", "")]
+
+
+def test_saml_outcome_metadata_at_well_known_url_is_answered():
+    """WR-05: content decides before the URL, so SAML metadata served from a
+    .well-known path is answered and parsed as SAML."""
+    rows, res = _saml_outcome_for(
+        SAMPLE_SAML_METADATA_XML,
+        target="https://idp.example.com/.well-known/saml-metadata.xml",
+    )
+    assert res == [("answered", "")]
+    assert len(rows) == 3
+    assert {ep.protocol for ep in rows} == {"SAML"}
+
+
+def test_saml_outcome_non_metadata_xml_at_well_known_url_is_not_answered():
+    rows, res = _saml_outcome_for(
+        b'<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"/>',
+        target="https://idp.example.com/.well-known/openid-configuration",
+    )
+    assert res == [("unexpected_response", "not an OIDC discovery document")]
+    assert rows == []
+
+
 def test_saml_outcome_closed_port_unreachable():
     with _socket.socket() as s:
         s.bind(("127.0.0.1", 0))
