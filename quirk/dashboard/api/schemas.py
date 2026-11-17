@@ -621,8 +621,9 @@ class PartialFailureEntry(BaseModel):
     stage: inventory|tls|ssh|api|identity|data_at_rest|broker_email|reports
     error_category: exception|missing_extra|missing_binary|
         the four 235.3 coverage-skip categories (internal_target_refused,
-        auth_failed, missing_credentials, targets_unreachable) and
-        target_unanswered
+        auth_failed, missing_credentials, targets_unreachable), the 238
+        unexpected_response category (a target answered with something other
+        than the expected document) and target_unanswered
     """
     stage: str
     scanner: str

@@ -44,12 +44,19 @@ FindingsDeriver = Callable[[Sequence[Any]], List[Mapping[str, Any]]]
 # and reads as zero while a partial outage shows. The shared
 # COVERAGE_SKIP_ADVISORY_CATEGORIES (scoring, findings_evaluator, sensor_cmd) is
 # deliberately unchanged (235.3 P-02) and is not used here.
+# Phase 238 D-10: unexpected_response (a target answered with the wrong
+# document) is a run-to-run outcome too, so a full outage of it weighs N.
 # target_unanswered is NOT in either set.
 _ADVISORY_ONLY_CATEGORIES: frozenset = frozenset(
     {"missing_extra", "missing_binary", "internal_target_refused"}
 )
 _OUTAGE_CATEGORIES: frozenset = frozenset(
-    {"targets_unreachable", "auth_failed", "missing_credentials"}
+    {
+        "targets_unreachable",
+        "auth_failed",
+        "missing_credentials",
+        "unexpected_response",
+    }
 )
 
 
