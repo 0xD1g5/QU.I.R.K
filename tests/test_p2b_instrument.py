@@ -281,13 +281,20 @@ _UNSCORED_CERT_FINDING = {
     "finding_severity_counts.MEDIUM",
     "scored_finding_severity_counts.MEDIUM", "totals.findings",
 }
+# Phase 238 D-14: a post-handshake mTLS row (MTLS_REQUIRED, no scan_error)
+# now derives one INFO "mTLS required" finding. Scoring never reads INFO.
+_UNSCORED_MTLS_INFO = {
+    "finding_severity_counts.INFO",
+    "scored_finding_severity_counts.INFO", "totals.findings",
+}
 HEALTHY_ALLOWED_MOVES = {
     "ecdsa": HEALTHY_SCORED_MOVES["ecdsa"] | _UNSCORED_POPULATION
     | _UNSCORED_CERT_FINDING,
     "rsa": HEALTHY_SCORED_MOVES["rsa"] | _UNSCORED_POPULATION
     | _UNSCORED_CERT_FINDING,
     "certless": HEALTHY_SCORED_MOVES["certless"] | _UNSCORED_POPULATION,
-    "mtls": HEALTHY_SCORED_MOVES["mtls"] | _UNSCORED_POPULATION,
+    "mtls": HEALTHY_SCORED_MOVES["mtls"] | _UNSCORED_POPULATION
+    | _UNSCORED_MTLS_INFO,
 }
 
 
