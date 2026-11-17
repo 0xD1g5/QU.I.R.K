@@ -29,6 +29,8 @@ from quirk.util.safe_exc import safe_str
 from quirk.scanner.target_outcome import (
     OUTCOME_ANSWERED,
     OUTCOME_AUTH_FAILED,
+    OUTCOME_MISSING_CREDENTIALS,
+    OUTCOME_UNEXPECTED_RESPONSE,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
     outcome_for_url_guard,
@@ -256,8 +258,13 @@ def _fetch_jwks(
       D-12: auth is attached to this existing fetch only — no new probe targets.
 
     235.3 D-05: when ``probe_log`` is a list, every probe appends one
-    ``(outcome_kind, detail)`` tuple (guard refusal, any HTTP response, or a
-    fetch exception). The caller folds them into the shared TargetOutcomes sink.
+    ``(outcome_kind, detail)`` tuple (guard refusal, HTTP answer, or a fetch
+    exception). The caller folds them into the shared TargetOutcomes sink.
+    Phase 238 D-08: ``answered`` is appended only for a JSON object with a
+    ``keys`` list (an empty list is valid), directly or via a discovery
+    document's ``jwks_uri``. Every other answer is ``unexpected_response``
+    with a detail made of status codes and fixed phrases (never a URL); an
+    uncredentialed 401/403 at the base origin is ``missing_credentials``.
 
     230-REVIEW CR-01: credentials (headers AND the query-param key) are attached
     only to URLs with the same origin (scheme, host, port) as ``base_url``. A
@@ -317,6 +324,10 @@ def _fetch_jwks(
             allow_internal=allow_internal,
         )
 
+    def _note(kind: str, detail: str) -> None:
+        if probe_log is not None:
+            probe_log.append((kind, detail))
+
     for path in JWKS_PATHS:
         url = base_url + path
         # CR-03: validate every base probe URL before fetching — SSRF guard, materially
@@ -340,31 +351,39 @@ def _fetch_jwks(
             # each fetched URL when allow_insecure_jwks is true (Phase 57 HARDEN-SCAN-01).
             # validate_external_url() runs on every probe URL above and every jwks_uri below.
             resp = _get(url)
-            if probe_log is not None:
+            status = resp.status_code
+            if status != 200:
                 # 235.3 review A-WR-05 (D-06): a 401/403 to a request that
                 # carried the configured credentials is "credentials present
-                # but rejected". With no credentials configured the server
-                # still responded, so it stays answered.
-                if (
-                    _has_creds
-                    and _norm_origin(url) == _base_origin
-                    and resp.status_code in (401, 403)
-                ):
-                    probe_log.append((
-                        OUTCOME_AUTH_FAILED,
-                        f"HTTP {resp.status_code}: configured credentials rejected",
-                    ))
+                # but rejected". Phase 238 D-08: with no credentials
+                # configured, the same answer is missing_credentials.
+                if status in (401, 403) and _norm_origin(url) == _base_origin:
+                    if _has_creds:
+                        _note(OUTCOME_AUTH_FAILED,
+                              f"HTTP {status}: configured credentials rejected")
+                    else:
+                        _note(OUTCOME_MISSING_CREDENTIALS,
+                              f"HTTP {status}: no credentials configured")
                 else:
-                    probe_log.append((OUTCOME_ANSWERED, ""))
-            if resp.status_code != 200:
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, f"HTTP {status}")
                 continue
 
-            data = resp.json()
+            # Phase 238 D-08: a body that is not JSON is a wrong-document
+            # answer, not a network failure.
+            try:
+                data = resp.json()
+            except Exception:
+                _note(OUTCOME_UNEXPECTED_RESPONSE, "not JSON")
+                continue
+            if not isinstance(data, dict):
+                _note(OUTCOME_UNEXPECTED_RESPONSE, "not a JSON object")
+                continue
 
             # OIDC discovery document — follow jwks_uri
             if path == "/.well-known/openid-configuration":
                 jwks_uri = data.get("jwks_uri")
-                if not jwks_uri:
+                if not jwks_uri or not isinstance(jwks_uri, str):
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, "discovery document has no jwks_uri")
                     continue
                 _vr = validate_external_url(jwks_uri, allow_internal=allow_internal)
                 if not _vr.ok:
@@ -375,13 +394,28 @@ def _fetch_jwks(
                 # WHY: same verify=verify_tls rationale as above — passive inventory
                 # scanner; allow_insecure_jwks defaults false; advisory finding emitted
                 # when enabled; validate_external_url() already ran on jwks_uri above.
+                # A cross-origin jwks_uri is fetched without credentials, so its
+                # 401/403 is reported as a status code, not as a credential state.
                 resp2 = _get(jwks_uri)
                 if resp2.status_code != 200:
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, f"jwks_uri HTTP {resp2.status_code}")
                     continue
-                data = resp2.json()
+                try:
+                    data = resp2.json()
+                except Exception:
+                    data = None
+                if not isinstance(data, dict) or not isinstance(data.get("keys"), list):
+                    _note(OUTCOME_UNEXPECTED_RESPONSE, "jwks_uri not a JWKS")
+                    continue
                 path = jwks_uri  # store actual JWKS URL as service_detail
+            elif not isinstance(data.get("keys"), list):
+                _note(OUTCOME_UNEXPECTED_RESPONSE, "not a JWKS (no keys array)")
+                continue
 
-            keys = data.get("keys", [])
+            # Phase 238 D-07/D-08: the one place a JWT target is answered.
+            if probe_log is not None:
+                probe_log.append((OUTCOME_ANSWERED, ""))
+            keys = data["keys"]
             if keys:
                 return keys, path, fetched_urls
 
