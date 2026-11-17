@@ -1416,8 +1416,8 @@ def _saml_cert_serial(service_detail: str) -> Optional[str]:
 def _evaluate_jwks_key(e, seen: set) -> List[Dict[str, Any]]:
     """Phase 238 IDENT-05 (D-01, D-02, D-33): findings for one published JWKS key.
 
-    One finding per key, first match wins, deduped on (host, kid) when the key
-    has a kid:
+    One finding per key, first match wins, deduped on the key's full identity
+    (host, service_detail, kid, kty, alg, n or x, size):
       1. ``alg`` is exactly "none" (any case) -> CRITICAL.
       2. the JWKS publishes private or symmetric key material (the scanner's
          marker, or a non-empty secret member) -> CRITICAL.
@@ -1440,11 +1440,22 @@ def _evaluate_jwks_key(e, seen: set) -> List[Dict[str, Any]]:
     alg = str(getattr(e, "cert_pubkey_alg", "") or "").strip()
     kty = str(jwk.get("kty") or "")
     kid = jwk.get("kid")
-    if kid:
-        key = (host, str(kid))
-        if key in seen:
-            return []
-        seen.add(key)
+    # Dedupe on the key's full identity, not on (host, kid): RFC 7517 lets
+    # keys of different types share a kid, and a healthy key must never hide
+    # a weak one published under the same kid (Phase 238 CR-01). The same key
+    # reached twice (with or without a kid) is still one finding.
+    identity = (
+        host,
+        str(getattr(e, "service_detail", "") or ""),
+        str(kid or ""),
+        kty,
+        alg,
+        str(jwk.get("n") or jwk.get("x") or ""),
+        str(getattr(e, "cert_pubkey_size", None)),
+    )
+    if identity in seen:
+        return []
+    seen.add(identity)
 
     label = alg or kty or "unknown"
     kid_text = f" (kid {kid})" if kid else ""
@@ -1554,11 +1565,11 @@ def evaluate_identity_endpoints(endpoints) -> List[Dict[str, Any]]:
 
     Phase 238 D-01: JWT (JWKS key) rows are dispatched to ``_evaluate_jwks_key``
     before the SAML gate, so they never reach the ``OIDC_ALG_SEVERITY`` lookup.
-    One finding per weak key, deduped on (host, kid).
+    One finding per weak key, deduped on the key's full identity.
     """
     findings: List[Dict[str, Any]] = []
     seen: set = set()  # (host, port, serial) — dedupe guard, weak-key branch only
-    jwt_seen: set = set()  # (host, kid) — JWKS key dedupe guard (Phase 238 D-02)
+    jwt_seen: set = set()  # full JWKS key identity — dedupe guard (238 D-02, CR-01)
 
     for e in endpoints:
         protocol = str(getattr(e, "protocol", "") or "").upper()
