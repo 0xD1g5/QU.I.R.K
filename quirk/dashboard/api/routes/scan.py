@@ -73,7 +73,11 @@ from quirk.intelligence.scan_completion import (
     running_scan_run_ids,
     session_status,
 )
-from quirk.intelligence.trends import _count_findings_by_bucket, _finding_key
+from quirk.intelligence.trends import (
+    _count_findings_by_bucket,
+    index_findings,
+    severity_rank,
+)
 from quirk.engine.findings_evaluator import evaluate_identity_endpoints, evaluate_protocol_service_endpoints
 from quirk.util.safe_exc import safe_str
 
@@ -1752,27 +1756,14 @@ def compare_scans(
         data_in_motion=_delta("data_in_motion"),
     )
 
-    # Finding diff (237 D-03/D-04): keyed by trends._finding_key (host, port,
-    # canonical title); severity is not part of identity. A (host, port) that
-    # errored in scan a is excluded from b so it is not a phantom removal.
+    # Finding diff (237 D-03/D-04): keyed by trends.finding_key (host, port,
+    # canonical title) via the shared trends.index_findings; severity is not
+    # part of identity. A (host, port) that errored in scan a is excluded from
+    # BOTH sides, so it is neither a phantom removal nor a phantom addition
+    # (review CR-01/WR-05).
     errored_a = {(ep.host, ep.port) for ep in eps_a if ep.scan_error is not None}
-    _rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
-
-    def _index(findings, excluded):
-        out: dict = {}
-        for f in findings:
-            if (f.get("host"), f.get("port")) in excluded:
-                continue
-            k = _finding_key(f)
-            cur = out.get(k)
-            if cur is None or _rank.get(f.get("severity"), 99) < _rank.get(
-                cur.get("severity"), 99
-            ):
-                out[k] = f
-        return out
-
-    ka = _index(fa, set())
-    kb = _index(fb, errored_a)
+    ka = index_findings(fa, errored_a)
+    kb = index_findings(fb, errored_a)
 
     def _to_compare(f: dict) -> CompareFinding:
         return CompareFinding(
@@ -1786,7 +1777,7 @@ def compare_scans(
 
     def _sort_key(f: dict):
         return (
-            _rank.get(f.get("severity"), 99),
+            severity_rank(f.get("severity")),
             str(f.get("host") or ""),
             f.get("port") if f.get("port") is not None else -1,
             f.get("title") or "",

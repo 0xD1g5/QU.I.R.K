@@ -106,6 +106,7 @@ def test_errored_now_host_not_phantom_resolved(tmp_path) -> None:
         d = _by_session([_f("10.0.0.1", 443, "Weak", "HIGH")], [])
         r = compute_trend_report(CUR, PREV, db, findings_deriver=d)
     assert r.resolved_total == 0
+    assert r.new_total == 0
 
 
 def test_protocol_none_finding_serializes(tmp_path) -> None:
@@ -132,3 +133,31 @@ def test_protocol_none_finding_serializes(tmp_path) -> None:
             host=t.host, port=t.port, protocol=t.protocol, title=t.title,
             previous_severity=t.previous_severity, current_severity=t.current_severity,
         )
+
+
+def test_errored_now_same_host_port_not_phantom_new(tmp_path) -> None:
+    """CR-01 (237 review): D-03 excludes an errored-now (host, port) from BOTH
+    sides. An HTTP finding unchanged across sessions, sharing (host, port)
+    with a current-session TLS timeout row, must not read as NEW."""
+    from quirk.dashboard.api.finding_derivation import derive_dashboard_scoring_findings
+
+    with _db(tmp_path) as db:
+        db.add(_ep(PREV, "prev", host="h", port=443, protocol="HTTP"))
+        db.add(_ep(CUR, "cur", host="h", port=443, protocol="HTTP"))
+        db.add(_ep(CUR, "cur", host="h", port=443, protocol="TLS",
+                   scan_error="timeout", scan_error_category="timeout"))
+        db.commit()
+        cur_eps = db.query(CryptoEndpoint).filter_by(scan_run_id="cur").all()
+        # Non-vacuity (WR-04): the real deriver DOES emit the HTTP finding for
+        # the non-errored row, so only the D-03 exclusion can keep it out.
+        derived = derive_dashboard_scoring_findings(cur_eps)
+        assert [(f["host"], f["port"], f["title"]) for f in derived] == [
+            ("h", 443, "Unencrypted HTTP service")
+        ]
+        r = compute_trend_report(
+            CUR, PREV, db, findings_deriver=derive_dashboard_scoring_findings
+        )
+    assert r.new_high == 0
+    assert r.new_total == 0
+    assert r.resolved_total == 0
+    assert r.new_findings_sample == []

@@ -86,7 +86,13 @@ _SEVERITY_RANK = {
     "HIGH": 1,
     "MEDIUM": 2,
     "LOW": 3,
+    "INFO": 4,
 }
+
+
+def severity_rank(severity: Any) -> int:
+    """Sort rank of a severity label (CRITICAL first; unknown last)."""
+    return _SEVERITY_RANK.get(severity, 99)
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +284,7 @@ def _count_by_bucket(keys: Iterable[tuple], sev_map: dict) -> dict:
     return counts
 
 
-def _finding_key(f: Mapping[str, Any]) -> tuple:
+def finding_key(f: Mapping[str, Any]) -> tuple:
     """The ONE finding identity: (host, port, canonical title).
 
     Severity and the finding id are never part of the key (D-03).
@@ -288,25 +294,34 @@ def _finding_key(f: Mapping[str, Any]) -> tuple:
     return (str(f.get("host") or ""), f.get("port"), canonical_cli_title(t) or t)
 
 
+_finding_key = finding_key
+
+
 def _count_findings_by_bucket(findings: Iterable[Mapping[str, Any]]) -> dict:
     """Count findings (one per finding, not per endpoint) by severity bucket."""
     items = list(findings)
     return _count_by_bucket(range(len(items)), {i: f.get("severity") for i, f in enumerate(items)})
 
 
-def _index_findings(findings: Iterable[Mapping[str, Any]], excluded_hosts: set) -> dict:
-    """key -> finding; on collision keep the highest-severity one."""
+def index_findings(findings: Iterable[Mapping[str, Any]], excluded_hosts: set) -> dict:
+    """finding_key -> finding; on collision keep the highest-severity one.
+
+    The ONE finding index shared by Trends and Compare (237 D-03, review
+    WR-05). Findings on an ``excluded_hosts`` (host, port) are dropped. D-03
+    callers pass the SAME errored-now set for both sides of a delta.
+    """
     out: dict = {}
     for f in findings:
         if (f.get("host"), f.get("port")) in excluded_hosts:
             continue
-        k = _finding_key(f)
+        k = finding_key(f)
         cur = out.get(k)
-        if cur is None or _SEVERITY_RANK.get(f.get("severity"), 99) < _SEVERITY_RANK.get(
-            cur.get("severity"), 99
-        ):
+        if cur is None or severity_rank(f.get("severity")) < severity_rank(cur.get("severity")):
             out[k] = f
     return out
+
+
+_index_findings = index_findings
 
 
 def _sample_findings(
@@ -465,13 +480,14 @@ def compute_trend_report(
         else None
     )
 
-    # D-03: a (host, port) that errored in the current session cannot have its
-    # previous findings judged resolved, so exclude it from the previous side.
+    # D-03: a (host, port) that errored in the current session is excluded from
+    # BOTH sides. Previous-only exclusion turned an unchanged finding sharing
+    # (host, port) with an errored row into a phantom NEW one (review CR-01).
     current_error_hosts = {
         (ep.host, ep.port) for ep in current_eps if ep.scan_error is not None
     }
-    current_sev = _index_findings(cur_f, set())
-    previous_sev = _index_findings(prev_f, current_error_hosts)
+    current_sev = index_findings(cur_f, current_error_hosts)
+    previous_sev = index_findings(prev_f, current_error_hosts)
     current_keys = set(current_sev)
     previous_keys = set(previous_sev)
 

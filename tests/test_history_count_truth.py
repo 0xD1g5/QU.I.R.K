@@ -109,3 +109,18 @@ def test_compare_errored_host_not_phantom_removed():
     _seed_session(Session, T_B, [_http("h", RUN_B), _http("other", RUN_B)])
     body = _compare(client, RUN_A, RUN_B)
     assert body["removed_findings"] == []
+    assert body["added_findings"] == []
+
+
+def test_compare_errored_same_host_port_not_phantom_added():
+    """CR-01 (237 review): a finding unchanged across both scans, sharing
+    (host, port) with an errored row in scan a, is neither added nor removed."""
+    client, Session = _make_client_and_session()
+    errored_tls = dict(host="h", port=443, protocol="TLS", severity=None,
+                       scan_run_id=RUN_A, scan_error="timeout",
+                       scan_error_category="timeout")
+    _seed_session(Session, T_A, [_http("h", RUN_A, port=443), errored_tls])
+    _seed_session(Session, T_B, [_http("h", RUN_B, port=443)])
+    body = _compare(client, RUN_A, RUN_B)
+    assert body["added_findings"] == []
+    assert body["removed_findings"] == []
