@@ -46,3 +46,7 @@ LEDGER row needed once `chore/master-ledger` merges (`.planning/LEDGER.md` is no
 The same exclusion also silences **notify**. `quirk/notify/payload.py:273` takes `scan_errors_new_count` from
 `trends.py:449`, so a full JWT, SAML or DNSSEC outage raises no new-scan-error drift signal in notifications
 either. A fix in `trends.py` covers both. Add a notify-payload assertion to the four-of-four-down test.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 237 (COUNT-07): a connector that failed against all N targets counts N scan-error regressions; notify fires and prints "Scan errors: N new". Commits main e99ffdd3 (PR #84 merge; 2a67676a, 89757e62). Tests: tests/test_trends_full_outage.py (14 nodes), tests/test_scan_robustness.py. Live: 4-target JWT outage gave scan_errors_new_count 5, should_notify True. Behaviour change: db/k8s/cloud full outages may read up to 2N (forwarded in-band rows count too).

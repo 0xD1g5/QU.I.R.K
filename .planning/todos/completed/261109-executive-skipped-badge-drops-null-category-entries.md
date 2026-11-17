@@ -60,3 +60,7 @@ The bug triggers with real stage orderings:
 
 Small (1-2 hours). The change is two lines plus two tests. Check `findings_evaluator` and trends for the same
 `getattr` default pattern on `scan_error_category`.
+
+## Resolution (2026-11-16)
+
+Fixed by Phase 237 (COUNT-04): the writer coalesces a null `error_category` to "exception" and the reader decodes per entry, so a categoryless row no longer takes out later entries; the Executive Skipped badge lists every connector and shows a categoryless error row as Failed. Review fix WR-03 also resolves partial failures by the scan's own run id first, so CLI and scheduled scans fill the badge. Commits main e99ffdd3 (PR #84 merge; a63183d6, fcf7c54b). Tests: tests/test_partial_failures_null_category.py (6 nodes). Behaviour change: the badge may list more connectors than before.
