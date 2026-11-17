@@ -637,3 +637,53 @@ def test_jwt_outcome_401_on_one_path_200_on_another_with_credentials_is_answered
         scan_jwt_targets([target], timeout=2, allow_internal=True,
                          cred_ctx=_bearer_ctx(), outcomes=sink)
         assert [r.kind for r in sink.resolved()] == ["answered"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 238 D-03: the JWT scan record keeps only the key metadata it needs
+# ---------------------------------------------------------------------------
+import base64 as _b64
+import logging as _logging
+
+_KEY_MEMBERS = {"k", "d", "p", "q", "dp", "dq", "qi", "oth"}
+
+
+def _b64url(raw: bytes) -> str:
+    return _b64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def test_jwt_scan_record_keeps_only_key_metadata(caplog):
+    """the JWT scan record keeps only the key metadata it needs"""
+    k_value = _b64url(bytes(range(1, 17)))  # 16 bytes
+    n_value = _b64url(b"\xc5" * 256)  # 2048-bit modulus
+    jwks = {"keys": [
+        {"kty": "oct", "alg": "HS256", "kid": "x", "k": k_value},
+        {"kty": "RSA", "alg": "RS256", "kid": "r", "n": n_value, "e": "AQAB", "d": "AAAA"},
+        {"kty": "RSA", "alg": "RS256", "kid": "p", "n": n_value, "e": "AQAB"},
+    ]}
+    caplog.set_level(_logging.DEBUG)
+    with _stub_server({"/.well-known/jwks.json": jwks}) as port:
+        rows = scan_jwt_targets([f"http://127.0.0.1:{port}"], timeout=2, allow_internal=True)
+    assert len(rows) == 3
+    by_kid = {}
+    for ep in rows:
+        record = json.loads(ep.jwt_scan_json)
+        assert set(record) & _KEY_MEMBERS == set()
+        by_kid[record["kid"]] = (record, ep)
+    assert sorted(by_kid) == ["p", "r", "x"]
+    assert by_kid["x"][0]["secret_material_present"] is True
+    assert by_kid["r"][0]["secret_material_present"] is True
+    assert by_kid["p"][0]["secret_material_present"] is False
+    assert by_kid["x"][1].cert_pubkey_size == 128
+    assert by_kid["r"][1].cert_pubkey_size == 2048
+    assert k_value not in caplog.text
+    assert "AAAA" not in caplog.text
+
+
+def test_jwt_oct_key_with_empty_k_has_no_size():
+    jwks = {"keys": [{"kty": "oct", "alg": "HS256", "kid": "e", "k": ""}]}
+    with _stub_server({"/.well-known/jwks.json": jwks}) as port:
+        rows = scan_jwt_targets([f"http://127.0.0.1:{port}"], timeout=2, allow_internal=True)
+    assert len(rows) == 1
+    assert rows[0].cert_pubkey_size is None
+    assert json.loads(rows[0].jwt_scan_json)["secret_material_present"] is False

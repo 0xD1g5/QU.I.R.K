@@ -131,6 +131,43 @@ def test_jwt_answered_empty_stays_ran_with_no_phantom_row(tmp_path, monkeypatch)
     assert _rows(eps, "ADVISORY", "jwt_scanner") == []
 
 
+
+@pytest.fixture
+def html_saml_target():
+    """A loopback SAML URL whose server answers 200 with an HTML login page."""
+    import http.server
+
+    page = b"<!DOCTYPE html><html><body>login</body></html>"
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", str(len(page)))
+            self.end_headers()
+            self.wfile.write(page)
+
+        def log_message(self, *args, **kwargs):  # silence
+            pass
+
+    with h._http_server(_Handler) as srv:
+        yield f"http://127.0.0.1:{srv.server_address[1]}/simplesaml/saml2/idp/metadata.php"
+
+
+def test_saml_html_target_skips_unexpected_response(tmp_path, monkeypatch, html_saml_target):
+    """Phase 238 D-07/D-11: an HTML 200 is an answer, but not SAML metadata."""
+    phases, eps = _scan(tmp_path, monkeypatch, {
+        "connectors": {"enable_saml": True, "saml_targets": [html_saml_target]},
+        "security": {"allow_internal_targets": True},
+    })
+    assert phases["saml_scanning"]["status"] == "skipped"
+    assert phases["saml_scanning"]["reason"] == "unexpected-response"
+    adv = _rows(eps, "ADVISORY", "saml_scanner")
+    assert len(adv) == 1
+    assert adv[0]["category"] == "unexpected_response"
+    assert len([e for e in eps if e["category"] == "unexpected_response"]) == 1
+    assert _rows(eps, "SAML") == []
+
 def test_s3_answered_empty_stays_ran_with_no_target_unanswered_row(tmp_path, monkeypatch):
     with h.s3_stub() as url:
         phases, eps = _scan(
