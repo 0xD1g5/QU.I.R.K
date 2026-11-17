@@ -121,6 +121,7 @@ from quirk.intelligence.remediation import (
     RESURFACED_STATE,
 )
 from quirk.intelligence.evidence import NON_ASSET_PROTOCOLS
+from quirk.util.tls_rows import is_observed_mtls
 from quirk.intelligence.scope_signature import (
     SCOPE_SIGNATURE_VERSION,
     endpoint_has_family_evidence,
@@ -495,19 +496,18 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 # a post-handshake MTLS_REQUIRED (Phase 238 D-14/D-15/D-31). That row
                 # completed the handshake, has a tls_version and no scan_error, so it
                 # is an observed, assessed row at both sites below.
-                _observed_mtls = (
-                    ep.protocol == "TLS"
-                    and ep.tls_blocker_reason == "MTLS_REQUIRED"
-                    and bool(ep.tls_version)
-                    and ep.scan_error is None
-                )
+                # Phase 238 WR-07: the same predicate both finding pipelines
+                # use, so a row that gets findings can also close them.
+                _observed_mtls = is_observed_mtls(ep)
                 _blocked = (
                     bool(ep.tls_blocker_reason)
                     and not _observed_mtls
                     and ep.protocol not in NON_ASSET_PROTOCOLS
                 )
                 if ep.protocol == "CLOSED" or _blocked or (
-                    ep.protocol not in NON_ASSET_PROTOCOLS and ep.scan_error is not None
+                    ep.protocol not in NON_ASSET_PROTOCOLS
+                    and ep.scan_error is not None
+                    and not _observed_mtls
                 ):
                     current_failed.add(key)
                 if (
@@ -518,8 +518,10 @@ def compute_closure(db_path: str, scan_run_id: str) -> Dict[str, int]:
                 if (
                     ep.protocol
                     and ep.protocol not in NON_ASSET_PROTOCOLS
-                    and ep.scan_error is None
-                    and (not ep.tls_blocker_reason or _observed_mtls)
+                    and (
+                        _observed_mtls
+                        or (ep.scan_error is None and not ep.tls_blocker_reason)
+                    )
                 ):
                     current_asset[key].add(ep.protocol)
                     if family_for_protocol(ep.protocol) is not None:

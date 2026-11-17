@@ -21,9 +21,9 @@ from quirk.engine.findings_evaluator import (
     evaluate_container_endpoints,
     evaluate_identity_endpoints,
     evaluate_protocol_service_endpoints,
-    mtls_required_variant,
-    runs_tls_certificate_checks,
 )
+# Phase 238 WR-07: the TLS-row predicates shared with the evaluator and closure.
+from quirk.util.tls_rows import mtls_required_variant, runs_tls_certificate_checks
 from quirk.dashboard.api.schemas import FindingItem, IdentityFinding
 from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import (

@@ -26,6 +26,11 @@ from quirk.util.jwt_alg import (
     jwk_has_secret_material,
 )
 from quirk.util.ports import WELL_KNOWN_TLS_PORTS
+from quirk.util.tls_rows import (  # noqa: F401 - re-exported (Phase 238 WR-07)
+    is_observed_mtls,
+    mtls_required_variant,
+    runs_tls_certificate_checks,
+)
 from quirk.util.weak_crypto import (
     has_legacy_tls_versions_signal,
     is_max_legacy_tls,
@@ -290,14 +295,9 @@ def _error_category(desc: str) -> str:
     return desc.strip()
 
 
-def runs_tls_certificate_checks(ep: Any) -> bool:
-    """True when ``ep`` is a row that gets TLS/certificate checks (Phase 228 D-05).
-
-    Exact-case ``== "TLS"`` on purpose: a case-variant protocol from a sensor
-    import must not widen the checks, and the report stays byte-identical.
-    Both pipelines must call this, never an inline ``== "TLS"`` copy.
-    """
-    return getattr(ep, "protocol", None) == "TLS"
+# Phase 228 D-05 / Phase 238 D-14 / WR-07: the TLS-row predicates live in
+# quirk.util.tls_rows so the evaluator, the dashboard deriver and closure share
+# one implementation (imported at the top of this module, re-exported here).
 
 
 # Phase 238 D-14: the recommendation _postprocess_findings gives the HTTP
@@ -308,28 +308,6 @@ _MTLS_POSTPROCESS_RECOMMENDATION = (
     "Service appears to require client authentication for TLS handshake. "
     "Validate client certificate requirements, trust chain, and onboarding flow."
 )
-
-
-def mtls_required_variant(ep: Any) -> Optional[str]:
-    """Which stored mTLS shape ``ep`` is, or None (Phase 238 D-14).
-
-    ``"handshake"``: the handshake failed for lack of a client certificate,
-    so ``scan_error`` carries the ``MTLS_REQUIRED`` category and nothing was
-    observed. ``"post_handshake"``: the handshake completed and the server
-    then rejected the client, so ``tls_blocker_reason`` is ``MTLS_REQUIRED``
-    and ``scan_error`` is empty; the observed fields are kept. Both
-    pipelines call this, never an inline copy.
-    """
-    if not runs_tls_certificate_checks(ep):
-        return None
-    if _error_category(getattr(ep, "scan_error", "") or "") == "MTLS_REQUIRED":
-        return "handshake"
-    if (
-        not getattr(ep, "scan_error", None)
-        and getattr(ep, "tls_blocker_reason", None) == "MTLS_REQUIRED"
-    ):
-        return "post_handshake"
-    return None
 
 
 EMAIL_PROTOCOLS = frozenset({
