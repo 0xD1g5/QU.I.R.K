@@ -4393,7 +4393,7 @@ That bullet is UAT-7-32's own subject and is structurally browser-only (Phase 20
 
 **Result:** - [ ] PASS  - [ ] FAIL  - [x] SKIP (2026-08-27 requires chaos lab Kerberos/SAML/DNSSEC targets, not available in this environment)
 **Date:** __________  **Tester:** __________  
-**Notes:** 2026-11-17 (Phase 238, IDENT-06): Steps and Pass Criteria updated from three cards to four. Result left unchanged: the Phase 238 operator walkthrough (UAT-238-12) confirmed the four cards, the JWT/JWKS card's count and Critical badge and the JWT rows of the findings table on the `jwt` profile, but did not exercise the detail Sheet, the Safe badge or Kerberos/DNSSEC targets, so this case is not re-dispositioned from it.
+**Notes:** 2026-11-17 (Phase 238, IDENT-06): Steps and Pass Criteria updated for the fourth card, JWT/JWKS. Result left unchanged: the Phase 238 operator walkthrough (UAT-238-12) confirmed the four cards, the JWT/JWKS card's count and Critical badge and the JWT rows of the findings table on the `jwt` profile, but did not exercise the detail Sheet, the Safe badge or Kerberos/DNSSEC targets, so this case is not re-dispositioned from it.
 
 ---
 
