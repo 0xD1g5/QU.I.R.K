@@ -163,7 +163,7 @@ PROFILE_ARGS="--profile jwt" ./lab.sh up
 | 20001 | jwt-rs256 | RS256 (RSA) | no finding; inventoried in the CBOM (healthy-key finding deferred, ledger 261116-healthy-quantum-vulnerable-jwks-key-finding) | 2048-bit | RS256 at 2048 bits is classically safe; the key is quantum-vulnerable and shows in the CBOM, not as a finding (Phase 238 D-33) |
 | 20002 | jwt-hs256 | HS256 (HMAC-SHA256) | CRITICAL "JWKS publishes secret key material" | 128-bit | The lab publishes the HMAC key's `k` member in its JWKS, so the key-material rule fires before the HMAC rule (Phase 238 D-02 rule 2) |
 | 20003 | jwt-rsa1024 | RS256 (RSA) | HIGH "JWKS key uses undersized RSA key" | 1024-bit | RSA-1024 is below the 2048-bit minimum (Phase 238 D-02 rule 4) |
-| 20004 | jwt-algnone | none | CRITICAL "JWKS key declares alg:none" | 0 | The key declares alg none; its `k` member is empty, and rule 1 wins first in any case (Phase 238 D-02 rule 1) |
+| 20004 | jwt-algnone | none | CRITICAL "JWKS key declares alg:none" | none recorded (empty `k`; stored key size is NULL, measured 2026-11-17) | The key declares alg none; its `k` member is empty, and rule 1 wins first in any case (Phase 238 D-02 rule 1) |
 
 **Scanner validation command:** the JWT scanner reads its targets from `connectors.jwt_targets`,
 not from `--targets-file` (see `docs/chaos-lab.md` section 3.6). Put this in the config file you
@@ -829,8 +829,8 @@ These hosts are indistinguishable in the findings from a generic RSA/untrusted-C
 may still be worth keeping as topology, but they do **not** demonstrate the capability their name
 implies:
 
-- `mh-edge-sha1` (10.80.0.13) — **no SHA-1 signature finding.** Emits `untrusted CA`, `QV RSA key`,
-  `legacy ciphers` — byte-identical to `mh-edge-chainbroken` and `mh-erp-frontend`.
+- `mh-edge-sha1` (10.80.0.13) — **moved out of this class by Phase 238.** Measured before it, it emitted only `untrusted CA`, `QV RSA key`, `legacy ciphers` (byte-identical to `mh-edge-chainbroken` and `mh-erp-frontend`);
+  from Phase 238 its CA-issued SHA-1 leaf also raises HIGH `TLS certificate uses a weak signature hash` on both surfaces. Not re-measured here; ledger 261109-multihost-oracle-remeasure-39-targets.
 - `mh-edge-chainbroken` (10.80.0.14) — **no broken-chain / missing-intermediate finding.**
 - `mh-edge-legacy` (10.80.0.10) — intended "TLS 1.0/1.1 + weak ciphers", but emits only a LOW
   `legacy ciphers`; no protocol-version finding. (Legacy TLS *does* reach the score — `Legacy TLS
