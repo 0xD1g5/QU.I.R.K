@@ -1255,6 +1255,52 @@ That divergence is measured and bounded — not silently reconciled — in
 the trend counts described above; it affects only the wording (title and description) a consultant
 sees on each surface.
 
+**Finding-level counts (5.29, Phase 237, COUNT-02).** The endpoint-level matching described above
+is superseded for counting. The trend delta now derives findings once per scan, the same way the
+Findings page does, and keys each finding by host, port and canonical finding title. A severity
+change on an unchanged finding is one severity transition, not a new plus a resolved. A
+certificate-expiry day count in a title is not churn: the key uses the canonical title, so the same
+certificate drifting from 41 to 40 days to expiry is neither new nor resolved. A finding with no
+protocol serialises with a null protocol and a `title`. `new_total` and `resolved_total` therefore count
+findings, not endpoints, and a scan that errored on a host contributes no phantom resolved findings
+for it.
+
+**Scan-error counts and the category split.** The scan-error figure is a net count of error rows
+that weighs outages. The categories `missing_extra`, `missing_binary` and `internal_target_refused`
+stay advisory: they describe your environment and never count. `targets_unreachable`, `auth_failed`
+and `missing_credentials` count as scan-error regressions. A connector that failed against all of
+its targets ("4 of 4 targets unreachable") counts as N failed targets, so a full JWT, SAML or DNSSEC
+outage reads as N, not 1. Database, Kubernetes and cloud connectors also forward their in-band
+error rows, which count too, so a full outage there can read up to 2N. A connector error row that
+carries no category is treated as a failure, and the Executive page's Skipped badge shows it as
+Failed rather than dropping it.
+
+**Scan History, Compare and the timeline show the same numbers as the Findings page.** The High,
+Medium and Low counts on Scan History and on the trend timeline are counts of derived findings
+(Critical and High together read as High), not endpoint rows. For scans recorded before 5.29 these
+numbers move, and for cloud scans they sometimes go down. They are not claimed to equal the
+downloadable report exactly. On the lab scans measured for Phase 237, report and History agree on
+Critical and High, but the report lists more Medium ("TLS certificate uses quantum-vulnerable RSA
+key") and Low ("Legacy TLS cipher suites accepted") findings than the dashboard derives (tracked
+under 999.132). Phase 236's dispositioned residuals (Kerberos weak etype, DNSSEC, and the
+Unencrypted HTTP / mTLS pair) still apply. Compare's Added and Removed tables carry **Finding** and
+**Port** columns, so each row names the finding rather than only a host.
+
+**Running and Incomplete scans (D-24).** Scan History marks a scan that has not finished and
+withholds its score and counts (shown as a dash) until it completes. Only a dashboard job can show
+**Running**, because only a dashboard scan has a job row. An in-progress CLI or scheduled scan shows
+**Incomplete**, since the History page sees checkpoints but no finished reports stage. A dashboard
+job whose server process died keeps showing Running until the server's startup sweep or a poll of
+that job's status page reconciles it (ledger 261116-dead-dashboard-job-shows-running). The
+dashboard's Executive page, the sidebar scan date, Trends and notify all keep using the last
+**completed** scan while another runs. Scans recorded before 5.29 have no checkpoints and read as
+complete.
+
+**Export PDF Scan Coverage.** The dashboard's Export PDF (`/print`) carries a "Scan Coverage"
+subsection with the per-phase ran and skipped counts and the recorded reason for each skipped
+connector (see §22). It renders when the scan recorded phase coverage; a scan with no coverage data
+omits the subsection.
+
 > **Client Conversation — Trends:**
 > "This trend report compares your two most recent scans. New and resolved counts are endpoint-
 > based, not severity-based, so they reflect real change even when we haven't recorded a severity

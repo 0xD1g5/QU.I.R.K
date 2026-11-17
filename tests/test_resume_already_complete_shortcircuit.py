@@ -71,12 +71,12 @@ def test_short_circuit_call_site_precedes_stage_checkpoint_writes():
     call_site_pos = call_site_match.start()
 
     inventory_write_match = re.search(
-        r'write_scan_checkpoint\(\s*args\.db_path, scan_run_id, "inventory"', source
+        r'write_scan_checkpoint\(\s*(?:args\.db_path|_ckpt_db), scan_run_id, "inventory"', source
     )
     assert inventory_write_match is not None, "inventory checkpoint write not found"
 
     reports_write_match = re.search(
-        r'write_scan_checkpoint\(args\.db_path, scan_run_id, "reports"', source
+        r'write_scan_checkpoint\((?:args\.db_path|_ckpt_db), scan_run_id, "reports"', source
     )
     assert reports_write_match is not None, "reports checkpoint write not found"
 

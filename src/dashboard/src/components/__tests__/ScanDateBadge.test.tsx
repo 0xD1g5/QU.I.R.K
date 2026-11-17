@@ -92,4 +92,33 @@ describe("ScanDateBadge — TAIL-01 persistent scan-date badge", () => {
     const text = matches[0].textContent ?? ""
     expect(text).toContain("3:12")
   })
+
+  // 237 D-17: the sidebar never names a running/incomplete scan as the last scan.
+  it("labels the first complete session, skipping a newer running one", () => {
+    mockUseScanList.mockReturnValue({
+      sessions: [
+        { scan_id: "run", scanned_at: "2026-09-05T15:12:58+00:00", total_endpoints: 5, status: "running" },
+        { scan_id: "ok", scanned_at: "2026-09-04T15:12:58+00:00", total_endpoints: 5, status: "complete" },
+      ],
+      loading: false,
+      error: null,
+    })
+    renderBadge()
+    const text = screen.getAllByText((_, n) => !!n?.textContent?.includes("Last scan:"))[0].textContent ?? ""
+    expect(text).toContain("Sep 4")
+    expect(text).not.toContain("Sep 5")
+  })
+
+  it("shows 'No scan yet' when no session is complete", () => {
+    mockUseScanList.mockReturnValue({
+      sessions: [
+        { scan_id: "run", scanned_at: "2026-09-05T15:12:58+00:00", total_endpoints: 5, status: "running" },
+        { scan_id: "inc", scanned_at: "2026-09-04T15:12:58+00:00", total_endpoints: 5, status: "incomplete" },
+      ],
+      loading: false,
+      error: null,
+    })
+    renderBadge()
+    expect(screen.getAllByText("No scan yet").length).toBeGreaterThan(0)
+  })
 })

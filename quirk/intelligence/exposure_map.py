@@ -327,9 +327,34 @@ def latest_scan_run_id(session: Any) -> Any:
     database), which callers treat as "do not scope" rather than "scope to
     nothing" — scoping to nothing would render an empty map and read as
     verified zero exposure.
+
+    Phase 237 D-17: run ids that are incomplete (checkpoint rows but no
+    completed 'reports' checkpoint) are skipped, so a running or interrupted
+    scan never becomes "the latest". An explicit scan_run_id passed to
+    ``derive_exposure_map`` is unaffected.
     """
+    from quirk.intelligence.scan_completion import incomplete_scan_run_ids
+
+    query = session.query(func.max(CryptoEndpoint.scan_run_id))
+    incomplete = incomplete_scan_run_ids(session)
+    if incomplete:
+        query = query.filter(CryptoEndpoint.scan_run_id.notin_(incomplete))
+    return query.scalar()
+
+
+NO_COMPLETE_SCAN_REASON = (
+    "No completed scan yet; the exposure map is drawn once a scan finishes, "
+    "not from a running or interrupted scan's partial rows."
+)
+
+
+def _has_keyed_rows(session: Any) -> bool:
+    """True when any endpoint row carries a scan_run_id (not all-legacy)."""
     return (
-        session.query(func.max(CryptoEndpoint.scan_run_id)).scalar()
+        session.query(CryptoEndpoint.scan_run_id)
+        .filter(CryptoEndpoint.scan_run_id.isnot(None))
+        .first()
+        is not None
     )
 
 
@@ -367,10 +392,25 @@ def derive_exposure_map(
     CA hub nodes are never crown jewels — a crown jewel is a system the client
     owns and cares about, not an issuer identity.
 
+    When ``scan_run_id`` is omitted and keyed scans exist but none of them is
+    complete (e.g. the first scan, still running), the result is an empty map
+    with an ``unavailable_reason`` key instead of an unscoped one (Phase 237
+    D-17, review WR-01). Only an all-legacy database, with no ``scan_run_id``
+    on any row, stays unscoped.
+
     Read-only: this function persists nothing and performs no writes.
     """
     if scan_run_id is None:
         scan_run_id = latest_scan_run_id(session)
+        if scan_run_id is None and _has_keyed_rows(session):
+            # Keyed scans exist, but every one is incomplete. Unscoped would
+            # draw the running scan's partial rows (D-17); an empty map with
+            # no reason would read as verified zero exposure.
+            return {
+                "nodes": [],
+                "edges": [],
+                "unavailable_reason": NO_COMPLETE_SCAN_REASON,
+            }
 
     key_reuse_edges = derive_key_reuse_edges(session, scan_run_id=scan_run_id)
     ca_nodes, shared_ca_edges = derive_shared_ca_edges(

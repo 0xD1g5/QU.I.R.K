@@ -20,8 +20,9 @@ configured value (``str()``-coerced); ``redact_target`` is display-only.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
-from typing import Dict, Final, Iterable, List, Tuple
+from typing import Dict, Final, Iterable, List, Optional, Tuple
 
 from quirk.util.safe_exc import safe_str
 from quirk.util.url_allowlist import (
@@ -66,6 +67,23 @@ COVERAGE_SKIP_ADVISORY_CATEGORIES: Final[frozenset] = frozenset({
     "missing_binary",
     *SKIP_REASON_TO_ADVISORY_CATEGORY.values(),
 })
+
+_FAILED_TARGETS_RE: Final = re.compile(r"^\d+ of (\d+) targets ")
+
+
+def failed_target_count(detail: Optional[str]) -> Optional[int]:
+    """Total target count N from a coverage-skip detail "<k> of <N> targets ...".
+
+    Writer: ``run_scan._classify_connector_outcomes`` (every target failed, so
+    N == the number of targets that did not answer). Frontend twin:
+    ``NO_TARGET_ANSWERED_DETAIL`` in coverage-reason.ts. Returns None when the
+    detail has no such prefix (e.g. the Vault missing-token advisory).
+    """
+    if not detail:
+        return None
+    m = _FAILED_TARGETS_RE.match(detail)
+    return int(m.group(1)) if m else None
+
 
 # P-14: a target that did not answer inside an otherwise-ran phase is a real
 # scan error (trends may count it), deliberately NOT an advisory category.

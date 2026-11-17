@@ -54,6 +54,20 @@ def _make_ep(
     return ep
 
 
+def _ep_deriver(endpoints):
+    """237-01 re-seed: Trends now diffs DERIVED findings, not CryptoEndpoint.severity.
+    These legacy fixtures encode a finding as an endpoint's severity, so this
+    stub derives one finding per non-errored endpoint (title = its protocol) and
+    carries ep.severity through. Real TLS derivation is covered by
+    tests/test_trends_finding_delta.py."""
+    return [
+        {"host": ep.host, "port": ep.port, "protocol": ep.protocol,
+         "title": f"{ep.protocol} finding", "severity": ep.severity}
+        for ep in endpoints
+        if ep.scan_error is None
+    ]
+
+
 PREV_TS = datetime(2026, 4, 25, 9, 0, 0)
 CURR_TS = datetime(2026, 4, 26, 9, 0, 0)
 
@@ -69,7 +83,7 @@ def test_score_delta_computed(db):
     _make_ep(db, "b.example", 443, "TLS", "MEDIUM", scanned_at=CURR_TS)
     _make_ep(db, "c.example", 22, "SSH", "LOW", scanned_at=CURR_TS)
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert report.score_delta is not None
     assert isinstance(report.score_delta, int)
@@ -102,7 +116,7 @@ def test_new_findings_counted(db):
     _make_ep(db, "b.example", 443, "TLS", "HIGH", scanned_at=CURR_TS)   # new
     _make_ep(db, "c.example", 22, "SSH", "MEDIUM", scanned_at=CURR_TS)  # new
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert report.new_high == 1    # b.example
     assert report.new_medium == 1  # c.example
@@ -118,7 +132,7 @@ def test_resolved_findings_counted(db):
     # Seed 1 endpoint at CURR_TS: only a.example remains
     _make_ep(db, "a.example", 443, "TLS", "HIGH", scanned_at=CURR_TS)
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert report.resolved_high == 0
     assert report.resolved_medium == 1  # b.example gone
@@ -140,7 +154,7 @@ def test_severity_change_surfaces(db):
     # Seed at CURR_TS: same host/port/protocol but MEDIUM (severity downgraded)
     _make_ep(db, "a.example", 443, "TLS", "MEDIUM", scanned_at=CURR_TS)
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert report.resolved_high == 0   # no longer double-counted as resolved
     assert report.new_medium == 0      # no longer double-counted as new
@@ -164,7 +178,7 @@ def test_scan_error_excluded_from_delta(db):
         scan_error="CONNECTION_REFUSED: port 443 unreachable",
     )
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     # scan_error row in current must NOT cause the finding to appear resolved
     assert report.resolved_high == 0
@@ -184,7 +198,7 @@ def test_scan_error_counts_surfaced(db):
     _make_ep(db, "err2.example", 443, "TLS", "HIGH", scanned_at=CURR_TS, scan_error="CONNECTION_REFUSED: ...")
     _make_ep(db, "err3.example", 443, "TLS", "HIGH", scanned_at=CURR_TS, scan_error="CONNECTION_REFUSED: ...")
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert report.scan_errors_new_count == 2       # 3 current - 1 previous = 2
     assert report.scan_errors_resolved_count == 0  # negative delta clamps to 0
@@ -198,7 +212,7 @@ def test_null_scanned_at_excluded(db):
     _make_ep(db, "a.example", 443, "TLS", "HIGH", scanned_at=PREV_TS)
     _make_ep(db, "a.example", 443, "TLS", "HIGH", scanned_at=CURR_TS)
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     # legacy NULL row must not appear in either session set
     assert report.new_high == 0
@@ -212,7 +226,7 @@ def test_sample_arrays_shape(db):
     # Seed at CURR_TS: one endpoint that is new
     _make_ep(db, "new.example", 443, "TLS", "MEDIUM", scanned_at=CURR_TS)
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert len(report.new_findings_sample) >= 1
     assert len(report.resolved_findings_sample) >= 1
@@ -237,7 +251,7 @@ def test_sample_arrays_capped_at_5(db):
         _make_ep(db, f"host{i}.example", 443 + i, "TLS", "HIGH", scanned_at=CURR_TS)
     # No endpoints at PREV_TS — all 7 are new
 
-    report = compute_trend_report(CURR_TS, PREV_TS, db)
+    report = compute_trend_report(CURR_TS, PREV_TS, db, findings_deriver=_ep_deriver)
 
     assert len(report.new_findings_sample) == 5
     assert report.new_high == 7  # count is exact, sample is capped

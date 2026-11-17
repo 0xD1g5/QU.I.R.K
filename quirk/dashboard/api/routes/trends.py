@@ -31,7 +31,7 @@ from quirk.dashboard.api.schemas import (
 from quirk.intelligence.evidence import build_evidence_summary
 from quirk.intelligence.scoring import compute_readiness_score
 from quirk.intelligence.trends import (
-    _count_by_bucket,
+    _count_findings_by_bucket,
     _fetch_session_endpoints,
     compute_trend_report,
     list_session_timestamps,
@@ -42,7 +42,7 @@ router = APIRouter(dependencies=[Depends(require_auth)])
 
 def _list_session_timestamps(db: Session) -> List[datetime]:
     """Delegate to the shared lister; kept for existing importers (D-10)."""
-    return list_session_timestamps(db, limit=10)
+    return list_session_timestamps(db, limit=10, complete_only=True)
 
 
 @router.get("/trends", response_model=TrendReportResponse)
@@ -100,6 +100,7 @@ def _to_response(report) -> TrendReportResponse:
                 port=s.port,
                 protocol=s.protocol,
                 severity=s.severity,
+                title=s.title,
             )
             for s in report.new_findings_sample
         ],
@@ -109,6 +110,7 @@ def _to_response(report) -> TrendReportResponse:
                 port=s.port,
                 protocol=s.protocol,
                 severity=s.severity,
+                title=s.title,
             )
             for s in report.resolved_findings_sample
         ],
@@ -119,6 +121,7 @@ def _to_response(report) -> TrendReportResponse:
                 protocol=t.protocol,
                 previous_severity=t.previous_severity,
                 current_severity=t.current_severity,
+                title=t.title,
             )
             for t in report.severity_transitions
         ],
@@ -140,7 +143,7 @@ def get_trends_timeline(
     dependencies=[Depends(require_auth)] declaration — no per-route
     annotation needed (RESEARCH.md Pitfall 5).
     """
-    sessions = list_session_timestamps(db, limit=n)
+    sessions = list_session_timestamps(db, limit=n, complete_only=True)
     if not sessions:
         return TrendTimelineResponse(sessions=[])
     points: List[TrendSessionPoint] = []
@@ -149,20 +152,13 @@ def get_trends_timeline(
         if not eps:
             continue
         # Phase 228 D-08/D-12: derive dashboard findings; no try/except on purpose.
-        evidence = build_evidence_summary(eps, derive_dashboard_scoring_findings(eps))
+        findings = derive_dashboard_scoring_findings(eps)
+        evidence = build_evidence_summary(eps, findings)
         score_dict = compute_readiness_score(evidence)
         sub = score_dict["subscores"]
-        keys = [
-            (ep.host, ep.port, ep.protocol)
-            for ep in eps
-            if ep.scan_error is None
-        ]
-        sev_map = {
-            (ep.host, ep.port, ep.protocol): ep.severity
-            for ep in eps
-            if ep.scan_error is None
-        }
-        counts = _count_by_bucket(keys, sev_map)
+        # Phase 237 D-13: per-finding buckets of the same derived list the
+        # score above was computed from, never the raw endpoint severity.
+        counts = _count_findings_by_bucket(findings)
         points.append(
             TrendSessionPoint(
                 session_ts=stamp_utc_iso(ts),

@@ -309,6 +309,8 @@ export interface ScanSession {
   // "" is not a real band (pre-fix rows). Added per 199 review IN-01.
   rating: string
   rating_cap_reason?: string | null
+  // Phase 237 D-09: absent (older server) is treated as "complete".
+  status?: "complete" | "running" | "incomplete"
 }
 
 export interface CompareScanSummary {
@@ -340,6 +342,9 @@ export interface CompareFinding {
   protocol?: string
   severity: string
   description?: string
+  // Phase 237 D-04: additive identity fields; absent on older servers.
+  port?: number | null
+  title?: string | null
 }
 
 export interface CompareEndpoint {

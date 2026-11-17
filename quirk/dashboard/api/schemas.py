@@ -716,6 +716,9 @@ class ScanSession(BaseModel):
     # bypass scoring; `rating_cap_reason` absent/None means NOT capped.
     rating: str = ""
     rating_cap_reason: Optional[str] = None
+    # Phase 237 D-09: 'complete' | 'running' | 'incomplete', from
+    # quirk/intelligence/scan_completion.py.
+    status: str = "complete"
 
 
 # Trend Analysis (Phase 31)
@@ -736,9 +739,10 @@ class SampleFinding(BaseModel):
     """
 
     host: str
-    port: int
-    protocol: str
+    port: Optional[int] = None
+    protocol: Optional[str] = None
     severity: Optional[str] = None
+    title: Optional[str] = None  # 237-01 additive: finding title (finding-level delta)
 
 
 class SeverityTransitionResponse(BaseModel):
@@ -746,10 +750,11 @@ class SeverityTransitionResponse(BaseModel):
     whose severity changed between two sessions without its identity
     changing (replaces the old severity-in-key double-count, D-03)."""
     host: str
-    port: int
-    protocol: str
+    port: Optional[int] = None
+    protocol: Optional[str] = None
     previous_severity: Optional[str] = None
     current_severity: Optional[str] = None
+    title: Optional[str] = None  # 237-01 additive
 
 
 class TrendReportResponse(BaseModel):
@@ -828,6 +833,9 @@ class CompareFinding(BaseModel):
     protocol: Optional[str] = None
     severity: str
     description: Optional[str] = None
+    # Phase 237 D-04: finding identity (additive, optional).
+    port: Optional[int] = None
+    title: Optional[str] = None
 
 
 class CompareEndpoint(BaseModel):

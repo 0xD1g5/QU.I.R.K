@@ -91,12 +91,24 @@ def _format_slack_text(summary) -> str:
         f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"
     )
 
+    scan_errors = getattr(summary, "scan_errors_new_count", 0)
+    # D-21: an outage-only alert must not imply new HIGH findings.
+    label = (
+        "QUIRK Scan-Coverage Alert"
+        if summary.new_high == 0 and scan_errors > 0
+        else "QUIRK Quantum-Readiness Alert"
+    )
     lines = [
-        f"*QUIRK Quantum-Readiness Alert* — Score Band: {summary.score_band}",
+        f"*{label}* — Score Band: {summary.score_band}",
         f"Score: {score_str} (was {prev_str}, delta {delta_str})",
         f"New findings — HIGH: {summary.new_high}  MEDIUM: {summary.new_medium}"
         f"  LOW: {summary.new_low}",
     ]
+
+    if scan_errors > 0:
+        lines.append(
+            f"Scan errors: {scan_errors} new (a connector or target stopped answering)"
+        )
 
     if summary.dashboard_url:
         lines.append(f"Dashboard: {summary.dashboard_url}")

@@ -75,6 +75,20 @@ def _make_ep(
     return ep
 
 
+def _ep_deriver(endpoints):
+    """237-01 re-seed: Trends now diffs DERIVED findings, not CryptoEndpoint.severity.
+    These legacy fixtures encode a finding as an endpoint's severity, so this
+    stub derives one finding per non-errored endpoint (title = its protocol) and
+    carries ep.severity through. Real TLS derivation is covered by
+    tests/test_trends_finding_delta.py."""
+    return [
+        {"host": ep.host, "port": ep.port, "protocol": ep.protocol,
+         "title": f"{ep.protocol} finding", "severity": ep.severity}
+        for ep in endpoints
+        if ep.scan_error is None
+    ]
+
+
 T1 = datetime(2026, 9, 1, 10, 0, 0)
 T2 = datetime(2026, 9, 2, 10, 0, 0)
 
@@ -93,7 +107,7 @@ def test_all_null_severity_delta_is_not_vacuous(db):
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T2, severity=None)
     _make_ep(db, "c.example", 8443, "TLS", scanned_at=T2, severity=None)
 
-    report = compute_trend_report(T2, T1, db)
+    report = compute_trend_report(T2, T1, db, findings_deriver=_ep_deriver)
 
     new_hosts_ports = {(s.host, s.port) for s in report.new_findings_sample}
     resolved_hosts_ports = {(s.host, s.port) for s in report.resolved_findings_sample}
@@ -119,7 +133,7 @@ def test_all_null_severity_counts_are_reported_not_silently_zero(db):
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T2, severity=None)
     _make_ep(db, "c.example", 8443, "TLS", scanned_at=T2, severity=None)
 
-    report = compute_trend_report(T2, T1, db)
+    report = compute_trend_report(T2, T1, db, findings_deriver=_ep_deriver)
 
     assert report.new_total == 1
     assert report.resolved_total == 1
@@ -141,7 +155,7 @@ def test_protocol_null_does_not_reintroduce_vacuity(db):
     _make_ep(db, "a.example", 443, None, scanned_at=T2, severity=None)
     _make_ep(db, "c.example", 8443, None, scanned_at=T2, severity=None)
 
-    report = compute_trend_report(T2, T1, db)
+    report = compute_trend_report(T2, T1, db, findings_deriver=_ep_deriver)
 
     new_hosts_ports = {(s.host, s.port) for s in report.new_findings_sample}
     resolved_hosts_ports = {(s.host, s.port) for s in report.resolved_findings_sample}
@@ -177,7 +191,7 @@ def test_severity_transition_reported_once_not_as_new_plus_resolved(db):
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T1, severity="HIGH")
     _make_ep(db, "a.example", 443, "TLS", scanned_at=T2, severity="MEDIUM")
 
-    report = compute_trend_report(T2, T1, db)
+    report = compute_trend_report(T2, T1, db, findings_deriver=_ep_deriver)
 
     transitions = report.severity_transitions
     matching = [
@@ -214,7 +228,7 @@ def test_severity_bucket_counts_still_work_when_severity_is_populated(db):
     _make_ep(db, "d.example", 8443, "TLS", scanned_at=T2, severity="HIGH")
     _make_ep(db, "c.example", 22, "SSH", scanned_at=T2, severity="MEDIUM")
 
-    report = compute_trend_report(T2, T1, db)
+    report = compute_trend_report(T2, T1, db, findings_deriver=_ep_deriver)
 
     assert report.new_high == 1
     assert report.new_medium == 0

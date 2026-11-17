@@ -146,8 +146,7 @@ def test_trends_excludes_missing_extra_from_error_counts() -> None:
 
 
 @pytest.mark.parametrize("category", [
-    "missing_extra", "missing_binary",
-    "internal_target_refused", "auth_failed", "missing_credentials", "targets_unreachable",
+    "missing_extra", "missing_binary", "internal_target_refused",
 ])
 def test_trends_advisory_category_not_a_scan_error_regression(tmp_path, category) -> None:
     """235.1 D-06: advisory-only categories never register as scan-error regressions.
@@ -181,6 +180,35 @@ def test_trends_advisory_category_not_a_scan_error_regression(tmp_path, category
         db.add(CryptoEndpoint(
             host="10.0.0.2", port=443, protocol="tls", scan_error="boom",
             scan_error_category="exception", scanned_at=cur_ts,
+        ))
+        db.commit()
+        report = compute_trend_report(cur_ts, prev_ts, db, findings_deriver=lambda eps: [])
+        assert report.scan_errors_new_count == 1
+
+
+@pytest.mark.parametrize("category", [
+    "auth_failed", "missing_credentials", "targets_unreachable",
+])
+def test_trends_outage_category_is_a_scan_error_regression(tmp_path, category) -> None:
+    """Phase 237 D-10: run-to-run outcome categories now count as regressions."""
+    from datetime import datetime
+
+    from sqlalchemy.orm import sessionmaker
+
+    from quirk.db import init_db
+    from quirk.intelligence.trends import compute_trend_report
+    from quirk.models import CryptoEndpoint
+
+    prev_ts = datetime(2026, 1, 1, 10, 0, 0)
+    cur_ts = datetime(2026, 1, 2, 10, 0, 0)
+    engine = init_db(str(tmp_path / "t.db"))
+    with sessionmaker(bind=engine)() as db:
+        db.add(CryptoEndpoint(host="10.0.0.1", port=443, protocol="tls", scanned_at=prev_ts))
+        db.add(CryptoEndpoint(host="10.0.0.1", port=443, protocol="tls", scanned_at=cur_ts))
+        db.add(CryptoEndpoint(
+            host="jwt_scanner", port=0, protocol="ADVISORY",
+            scan_error="connector did not run", scan_error_category=category,
+            scanned_at=cur_ts,
         ))
         db.commit()
         report = compute_trend_report(cur_ts, prev_ts, db, findings_deriver=lambda eps: [])

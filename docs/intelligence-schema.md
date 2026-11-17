@@ -86,6 +86,11 @@ backward-compatible defaults (`[]` / `0` / `0`) on the single-session response b
 | `new_total` | `int` | 5.19.0 | Severity-agnostic count of newly appeared `(host, port, protocol)` keys (`len(new_keys)`). Stays non-zero even when every row's severity is `NULL`, unlike the `new_high`/`new_medium`/`new_low` buckets. |
 | `resolved_total` | `int` | 5.19.0 | Severity-agnostic count of `(host, port, protocol)` keys present in the previous session but not the current one (`len(resolved_keys)`). Same non-zero-even-without-severity guarantee as `new_total`. |
 
+**Finding-level semantics (5.29, Phase 237, COUNT-02).** `new_total`, `resolved_total`, the severity buckets, the sample arrays and
+`severity_transitions` now count derived findings (derived once per session with the Findings page's deriver), keyed by
+`(host, port, canonical finding title)`. The `protocol` field on a sample or transition entry is nullable, and both gain an additive
+`title` field. A severity change at an unchanged key is one transition; certificate-expiry day counts in a title are not churn.
+
 ### Single-session response (D-06)
 
 When exactly one distinct session exists, `GET /api/trends` returns HTTP 200 with the following collapsed form (an empty database returns the same shape, with the timestamp and score fields null, every count zero and every array empty):
@@ -144,12 +149,12 @@ see `docs/report-interpretation.md` §15 for the client-facing explanation.
 
 ### Excluded rows
 
-- Rows with `scan_error IS NOT NULL` (D-04) — reported separately as `scan_errors_new_count` / `scan_errors_resolved_count`, NOT in the severity buckets. These two are a net change in the number of error rows, not a per-host match: `scan_errors_new_count` is `max(0, current errors - previous errors)` and `scan_errors_resolved_count` is `max(0, previous errors - current errors)`; rows whose `scan_error_category` is `missing_extra` are not counted. Additionally, if a `(host, port, protocol)` triplet has a scan_error in the current session, its matching previous-session entries are also excluded to prevent phantom "resolved" findings for temporarily unreachable hosts.
+- Rows with `scan_error IS NOT NULL` (D-04) — reported separately as `scan_errors_new_count` / `scan_errors_resolved_count`, NOT in the severity buckets. These two are a net change in the number of error rows, not a per-host match: `scan_errors_new_count` is `max(0, current errors - previous errors)` and `scan_errors_resolved_count` is `max(0, previous errors - current errors)`; rows whose `scan_error_category` is `missing_extra` are not counted (as of 5.29 `missing_binary` and `internal_target_refused` are advisory and not counted either). As of 5.29 a connector outage row of the form "N of M targets ..." (`targets_unreachable`, `auth_failed`, `missing_credentials`) counts M failed targets, so a full JWT, SAML or DNSSEC outage adds M; for database, Kubernetes and cloud connectors the forwarded in-band error rows also count, so a full outage may read up to 2M. Additionally, if a `(host, port, protocol)` triplet has a scan_error in the current session, its matching previous-session entries are also excluded to prevent phantom "resolved" findings for temporarily unreachable hosts.
 - Rows with `scanned_at IS NULL` (D-13) — older data without a scan timestamp is ignored entirely; does not count toward session total.
 
 ### Sample arrays (D-08)
 
-Sample arrays are capped at 5 entries. Sort order is severity descending (CRITICAL, HIGH, MEDIUM, LOW, then INFO and NULL severity) then host ascending then port ascending. Sample entries contain only `host`, `port`, `protocol`, and `severity` — no remediation text, no algorithm details.
+Sample arrays are capped at 5 entries. Sort order is severity descending (CRITICAL, HIGH, MEDIUM, LOW, then INFO and NULL severity) then host ascending then port ascending. Sample entries contain only `host`, `port`, `protocol` (nullable), `title`, and `severity` — no remediation text, no algorithm details.
 
 ## Trends Timeline (TREND-01)
 

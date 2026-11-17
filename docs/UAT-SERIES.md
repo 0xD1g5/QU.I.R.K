@@ -1,7 +1,7 @@
 # QU.I.R.K. — UAT Test Series (Gating Document)
 
 **Version:** 5.28.2
-**Last Updated:** 2026-11-16 (Phase 236 plan 09 gap closure -- UAT-236-07 added (scan_error TLS row headline parity, PASS on cited nodes). Prior: 2026-11-16 (Phase 236 -- Score Divergence Closure, XSURF-09..14. Series 236 added: 6 cases, all PASS on cited test nodes (two-tier legacy TLS, weak cipher HIGH, undersized ECDSA HIGH on the dashboard, container findings on the dashboard, drift score equals Trends, remaining divergences dispositioned). No version bump. Prior: 2026-11-08 (Phase 235.4 post-release -- v5.28.2 published. UAT-1-02 re-executed against the published 5.28.2 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-08 (Phase 235.4 plan 05 -- UAT-235.3-13, the live GUI leg, moves from SKIP DEFERRED to PASS on the operator-confirmed LAUNCH-10 walkthrough. Prior: 2026-11-07 (Phase 235.4 -- Release 5.28.2. Version bumped to 5.28.2: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.1 run) to SKIP DEFERRED until it is re-executed against the published 5.28.2. Prior: 2026-11-06 (Phase 235.3 -- Connector Coverage Truth Fixes. Series 235.3 added: 13 cases, 12 PASS on cited nodes executed in plan 19 and 1 SKIP (UAT-235.3-13, the live GUI leg, DEFERRED to Phase 235.4 LAUNCH-10); UAT-192-01 corrected from six to eight skip reasons (internal-target-refused and target-unanswered added). No version bump. Prior: 2026-11-05 (Phase 235.2 post-release -- v5.28.1 published. UAT-1-02 re-executed against the published 5.28.1 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-05 (Phase 235.2 -- Release 5.28.1. Version bumped to 5.28.1: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.0 run) to SKIP DEFERRED until it is re-executed against the published 5.28.1. Prior: 2026-11-04 (Phase 235.1 -- Install, Source-Scan Truth Fixes. Series 235.1 added: 7 cases, all PASS on cited test nodes (missing-binary skip for semgrep and syft, doctor configured-but-missing warning, doctor Python range, doctor DB check, source-scan partial failure, 3.15 unpinned-resolve verdict); UAT-192-01 corrected from five to six skip reasons (missing-binary added). No version bump. Prior: 2026-10-30 (Phase 235 post-release, plan 16 -- v5.28.0 published. UAT-1-02 re-executed against the published 5.28.0 PyPI install and moves from SKIP DEFERRED to PASS; UAT-235-11..17 (macOS, Linux 3.11, Linux 3.10, Python 3.15 negative, attestation, live README links, release body) and UAT-232-08 (live PyPI README links) move from SKIP DEFERRED to PASS on the plan 235-14/235-15 evidence. Prior: 2026-10-29 (Phase 235 — Release & Launch Gate, LAUNCH-01/LAUNCH-04. Version bumped to 5.28.0: header and UAT-1-02 Pass Criteria. Series 235 added: 17 cases, 10 PASS on cited test nodes and 7 SKIP (DEFERRED, live legs owed to plans 235-15 and 235-16). UAT-1-02 moves from PASS (a 5.27.0 run) to SKIP DEFERRED until plan 235-16 re-executes it against the published 5.28.0; UAT-232-08's owner label corrected from LAUNCH-03 to LAUNCH-04; UAT-5-15 annotated in Notes (the Semgrep ruleset is gone), Result unchanged. Prior: 2026-10-27 (Phase 234 — P2b Scan-Depth Fix & Ladder Re-measurement, SCORE-09/SCORE-10. Series 234 added: 13 cases, 12 PASS and 1 SKIP, covering scoring 4.0 (absolute-count penalties at N_REF 40, the classical-key rule, the PQC certificate bucket, Kerberos placeholder and scan-error rows), the QRAMM overall over assessed dimensions with its stale and pre-upgrade states, and the code-review fixes D-27..D-31; UAT-234-13, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. UAT-233-07 and UAT-212-02 re-dispositioned as resolved by Phase 234 (PASS on the un-xfailed P2b node, their known-open-defect dispositions kept in Notes as history); UAT-233-03's probe count and UAT-233-04's continuity wording updated; UAT-60-04's Expected corrected for "Below Basic". No version bump. Prior: 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
+**Last Updated:** 2026-11-16 (Phase 237 -- History and Count Truth, COUNT-01..07. Series 237 added: 13 cases, all PASS on cited test nodes, vitest cases or the live evidence files; UAT-44-04, UAT-178-02 and UAT-229-06 Notes updated for finding-level trends semantics with names and Result lines unchanged. No version bump. Prior: 2026-11-16 (Phase 236 plan 09 gap closure -- UAT-236-07 added (scan_error TLS row headline parity, PASS on cited nodes). Prior: 2026-11-16 (Phase 236 -- Score Divergence Closure, XSURF-09..14. Series 236 added: 6 cases, all PASS on cited test nodes (two-tier legacy TLS, weak cipher HIGH, undersized ECDSA HIGH on the dashboard, container findings on the dashboard, drift score equals Trends, remaining divergences dispositioned). No version bump. Prior: 2026-11-08 (Phase 235.4 post-release -- v5.28.2 published. UAT-1-02 re-executed against the published 5.28.2 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-08 (Phase 235.4 plan 05 -- UAT-235.3-13, the live GUI leg, moves from SKIP DEFERRED to PASS on the operator-confirmed LAUNCH-10 walkthrough. Prior: 2026-11-07 (Phase 235.4 -- Release 5.28.2. Version bumped to 5.28.2: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.1 run) to SKIP DEFERRED until it is re-executed against the published 5.28.2. Prior: 2026-11-06 (Phase 235.3 -- Connector Coverage Truth Fixes. Series 235.3 added: 13 cases, 12 PASS on cited nodes executed in plan 19 and 1 SKIP (UAT-235.3-13, the live GUI leg, DEFERRED to Phase 235.4 LAUNCH-10); UAT-192-01 corrected from six to eight skip reasons (internal-target-refused and target-unanswered added). No version bump. Prior: 2026-11-05 (Phase 235.2 post-release -- v5.28.1 published. UAT-1-02 re-executed against the published 5.28.1 PyPI install and moves from SKIP DEFERRED to PASS. Prior: 2026-11-05 (Phase 235.2 -- Release 5.28.1. Version bumped to 5.28.1: header and UAT-1-02 Pass Criteria; UAT-1-02 moves from PASS (a 5.28.0 run) to SKIP DEFERRED until it is re-executed against the published 5.28.1. Prior: 2026-11-04 (Phase 235.1 -- Install, Source-Scan Truth Fixes. Series 235.1 added: 7 cases, all PASS on cited test nodes (missing-binary skip for semgrep and syft, doctor configured-but-missing warning, doctor Python range, doctor DB check, source-scan partial failure, 3.15 unpinned-resolve verdict); UAT-192-01 corrected from five to six skip reasons (missing-binary added). No version bump. Prior: 2026-10-30 (Phase 235 post-release, plan 16 -- v5.28.0 published. UAT-1-02 re-executed against the published 5.28.0 PyPI install and moves from SKIP DEFERRED to PASS; UAT-235-11..17 (macOS, Linux 3.11, Linux 3.10, Python 3.15 negative, attestation, live README links, release body) and UAT-232-08 (live PyPI README links) move from SKIP DEFERRED to PASS on the plan 235-14/235-15 evidence. Prior: 2026-10-29 (Phase 235 — Release & Launch Gate, LAUNCH-01/LAUNCH-04. Version bumped to 5.28.0: header and UAT-1-02 Pass Criteria. Series 235 added: 17 cases, 10 PASS on cited test nodes and 7 SKIP (DEFERRED, live legs owed to plans 235-15 and 235-16). UAT-1-02 moves from PASS (a 5.27.0 run) to SKIP DEFERRED until plan 235-16 re-executes it against the published 5.28.0; UAT-232-08's owner label corrected from LAUNCH-03 to LAUNCH-04; UAT-5-15 annotated in Notes (the Semgrep ruleset is gone), Result unchanged. Prior: 2026-10-27 (Phase 234 — P2b Scan-Depth Fix & Ladder Re-measurement, SCORE-09/SCORE-10. Series 234 added: 13 cases, 12 PASS and 1 SKIP, covering scoring 4.0 (absolute-count penalties at N_REF 40, the classical-key rule, the PQC certificate bucket, Kerberos placeholder and scan-error rows), the QRAMM overall over assessed dimensions with its stale and pre-upgrade states, and the code-review fixes D-27..D-31; UAT-234-13, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. UAT-233-07 and UAT-212-02 re-dispositioned as resolved by Phase 234 (PASS on the un-xfailed P2b node, their known-open-defect dispositions kept in Notes as history); UAT-233-03's probe count and UAT-233-04's continuity wording updated; UAT-60-04's Expected corrected for "Below Basic". No version bump. Prior: 2026-10-27 (Phase 233 — P2b Measurement Instrument, SCORE-08. Series 233 added: 8 cases, 7 PASS and 1 SKIP. The third instrument agrees with an independent closed form at 80 of 80 sweep points; the verdict is that none of Phase 212's three candidates is supported and the data point to a new two-part shape, effort L. UAT-233-07 is PASS as a known-open-defect record, mirroring UAT-212-02, since the p2b property test still xfails strict until Phase 234; UAT-233-08, the local-only real-estate reading, is SKIP DEFERRED to the read-only snapshot node. No version bump. Prior: 2026-10-27 (Phase 232 — Post-Launch Visible Fixes, POLISH-01..04. Series 232 added: 8 cases, 7 PASS and 1 SKIP. UAT-232-06's PDF leg was run for real against a locally installed Chromium and is declared CI-EXEMPT, since Linux Full Suite has no Chromium; UAT-232-08, the live PyPI README check, is SKIP DEFERRED to the offline pin gate and handed to Phase 235 LAUNCH-03. No version bump. Prior: 2026-10-25 (Phase 231 — QRAMM Scoring Surfaces, QRAMM-17..20. Series 231 added: 9 cases, 9 PASS and 0 SKIP on local evidence; UAT-231-07's live print/PDF leg was observed by plan 231-07 on 2026-10-24. UAT-55-03 and UAT-56-01 annotated in Notes as superseded by Series 231, Result lines unchanged. No version bump. Prior: 2026-10-23 (Phase 230 gap closure 230-08 — the Kerberos UDP fallback follows the TCP rule, so a UDP failure no longer reads as kerberos-no-preauth. UAT-230-03 re-measured at 183 passed with the transport-outcome invariant added and its text corrected to the QUIRK-framed transport; UAT-230-07 re-measured at 209 passed; live Samba KDC distribution recorded in UAT-230-03. No version bump. Prior: 2026-10-23 (Phase 230 — Findings That Fire, DETECT-01..05. Series 230 added: 7 cases, all PASS on cited test nodes; the two Kerberos wire cases are local-only proofs that skip in CI (ci_extras_gap) with the 2026-10-23 real-KDC measurement recorded in UAT-230-03. No version bump. Prior: 2026-10-16 (Phase 229 gap closure 229-12 email follow-up — UAT-229-03 re-measured at 46 passed after a timed-out or refused mail port was treated as a failed recheck (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 evidence follow-up — UAT-229-03 re-measured at 41 passed after a family counted as rechecked only with that host's own evidence (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 37 passed after legacy carried findings were made to close only after re-detection (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 legacy-chain follow-up — UAT-229-03 re-measured at 30 passed after the empty-probe-basis refusal (FIND-11). Prior: 2026-10-16 (Phase 229 gap closure 229-12 — UAT-229-02 re-measured at 6 passed and UAT-229-03 at 26 passed after the per-host closure recheck rule (229-VERIFICATION gap 1). Prior: 2026-10-16 (Phase 229 code-review fixes, iteration 3 — every Series 229 case re-run; UAT-229-08 re-measured at 22 passed after the iteration-1 WR-01 merge test. Prior: 2026-10-16 (Phase 229 code-review fixes — UAT-229-03 re-run at 10 passed with the CR-01 timeout case; UAT-229-10 cites the behavioural HTTPS push test (WR-06). Prior: 2026-10-15 (Phase 229 — Finding & State Correctness, FIND-11..13. Series 229 added: 10 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 228 — Cross-Surface Score Parity, XSURF-05..08. Series 228 added: 8 cases, all PASS. No version bump. Prior: 2026-10-15 (Phase 227 — doc224 todo ownership gate. Series 227 added: 2 cases, both PASS. Prior: 2026-10-15 (Phase 226 post-release — v5.27.0 published. Series 226 added: 6 cases, all PASS. UAT-225-05 moves from SKIP (GAP) to PASS on the post-tag raw-URL check. UAT-1-02 re-executed against the published PyPI 5.27.0. Prior: 2026-10-14 (Phase 226 execution — Release v5.27.0, REL-05/06/07. Version bumped to 5.27.0: header and UAT-1-02 Pass Criteria. Prior: 2026-10-14 (Phase 225.1 execution — Pre-release Security Hardening, SECH-01..05. Series 225.1 added: 11 cases, all PASS on cited test nodes; no version bump. Prior: 2026-10-13 (Phase 225 execution — Doc Publication & Hero Retake, DOC-05/06. Series 225 added: 5 cases; master guide and docs-to-vault sync instrument verified, README hero retaken against the branded dashboard with the operator's approval, and the executive gauge row refit to one line at the 1200 px content cap (a user-visible dashboard change). UAT-85-08 moves from GAP to a QUALIFIED PASS with its ledger row. UAT-225-05, the post-merge raw-URL byte check, is SKIP (GAP) owed to Phase 226 REL-07. No version bump. Prior: 2026-10-13 (Phase 224 execution — Doc Claim Ledger & Verification, DOC-03/04. Series 224 added: 12 cases; 83 tracked doc files classified, 32 of them user-facing; 9,801 ledger rows (TRUE 4,552 / FIXED 3,121 / REMOVED 2,128); dashboard-first Quick Start verified in a clean venv; private vulnerability reporting enabled by the operator and confirmed live. UAT-224-10 is recorded FAIL: three adversarial audits measured a flat 4.0% false-claim rate in sampled ledger rows (8/201), disclosed and owned by 999.123. UAT-224-12 records the product defects found as open todos, not fixed here; 7 security findings are tracked privately. No version bump. Prior: 2026-10-11 (Phase 223 execution — Dashboard Brand Adoption, BRAND-02/03/07. Series 223 added: 7 cases; UAT-223-01 is the operator's both-themes wide/narrow/tab/login check (PASS, verbatim reply in its Notes). UAT-7-31 re-worded as a unit with its ledger row (still QUALIFIED PASS), UAT-7-02 Expected and UAT-7-23 steps re-worded, UAT-7-23 annotated with no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222.1 execution — Brand Guidelines v2 and Dashboard Re-theme, BRAND-06/08. Series 222.1 added: 7 cases; UAT-222.1-01 is the operator's both-themes check (PASS, verbatim replies in its Notes, step 4 initially failed on a pre-existing QRAMM CSRF 403 fixed in-phase, UAT-222.1-07); three historical teal cases annotated, no Result line edited. No version bump. Prior: 2026-10-02 (Phase 222 execution — Brand Identity Landed, BRAND-01/04/05. Series 222 added: 8 cases; UAT-222-01 is the operator's GitHub light/dark README check (PASS, verbatim replies in its Notes), the two Chromium-only PDF nodes are PASS on executed local output and CI-EXEMPT-declared. No version bump. Prior: 2026-10-01 (Phase 221 execution — Close Gap: A11y Blind Spots + Empty/Loading Variant Legs, HARNESS-03/FIX-05. Series 221 added: 11 cases; nine PASS from live or cited evidence, UAT-221-06 SKIP (GAP), and UAT-221-11 recorded FAIL as the operator-confirmed CBOM light system-node defect owned by 999.118. No version bump. Prior: 2026-10-01 (Phase 220 execution — CI Instrument Truth, CITRUTH-01/02/03. Series 220)
 added: 7 cases, six PASS on local evidence and UAT-220-07 (the live D-15 branch demonstration) SKIP
 DEFERRED to a unit-test node, with its live legs recorded in `220-VERIFICATION.md` by 220-08. UAT-28-01
 reworded for the moto S3 server (Result line unchanged), and two historical "permanently withdrawn
@@ -7342,7 +7342,7 @@ is left as written: it is accurate on an operator machine, and this note records
 **Result:** - [x] PASS  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-05-03  **Tester:** Digs
 **Status:** Passed
-**Notes:** `.venv/bin/python -m pytest tests/test_dashboard_trends.py::test_uat_31_trends_two_sessions_flat_wire_format -v` → 1 passed in 0.20s. All 12 flat wire-format keys asserted; new_high >= 1 and resolved_medium >= 1 confirmed.
+**Notes:** `.venv/bin/python -m pytest tests/test_dashboard_trends.py::test_uat_31_trends_two_sessions_flat_wire_format -v` → 1 passed in 0.20s. All 12 flat wire-format keys asserted; new_high >= 1 and resolved_medium >= 1 confirmed. Phase 237 (COUNT-02): `new_high` and `resolved_medium` now count derived findings keyed by host, port and canonical title, not endpoint severity; the test seeds HTTP endpoints (new HIGH "Unencrypted HTTP service") and a TLS 1.3 ECDSA endpoint (resolved MEDIUM "Quantum-vulnerable algorithm: ECDSA"). The test name is unchanged.
 
 ---
 
@@ -21869,6 +21869,7 @@ anywhere in the match path, or if `protocol=None` rows are silently dropped from
 **Date:** 2026-09-02  **Tester:** Automated (178-07 phase-close plan execution)
 **Notes:** Fixture-level proof against an in-memory SQLite session; no live chaos lab needed
 (matches the Phase 44 `UAT-44-04` precedent for trend-report testing).
+Phase 237 (COUNT-02): the delta is now finding-level (host, port, canonical title) and the fixtures supply a stub deriver that yields one finding per non-errored endpoint with the endpoint's severity, so the non-vacuity property is preserved at finding level; the test names are unchanged.
 
 ---
 
@@ -33327,7 +33328,7 @@ gh api graphql -f query='{repository(owner:"0xD1g5",name:"QU.I.R.K"){usesCustomO
 
 **Result:** - [x] PASS (2026-10-15 4 passed — covered by `tests/test_notify_session_identity.py::test_probe_two_runs_microsecond_timestamps_fires` and `tests/test_notify_session_identity.py::test_three_runs_compare_two_newest_distinct` and `tests/test_notify_session_identity.py::test_legacy_null_run_rows_in_distinct_ms_stay_distinct` and `tests/test_notify_session_identity.py::test_import_hygiene_no_fastapi_or_pydantic`)  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-10-15  **Tester:** automated
-**Notes:** Plan 229-05 (D-08/D-10).
+**Notes:** Plan 229-05 (D-08/D-10). Phase 237 (COUNT-02): the fixtures for these nodes use a stub deriver (one finding per non-errored endpoint) because the delta is finding-level; the test names and the session-identity behaviour are unchanged.
 
 ### UAT-229-07: The trend timeline shows one point per scan run
 
@@ -35258,3 +35259,256 @@ cd src/dashboard && npx vitest run src/lib/__tests__/coverage-reason.test.ts src
 **Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 236-09 run -- covered by "tests/test_cross_surface_parity.py::test_xsurf236_scan_error_tls_row_headline_parity" and "tests/test_severity_divergence_behaviour.py::test_every_residual_is_dispositioned" and "tests/test_severity_divergence_behaviour.py::test_injected_mutations_turn_new_gate_red")  - [ ] FAIL  - [ ] SKIP
 **Date:** 2026-11-16  **Tester:** Automated (Phase 236 plan 09)
 **Notes:** Gap closure for 236-VERIFICATION gap 1 (review WR-02). Pre-fix measured report 73 vs dashboard 60 on the probe estate; post-fix 73 == 73.
+
+## Series 237: History and Count Truth (Phase 237 — v5.29)
+
+**Last Updated:** 2026-11-16 (Phase 237)
+
+### UAT-237-01: Scan History counts are derived findings and equal the Findings page
+
+**ID:** UAT-237-01
+**Title:** Scan History counts are derived findings and equal the Findings page
+**Maps to:** COUNT-01, D-01
+
+**What to test:** Scan History's High, Medium and Low counts count derived findings (one per finding, Critical and High together as High), not endpoint rows, and equal the Findings page's bucketed counts for the same scan.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_history_count_truth.py::test_history_counts_equal_findings_page tests/test_history_count_truth.py::test_history_counts_per_finding
+```
+
+**Pass Criteria:** Both nodes pass; a mutation that counts endpoint severity instead turns both red.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_history_count_truth.py::test_history_counts_equal_findings_page` and `tests/test_history_count_truth.py::test_history_counts_per_finding`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-04. Live: three core-lab scans read 2/3/0, 1/3/0 and 2/3/0 on both History and the bucketed Findings (`237-evidence/live-core-counts.txt`). Known limit: the downloadable report lists extra MEDIUM (quantum-vulnerable RSA key) and LOW (Legacy TLS cipher suites accepted) findings the dashboard does not derive, so report parity holds on CRITICAL and HIGH only (ledger 999.132); counts for scans recorded before 5.29 move.
+
+### UAT-237-02: The trend timeline counts derived findings and excludes incomplete scans
+
+**ID:** UAT-237-02
+**Title:** The trend timeline counts derived findings and excludes incomplete scans
+**Maps to:** COUNT-01, COUNT-06
+
+**What to test:** The /api/trends timeline counts come from derived findings, and an incomplete scan is not a timeline point or the current session.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_trends_complete_sessions.py::test_timeline_counts_from_derived_findings tests/test_trends_complete_sessions.py::test_timeline_excludes_incomplete tests/test_trends_complete_sessions.py::test_api_trends_current_session_is_last_complete
+```
+
+**Pass Criteria:** All three nodes pass.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_trends_complete_sessions.py::test_timeline_counts_from_derived_findings` and `tests/test_trends_complete_sessions.py::test_timeline_excludes_incomplete` and `tests/test_trends_complete_sessions.py::test_api_trends_current_session_is_last_complete`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-06.
+
+### UAT-237-03: The Trends delta is finding-level: severity change is a transition, expiry day counts are not churn
+
+**ID:** UAT-237-03
+**Title:** The Trends delta is finding-level: severity change is a transition, expiry day counts are not churn
+**Maps to:** COUNT-02, D-02, D-03
+
+**What to test:** New and resolved counts key findings by host, port and canonical title from the same derivation the Findings page uses. A new TLS HIGH is counted, a severity change is one transition, a certificate-expiry day count is not churn, an errored host is not a phantom resolved finding, and a finding with no protocol serialises.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_trends_finding_delta.py
+```
+
+**Pass Criteria:** All six nodes pass; adding severity to the key turns the transition node red.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_trends_finding_delta.py::test_new_tls_high_counted` and `tests/test_trends_finding_delta.py::test_counts_are_per_finding_not_per_endpoint` and `tests/test_trends_finding_delta.py::test_severity_change_is_one_transition` and `tests/test_trends_finding_delta.py::test_expiring_cert_day_count_not_churn` and `tests/test_trends_finding_delta.py::test_errored_now_host_not_phantom_resolved` and `tests/test_trends_finding_delta.py::test_protocol_none_finding_serializes`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-01. Three older tests (UAT-44-04, UAT-178-02, UAT-229-05) were re-seeded for finding-level semantics with their names unchanged; see their Notes.
+
+### UAT-237-04: Compare lists added and removed findings with identity, not phantoms
+
+**ID:** UAT-237-04
+**Title:** Compare lists added and removed findings with identity, not phantoms
+**Maps to:** COUNT-03, D-04
+
+**What to test:** /api/compare diffs by finding identity (host, port, canonical title) and returns port and title on each entry; identical scans diff empty and a host that errored in one scan is not a phantom removal.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_history_count_truth.py::test_compare_lists_added_and_removed_with_identity tests/test_history_count_truth.py::test_compare_identical_scans_empty tests/test_history_count_truth.py::test_compare_errored_host_not_phantom_removed
+```
+
+**Pass Criteria:** All three nodes pass.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_history_count_truth.py::test_compare_lists_added_and_removed_with_identity` and `tests/test_history_count_truth.py::test_compare_identical_scans_empty` and `tests/test_history_count_truth.py::test_compare_errored_host_not_phantom_removed`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-04. Live: restoring a stopped lab service added `127.0.0.1:10443` HIGH "TLS certificate is self-signed" with title and port; the stopped direction is empty by D-04 design (`237-evidence/live-core-counts.txt`).
+
+### UAT-237-05: The Compare page shows Finding and Port columns
+
+**ID:** UAT-237-05
+**Title:** The Compare page shows Finding and Port columns
+**Maps to:** COUNT-03
+
+**What to test:** The Compare page's Added and Removed tables render a Port column and a Finding column, falling back to the description when the title is absent.
+
+**Steps:**
+```
+cd src/dashboard && npx vitest run src/pages/__tests__/compare-finding-identity.test.tsx
+```
+
+**Pass Criteria:** Both vitest cases pass.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `src/dashboard/src/pages/__tests__/compare-finding-identity.test.tsx::"renders Port and Finding columns with title and port values"` and `src/dashboard/src/pages/__tests__/compare-finding-identity.test.tsx::"falls back to description when title is absent and shows both when they differ"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-03. Operator visual check recorded in UAT-237-13.
+
+### UAT-237-06: A connector error row with no category no longer drops later partial-failure entries
+
+**ID:** UAT-237-06
+**Title:** A connector error row with no category no longer drops later partial-failure entries
+**Maps to:** COUNT-04, D-05
+
+**What to test:** A null `error_category` is coalesced on write and read per entry, so a later partial-failure entry is kept and the Executive Skipped badge lists every connector, showing a categoryless error row as Failed.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_partial_failures_null_category.py
+```
+
+**Pass Criteria:** All four nodes pass.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_partial_failures_null_category.py::test_null_category_entry_does_not_drop_later_entries` and `tests/test_partial_failures_null_category.py::test_malformed_entry_skips_only_itself` and `tests/test_partial_failures_null_category.py::test_writer_coalesces_null_category` and `tests/test_partial_failures_null_category.py::test_db_then_vault_ordering_in_process`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-02.
+
+### UAT-237-07: Export PDF carries a Scan Coverage section
+
+**ID:** UAT-237-07
+**Title:** Export PDF carries a Scan Coverage section
+**Maps to:** COUNT-05
+
+**What to test:** The /print page renders a Scan Coverage subsection with the ran and skipped counts and the recorded skip reason per connector, using the shared phase wording and no raw HTML injection; it is absent when every phase ran or coverage was not recorded.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_report_coverage_parity.py::TestPrintScanCoverageSourceLeg
+cd src/dashboard && npx vitest run src/pages/__tests__/print-scan-coverage.test.tsx
+```
+
+**Pass Criteria:** The pytest class and all six vitest cases pass.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_report_coverage_parity.py::TestPrintScanCoverageSourceLeg::test_print_uses_shared_phase_text_and_testid` and `tests/test_report_coverage_parity.py::TestPrintScanCoverageSourceLeg::test_print_has_no_raw_html_injection` and `src/dashboard/src/pages/__tests__/print-scan-coverage.test.tsx::"renders the skip reason via phaseRecordText for a missing-credentials skip"` and `src/dashboard/src/pages/__tests__/print-scan-coverage.test.tsx::"is absent when coverage was not recorded"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-03. Live: POST /api/export/pdf (with the `X-Quirk-Request: 1` header) returned HTTP 200 and `pdftotext` found "Scan Coverage" (`237-evidence/human-verify.txt`).
+
+### UAT-237-08: The latest scan skips incomplete scans; History and the sidebar badge mark them (Incomplete vs Running)
+
+**ID:** UAT-237-08
+**Title:** The latest scan skips incomplete scans; History and the sidebar badge mark them (Incomplete vs Running)
+**Maps to:** COUNT-06, D-06, D-07, D-24
+
+**What to test:** /api/scan/latest without a scan id serves the last completed scan, 404 when only incomplete scans exist, and still serves legacy scans with no run id; an explicit scan id still loads an incomplete scan. Scan History marks a not-finished scan and withholds its numbers, and the sidebar ScanDateBadge skips non-complete scans. D-24: an in-progress CLI or scheduled scan shows Incomplete (it has no job row); only a dashboard job shows Running, and a dashboard job whose server process died keeps showing Running until the startup sweep or a job status poll reconciles it (ledger 261116-dead-dashboard-job-shows-running).
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_scan_completion.py::test_latest_skips_incomplete_scan tests/test_scan_completion.py::test_latest_404_when_only_incomplete tests/test_scan_completion.py::test_latest_legacy_null_run_id_still_served tests/test_scan_completion.py::test_scans_status_values tests/test_scan_completion.py::test_active_job_makes_it_running
+cd src/dashboard && npx vitest run src/pages/__tests__/scan-history-status.test.tsx src/components/__tests__/ScanDateBadge.test.tsx
+```
+
+**Pass Criteria:** All nodes pass; History shows Running only for a job with an active ScanJob and Incomplete for checkpoints without a reports stage.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_scan_completion.py::test_latest_skips_incomplete_scan` and `tests/test_scan_completion.py::test_latest_404_when_only_incomplete` and `tests/test_scan_completion.py::test_latest_legacy_null_run_id_still_served` and `tests/test_scan_completion.py::test_scans_status_values` and `tests/test_scan_completion.py::test_active_job_makes_it_running` and `src/dashboard/src/pages/__tests__/scan-history-status.test.tsx::"badges running and incomplete rows, withholds numbers, disables only the running checkbox"` and `src/dashboard/src/components/__tests__/ScanDateBadge.test.tsx::"labels the first complete session, skipping a newer running one"`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plans 237-02, 237-03, 237-04. Live: mid-run, `/api/scans` marked the CLI run Incomplete with counts withheld and `/api/scan/latest` served the previous complete scan; after exit the new scan read complete (`237-evidence/live-running-scan.txt`). Scans recorded before 5.29 have no checkpoints and read as complete (D-14). Limit: `/api/scan/latest` `meta.scan_id` (naive max scanned_at) and the run id used by `/api/scans` and `/api/compare` differ for the same scan (ledger 261116-latest-scan-id-id-space-mismatch).
+
+### UAT-237-09: CLI and scheduled scans write checkpoints and the job run id is stamped at start
+
+**ID:** UAT-237-09
+**Title:** CLI and scheduled scans write checkpoints and the job run id is stamped at start
+**Maps to:** COUNT-06, D-13, D-14
+
+**What to test:** Every scan path writes an inventory checkpoint early (so --list-resumable lists an interrupted CLI or scheduled run and History shows it Incomplete), the checkpoint DB falls back to the output DB, and the dashboard job's run id is stamped at scan start, after any resume override. One FastAPI-free helper defines completeness and agrees with --list-resumable.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_scan_completion.py
+```
+
+**Pass Criteria:** All 16 nodes in the file pass.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_scan_completion.py::test_first_checkpoint_is_inventory_without_db_path` and `tests/test_scan_completion.py::test_checkpoint_db_falls_back_to_output_db` and `tests/test_scan_completion.py::test_job_run_id_stamped_after_resume_override` and `tests/test_scan_completion.py::test_agrees_with_list_resumable` and `tests/test_scan_completion.py::test_import_hygiene_no_fastapi_or_pydantic`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-02. Side effect: `--list-resumable` also lists interrupted CLI and scheduled runs (accepted under D-14).
+
+### UAT-237-10: A full connector outage counts N scan-error regressions and notify fires and says so
+
+**ID:** UAT-237-10
+**Title:** A full connector outage counts N scan-error regressions and notify fires and says so
+**Maps to:** COUNT-07, D-20, D-21, D-23
+
+**What to test:** A connector that failed against all N of its targets counts N in Trends (db, k8s and cloud may read up to 2N because forwarded in-band rows count too); environment categories stay advisory; notify fires on a scan-error regression with a previous session, prints "Scan errors: N new", names the outage in the Slack header and email subject only when there is no new HIGH, and never alerts on scan errors without a previous scan.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_trends_full_outage.py tests/test_scan_robustness.py
+```
+
+**Pass Criteria:** All nodes pass; restoring the old advisory set turns the full-outage nodes red.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_trends_full_outage.py::test_full_outage_counts_at_least_partial` and `tests/test_trends_full_outage.py::test_failed_target_count_contract` and `tests/test_trends_full_outage.py::test_environment_categories_stay_zero` and `tests/test_trends_full_outage.py::test_outage_notify_actually_sends` and `tests/test_trends_full_outage.py::test_scan_error_trigger_requires_previous_session` and `tests/test_trends_full_outage.py::test_slack_first_line_unchanged_with_new_high`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-05. Live: a 4-target JWT outage plus a stopped lab service gave `scan_errors_new_count` 5 and `should_notify` True with Slack text "Scan errors: 5 new" (`237-evidence/live-core-counts.txt`); no channel was configured so nothing was delivered live.
+
+### UAT-237-11: Notify, trends listers and the exposure map skip incomplete scans; a failed scheduled run is not re-alerted
+
+**ID:** UAT-237-11
+**Title:** Notify, trends listers and the exposure map skip incomplete scans; a failed scheduled run is not re-alerted
+**Maps to:** COUNT-06, D-22
+
+**What to test:** Session listers take a complete-only mode applied by /api/trends, the timeline, notify and the exposure map; notify skips a failed or interrupted scheduled run and a newest-incomplete session so the previous pair is not re-alerted.
+
+**Steps:**
+```
+.venv/bin/python -m pytest -q -m "" tests/test_trends_complete_sessions.py
+```
+
+**Pass Criteria:** All ten nodes pass; disabling the complete_only filter turns five of them red.
+
+**Result:** - [x] PASS (2026-11-16 all cited nodes passed in the plan 237-08 run -- covered by `tests/test_trends_complete_sessions.py::test_list_session_timestamps_complete_only_drops_incomplete_before_limit` and `tests/test_trends_complete_sessions.py::test_notify_find_two_sessions_skips_incomplete` and `tests/test_trends_complete_sessions.py::test_exposure_latest_skips_incomplete` and `tests/test_trends_complete_sessions.py::test_notify_skips_failed_scheduled_run` and `tests/test_trends_complete_sessions.py::test_notify_skips_when_newest_session_incomplete`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated (Phase 237 plan 08)
+**Notes:** Plan 237-06. Known limit (ledger 261116-notify-alert-dropped-while-dashboard-scan-runs): a scheduled run that completes while a newer dashboard scan is running has its alert skipped and not re-sent.
+
+### UAT-237-12: Live core-lab acceptance: counts, compare, running scan and outage alert
+
+**ID:** UAT-237-12
+**Title:** Live core-lab acceptance: counts, compare, running scan and outage alert
+**Maps to:** COUNT-01, COUNT-03, COUNT-06, COUNT-07
+
+**What to test:** On a live chaos-lab core scan set, History equals the Findings page on three scans, Compare lists a titled finding when a service is restored, a CLI scan is withheld mid-run while the previous complete scan is served, and a connector outage raises a scan-coverage alert.
+
+**Steps:**
+```
+see .planning/phases/237-history-and-count-truth/237-evidence/live-core-counts.txt and live-running-scan.txt (core lab, snapshot DB, canonical DB untouched)
+```
+
+**Pass Criteria:** SC#1 counts equal (2/3/0, 1/3/0, 2/3/0); SC#2 added finding has title and port; SC#4 mid-run snapshot withholds the running scan; SC#5 scan_errors_new_count >= 4 and should_notify True.
+
+**Result:** - [x] PASS (2026-11-16 live core-lab run, evidence in `237-evidence/live-core-counts.txt` and `237-evidence/live-running-scan.txt`)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Automated plus operator (Phase 237 plan 07)
+**Notes:** Evidence files live in the gitignored phase directory (not a CI gate). SC#1 is accepted as History equals the Findings page exactly with report parity on CRITICAL and HIGH only (operator: "follow your recommendation"); the report-only MEDIUM and LOW population gap is ledgered under 999.132.
+
+### UAT-237-13: Operator visual walkthrough of History, Compare, sidebar badge and Export PDF
+
+**ID:** UAT-237-13
+**Title:** Operator visual walkthrough of History, Compare, sidebar badge and Export PDF
+**Maps to:** COUNT-01, COUNT-03, COUNT-05, COUNT-06
+
+**What to test:** The operator opens Scan History, Compare, the sidebar scan date and Export PDF on a lab database with complete and incomplete scans and confirms the counts, the Finding and Port columns, the Incomplete badge with withheld numbers, and the Scan Coverage section.
+
+**Steps:**
+```
+see .planning/phases/237-history-and-count-truth/237-evidence/human-verify.txt
+```
+
+**Pass Criteria:** Operator confirms all four steps look right.
+
+**Result:** - [x] PASS (2026-11-16 Phase 237 -- operator reply recorded verbatim in Notes)  - [ ] FAIL  - [ ] SKIP
+**Date:** 2026-11-16  **Tester:** Digs
+**Notes:** Operator reply recorded verbatim in `237-evidence/human-verify.txt`: "Approved, all looked right" (2026-11-16).

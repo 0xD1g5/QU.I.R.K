@@ -137,3 +137,34 @@ def test_exposure_map_requires_auth(tmp_path, monkeypatch):
 
     resp_ok = client.get("/api/exposure-map", headers={"X-API-Key": "test-token"})
     assert resp_ok.status_code == 200
+
+
+def test_all_incomplete_scans_surface_unavailable_reason(tmp_path, monkeypatch):
+    """WR-01 (237 review): with only a running (incomplete) keyed scan, the
+    route returns an empty map with unavailable_reason set, not the running
+    scan's partial edges and not a bare verified-zero map."""
+    from quirk.models import ScanCheckpoint
+
+    db_path = str(tmp_path / "running.db")
+    init_db(db_path)
+    run = "2026-11-16T10:00:00+00:00"
+    with get_session(db_path) as session:
+        for host in ("host-a.example.com", "host-b.example.com"):
+            session.add(CryptoEndpoint(
+                host=host, port=443, protocol="TLS", scanned_at=_now(),
+                scan_run_id=run, cert_spki_fingerprint="a" * 64,
+                cert_subject="CN=host-a.example.com", cert_pubkey_alg="RSA",
+                cert_pubkey_size=2048,
+            ))
+        session.add(ScanCheckpoint(
+            scan_run_id=run, stage="discovery", status="completed",
+            completed_at=_now(),
+        ))
+        session.commit()
+
+    client = _client(monkeypatch, db_path)
+    resp = client.get("/api/exposure-map")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["nodes"] == [] and data["edges"] == []
+    assert data["unavailable_reason"]

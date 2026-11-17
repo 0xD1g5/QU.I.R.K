@@ -84,7 +84,12 @@ def _channel_send_email(cfg, summary) -> None:
     delta_str = (
         f"{summary.score_delta:+d}" if summary.score_delta is not None else "N/A"
     )
-    subject = f"QUIRK Alert: {summary.new_high} new HIGH finding(s) — score {summary.current_score}"
+    scan_errors = summary.scan_errors_new_count
+    if summary.new_high == 0 and scan_errors > 0:
+        # D-21: outage-only alert names the outage, not new HIGH findings.
+        subject = f"QUIRK Alert: {scan_errors} new scan error(s) — score {summary.current_score}"
+    else:
+        subject = f"QUIRK Alert: {summary.new_high} new HIGH finding(s) — score {summary.current_score}"
     body = (
         f"QUIRK Quantum-Readiness Alert\n"
         f"Score: {summary.current_score} (was {summary.previous_score}, "
@@ -92,6 +97,11 @@ def _channel_send_email(cfg, summary) -> None:
         f"New findings — HIGH: {summary.new_high}  MEDIUM: {summary.new_medium}  "
         f"LOW: {summary.new_low}\n"
     )
+    if scan_errors > 0:
+        body += (
+            f"Scan errors: {scan_errors} new "
+            f"(a connector or target stopped answering)\n"
+        )
     if summary.dashboard_url:
         body += f"\nDashboard: {summary.dashboard_url}\n"
     send_email(cfg, subject=subject, body=body)
@@ -113,9 +123,10 @@ def _find_two_sessions(db: Session) -> Tuple[Optional[datetime], Optional[dateti
 
     Thin wrapper over the shared list_session_timestamps() (Phase 229 D-10):
     sessions are identified by scan_run_id, not by a millisecond string key
-    (FIND-12). NULL scanned_at rows excluded (D-13).
+    (FIND-12). NULL scanned_at rows excluded (D-13). Phase 237 D-08: running or
+    interrupted scans are skipped (complete_only=True).
     """
-    sessions = list_session_timestamps(db, limit=2)
+    sessions = list_session_timestamps(db, limit=2, complete_only=True)
     current = sessions[0] if sessions else None
     previous = sessions[1] if len(sessions) > 1 else None
     return current, previous
@@ -132,7 +143,15 @@ def should_notify(report: TrendReport, threshold: int = 5) -> bool:
     Fires when:
       - report.new_high > 0 (new HIGH or CRITICAL finding), OR
       - report.score_delta is not None AND score_delta < -threshold
-        (score regression beyond the floor).
+        (score regression beyond the floor), OR
+      - report.scan_errors_new_count > 0 AND report.previous_session_ts is not
+        None (Phase 237 COUNT-07 / D-23: a connector or target stopped
+        answering since the last scan). Requiring a previous session keeps a
+        permanent condition (e.g. a Vault missing_credentials row) from alerting
+        on the very first scan, when every current error would read as new.
+
+    Note (D-20): new_high now also counts TLS findings, a documented behaviour
+    change of Phase 237.
 
     Explicitly returns False when score_delta is None (Pitfall 4 — first scan
     with no previous session).  This prevents an alert storm on the very first
@@ -145,12 +164,39 @@ def should_notify(report: TrendReport, threshold: int = 5) -> bool:
         return True
     if report.score_delta is not None and report.score_delta < -threshold:
         return True
+    if report.scan_errors_new_count > 0 and report.previous_session_ts is not None:
+        return True
     return False
 
 
 # ---------------------------------------------------------------------------
 # Main fan-out entry point
 # ---------------------------------------------------------------------------
+
+
+def _newest_session_is_incomplete(db: Session) -> bool:
+    """True when the newest scan session overall is running or interrupted (D-22).
+
+    Fail-soft: any error (a mock or broken db) reads as False so the guard can
+    never suppress or crash the fan-out by itself.
+    """
+    try:
+        from quirk.intelligence.scan_completion import incomplete_scan_run_ids
+        from quirk.models import CryptoEndpoint
+
+        row = (
+            db.query(CryptoEndpoint.scan_run_id)
+            .filter(CryptoEndpoint.scanned_at.isnot(None))
+            .order_by(CryptoEndpoint.scanned_at.desc())
+            .first()
+        )
+        if row is None or not row[0]:
+            return False
+        return row[0] in incomplete_scan_run_ids(db)
+    except Exception as exc:  # noqa: BLE001
+        import logging as _logging
+        _logging.getLogger(__name__).debug("newest-session check failed: %s", exc)
+        return False
 
 
 def dispatch_notifications(
@@ -178,6 +224,13 @@ def dispatch_notifications(
     notify_cfg: Optional[NotifyCfg] = load_notifications_config()
     if notify_cfg is None:
         return  # Notifications not configured — exit cleanly
+
+    # Phase 237 D-22: a failed or interrupted run must not re-send the previous
+    # complete pair's alert (complete_only below would otherwise fall back to it).
+    if getattr(run, "status", None) != "completed":
+        return
+    if _newest_session_is_incomplete(db):
+        return
 
     # Discover the two most recent scan sessions
     current_ts, previous_ts = _find_two_sessions(db)
