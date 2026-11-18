@@ -2,19 +2,13 @@
 stderr and no traceback, and marks a dashboard-launched job row failed."""
 from __future__ import annotations
 
-import subprocess
-import sys
-from pathlib import Path
-
-import pytest
 import yaml
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quirk.models import Base, ScanJob
 from quirk.util import target_trust as _tt
-
-_ROOT = Path(__file__).resolve().parent.parent
+from tests.cli_helpers import run_cli
 
 
 def _write_config(tmp_path, trusted, fqdns):
@@ -37,10 +31,7 @@ def _write_config(tmp_path, trusted, fqdns):
 
 
 def _run(config, *extra):
-    return subprocess.run(
-        [sys.executable, "run_scan.py", "--config", str(config), "--quiet", *extra],
-        cwd=_ROOT, capture_output=True, text=True, timeout=120,
-    )
+    return run_cli(["--config", str(config), "--quiet", *extra], timeout=120)
 
 
 def _job_db(tmp_path):

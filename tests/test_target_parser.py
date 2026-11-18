@@ -7,7 +7,8 @@ is set.  Hosts are neutral (a.example, b.example, RFC 5737 and RFC 3849).
 from __future__ import annotations
 
 import dataclasses
-import subprocess
+import shutil
+
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,6 +16,7 @@ import pytest
 import yaml
 
 from quirk.config import ConnectorsCfg
+from tests.cli_helpers import run_fork_safe
 from quirk.util import target_trust as tt
 from quirk.util.target_trust import (
     AMBIGUOUS_TARGET,
@@ -193,8 +195,8 @@ def test_shape_map_covers_every_check_field():
 
 
 def test_tracked_configs_have_no_ambiguous_targets():
-    names = subprocess.run(
-        ["git", "ls-files", "*.yaml", "*.yml"], cwd=ROOT, capture_output=True, text=True, check=True
+    names = run_fork_safe(
+        [shutil.which("git"), "-C", str(ROOT), "ls-files", "*.yaml", "*.yml"], check=True
     ).stdout.split()
     parsed = 0
     for name in names:
