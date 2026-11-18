@@ -233,7 +233,7 @@ Plans:
 **Gap closure 3 (code review 239-REVIEW-GAP2, operator scope 239-GAP3-SCOPE.md)**
 - [ ] 239-12-PLAN.md — Ledger rows first for the ledger-only review items; container image references naming any source scheme in the syft model are refused, tied to the model by a run-time test (RED first) (TRUST-01, WR-03)
 - [ ] 239-13-PLAN.md — The syft registry model follows syft's upstream reference parser, allows the default registry only where it predicts it, and its real-syft check runs in Linux Full Suite with a pinned syft (RED first) (TRUST-01, WR-04)
-- [ ] 239-14-PLAN.md — UAT-239-08, UAT-239-07 enforced in CI, vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
+- [ ] 239-14-PLAN.md — UAT-239-08, UAT-239-07 CI-EXEMPT withdrawn (CI execution junit-proven; substitute-runner gap ledgered), vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
 
 ### Phase 240: Regressions and Release 5.29.0
 **Goal**: Scan confidence reflects a high probe error rate again, and 5.29.0 ships the milestone's fixes with the known-defect wording for every fixed item withdrawn and every date-gated catalog green on an honest re-verification.
