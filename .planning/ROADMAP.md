@@ -212,7 +212,7 @@ Plans:
   1. A scalar `*_targets` value for any connector loads as a one-element list, and a test that enumerates the target fields from `ConnectorsCfg` at run time shows the trust gate and the scanner see the same target set for every field.
   2. LDAP-based connectors do not follow a directory referral to a host the trust gate has not checked, and a run-time source scan finds every `ldap3.Server` / `Connection` in `quirk/` and fails if any one is not covered.
   3. The trust gate refuses an IP literal that is not ASCII instead of passing it through.
-**Plans**: 11 plans (4 + 7 gap closure)
+**Plans**: 14 plans (4 + 7 gap closure + 3 gap closure 3)
 Plans:
 **Wave 1**
 - [ ] 239-01-PLAN.md — Ledger-first rows, then one target shape for every list-typed connector field and trusted_targets via a shared as_target_list (TRUST-01, D-01..D-05, D-07, D-18, D-21, D-22)
@@ -230,6 +230,10 @@ Plans:
 - [x] 239-09-PLAN.md — Ledger rows first; kubeconfig cluster servers join the agreement test (RED first); the trust gate reads them with the shared parser and URL target fields accept http and https only (TRUST-01, WR-01)
 - [x] 239-10-PLAN.md — Container image registries join the agreement test with a real-syft cross-check (RED first); the gate reads an explicit registry with the shared parser; Kerberos self-check uses the same parser (TRUST-01, WR-03)
 - [x] 239-11-PLAN.md — Docs, UAT-239-06, regenerated artifacts, vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
+**Gap closure 3 (code review 239-REVIEW-GAP2, operator scope 239-GAP3-SCOPE.md)**
+- [ ] 239-12-PLAN.md — Ledger rows first for the ledger-only review items; container image references naming any source scheme in the syft model are refused, tied to the model by a run-time test (RED first) (TRUST-01, WR-03)
+- [ ] 239-13-PLAN.md — The syft registry model follows syft's upstream reference parser, allows the default registry only where it predicts it, and its real-syft check runs in Linux Full Suite with a pinned syft (RED first) (TRUST-01, WR-04)
+- [ ] 239-14-PLAN.md — UAT-239-08, UAT-239-07 enforced in CI, vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
 
 ### Phase 240: Regressions and Release 5.29.0
 **Goal**: Scan confidence reflects a high probe error rate again, and 5.29.0 ships the milestone's fixes with the known-defect wording for every fixed item withdrawn and every date-gated catalog green on an honest re-verification.
