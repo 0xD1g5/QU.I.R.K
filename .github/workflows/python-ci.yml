@@ -444,6 +444,22 @@ jobs:
           pip install pytest
           pip install "resvg-py==0.5.0"
 
+      # The container_targets agreement model is checked against the real syft here, so
+      # the cross-check executes in CI instead of skipping. The version and sha256 are
+      # pinned literally and must match SYFT_MODEL_VERSION in
+      # tests/test_connector_target_shape.py (enforced by
+      # test_ci_installs_the_syft_version_the_model_cites).
+      - name: Install pinned syft (real-syft cross-check, Phase 239 WR-04)
+        run: |
+          set -euo pipefail
+          SYFT_SHA256=ad92bd3ec1b94a3df01d4d0aec199afa9c42b72e86da436ff5f837914d32706b
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/syft.tar.gz" "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz"
+          echo "${SYFT_SHA256}  $RUNNER_TEMP/syft.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/syft-bin"
+          tar -xzf "$RUNNER_TEMP/syft.tar.gz" -C "$RUNNER_TEMP/syft-bin" syft
+          echo "$RUNNER_TEMP/syft-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/syft-bin/syft" version
+
       - name: Run full test suite
         run: pytest -q -m "" -rs --junitxml=pytest-junit.xml
 
