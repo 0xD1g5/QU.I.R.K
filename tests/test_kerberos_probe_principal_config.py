@@ -1818,6 +1818,24 @@ def _kernel_peer(raw):
         sock.close()
 
 
+def test_kerberos_self_check_uses_the_gate_parser():
+    import inspect
+
+    from quirk.util import target_trust as tt
+    from quirk.util.target_trust import CONNECTOR_FIELD_TARGET_SHAPE, parse_target
+
+    shape = CONNECTOR_FIELD_TARGET_SHAPE["kerberos_targets"]
+    checked = 0
+    for t in _sweep_targets():
+        if ks._invalid_target_reason(t) is not None:
+            continue
+        checked += 1
+        assert parse_target(t.strip(), shape).host == t.strip(), repr(t)
+    assert checked > 1000
+    assert "_extract_host" not in inspect.getsource(ks)
+    assert not hasattr(tt, "_extract_host")
+
+
 def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
     from quirk.util import target_trust as tt
 
