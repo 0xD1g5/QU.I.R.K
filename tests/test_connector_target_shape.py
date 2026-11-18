@@ -715,7 +715,8 @@ def _observe_syft(exe, ref, base_env, work):
     for sub in ("home", "xdg-config", "xdg-cache"):
         (work / sub).mkdir(parents=True, exist_ok=True)
     try:
-        subprocess.run([exe, "-o", "json", "--", ref], env=env, capture_output=True, timeout=60)
+        subprocess.run([exe, "-o", "json", "--", ref], env=env, capture_output=True, timeout=60,
+                       close_fds=False)
     except subprocess.TimeoutExpired:
         pass
     finally:
