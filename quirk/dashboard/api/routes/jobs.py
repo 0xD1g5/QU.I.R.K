@@ -731,7 +731,11 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
     # 225.1 / D-03, D-07: one tolerant reader; an unreadable server config is a
     # 503, never an empty (allow-all) list. Overlay connector hosts are checked too.
     from quirk.util.server_config import load_server_security
-    from quirk.util.target_trust import connector_host_values, is_target_trusted
+    from quirk.util.target_trust import (
+        connector_host_values,
+        is_target_trusted,
+        refusal_message,
+    )
     sec = load_server_security()
     if sec.error:
         logger.error("Server security configuration could not be read: %s", sec.error)
@@ -743,20 +747,14 @@ def create_job(payload: ScanSubmitRequest, db: Session = Depends(get_db)) -> dic
             if not _result.ok:
                 raise HTTPException(
                     status_code=422,
-                    detail=(
-                        f"Target {_result.redacted_preview!r} is not in the trusted-targets "
-                        f"allowlist (security.trusted_targets in config.yaml)."
-                    ),
+                    detail=refusal_message(_result),
                 )
         for _field, _host in connector_host_values(payload.connectors or {}):
             _result = is_target_trusted(_host, trusted_targets_cfg)
             if not _result.ok:
                 raise HTTPException(
                     status_code=422,
-                    detail=(
-                        f"Target {_result.redacted_preview!r} (connectors.{_field}) is not in "
-                        f"the trusted-targets allowlist (security.trusted_targets in config.yaml)."
-                    ),
+                    detail=refusal_message(_result, _field),
                 )
 
     # Phase 144 / D-02: large ranges are now chunked, not rejected. nmap

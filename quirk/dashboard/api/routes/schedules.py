@@ -141,7 +141,7 @@ def _enforce_trusted_target(target: str) -> None:
     An unreadable server config is a 503, never an empty (allow-all) list.
     """
     from quirk.util.server_config import load_server_security
-    from quirk.util.target_trust import is_target_trusted
+    from quirk.util.target_trust import is_target_trusted, refusal_message
 
     sec = load_server_security()
     if sec.error:
@@ -153,10 +153,7 @@ def _enforce_trusted_target(target: str) -> None:
     if not result.ok:
         raise HTTPException(
             status_code=422,
-            detail=(
-                f"Target {result.redacted_preview!r} is not in the trusted-targets "
-                f"allowlist (security.trusted_targets in config.yaml)."
-            ),
+            detail=refusal_message(result),
         )
 
 
