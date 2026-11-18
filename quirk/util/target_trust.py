@@ -23,6 +23,7 @@ RC_NOT_IN_ALLOWLIST: Final[str] = "not_in_trusted_targets"
 RC_UNREADABLE_TARGET: Final[str] = "unreadable_target_value"
 RC_NON_ASCII_IP_LITERAL: Final[str] = "non_ascii_ip_literal"
 RC_AMBIGUOUS_TARGET: Final[str] = "ambiguous_target_value"
+RC_INVALID_ALLOWLIST_ENTRY: Final[str] = "invalid_trusted_targets_entry"
 
 SHAPE_URL: Final[str] = "url"
 SHAPE_LDAP: Final[str] = "ldap"
@@ -46,6 +47,11 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
     """
     if not trusted_targets:
         return ValidationResult(True, "", "")
+
+    # An entry that is not a string cannot be matched; refuse every target with a code
+    # rather than let the matching below raise.
+    if any(not isinstance(entry, str) for entry in trusted_targets):
+        return ValidationResult(False, RC_INVALID_ALLOWLIST_ENTRY, "")
 
     if host_or_ip is AMBIGUOUS_TARGET:
         return ValidationResult(False, RC_AMBIGUOUS_TARGET, "")
@@ -503,6 +509,12 @@ def refusal_message(result: ValidationResult, field_name: "str | None" = None) -
             f"Target {result.redacted_preview!r}{where} is an IP address literal "
             f"containing non-ASCII characters and is refused "
             f"(security.trusted_targets in config.yaml)."
+        )
+    if result.reason == RC_INVALID_ALLOWLIST_ENTRY:
+        return (
+            "security.trusted_targets in config.yaml contains an entry that is not a "
+            "host name, IP address or CIDR string, so every target is refused until "
+            "that entry is fixed."
         )
     if result.reason == RC_AMBIGUOUS_TARGET:
         return (
