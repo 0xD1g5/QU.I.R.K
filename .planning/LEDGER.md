@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (315)
+## Open (316)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -362,6 +362,7 @@ the Evidence cell.
 | 261118-registry-kubeconfig-host-agreement-test | OPEN | P1 | security | Trust gate reads kubeconfig cluster servers and image-reference registry hosts with the shared target parser | .planning/phases/239-connector-target-trust-gate-hardening/239-VERIFICATION.md | verified open at 4e503a92 (re-verification 2026-11-18, SC#1 partial); fix in Phase 239 plans 09-10: the trust gate reads each kubeconfig cluster server and each explicit image-reference registry with parse_target and refuses one that does not read as exactly one host and port while trusted_targets is set; URL target fields accept http and https URLs only; the gate/connector agreement test covers k8s_kubeconfig and container_targets; was a P3 test-coverage row until 2026-11-18 |
 | 261118-url-target-fields-http-https-only | OPEN | P2 | security | URL target fields accept http and https URLs only | .planning/phases/239-connector-target-trust-gate-hardening/239-REVIEW.md WR-01 | verified open at 4e503a92; fix in Phase 239 plan 09: URL target fields accept http and https URLs only |
 | 261118-kerberos-self-check-shared-parser | OPEN | P3 | connector | Kerberos target self-check reads targets with the trust gate's shared parser | .planning/phases/239-connector-target-trust-gate-hardening/239-REVIEW.md WR-03 | verified open at 4e503a92; fix in Phase 239 plan 10: kerberos_scanner._invalid_target_reason compares a target with the gate's parse_target host, and target_trust._extract_host is retired |
+| 261118-container-local-source-schemes-refused | OPEN | P2 | security | Container image references naming a local-file or container-daemon source scheme are refused before syft runs | 239 gap-closure planning (plan-checker, 2026-11-18) | verified open at 8c36b478; fix in Phase 239 plan 10: validate_image_ref refuses every syft local-file and daemon source scheme, as it already does for dir:, file:, oci:, docker-daemon:, podman: and docker-archive: |
 
 ## Deferred (37)
 
