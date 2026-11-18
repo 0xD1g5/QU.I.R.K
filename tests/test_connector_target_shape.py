@@ -12,8 +12,12 @@ import dataclasses
 import importlib
 import inspect
 import itertools
+import os
 import re
+import shutil
 import socket
+import subprocess
+import threading
 import typing
 from pathlib import Path
 from types import SimpleNamespace
@@ -242,16 +246,17 @@ PARSER_AGREEMENT_CORPUS = (
     "a.example:389,b.example:389",
     "a.example,b.example:5432",
     "a.example://b.example/x",
+    "a.example/x:1",
+    "a.example:5000/x",
+    "[2001:db8::1]:5000/x",
+    "registry:a.example/x",
+    "oci-archive:a.example/x",
+    "a.example:5000:6000/x",
 )
 
 _PARSER_AGREEMENT_IDS = [f"c{i:02d}" for i in range(len(PARSER_AGREEMENT_CORPUS))]
 
-OUT_OF_AGREEMENT_SCOPE = {
-    "check-registry": (
-        "image references: the consumer is the registry client's reference parser; "
-        "LEDGER 261118-registry-kubeconfig-host-agreement-test"
-    ),
-}
+OUT_OF_AGREEMENT_SCOPE: dict = {}
 
 CHECK_FIELDS = [
     f.name
@@ -506,6 +511,83 @@ def _k8s_consumer(path, mp):
     return set(dialled)
 
 
+_SYFT_REGISTRY_SCHEMES = ("registry:", "oci-model-registry:")
+_SYFT_DAEMON_SCHEMES = ("docker:", "podman:", "containerd:", "docker-daemon:", "image:")
+_SYFT_LOCAL_SCHEMES = (
+    "docker-archive:", "oci-archive:", "oci-dir:", "singularity:", "dir:", "file:", "oci:", "snap:",
+)
+_IMAGE_DOMAIN = re.compile(r"^(?:[A-Za-z0-9.-]+|\[[0-9a-fA-F:.]+\])(?::[0-9]*)?$")
+_IMAGE_PATH = re.compile(
+    r"^[a-z0-9_.\-/]*(?::[\w][\w.-]{0,127})?(?:@[A-Za-z][A-Za-z0-9]*:[0-9a-fA-F]{32,})?$"
+)
+
+
+def _syft_registry_hosts(ref) -> set:
+    """Registry hosts syft contacts for the argv reference ``ref``.
+
+    Source of the scheme lists: ``syft scan --help`` (syft 1.57.2): explicit
+    schemes ``docker:``, ``podman:``, ``registry:``, ``docker-archive:``,
+    ``oci-archive:``, ``oci-dir:``, ``singularity:``, ``oci-model-registry:``,
+    ``dir:``, ``file:``; the installed binary also resolves ``snap:`` and
+    ``image:``.  A scheme is matched in any letter case; local-file sources
+    contact no registry.  The remainder is read the way the registry client
+    reads a reference: the first ``/`` component is the registry when it
+    contains ``.`` or ``:`` or equals ``localhost``, and is taken as a URL
+    authority (host with an optional, possibly empty, numeric port; a bracketed
+    IPv6 form); the rest is a repository of lowercase alphanumerics and
+    ``._-/``, an optional ``:tag`` and an optional ``@digest``.  An ``http:``
+    or ``https:`` head is a URL, which syft does not resolve as a registry
+    (observed with syft 1.57.2).  A reference with no explicit registry goes
+    to the default registry, and syft also probes the snap store; the
+    cross-check lists both separately.
+    """
+    lowered = ref.lower()
+    rest = ref
+    for scheme in _SYFT_REGISTRY_SCHEMES + _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES:
+        if lowered.startswith(scheme):
+            if scheme in _SYFT_LOCAL_SCHEMES:
+                return set()
+            rest = ref[len(scheme):]
+            break
+    if "/" not in rest:
+        return set()
+    first, tail = rest.split("/", 1)
+    if not ("." in first or ":" in first or first == "localhost"):
+        return set()
+    if first.lower() in ("http:", "https:"):
+        return set()
+    if not _IMAGE_DOMAIN.match(first) or not tail or not _IMAGE_PATH.match(tail):
+        return set()
+    host = first
+    if host.startswith("["):
+        host = host[1 : host.index("]")]
+    elif ":" in host:
+        host = host.rsplit(":", 1)[0]
+    return {host.lower()}
+
+
+def _container_consumer(value, mp):
+    from quirk.scanner import container_scanner as mod
+
+    real_which = shutil.which
+    mp.setattr(
+        mod.shutil, "which",
+        lambda name, *a, **k: "/nonexistent/syft" if name == "syft" else real_which(name, *a, **k),
+    )
+    recorded = []
+
+    def fake(argv, *a, **k):
+        recorded.append(list(argv))
+        raise subprocess.TimeoutExpired(argv, 1)
+
+    mp.setattr(mod.subprocess, "run", fake)
+    mod.scan_container_targets([value], timeout=1)
+    hosts = set()
+    for argv in recorded:
+        hosts |= _syft_registry_hosts(argv[-1])
+    return hosts
+
+
 CONSUMERS = {
     "adcs_targets": (_ldap_consumer("quirk.scanner.adcs_scanner", "scan_adcs_targets"), "ldap://dc.example:389", "dc.example"),
     "smime_targets": (_ldap_consumer("quirk.scanner.smime_scanner", "scan_smime_targets"), "ldap://dc.example:389", "dc.example"),
@@ -521,6 +603,7 @@ CONSUMERS = {
     "aws_endpoint_url": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
     "azure_keyvault_urls": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
     "k8s_kubeconfig": (_k8s_consumer, "https://api.example:6443", "api.example"),
+    "container_targets": (_container_consumer, "reg.example/app:1", "reg.example"),
 }
 
 
@@ -561,7 +644,7 @@ def test_benign_targets_keep_their_host(monkeypatch, tmp_path, field):
     assert _tt.is_target_trusted(expected, [expected]).ok
     contacted = {_norm(c) for c in consumer(gate_input, monkeypatch)}
     assert contacted == {expected}
-    if field in ("jwt_targets", "saml_targets", "k8s_kubeconfig"):
+    if field in ("jwt_targets", "saml_targets", "k8s_kubeconfig", "container_targets"):
         assert contacted
 
 
@@ -578,3 +661,103 @@ def test_gate_and_consumer_agree_on_host(monkeypatch, tmp_path, field, value):
         f"{field}: the gate and the consumer read the value differently "
         f"(corpus id c{PARSER_AGREEMENT_CORPUS.index(value):02d})"
     )
+
+
+DEFAULT_REGISTRY_HOSTS = {"docker.io", "index.docker.io", "registry-1.docker.io", "auth.docker.io"}
+SYFT_FIXED_PROBE_HOSTS = {"api.snapcraft.io"}
+
+
+def _loopback_registry(ref) -> bool:
+    first = ref.split("/", 1)[0].rsplit(":", 1)[0].lower() if "/" in ref else ""
+    return first == "localhost" or first.startswith("127.") or first in ("[::1]", "::1")
+
+
+def _observe_syft(exe, ref, base_env, work):
+    """Run syft over ``ref`` behind a private recording proxy; return the CONNECT authorities."""
+    seen = []
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(64)
+    listener.settimeout(0.2)
+    stop = threading.Event()
+
+    def serve():
+        while not stop.is_set():
+            try:
+                conn, _ = listener.accept()
+            except (socket.timeout, OSError):
+                continue
+            try:
+                conn.settimeout(2)
+                parts = conn.makefile("rb").readline().decode("latin-1", "replace").split()
+                if len(parts) >= 2 and parts[0] == "CONNECT":
+                    seen.append(parts[1])
+            except OSError:
+                pass
+            finally:
+                conn.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    proxy = f"http://127.0.0.1:{listener.getsockname()[1]}"
+    absent = work / "absent.sock"
+    env = dict(base_env)
+    env.update(
+        HTTPS_PROXY=proxy, HTTP_PROXY=proxy, https_proxy=proxy, http_proxy=proxy,
+        HOME=str(work / "home"),
+        XDG_CONFIG_HOME=str(work / "xdg-config"),
+        XDG_CACHE_HOME=str(work / "xdg-cache"),
+        SYFT_CHECK_FOR_APP_UPDATE="false",
+        DOCKER_HOST=f"unix://{absent}",
+        CONTAINER_HOST=f"unix://{absent}",
+        CONTAINERD_ADDRESS=str(absent),
+    )
+    for sub in ("home", "xdg-config", "xdg-cache"):
+        (work / sub).mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run([exe, "-o", "json", "--", ref], env=env, capture_output=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        pass
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        listener.close()
+    return list(seen)
+
+
+@pytest.mark.slow
+def test_syft_registry_model_matches_real_syft(tmp_path):
+    exe = shutil.which("syft")
+    if exe is None:
+        pytest.skip("syft is not on PATH; the cross-check needs the real binary")
+    from concurrent.futures import ThreadPoolExecutor
+
+    from quirk.util.subprocess_input import validate_image_ref
+
+    base_env = dict(os.environ)
+    for name in ("NO_PROXY", "no_proxy", "ALL_PROXY", "all_proxy"):
+        base_env.pop(name, None)
+    refs = [
+        r for r in PARSER_AGREEMENT_CORPUS
+        if isinstance(r, str) and validate_image_ref(r).ok and not _loopback_registry(r)
+    ]
+    assert len(refs) >= 5, refs
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(
+            pool.map(
+                lambda item: _observe_syft(exe, item[1], base_env, tmp_path / f"w{item[0]}"),
+                enumerate(refs),
+            )
+        )
+    total = 0
+    for ref, authorities in zip(refs, results):
+        observed = {_tt.parse_target(a, _tt.SHAPE_HOST_PORT).host.lower() for a in authorities}
+        total += len(authorities)
+        predicted = _syft_registry_hosts(ref)
+        extra = observed - DEFAULT_REGISTRY_HOSTS - SYFT_FIXED_PROBE_HOSTS - predicted
+        assert not extra, f"{ref!r}: syft contacted {sorted(extra)}, the model predicted {sorted(predicted)}"
+        if predicted:
+            assert predicted & observed, (
+                f"{ref!r}: the model predicts {sorted(predicted)}, syft contacted {sorted(observed)}"
+            )
+    assert total >= 1, "the proxy recorded no CONNECT: the cross-check is vacuous"
