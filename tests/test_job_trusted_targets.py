@@ -237,3 +237,23 @@ def test_server_config_scalar_trusted_targets_is_one_entry(monkeypatch, tmp_path
     path.write_text("security:\n  trusted_targets: 10.0.0.0/8\n")
     monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
     assert load_server_security().trusted_targets == ["10.0.0.0/8"]
+
+
+def test_post_jobs_non_string_trusted_targets_entry_is_422(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    path = tmp_path / "server.yaml"
+    path.write_text("security:\n  trusted_targets: false\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc, TestingSession = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "10.1.1.1"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 422, response.text
+    assert "not a host name, IP address or CIDR string" in response.text
+    db = TestingSession()
+    assert db.query(ScanJob).count() == 0
+    db.close()

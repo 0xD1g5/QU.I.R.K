@@ -406,3 +406,38 @@ def test_refusal_message_used_at_every_site():
                      or "is not in the trusted-targets" in node.value)
             ):
                 assert id(node) in allowed, f"{rel}:{node.lineno} formats the refusal text locally"
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [[10], [True], [False], [1.5], ["10.0.0.0/8", 10]],
+    ids=["int", "true", "false", "float", "mixed"],
+)
+@pytest.mark.parametrize("target", ["10.1.1.1", "localhost", "ambiguous"])
+def test_non_string_allowlist_entry_refused_with_code(entries, target):
+    from quirk.util import target_trust as _tt
+
+    host = _tt.AMBIGUOUS_TARGET if target == "ambiguous" else target
+    result = _tt.is_target_trusted(host, entries)
+    assert result.ok is False
+    assert result.reason == _tt.RC_INVALID_ALLOWLIST_ENTRY
+
+
+def test_empty_allowlist_and_string_allowlist_unchanged():
+    assert is_target_trusted("10.1.1.1", []).ok
+    assert is_target_trusted("10.1.1.1", ["10.0.0.0/8"]).ok
+    assert not is_target_trusted("11.1.1.1", ["10.0.0.0/8"]).ok
+
+
+def test_enforce_non_string_allowlist_entry_raises_refusal():
+    from quirk.util import target_trust as _tt
+
+    cfg = _cfg(False)
+    cfg.targets.fqdns = ["a.example"]
+    expected = _tt.refusal_message(
+        _tt.ValidationResult(False, _tt.RC_INVALID_ALLOWLIST_ENTRY, "")
+    )
+    with pytest.raises(ValueError) as excinfo:
+        enforce_trusted_targets(cfg)
+    assert str(excinfo.value) == expected
+    assert "not a host name, IP address or CIDR string" in expected
