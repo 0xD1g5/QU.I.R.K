@@ -173,11 +173,17 @@ def _bind_and_search(host: str, port: int, base_dn: str, timeout: int):
     at the caller; this helper raises so the caller can attach
     ``scan_error`` if needed.
     """
-    server = ldap3.Server(host, port=port, get_info=ldap3.ALL, connect_timeout=timeout)
+    # Phase 239 TRUST-02: follow no referral. ldap3 defaults to following one to any host and
+    # re-binding there, and the trusted-targets gate never checked that host.
+    server = ldap3.Server(
+        host, port=port, get_info=ldap3.ALL, connect_timeout=timeout,
+        allowed_referral_hosts=[],
+    )
     conn = ldap3.Connection(
         server,
         authentication=ldap3.ANONYMOUS,
         receive_timeout=timeout,
+        auto_referrals=False,
     )
     if not conn.bind():
         logger.warning("SMIME: anonymous bind rejected on %s:%d", host, port)

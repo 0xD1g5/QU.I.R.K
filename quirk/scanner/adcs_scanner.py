@@ -279,15 +279,22 @@ def _bind_and_query(
     Raises ``ldap3.core.exceptions.LDAPBindError`` on bind failure so the
     caller converts to an ADCS-UNREACH coverage gap.
     """
-    server = ldap3.Server(host, port=port, get_info=ldap3.ALL, connect_timeout=timeout)
+    # Phase 239 TRUST-02: follow no referral. ldap3 defaults to following one to any host and
+    # re-binding there, and the trusted-targets gate never checked that host.
+    server = ldap3.Server(
+        host, port=port, get_info=ldap3.ALL, connect_timeout=timeout,
+        allowed_referral_hosts=[],
+    )
     if user and password:
         conn = ldap3.Connection(
             server, user=user, password=password,
             authentication=ldap3.SIMPLE, receive_timeout=timeout,
+            auto_referrals=False,
         )
     else:
         conn = ldap3.Connection(
             server, authentication=ldap3.ANONYMOUS, receive_timeout=timeout,
+            auto_referrals=False,
         )
     if not conn.bind():
         bind_exc = ldap3.core.exceptions.LDAPBindError(
