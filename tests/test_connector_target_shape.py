@@ -11,9 +11,11 @@ from __future__ import annotations
 import dataclasses
 import importlib
 import inspect
+import itertools
 import re
 import socket
 import typing
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -239,6 +241,7 @@ PARSER_AGREEMENT_CORPUS = (
     "a.example,b.example",
     "a.example:389,b.example:389",
     "a.example,b.example:5432",
+    "a.example://b.example/x",
 )
 
 _PARSER_AGREEMENT_IDS = [f"c{i:02d}" for i in range(len(PARSER_AGREEMENT_CORPUS))]
@@ -248,10 +251,6 @@ OUT_OF_AGREEMENT_SCOPE = {
         "image references: the consumer is the registry client's reference parser; "
         "LEDGER 261118-registry-kubeconfig-host-agreement-test"
     ),
-    "check-kubeconfig": (
-        "cluster servers are read from a file by the kubernetes client; "
-        "LEDGER 261118-registry-kubeconfig-host-agreement-test"
-    ),
 }
 
 CHECK_FIELDS = [
@@ -259,6 +258,40 @@ CHECK_FIELDS = [
     for f in dataclasses.fields(ConnectorsCfg)
     if _tt.CONNECTOR_HOST_FIELD_DISPOSITION.get(f.name) == "check"
 ]
+
+
+AGREEMENT_FIELDS = [
+    f.name
+    for f in dataclasses.fields(ConnectorsCfg)
+    if _tt.CONNECTOR_HOST_FIELD_DISPOSITION.get(f.name, "").startswith("check")
+    and _tt.CONNECTOR_HOST_FIELD_DISPOSITION.get(f.name) not in OUT_OF_AGREEMENT_SCOPE
+]
+
+
+_KUBECONFIG_COUNTER = itertools.count()
+
+
+def _write_kubeconfig(server, tmp_path):
+    n = next(_KUBECONFIG_COUNTER)
+    path = tmp_path / f"kubeconfig-{n}.yaml"
+    doc = {
+        "apiVersion": "v1",
+        "kind": "Config",
+        "clusters": [{"name": "c", "cluster": {"server": server}}],
+        "users": [{"name": "u", "user": {"token": "t"}}],
+        "contexts": [{"name": "x", "context": {"cluster": "c", "user": "u"}}],
+        "current-context": "x",
+    }
+    path.write_text(yaml.safe_dump(doc), encoding="utf-8")
+    return str(path)
+
+
+GATE_INPUT = {"k8s_kubeconfig": _write_kubeconfig}
+
+
+def _gate_input(field, value, tmp_path):
+    adapter = GATE_INPUT.get(field)
+    return adapter(value, tmp_path) if adapter else value
 
 
 def _norm(host) -> str:
@@ -444,6 +477,35 @@ def _urllib3_consumer(value, mp):
     return {host} if host else set()
 
 
+def _k8s_consumer(path, mp):
+    """The Kubernetes connector loads the kubeconfig with the kubernetes client
+    and urllib3 opens the connection; the spy records the host urllib3 is asked
+    to dial."""
+    import urllib3.util.connection
+
+    from quirk.scanner import k8s_connector
+
+    for name in (
+        "HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy",
+        "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy",
+    ):
+        mp.delenv(name, raising=False)
+    dialled = []
+
+    def spy(address, *a, **k):
+        dialled.append(address[0])
+        raise OSError("stop before any network I/O")
+
+    mp.setattr(urllib3.util.connection, "create_connection", spy)
+    try:
+        k8s_connector.scan_k8s_targets(
+            provider="eks", cluster_name="agreement", kubeconfig=path
+        )
+    except Exception:  # noqa: BLE001 - the connector may refuse the value
+        pass
+    return set(dialled)
+
+
 CONSUMERS = {
     "adcs_targets": (_ldap_consumer("quirk.scanner.adcs_scanner", "scan_adcs_targets"), "ldap://dc.example:389", "dc.example"),
     "smime_targets": (_ldap_consumer("quirk.scanner.smime_scanner", "scan_smime_targets"), "ldap://dc.example:389", "dc.example"),
@@ -458,42 +520,60 @@ CONSUMERS = {
     "vault_addr": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
     "aws_endpoint_url": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
     "azure_keyvault_urls": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
+    "k8s_kubeconfig": (_k8s_consumer, "https://api.example:6443", "api.example"),
 }
 
 
 def test_every_check_field_has_a_consumer():
     assert len(CHECK_FIELDS) >= 13, CHECK_FIELDS
-    missing = sorted(set(CHECK_FIELDS) - set(CONSUMERS))
-    extra = sorted(set(CONSUMERS) - set(CHECK_FIELDS))
+    missing = sorted(set(AGREEMENT_FIELDS) - set(CONSUMERS))
+    extra = sorted(set(CONSUMERS) - set(AGREEMENT_FIELDS))
     assert not missing, f"check field(s) with no registered consumer: {missing}"
     assert not extra, f"consumer registered for non-check field(s): {extra}"
+    covered = {_tt.CONNECTOR_HOST_FIELD_DISPOSITION[f] for f in CONSUMERS}
     kinds = {
         d for d in _tt.CONNECTOR_HOST_FIELD_DISPOSITION.values()
         if d.startswith("check") and d != "check"
     }
-    assert kinds <= set(OUT_OF_AGREEMENT_SCOPE), kinds
+    assert kinds <= covered | set(OUT_OF_AGREEMENT_SCOPE), kinds
 
 
-@pytest.mark.parametrize("field", CHECK_FIELDS)
-def test_benign_targets_keep_their_host(monkeypatch, field):
+def test_out_of_agreement_scope_entries_are_justified():
+    ledger = (Path(__file__).resolve().parents[1] / ".planning" / "LEDGER.md").read_text(
+        encoding="utf-8"
+    )
+    used = set(_tt.CONNECTOR_HOST_FIELD_DISPOSITION.values())
+    for kind, reason in OUT_OF_AGREEMENT_SCOPE.items():
+        assert kind in used, kind
+        assert len(reason) >= 40, kind
+        ids = re.findall(r"LEDGER (\d{6}-[a-z0-9-]+)", reason)
+        assert ids, f"{kind}: reason names no LEDGER row"
+        for row_id in ids:
+            assert f"| {row_id} |" in ledger, f"{kind}: LEDGER row {row_id} not found"
+
+
+@pytest.mark.parametrize("field", AGREEMENT_FIELDS)
+def test_benign_targets_keep_their_host(monkeypatch, tmp_path, field):
     consumer, benign, expected = CONSUMERS[field]
-    pairs = _tt.connector_host_values({field: [benign]})
+    gate_input = _gate_input(field, benign, tmp_path)
+    pairs = _tt.connector_host_values({field: [gate_input]})
     assert [h for _f, h in pairs] == [expected]
     assert _tt.is_target_trusted(expected, [expected]).ok
-    contacted = {_norm(c) for c in consumer(benign, monkeypatch)}
+    contacted = {_norm(c) for c in consumer(gate_input, monkeypatch)}
     assert contacted == {expected}
-    if field in ("jwt_targets", "saml_targets"):
+    if field in ("jwt_targets", "saml_targets", "k8s_kubeconfig"):
         assert contacted
 
 
 @pytest.mark.parametrize("value", PARSER_AGREEMENT_CORPUS, ids=_PARSER_AGREEMENT_IDS)
-@pytest.mark.parametrize("field", CHECK_FIELDS)
-def test_gate_and_consumer_agree_on_host(monkeypatch, field, value):
-    pairs = _tt.connector_host_values({field: [value]})
+@pytest.mark.parametrize("field", AGREEMENT_FIELDS)
+def test_gate_and_consumer_agree_on_host(monkeypatch, tmp_path, field, value):
+    gate_input = _gate_input(field, value, tmp_path)
+    pairs = _tt.connector_host_values({field: [gate_input]})
     gate_hosts = [h for _f, h in pairs if isinstance(h, str)]
     allow = gate_hosts or ["192.0.2.254"]
     gate_refuses = any(not _tt.is_target_trusted(h, allow).ok for _f, h in pairs)
-    contacted = CONSUMERS[field][0](value, monkeypatch)
+    contacted = CONSUMERS[field][0](gate_input, monkeypatch)
     assert gate_refuses or {_norm(c) for c in contacted} <= {_norm(h) for h in gate_hosts}, (
         f"{field}: the gate and the consumer read the value differently "
         f"(corpus id c{PARSER_AGREEMENT_CORPUS.index(value):02d})"
