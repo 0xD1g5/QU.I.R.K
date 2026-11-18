@@ -2284,7 +2284,16 @@ def main():
     # Phase 143 / TAIL-02 / D-04: single chokepoint gate — raises ValueError before any
     # scan execution begins if a target is outside security.trusted_targets (empty = allow-all).
     from quirk.util.target_trust import enforce_trusted_targets
-    enforce_trusted_targets(cfg)
+    try:
+        enforce_trusted_targets(cfg)
+    except ValueError as exc:
+        # A refusal is an operator-facing result, not a crash: print the one refusal
+        # text and exit 2. SystemExit skips _run_main_with_job_guard's `except
+        # Exception`, so a dashboard-launched job row is marked failed here.
+        print(safe_str(exc), file=sys.stderr)
+        if getattr(args, "job_id", None) and getattr(args, "db_path", None):
+            mark_job_failed(args.db_path, args.job_id, safe_str(exc))
+        sys.exit(2)
 
     # Phase 133 SNMP-01/D-04: --enable-snmp CLI flag overrides config.
     # getattr guard for backwards compatibility with older config.yaml files
