@@ -235,7 +235,9 @@ def parse_target(value, shape: str, default_port: Optional[int] = None) -> Parse
 # D-07 / D-26: every ConnectorsCfg field that can name a host is dispositioned here.
 # "check"            -> every host value is checked against trusted_targets.
 # "check-registry"   -> image references; only an EXPLICIT registry host is checked
-#                       (first "/" component containing "." or ":" or == "localhost").
+#                       (first "/" component containing "." or ":" or == "localhost"),
+#                       read with parse_target in host[:port] form; a component the
+#                       parser refuses is the ambiguous-value marker.
 #                       A reference with no explicit registry (``nginx:1.25``) uses the
 #                       default registry and is not checked.
 # "check-kubeconfig" -> a kubeconfig path; every ``clusters[].cluster.server`` host
@@ -417,8 +419,15 @@ def _extract_host(value) -> "str | None":
     return candidate
 
 
-def _registry_host(image_ref) -> "str | None":
-    """Explicit registry host of an image reference, else None (default registry)."""
+def _registry_host(image_ref):
+    """Registry host of an image reference, read with the shared target parser.
+
+    An explicit registry is the first ``/`` component when it contains ``.`` or
+    ``:`` or equals ``localhost``; it is read in host[:port] form with
+    ``parse_target``.  A component the parser refuses is the ambiguous-value
+    marker.  A reference with no explicit registry is None (the default
+    registry, not checked).
+    """
     if not isinstance(image_ref, str):
         return None
     ref = image_ref.strip()
@@ -426,7 +435,10 @@ def _registry_host(image_ref) -> "str | None":
         return None
     first = ref.split("/", 1)[0]
     if "." in first or ":" in first or first == "localhost":
-        return first.rsplit(":", 1)[0] if ":" in first and not first.startswith("[") else first
+        try:
+            return parse_target(first, SHAPE_HOST_PORT).host
+        except AmbiguousTargetError:
+            return AMBIGUOUS_TARGET
     return None
 
 

@@ -179,10 +179,23 @@ def test_empty_allowlist_allows_connector_hosts():
         ("ghcr.io/org/app", "ghcr.io"),
         ("nginx:1.25", None),
         ("library/nginx", None),
+        ("[2001:db8::1]:5000/x", "2001:db8::1"),
+        ("registry:a.example/x", _tt.AMBIGUOUS_TARGET),
+        ("a.example:5000:6000/x", _tt.AMBIGUOUS_TARGET),
     ],
+    ids=[f"r{i:02d}" for i in range(8)],
 )
 def test_registry_host(ref, host):
     assert _tt._registry_host(ref) == host
+
+
+@pytest.mark.parametrize("ref", ["registry:a.example/x", "a.example:5000:6000/x"])
+def test_container_registry_not_one_host_is_refused(ref):
+    pairs = _tt.connector_host_values({"container_targets": [ref]})
+    assert [h for _f, h in pairs] == [_tt.AMBIGUOUS_TARGET]
+    with pytest.raises(ValueError, match="connectors.container_targets") as exc:
+        enforce_trusted_targets(_cfg(["t.example"], {"container_targets": [ref]}))
+    assert "does not read as exactly one host and port" in str(exc.value)
 
 
 def test_container_registry_host_checked():
