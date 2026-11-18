@@ -211,3 +211,12 @@ def test_post_jobs_unreadable_server_config_is_503(monkeypatch, tmp_path):
     )
     assert response.status_code == 503, response.text
     assert "DASHBOARD-014" in response.text
+
+
+def test_server_config_scalar_trusted_targets_is_one_entry(monkeypatch, tmp_path):
+    from quirk.util.server_config import load_server_security
+
+    path = tmp_path / "server.yaml"
+    path.write_text("security:\n  trusted_targets: 10.0.0.0/8\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
+    assert load_server_security().trusted_targets == ["10.0.0.0/8"]
