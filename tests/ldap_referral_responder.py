@@ -106,9 +106,19 @@ class Responder:
 
     def __init__(self, referral_uri=None):
         self.referral_uri = referral_uri
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(("127.0.0.1", 0))
+        # ldap3 rejects port 65535 ("must in range from 0 to 65535" is checked
+        # as < 65535), so never serve there: hold a port-65535 socket open
+        # while drawing another, then release it.
+        spare = []
+        while True:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.sock.bind(("127.0.0.1", 0))
+            if self.sock.getsockname()[1] != 65535:
+                break
+            spare.append(self.sock)
+        for extra in spare:
+            extra.close()
         self.sock.listen(8)
         self.port = self.sock.getsockname()[1]
         self.accepts = 0
