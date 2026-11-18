@@ -117,7 +117,7 @@ class _AmbiguousTarget:
 
 AMBIGUOUS_TARGET: Final = _AmbiguousTarget()
 
-_SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*\Z")
+_URL_SCHEMES: Final = frozenset({"http", "https"})
 _NAME_FORBIDDEN = frozenset(": / @ ? # , [ ] %".split())
 
 
@@ -180,7 +180,8 @@ def parse_target(value, shape: str, default_port: Optional[int] = None) -> Parse
     this function, so they read a target's host with one shared parser. A
     value that does not read as exactly one host and port raises
     AmbiguousTargetError. No stdlib URL accessor is used: their validation
-    differs between Python versions.
+    differs between Python versions. URL-shaped fields take http and https
+    URLs only, because every consumer of one is an HTTP client.
     """
     if not isinstance(value, str):
         raise AmbiguousTargetError("type")
@@ -210,7 +211,8 @@ def parse_target(value, shape: str, default_port: Optional[int] = None) -> Parse
         port_default = default_port or (636 if scheme == "ldaps" else 389)
     else:
         scheme, _, rest = value.partition("://")
-        if not _SCHEME_RE.match(scheme):
+        scheme = scheme.lower()
+        if scheme not in _URL_SCHEMES:
             raise AmbiguousTargetError("scheme")
         end = len(rest)
         for mark in "/?#":
@@ -347,9 +349,11 @@ _KUBECONFIG_MAX_BYTES: Final[int] = 1024 * 1024
 def _kubeconfig_server_hosts(path) -> list:
     """Hosts of every ``clusters[].cluster.server`` in the kubeconfig at *path*.
 
-    Anything that cannot be read as a kubeconfig with at least one cluster
-    server yields ``[path]`` so the caller checks the path as a unit and
-    fails closed.
+    Each cluster server is read with the shared parser in the URL form; a
+    server it refuses is yielded as the ambiguous-value marker so the gate
+    refuses it while trusted_targets is set. An unusable file or a cluster
+    with no server yields ``[path]`` so the caller checks the path as a unit
+    and fails closed.
     """
     import os
     import stat
@@ -372,8 +376,13 @@ def _kubeconfig_server_hosts(path) -> list:
     for entry in clusters if isinstance(clusters, list) else []:
         cluster = entry.get("cluster") if isinstance(entry, dict) else None
         server = cluster.get("server") if isinstance(cluster, dict) else None
-        host = _extract_host(server) if isinstance(server, str) else None
-        hosts.append(host or path)
+        if isinstance(server, str) and server.strip():
+            try:
+                hosts.append(parse_target(server, SHAPE_URL).host)
+            except AmbiguousTargetError:
+                hosts.append(AMBIGUOUS_TARGET)
+        else:
+            hosts.append(path)
     return hosts or [path]
 
 

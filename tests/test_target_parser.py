@@ -49,13 +49,14 @@ ROOT = Path(__file__).resolve().parent.parent
         ("[2001:db8::1]", SHAPE_HOST_PORT, {}, ParsedTarget("2001:db8::1", None, None)),
         ("https://svc.example:8443/x", SHAPE_URL, {}, ParsedTarget("svc.example", 8443, "https")),
         ("https://SVC.example/x", SHAPE_URL, {}, ParsedTarget("svc.example", None, "https")),
+        ("HTTPS://svc.example/x", SHAPE_URL, {}, ParsedTarget("svc.example", None, "https")),
         ("svc.example:8443", SHAPE_URL, {}, ParsedTarget("svc.example", 8443, None)),
         ("zone.example", SHAPE_NAME, {}, ParsedTarget("zone.example", None, None)),
         ("192.0.2.1", SHAPE_NAME, {}, ParsedTarget("192.0.2.1", None, None)),
         ("2001:db8::1", SHAPE_NAME, {}, ParsedTarget("2001:db8::1", None, None)),
         ("db.example:5432", SHAPE_HOST_PORT_NO_V6, {}, ParsedTarget("db.example", 5432, None)),
     ],
-    ids=[f"p{i:02d}" for i in range(17)],
+    ids=[f"p{i:02d}" for i in range(18)],
 )
 def test_parse_target_reads_well_formed_values(value, shape, kwargs, expected):
     assert parse_target(value, shape, **kwargs) == expected
@@ -106,8 +107,8 @@ def test_ldap_shape_refusals(value):
     ["https://u@a.example/", "https://u:p@a.example/", "https://b.example:443@a.example/",
      "https://a.example,b.example/", "https://:443/", "https:///x", "ht tp://a.example",
      "1http://a.example", "https://a.example%2fb.example", "https://[a.example]/",
-     "x@a.example", "a.example/x"],
-    ids=[f"u{i:02d}" for i in range(12)],
+     "x@a.example", "a.example/x", "a.example://b.example/x", "ftp://a.example"],
+    ids=[f"u{i:02d}" for i in range(14)],
 )
 def test_url_shape_refusals(value):
     with pytest.raises(AmbiguousTargetError):

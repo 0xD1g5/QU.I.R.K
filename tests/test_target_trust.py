@@ -255,6 +255,29 @@ def test_kubeconfig_cluster_servers_are_checked(tmp_path):
         enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": mixed}))
 
 
+@pytest.mark.parametrize(
+    "server", ["https://u@api.trusted.example:6443", "ftp://api.trusted.example"], ids=["k00", "k01"]
+)
+def test_kubeconfig_server_not_one_host_is_refused(tmp_path, server):
+    path = _kubeconfig(tmp_path, server)
+    with pytest.raises(ValueError) as exc:
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": path}))
+    msg = str(exc.value)
+    assert "connectors.k8s_kubeconfig" in msg
+    assert "does not read as exactly one host and port" in msg
+
+
+def test_kubeconfig_cluster_without_server_is_checked_as_the_path(tmp_path):
+    path = tmp_path / "kubeconfig"
+    path.write_text(
+        "apiVersion: v1\nkind: Config\nclusters:\n"
+        "- name: a\n  cluster:\n    server: https://api.trusted.example:6443\n"
+        "- name: b\n  cluster: {}\n"
+    )
+    with pytest.raises(ValueError, match="k8s_kubeconfig"):
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": str(path)}))
+
+
 @pytest.mark.parametrize("shape", ["missing", "directory", "not-yaml", "no-clusters"])
 def test_unusable_kubeconfig_fails_closed(tmp_path, shape):
     path = tmp_path / "kc"
@@ -313,7 +336,7 @@ def test_non_ascii_ip_literal_passes_when_allowlist_empty(target):
 
 
 def test_non_ascii_url_form_refused_via_enforce():
-    cfg = _cfg(["fe80::/10"], {"jwt_targets": ["ldap://[fe80::1%\u0131.x]:389"]})
+    cfg = _cfg(["fe80::/10"], {"jwt_targets": ["https://[fe80::1%\u0131.x]:389"]})
     with pytest.raises(ValueError) as exc:
         enforce_trusted_targets(cfg)
     msg = str(exc.value)
