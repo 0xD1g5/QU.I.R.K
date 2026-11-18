@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,923 lines, in reading order.
+Five guides, 7,936 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -2302,6 +2302,16 @@ security:
 
 **Target shape and refusals.** Every connector field that takes a list of targets also accepts a single value, which loads as one target; `null` or `""` mean no targets. `security.trusted_targets` loads the same way. While `trusted_targets` is set, a connector target value with no readable host (for example a mapping with no host) is refused, and the refusal names the field. An IP address literal containing non-ASCII characters is refused with its own message, even when it falls inside a listed CIDR (an ASCII IPv6 zone id such as `%en0` is unaffected). An empty `trusted_targets` still allows every target.
 
+**Accepted connector target forms.** The trust gate and the connectors read a target's host with one shared parser.
+
+- LDAP connectors (`adcs_targets`, `smime_targets`, `codesign_targets`): `host`, `host:port`, `ldap://host[:port]` or `ldaps://host[:port]`; an IPv6 address is written in brackets when a port follows.
+- Database and broker targets (`pg_targets`, `mysql_targets`, `broker_targets`): `host` or `host:port`; an IPv6 address is written in brackets when a port follows (the bracketed form is the accepted syntax for PostgreSQL and MySQL).
+- URL fields (`jwt_targets`, `saml_targets`, `vault_addr`, `aws_endpoint_url`, `azure_keyvault_urls`): a URL without user information; put credentials in the connector's credential fields.
+- `kerberos_targets`: a bare host name or IP address. `dnssec_targets`: a domain name.
+- A value is written exactly: no surrounding whitespace (a padded value is skipped, not trimmed), and a port is digits only.
+
+While `trusted_targets` is set, a connector target value that does not read as exactly one host and port in its connector's form is refused, the refusal names the field, and the value is not echoed. The AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a value (recorded as not probed, including a malformed port) even when `trusted_targets` is empty. An entry of `trusted_targets` that is not a string (for example `false` or a number) refuses every target until it is fixed; an empty list or an absent key still allows every target. The CLI exits with code 2 and prints the refusal message when the trust gate refuses a scan.
+
 > **Operator note:** This is an opt-in consent gate, not a security boundary against a malicious
 > operator — it exists to prevent an operator (or an automated scheduler) from accidentally
 > pointing a shared QUIRK instance at a host outside its authorized engagement scope. Leave it
@@ -3567,7 +3577,10 @@ Three small operator-facing additions shipped in Phase 143:
   hosts against the server config's list, and writes that list into the job config so the scan
   enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. A connector target
   value with no readable host is refused while `trusted_targets` is set, and an IP literal containing
-  non-ASCII characters is refused with its own message. The AD CS, S/MIME and code-signing connectors
+  non-ASCII characters is refused with its own message. A connector target value that does not read as exactly one host and port is refused while
+  `trusted_targets` is set, and the AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a
+  value; a `trusted_targets` entry that is not a string refuses every target until it is fixed, and the CLI
+  exits 2 on a trust-gate refusal. The AD CS, S/MIME and code-signing connectors
   follow no LDAP referral, so a directory cannot redirect them to a host the trusted-targets check did
   not see. See
   [`docs/configuration.md`](#configuration) § `security.trusted_targets`.
