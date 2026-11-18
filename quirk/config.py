@@ -3,6 +3,8 @@ import ipaddress
 import logging
 import os
 import pathlib
+import re
+import typing
 import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
@@ -10,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from quirk.errors import format_error
+from quirk.util.target_trust import as_target_list
 
 # Phase 184.2 D-14: module-level logger for the unknown-connector-key warning
 # in config_from_dict (mirrors quirk/intelligence/confidence.py's idiom).
@@ -260,6 +263,13 @@ class TargetsCfg:
     exclude_ips: List[str]
 
 
+def _is_list_annotation(t) -> bool:
+    """True for a ``list`` / ``List[...]`` annotation (string annotations by regex)."""
+    if isinstance(t, str):
+        return re.match(r"(typing\.)?(List|list)\b", t) is not None
+    return t is list or typing.get_origin(t) is list
+
+
 @dataclass
 class ConnectorsCfg:
     enable_aws: bool = False
@@ -391,6 +401,21 @@ class ConnectorsCfg:
     # Phase 72 D-02 / WR-11: tracks which keys appeared in the raw YAML connectors block.
     # Used by quirk.engine.profiles to suppress mutation of user-explicit values.
     _user_set_fields: frozenset = field(default_factory=frozenset, repr=False, compare=False)
+
+    # 230-REVIEW-R12 CR-01 / R13 CR-01/CR-02: any value that is not a list is
+    # one target.  A str was iterated one character at a time ("0" resolves
+    # to 0.0.0.0), a number raised in the scan, and a mapping's keys were
+    # probed while enforce_trusted_targets found no host in it and passed.
+    # Elements are kept as they are: the scanner rejects any that is not a
+    # usable host name, where _as_str_list would turn None into "None".  An
+    # empty string still means no targets.
+    # Phase 239 TRUST-01: generalised from kerberos_targets to every list-typed field.
+    def __post_init__(self) -> None:
+        for f in dataclasses.fields(self):
+            if _is_list_annotation(f.type):
+                value = getattr(self, f.name)
+                if not isinstance(value, list):
+                    setattr(self, f.name, as_target_list(value))
 
 
 @dataclass
@@ -831,16 +856,6 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
                 if k in _KNOWN_CONNECTOR_KEYS}
     # Coerce broker list fields through _as_str_list to guard against scalar YAML values
     # (T-33-03: user-supplied namespace/region strings must be proper lists before hostname construction)
-    # 230-REVIEW-R12 CR-01 / R13 CR-01/CR-02: any value that is not a list is
-    # one target.  A str was iterated one character at a time ("0" resolves
-    # to 0.0.0.0), a number raised in the scan, and a mapping's keys were
-    # probed while enforce_trusted_targets found no host in it and passed.
-    # Elements are kept as they are: the scanner rejects any that is not a
-    # usable host name, where _as_str_list would turn None into "None".  An
-    # empty string still means no targets.
-    _kt = conn_raw.get("kerberos_targets")
-    if _kt is not None and not isinstance(_kt, (list, tuple)):
-        conn_raw["kerberos_targets"] = [_kt] if _kt != "" else []
     if "broker_azure_namespaces" in conn_raw:
         conn_raw["broker_azure_namespaces"] = _as_str_list(conn_raw["broker_azure_namespaces"])
     if "broker_sqs_regions" in conn_raw:
@@ -899,7 +914,7 @@ def config_from_dict(raw: Dict[str, Any]) -> AppConfig:
         allow_insecure_jwks=bool(security_raw.get("allow_insecure_jwks", False)),
         api_token=str(security_raw.get("api_token", "") or ""),
         cors_origins=list(security_raw.get("cors_origins") or []),
-        trusted_targets=list(security_raw.get("trusted_targets") or []),
+        trusted_targets=as_target_list(security_raw.get("trusted_targets")),
     )
 
     # Phase 57 / D-05: per-host broker credentials (pass_env is env-var name, never inline password)

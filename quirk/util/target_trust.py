@@ -248,6 +248,26 @@ def _field_values(connectors, name):
     return [raw]
 
 
+def as_target_list(value) -> list:
+    """Phase 239 TRUST-01 D-03/D-21/D-22: one shape for a target list however it is written.
+
+    Shared by ConnectorsCfg.__post_init__, config_from_dict's and
+    server_config's trusted_targets reads, and enforce_trusted_targets.
+    A list is returned as the same object; a tuple/set/frozenset becomes a
+    list; None and "" mean no targets; any other value is one target.
+    Elements are never converted.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, (tuple, set, frozenset)):
+        return list(value)
+    if isinstance(value, str) and value == "":
+        return []
+    return [value]
+
+
 def connector_host_values(connectors) -> list:
     """``(field_name, host)`` for every host named by a ``check*`` field."""
     pairs = []
@@ -276,7 +296,7 @@ def enforce_trusted_targets(cfg) -> None:
     """Single chokepoint (D-04) — raise ValueError on the first untrusted target.
     Called from BOTH run_scan.py::main and jobs.py::create_job.
     """
-    trusted = list(getattr(cfg.security, "trusted_targets", None) or [])
+    trusted = as_target_list(getattr(cfg.security, "trusted_targets", None))
     if not trusted:
         return  # D-03: allow-all when empty
     plain = (

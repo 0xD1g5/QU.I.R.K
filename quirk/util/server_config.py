@@ -25,6 +25,8 @@ from typing import Optional
 
 import yaml
 
+from quirk.util.target_trust import as_target_list
+
 
 class ServerConfigError(RuntimeError):
     """The server config file exists but cannot be used (DASHBOARD-014).
@@ -164,6 +166,6 @@ def load_server_security() -> ServerSecurity:
         return ServerSecurity(False, [], f"{path}: 'security' is not a mapping")
     return ServerSecurity(
         bool(security.get("allow_internal_targets", False)),
-        list(security.get("trusted_targets") or []),
+        as_target_list(security.get("trusted_targets")),
         None,
     )
