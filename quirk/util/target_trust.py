@@ -12,14 +12,25 @@ allow-all (D-03) — backward compatible with every existing scan config.
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
+import unicodedata
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, Optional
 from urllib.parse import urlparse
 
 RC_NOT_IN_ALLOWLIST: Final[str] = "not_in_trusted_targets"
 RC_UNREADABLE_TARGET: Final[str] = "unreadable_target_value"
 RC_NON_ASCII_IP_LITERAL: Final[str] = "non_ascii_ip_literal"
+RC_AMBIGUOUS_TARGET: Final[str] = "ambiguous_target_value"
+
+SHAPE_URL: Final[str] = "url"
+SHAPE_LDAP: Final[str] = "ldap"
+SHAPE_HOST_PORT: Final[str] = "host-port"
+SHAPE_NAME: Final[str] = "name"
+# Host and port with no IP-literal host containing ":"; used while a connector still
+# splits its target on the first ":" (plan 239-06 moves it to parse_target).
+SHAPE_HOST_PORT_NO_V6: Final[str] = "host-port-no-v6"
 
 
 @dataclass(frozen=True)
@@ -35,6 +46,9 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
     """
     if not trusted_targets:
         return ValidationResult(True, "", "")
+
+    if host_or_ip is AMBIGUOUS_TARGET:
+        return ValidationResult(False, RC_AMBIGUOUS_TARGET, "")
 
     if not isinstance(host_or_ip, str):
         return ValidationResult(False, RC_UNREADABLE_TARGET, "<unreadable value>")
@@ -75,6 +89,139 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
             return ValidationResult(True, "", "")
 
     return ValidationResult(False, RC_NOT_IN_ALLOWLIST, host_or_ip[:32])
+
+
+class AmbiguousTargetError(ValueError):
+    """A target value does not read as exactly one host and port."""
+
+
+@dataclass(frozen=True)
+class ParsedTarget:
+    host: str
+    port: Optional[int]
+    scheme: Optional[str]
+
+
+class _AmbiguousTarget:
+    """Marker yielded by connector_host_values for a value parse_target refuses."""
+
+    def __repr__(self) -> str:
+        return "<ambiguous target value>"
+
+
+AMBIGUOUS_TARGET: Final = _AmbiguousTarget()
+
+_SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*\Z")
+_NAME_FORBIDDEN = frozenset(": / @ ? # , [ ] %".split())
+
+
+def _is_ip(text: str) -> bool:
+    try:
+        ipaddress.ip_address(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _parse_port(text: str) -> int:
+    if not (text.isascii() and text.isdigit()):
+        raise AmbiguousTargetError("port")
+    port = int(text)
+    if not 1 <= port <= 65535:
+        raise AmbiguousTargetError("port")
+    return port
+
+
+def _split_authority(text: str, default_port: Optional[int]) -> "tuple[str, Optional[int]]":
+    """Host and port of an authority: ``host``, ``host:port``, ``[v6]``, ``[v6]:port`` or a bare IP."""
+    if not text:
+        raise AmbiguousTargetError("authority")
+    if text.startswith("["):
+        close = text.find("]")
+        if close == -1:
+            raise AmbiguousTargetError("authority")
+        inner = text[1:close]
+        if not _is_ip(inner):
+            raise AmbiguousTargetError("authority")
+        rest = text[close + 1:]
+        if not rest:
+            return inner, default_port
+        if not rest.startswith(":"):
+            raise AmbiguousTargetError("authority")
+        return inner, _parse_port(rest[1:])
+    colons = text.count(":")
+    if colons == 0:
+        return text, default_port
+    if colons == 1:
+        host, _, port_text = text.partition(":")
+        if not host:
+            raise AmbiguousTargetError("authority")
+        return host, _parse_port(port_text)
+    if _is_ip(text):
+        return text, default_port
+    raise AmbiguousTargetError("authority")
+
+
+def _refuse_if(value: str, chars: str) -> None:
+    if any(c in value for c in chars):
+        raise AmbiguousTargetError("form")
+
+
+def parse_target(value, shape: str, default_port: Optional[int] = None) -> ParsedTarget:
+    """The one definition of a target value's host and port, per consumer shape.
+
+    The trust gate and the connectors that read a host themselves both call
+    this function, so they read a target's host with one shared parser. A
+    value that does not read as exactly one host and port raises
+    AmbiguousTargetError. No stdlib URL accessor is used: their validation
+    differs between Python versions.
+    """
+    if not isinstance(value, str):
+        raise AmbiguousTargetError("type")
+    if not value.strip():
+        raise AmbiguousTargetError("empty")
+    for ch in value:
+        if ch.isspace() or ch in "\\;" or unicodedata.category(ch) in ("Cc", "Cs"):
+            raise AmbiguousTargetError("character")
+    scheme: Optional[str] = None
+    if shape == SHAPE_NAME:
+        if not _is_ip(value) and any(c in value for c in _NAME_FORBIDDEN):
+            raise AmbiguousTargetError("name")
+        return ParsedTarget(value, None, None)
+    if "://" not in value:
+        _refuse_if(value, "/@?#,")
+        authority = value
+        port_default = default_port or (389 if shape == SHAPE_LDAP else None)
+    elif shape in (SHAPE_HOST_PORT, SHAPE_HOST_PORT_NO_V6):
+        raise AmbiguousTargetError("form")
+    elif shape == SHAPE_LDAP:
+        scheme, _, rest = value.partition("://")
+        scheme = scheme.lower()
+        if scheme not in ("ldap", "ldaps"):
+            raise AmbiguousTargetError("scheme")
+        authority = rest.split("/", 1)[0]
+        _refuse_if(authority, "@?#,")
+        port_default = default_port or (636 if scheme == "ldaps" else 389)
+    else:
+        scheme, _, rest = value.partition("://")
+        if not _SCHEME_RE.match(scheme):
+            raise AmbiguousTargetError("scheme")
+        end = len(rest)
+        for mark in "/?#":
+            cut = rest.find(mark)
+            if cut != -1:
+                end = min(end, cut)
+        authority = rest[:end]
+        _refuse_if(authority, "@,")
+        port_default = default_port
+    host, port = _split_authority(authority, port_default)
+    if "%" in host and not (":" in host and _is_ip(host)):
+        raise AmbiguousTargetError("escape")
+    if shape == SHAPE_HOST_PORT_NO_V6 and ":" in host:
+        raise AmbiguousTargetError("form")
+    if shape == SHAPE_URL:
+        host = host.lower()
+    return ParsedTarget(host, port, scheme)
 
 
 # D-07 / D-26: every ConnectorsCfg field that can name a host is dispositioned here.
@@ -127,6 +274,22 @@ CONNECTOR_HOST_FIELD_DISPOSITION: Final[dict] = {
     "aks_clusters": _CLOUD_ID,
 }
 
+
+CONNECTOR_FIELD_TARGET_SHAPE: Final[dict] = {
+    "jwt_targets": SHAPE_URL,
+    "saml_targets": SHAPE_URL,
+    "vault_addr": SHAPE_URL,
+    "aws_endpoint_url": SHAPE_URL,
+    "azure_keyvault_urls": SHAPE_URL,
+    "adcs_targets": SHAPE_LDAP,
+    "smime_targets": SHAPE_LDAP,
+    "codesign_targets": SHAPE_LDAP,
+    "pg_targets": SHAPE_HOST_PORT_NO_V6,
+    "mysql_targets": SHAPE_HOST_PORT_NO_V6,
+    "broker_targets": SHAPE_HOST_PORT,
+    "kerberos_targets": SHAPE_HOST_PORT,
+    "dnssec_targets": SHAPE_NAME,
+}
 
 _FLAG = "on/off switch; names no host"
 _CRED = "credential or credential reference; names no host"
@@ -301,12 +464,27 @@ def connector_host_values(connectors) -> list:
             if disposition == "check-kubeconfig":
                 pairs.extend((name, h) for h in _kubeconfig_server_hosts(value))
                 continue
-            host = _registry_host(value) if disposition == "check-registry" else _extract_host(value)
+            if disposition == "check":
+                if isinstance(value, dict):
+                    source = value.get("host")
+                elif value is not None and not isinstance(value, str):
+                    source = getattr(value, "host", None)
+                else:
+                    source = value
+                if not isinstance(source, str):
+                    pairs.append((name, None))
+                elif source.strip():
+                    try:
+                        pairs.append(
+                            (name, parse_target(source, CONNECTOR_FIELD_TARGET_SHAPE[name]).host)
+                        )
+                    except AmbiguousTargetError:
+                        pairs.append((name, AMBIGUOUS_TARGET))
+                continue
+            host = _registry_host(value)
             if host:
                 pairs.append((name, host))
-            elif disposition == "check" and not (isinstance(value, str) and not value.strip()):
-                pairs.append((name, None))
-            elif disposition == "check-registry" and not isinstance(value, str):
+            elif not isinstance(value, str):
                 pairs.append((name, None))
     return pairs
 
@@ -314,7 +492,7 @@ def connector_host_values(connectors) -> list:
 def _broker_target_hosts(cfg) -> list:
     """Thin wrapper kept for callers: hosts of connectors.broker_targets."""
     connectors = getattr(cfg, "connectors", None)
-    return [h for _n, h in connector_host_values(connectors) if _n == "broker_targets" and h is not None]
+    return [h for _n, h in connector_host_values(connectors) if _n == "broker_targets" and isinstance(h, str)]
 
 
 def refusal_message(result: ValidationResult, field_name: "str | None" = None) -> str:
@@ -324,6 +502,12 @@ def refusal_message(result: ValidationResult, field_name: "str | None" = None) -
         return (
             f"Target {result.redacted_preview!r}{where} is an IP address literal "
             f"containing non-ASCII characters and is refused "
+            f"(security.trusted_targets in config.yaml)."
+        )
+    if result.reason == RC_AMBIGUOUS_TARGET:
+        return (
+            f"A value{where} does not read as exactly one host and port and is "
+            f"refused while the trusted-targets check is on "
             f"(security.trusted_targets in config.yaml)."
         )
     if result.reason == RC_UNREADABLE_TARGET:
