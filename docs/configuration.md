@@ -382,7 +382,7 @@ connector disposition table" below for all 25 keys.
 | `enable_aws` | bool | `false` | Enable AWS cloud connector (ACM, KMS, CloudFront, ELBv2) |
 | `enable_azure` | bool | `false` | Enable Azure cloud connector (Key Vault, App Gateway) |
 | `enable_adcs` | bool | `false` | AD CS LDAP connector — inventories certificates issued by an Active Directory Certificate Services CA. The `enable_adcs` key is honored from release 5.19.0; earlier releases silently dropped it. Requires `quirk-scanner[adcs]` (ldap3). |
-| `adcs_targets` | list[string] | `[]` | LDAP URLs for AD CS discovery (e.g. `ldap://dc.corp.com:389`) |
+| `adcs_targets` | list[string] | `[]` | LDAP URLs for AD CS discovery (e.g. `ldap://dc.corp.com:389`). Like every connector list field, a single value is read as one target and `null` or `""` as no targets. |
 | `adcs_search_base` | string | `null` | LDAP search base DN (e.g. `dc=corp,dc=com`) |
 | `adcs_user` | string | `null` | LDAP bind username (no example value shipped — do not template credential-shaped strings into a client config) |
 | `adcs_password` | string | `null` | LDAP bind password — in real use leave it unset and export `QUIRK_ADCS_PASSWORD` instead (see "Credential environment variables"); never write it inline |
@@ -1551,8 +1551,11 @@ security:
 | **Empty or absent (default)** | Allow-all — backward compatible with every existing scan config/CLI invocation. No enforcement happens. |
 | **Populated** | Only the listed hosts/IPs/CIDRs may be scan targets. A checked target outside the list is rejected **before any scan begins** (see above for which inputs each entry point checks). |
 | **Matching semantics** | Exact, case-sensitive string match against a listed entry, or CIDR containment for entries written as `a.b.c.d/nn`: an IP target (or the DNS-resolved addresses of a hostname target) inside a listed CIDR is allowed. A CIDR scan target is only allowed when that exact CIDR string is listed. No wildcard subdomain matching — `*.acme.com` is not supported; list every FQDN explicitly. Connector host fields are matched the same way on the CLI and in the dashboard. |
+| **Non-ASCII IP literal** | An IP address literal containing non-ASCII characters is refused with its own message, checked before the exact-match and CIDR rules, so listing it or its CIDR does not allow it. |
 | **CLI rejection** | `run_scan.py` raises `ValueError` naming the redacted out-of-allowlist target, aborting before `init_db()`/scan execution. |
 | **Dashboard rejection** | The `/scan/new` → `POST /api/jobs` endpoint returns **HTTP 422** for an out-of-allowlist target — no `ScanJob` database row is created and no subprocess is spawned. |
+
+**Target shape and refusals.** Every connector field that takes a list of targets also accepts a single value, which loads as one target; `null` or `""` mean no targets. `security.trusted_targets` loads the same way. While `trusted_targets` is set, a connector target value with no readable host (for example a mapping with no host) is refused, and the refusal names the field. An IP address literal containing non-ASCII characters is refused with its own message, even when it falls inside a listed CIDR (an ASCII IPv6 zone id such as `%en0` is unaffected). An empty `trusted_targets` still allows every target.
 
 > **Operator note:** This is an opt-in consent gate, not a security boundary against a malicious
 > operator — it exists to prevent an operator (or an automated scheduler) from accidentally

@@ -160,7 +160,11 @@ Three small operator-facing additions shipped in Phase 143:
   whether or not that connector is enabled, and the explicit registry host of a container image
   reference). The dashboard's "New Scan" page checks the form targets and the Connectors-panel
   hosts against the server config's list, and writes that list into the job config so the scan
-  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. See
+  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. A connector target
+  value with no readable host is refused while `trusted_targets` is set, and an IP literal containing
+  non-ASCII characters is refused with its own message. The AD CS, S/MIME and code-signing connectors
+  follow no LDAP referral, so a directory cannot redirect them to a host the trusted-targets check did
+  not see. See
   [`docs/configuration.md`](configuration.md) § `security.trusted_targets`.
 - **Windows Authenticode signing (build mechanism, not yet activated)** — the
   `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
