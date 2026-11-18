@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (309)
+## Open (310)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -355,7 +355,8 @@ the Evidence cell.
 | 261117-run-stats-phase-records-object-repr | OPEN | P3 | cli | run-stats JSON writes phase_records as a Python object repr instead of the phase records | Phase 238 (238-08-SUMMARY.md) | pre-existing since Phase 192 (50b626ee), found by 238-08: run_scan.py:2200 stores a live _PhaseRecorder in run_stats['phase_records'] and the run-stats writer stringifies it to '<__main__._PhaseRecorder object at 0x...>'; the scan_phase_records table is correct, only the run-stats artifact is useless; not caused by Phase 238 |
 | 261117-api-scans-target-string-includes-saml-scanner | OPEN | P3 | dashboard | /api/scans target string for a CLI scan lists scanner pseudo-hosts such as 'saml_scanner' | Phase 238 (238-08-SUMMARY.md) | pre-existing, found by 238-08: quirk/dashboard/api/routes/scan.py:1181-1182 builds target from every distinct endpoint host when no ScanJob exists, so coverage/ADVISORY rows whose host is the scanner label (saml_scanner) appear as a target; not caused by Phase 238 |
 | 261117-rsa-pss-keys-reported-as-rsa | OPEN | P3 | scanner | TLS scanner reports RSA-PSS leaf keys as 'RSA', so RSA-PSS rules have no live TLS input | Phase 238 code review (238-REVIEW.md IN-02) | verified open at e26bbe9c: quirk/scanner/tls_scanner.py:45-47 _pubkey_info returns ('RSA', size) for every RSAPublicKey, PSS included, so no live TLS row carries an RSA-PSS key algorithm and the shared undersized-RSA predicate's RSA-PSS branch (238 D-20) has nothing to read from a scan; related 261117-rsa-pss-large-key-no-quantum-vulnerable-finding |
-| 261117-phase239-release-notes | OPEN | P1 | release | Phase 239 user-visible changes to put in CHANGELOG 5.29.0 (owned by Phase 240 REL-14) | Phase 239 (239-CONTEXT.md) | to state, in fix wording only (D-20): a scalar connector target or trusted_targets value loads as one target, and null/empty mean no targets; a connector target with no readable host is refused while trusted_targets is set; AD CS, S/MIME and code-signing connectors do not follow LDAP referrals; the trust gate refuses an IP literal containing non-ASCII characters; whether 5.29.0 carries a security line or advisory is an operator call (239-CONTEXT item 8). |
+| 261117-phase239-release-notes | OPEN | P1 | release | Phase 239 user-visible changes to put in CHANGELOG 5.29.0 (owned by Phase 240 REL-14) | Phase 239 (239-CONTEXT.md) | to state, in fix wording only (D-20): a scalar connector target or trusted_targets value loads as one target, and null/empty mean no targets; a connector target with no readable host is refused while trusted_targets is set; AD CS, S/MIME and code-signing connectors do not follow LDAP referrals; the trust gate refuses an IP literal containing non-ASCII characters; whether 5.29.0 carries a security line or advisory is an operator call (239-CONTEXT item 8). Fix commits on v529-open: 7939462e (scalar targets, RED 7d3c3816), 77628738 (no-referral LDAP connectors, RED 100c199e), 867447b3 and 174f06a2 (unreadable and non-ASCII refusals with one message, RED 75b5fd0e). |
+| 261117-phase239-post-merge-closure | OPEN | P1 | security | Apply Phase 239 closure after merge: flip TRUST-01..03, close two rows and two todos with main evidence | .planning/phases/239-connector-target-trust-gate-hardening/239-evidence/closure-pending.md | fixes on v529-open 7939462e, 77628738, 867447b3, 174f06a2; not yet ancestors of main (LEDGER rule 3) |
 
 ## Deferred (30)
 
