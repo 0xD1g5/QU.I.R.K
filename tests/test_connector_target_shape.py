@@ -516,6 +516,62 @@ _SYFT_DAEMON_SCHEMES = ("docker:", "podman:", "containerd:", "docker-daemon:", "
 _SYFT_LOCAL_SCHEMES = (
     "docker-archive:", "oci-archive:", "oci-dir:", "singularity:", "dir:", "file:", "oci:", "snap:",
 )
+def _syft_exe_or_skip() -> str:
+    exe = shutil.which("syft")
+    if exe is None:
+        if os.environ.get("CI"):
+            pytest.fail("syft is not on PATH; the Linux Full Suite job must install the pinned syft")
+        pytest.skip("syft is not on PATH; the cross-check needs the real binary")
+    return exe
+
+
+def test_syft_model_daemon_and_local_schemes_are_refused():
+    from quirk.util.subprocess_input import RC_INVALID_IMAGE_REF, validate_image_ref
+
+    schemes = _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES
+    assert len(schemes) >= 10, schemes
+    for scheme in schemes:
+        for variant in (scheme, scheme.upper(), scheme.title()):
+            res = validate_image_ref(variant + "a.example/x")
+            assert not res.ok and res.reason == RC_INVALID_IMAGE_REF, variant
+
+
+def test_syft_model_registry_schemes_are_not_refused():
+    from quirk.util.subprocess_input import validate_image_ref
+
+    assert _SYFT_REGISTRY_SCHEMES
+    for scheme in _SYFT_REGISTRY_SCHEMES:
+        assert validate_image_ref(scheme + "a.example/x").ok, scheme
+
+
+def test_production_prefixes_are_classified_by_the_syft_model():
+    from quirk.util import subprocess_input
+
+    model = set(_SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES)
+    production = set(subprocess_input._LOCAL_REF_PREFIXES)
+    assert production <= model, sorted(production - model)
+    assert production == model, sorted(model - production)
+
+
+def test_syft_model_schemes_cover_syft_help():
+    exe = _syft_exe_or_skip()
+    proc = subprocess.run(
+        [exe, "scan", "--help"],
+        capture_output=True, text=True, timeout=60, close_fds=False,
+    )
+    text = proc.stdout + proc.stderr
+    marker = "explicitly specify the scheme"
+    assert marker in text, text[:500]
+    section = text.split(marker, 1)[1].split("Flags:", 1)[0]
+    found = set(re.findall(r"^\s*syft scan ([a-z][a-z0-9-]*):", section, re.MULTILINE))
+    assert len(found) >= 8, found
+    model = set(
+        s.rstrip(":")
+        for s in _SYFT_REGISTRY_SCHEMES + _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES
+    )
+    assert found <= model, sorted(found - model)
+
+
 _IMAGE_DOMAIN = re.compile(r"^(?:[A-Za-z0-9.-]+|\[[0-9a-fA-F:.]+\])(?::[0-9]*)?$")
 _IMAGE_PATH = re.compile(
     r"^[a-z0-9_.\-/]*(?::[\w][\w.-]{0,127})?(?:@[A-Za-z][A-Za-z0-9]*:[0-9a-fA-F]{32,})?$"
@@ -728,9 +784,7 @@ def _observe_syft(exe, ref, base_env, work):
 
 @pytest.mark.slow
 def test_syft_registry_model_matches_real_syft(tmp_path):
-    exe = shutil.which("syft")
-    if exe is None:
-        pytest.skip("syft is not on PATH; the cross-check needs the real binary")
+    exe = _syft_exe_or_skip()
     from concurrent.futures import ThreadPoolExecutor
 
     from quirk.util.subprocess_input import validate_image_ref
