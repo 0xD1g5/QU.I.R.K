@@ -228,7 +228,7 @@ Plans:
 - [ ] 239-08-PLAN.md — Operator decision on unpushed history, STATE.md rewording, final wording scan before push, push and branch CI (checkpoint)
 **Gap closure 2 (SC#1 for k8s_kubeconfig and container_targets, from the 239 re-verification)**
 - [x] 239-09-PLAN.md — Ledger rows first; kubeconfig cluster servers join the agreement test (RED first); the trust gate reads them with the shared parser and URL target fields accept http and https only (TRUST-01, WR-01)
-- [ ] 239-10-PLAN.md — Container image registries join the agreement test with a real-syft cross-check (RED first); the gate reads an explicit registry with the shared parser; Kerberos self-check uses the same parser (TRUST-01, WR-03)
+- [x] 239-10-PLAN.md — Container image registries join the agreement test with a real-syft cross-check (RED first); the gate reads an explicit registry with the shared parser; Kerberos self-check uses the same parser (TRUST-01, WR-03)
 - [ ] 239-11-PLAN.md — Docs, UAT-239-06, regenerated artifacts, vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
 
 ### Phase 240: Regressions and Release 5.29.0
