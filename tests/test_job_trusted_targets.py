@@ -174,6 +174,23 @@ def test_post_jobs_rejects_untrusted_overlay_host(monkeypatch, tmp_path):
     db.close()
 
 
+def test_post_jobs_refuses_non_ascii_ip_literal(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    _server_config(monkeypatch, tmp_path, ["fe80::/10"])
+    _, tc, TestingSession = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "fe80::1%en\u0131"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 422, response.text
+    assert "non-ASCII" in response.text
+    db = TestingSession()
+    assert db.query(ScanJob).count() == 0
+    db.close()
+
+
 def test_post_jobs_trusted_overlay_host_writes_trusted_targets_to_yaml(monkeypatch, tmp_path):
     import yaml
 

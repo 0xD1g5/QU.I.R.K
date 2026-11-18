@@ -270,3 +270,139 @@ def test_unusable_kubeconfig_fails_closed(tmp_path, shape):
 
 def test_kubeconfig_not_read_when_allowlist_empty(tmp_path):
     enforce_trusted_targets(_cfg([], {"k8s_kubeconfig": str(tmp_path / "absent")}))
+
+
+# ---------------------------------------------------------------------------
+# Phase 239 plan 03: TRUST-01 (D-06 gate element rule) and TRUST-03 (D-12..D-15)
+# ---------------------------------------------------------------------------
+# Non-ASCII zone-id IP literals, written with escapes (neutral ids on purpose).
+R16_STRINGS = (
+    "fe80::1%\u0131.attacker.example",
+    "fe80::1%en\u0131",
+    "::ffff:1.2.3.4%\u00e9",
+)
+R16_IDS = ["dotted-zone", "suffix-zone", "v4mapped-zone"]
+_NON_ASCII_ALLOWLIST = ["fe80::/10", "::ffff:0:0/96"]
+
+
+@pytest.mark.parametrize("target", R16_STRINGS, ids=R16_IDS)
+def test_non_ascii_ip_literal_refused(target):
+    from quirk.util import target_trust as _tt
+
+    result = is_target_trusted(target, _NON_ASCII_ALLOWLIST)
+    assert result.ok is False
+    assert result.reason == _tt.RC_NON_ASCII_IP_LITERAL
+
+
+@pytest.mark.parametrize("target", R16_STRINGS, ids=R16_IDS)
+def test_non_ascii_ip_literal_refused_even_if_listed_exactly(target):
+    from quirk.util import target_trust as _tt
+
+    result = is_target_trusted(target, [target, "fe80::/10"])
+    assert result.ok is False
+    assert result.reason == _tt.RC_NON_ASCII_IP_LITERAL
+
+
+def test_ascii_zone_id_still_passes():
+    assert is_target_trusted("fe80::1%en0", ["fe80::/10"]).ok is True
+
+
+@pytest.mark.parametrize("target", R16_STRINGS, ids=R16_IDS)
+def test_non_ascii_ip_literal_passes_when_allowlist_empty(target):
+    assert is_target_trusted(target, []).ok is True
+
+
+def test_non_ascii_url_form_refused_via_enforce():
+    cfg = _cfg(["fe80::/10"], {"jwt_targets": ["ldap://[fe80::1%\u0131.x]:389"]})
+    with pytest.raises(ValueError) as exc:
+        enforce_trusted_targets(cfg)
+    msg = str(exc.value)
+    assert "non-ASCII" in msg and "jwt_targets" in msg
+    assert "is not in the trusted-targets allowlist" not in msg
+
+
+@pytest.mark.parametrize("shape", [{"dc01.evil.example": 1}, 123, None],
+                         ids=["mapping-no-host", "int", "none"])
+def test_unreadable_check_element_refused_and_named(shape):
+    cfg = _cfg(["trusted.invalid"], {"jwt_targets": [shape]})
+    with pytest.raises(ValueError, match="jwt_targets") as exc:
+        enforce_trusted_targets(cfg)
+    assert "no readable host" in str(exc.value)
+
+
+def test_unreadable_pairs_emitted():
+    from quirk.util.target_trust import connector_host_values
+
+    pairs = connector_host_values({"jwt_targets": [{"dc01.evil.example": 1}, 123, None, "", "  "]})
+    assert pairs == [("jwt_targets", None)] * 3
+
+
+def test_empty_elements_still_pass():
+    enforce_trusted_targets(_cfg(["trusted.invalid"], {"jwt_targets": ["", "  "]}))
+
+
+def test_unreadable_passes_when_allowlist_empty():
+    enforce_trusted_targets(_cfg([], {"jwt_targets": [123]}))
+
+
+def test_container_non_str_element_refused():
+    with pytest.raises(ValueError, match="container_targets"):
+        enforce_trusted_targets(_cfg(["trusted.invalid"], {"container_targets": [123]}))
+
+
+def test_container_registryless_ref_still_passes():
+    enforce_trusted_targets(_cfg(["trusted.invalid"], {"container_targets": ["nginx:1.25"]}))
+
+
+@pytest.mark.parametrize("value", [None, 123, {"a": 1}], ids=["none", "int", "mapping"])
+def test_is_target_trusted_non_str_never_raises(value):
+    from quirk.util import target_trust as _tt
+
+    result = is_target_trusted(value, ["trusted.invalid"])
+    assert result.ok is False
+    assert result.reason == _tt.RC_UNREADABLE_TARGET
+    assert isinstance(result.redacted_preview, str)
+
+
+def test_refusal_message_default_branch_byte_identical():
+    from quirk.util import target_trust as _tt
+
+    r = _tt.ValidationResult(False, RC_NOT_IN_ALLOWLIST, "x.invalid")
+    assert _tt.refusal_message(r) == (
+        "Target 'x.invalid' is not in the trusted-targets allowlist "
+        "(security.trusted_targets in config.yaml)."
+    )
+    assert _tt.refusal_message(r, "jwt_targets") == (
+        "Target 'x.invalid' (connectors.jwt_targets) is not in the trusted-targets "
+        "allowlist (security.trusted_targets in config.yaml)."
+    )
+
+
+def test_refusal_message_used_at_every_site():
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    files = [
+        "quirk/util/target_trust.py",
+        "quirk/dashboard/api/routes/jobs.py",
+        "quirk/dashboard/api/routes/schedules.py",
+        "quirk/cli/schedule_cmd.py",
+    ]
+    assert len(files) == 4
+    for rel in files:
+        src = (root / rel).read_text(encoding="utf-8")
+        assert "refusal_message(" in src, rel
+        tree = ast.parse(src)
+        allowed = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "refusal_message":
+                allowed.update(id(n) for n in ast.walk(node))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and ("trusted-targets allowlist" in node.value
+                     or "is not in the trusted-targets" in node.value)
+            ):
+                assert id(node) in allowed, f"{rel}:{node.lineno} formats the refusal text locally"
