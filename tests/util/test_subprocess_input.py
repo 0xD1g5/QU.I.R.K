@@ -115,6 +115,22 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("localhost/img:tag", True, ""),
     ("localhost:5000/img", True, ""),
     ("docker.io/library/nginx", True, ""),
+    # source-scheme prefixes listed by syft's help text
+    ("oci-archive:/x.tar", False, RC_INVALID_IMAGE_REF),
+    ("oci-dir:/x", False, RC_INVALID_IMAGE_REF),
+    ("singularity:/x.sif", False, RC_INVALID_IMAGE_REF),
+    ("docker:alpine", False, RC_INVALID_IMAGE_REF),
+    ("containerd:alpine", False, RC_INVALID_IMAGE_REF),
+    ("snap:x", False, RC_INVALID_IMAGE_REF),
+    # prefixes are matched in any letter case
+    ("DIR:/x", False, RC_INVALID_IMAGE_REF),
+    ("Dir:/x", False, RC_INVALID_IMAGE_REF),
+    ("File:/x", False, RC_INVALID_IMAGE_REF),
+    ("OCI-ARCHIVE:/x.tar", False, RC_INVALID_IMAGE_REF),
+    ("Docker:alpine", False, RC_INVALID_IMAGE_REF),
+    # registry-pulling schemes are unaffected
+    ("registry:a.example/x", True, ""),
+    ("oci-model-registry:ai/llama", True, ""),
 ], ids=[
     "valid_registry_tag",
     "valid_alpine",
@@ -133,6 +149,19 @@ def test_validate_repo_path_existing_dir(tmp_path):
     "valid_localhost_img",
     "valid_localhost_port",
     "valid_dockerio_library",
+    "oci_archive_prefix",
+    "oci_dir_prefix",
+    "singularity_prefix",
+    "docker_prefix",
+    "containerd_prefix",
+    "snap_prefix",
+    "dir_prefix_upper",
+    "dir_prefix_mixed",
+    "file_prefix_mixed",
+    "oci_archive_prefix_upper",
+    "docker_prefix_mixed",
+    "registry_prefix_unaffected",
+    "model_registry_prefix_unaffected",
 ])
 def test_validate_image_ref(ref, expected_ok, expected_reason):
     result = validate_image_ref(ref)
@@ -142,6 +171,14 @@ def test_validate_image_ref(ref, expected_ok, expected_reason):
         assert len(result.redacted_preview) <= 32
         for ch in result.redacted_preview:
             assert ord(ch) >= 0x20, f"Control char 0x{ord(ch):02x} in preview"
+
+
+def test_source_scheme_prefixes_are_stored_lowercase():
+    from quirk.util import subprocess_input
+
+    assert subprocess_input._LOCAL_REF_PREFIXES
+    for prefix in subprocess_input._LOCAL_REF_PREFIXES:
+        assert prefix == prefix.lower(), prefix
 
 
 # ---------------------------------------------------------------------------
