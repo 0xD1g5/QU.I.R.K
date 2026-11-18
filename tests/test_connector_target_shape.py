@@ -9,8 +9,10 @@ the elements the scanner iterates.
 from __future__ import annotations
 
 import dataclasses
+import importlib
 import inspect
 import re
+import socket
 import typing
 from types import SimpleNamespace
 
@@ -86,15 +88,18 @@ def test_list_field_enumeration_is_not_vacuous():
 
 
 @pytest.mark.parametrize("field", LIST_FIELDS)
-def test_scalar_loads_as_one_element_and_gate_sees_scanner_set(tmp_path, field):
-    cfg = load_config(_write_cfg(tmp_path, {field: "h.example:443"}))
-    value = getattr(cfg.connectors, field)
-    assert value == ["h.example:443"]
+def test_scalar_loads_as_one_element_and_gate_sees_scanner_set(tmp_path, monkeypatch, field):
     disposition = _tt.CONNECTOR_HOST_FIELD_DISPOSITION.get(field)
     assert disposition is not None, f"{field} has no gate disposition"
+    given = CONSUMERS[field][1] if disposition == "check" else "h.example:443"
+    cfg = load_config(_write_cfg(tmp_path, {field: given}))
+    value = getattr(cfg.connectors, field)
+    assert value == [given]
     gate = [h for f, h in _tt.connector_host_values(cfg.connectors) if f == field]
     if disposition == "check":
-        assert gate == [_tt._extract_host(e) for e in value]
+        expected = CONSUMERS[field][2]
+        assert gate == [expected]
+        assert {_norm(c) for c in CONSUMERS[field][0](value[0], monkeypatch)} == {expected}
     elif disposition == "check-registry":
         assert gate == [h for h in (_tt._registry_host(e) for e in value) if h]
 
@@ -144,3 +149,352 @@ def test_enforce_reads_scalar_trusted_targets_whole():
         connectors=SimpleNamespace(),
     )
     enforce_trusted_targets(cfg)
+
+
+PARSER_AGREEMENT_CORPUS = (
+    "a.example",
+    "a.example:389",
+    "a.example:0",
+    "a.example:65536",
+    "a.example:99999",
+    "a.example:abc",
+    "a.example:",
+    "a.example: 389",
+    "a.example:+389",
+    "a.example:\u0663\u0668\u0669",
+    "a.example%2eb.example",
+    "a.example%40b.example",
+    "%61.example",
+    "a.example%00",
+    "ldap://a.example%2fb.example",
+    "https://a.example%2fb.example",
+    "b\u00fccher.example",
+    "b\u00fccher.example:389",
+    "ldap://b\u00fccher.example",
+    "https://b\u00fccher.example/x",
+    "A.EXAMPLE",
+    "A.Example:389",
+    "ldap://A.EXAMPLE",
+    "https://A.EXAMPLE/",
+    "a.example.",
+    "a.example.:389",
+    "ldap://a.example.",
+    "https://a.example./",
+    "a.example;b.example",
+    "ldap://a.example;b.example",
+    "https://a.example;b.example/",
+    "ldap://a.example:389",
+    "ldap://a.example",
+    "ldaps://a.example",
+    "ldaps://a.example:636",
+    "ldap://:389",
+    "ldap:///a.example",
+    "https://a.example/x",
+    "https://a.example:8443/x",
+    "http://a.example",
+    "[2001:db8::1]",
+    "[2001:db8::1]:389",
+    "[2001:db8::1",
+    "[a.example]",
+    "[a.example]:389",
+    "ldap://[a.example]",
+    "2001:db8::1",
+    "192.0.2.1",
+    "192.0.2.1:389",
+    "ldap://192.0.2.1",
+    "ldap://[2001:db8::1]:389",
+    "https://[2001:db8::1]:8443/x",
+    "user@a.example",
+    "ldap://user@a.example",
+    "ldap://user:pw@a.example",
+    "ldap://b.example:389@a.example",
+    "ldap://a.example:389@b.example",
+    "https://user:pw@a.example/",
+    "https://b.example:443@a.example/",
+    "https://a.example:443@b.example/",
+    "b.example:389@a.example",
+    "a.example@b.example",
+    "postgres://a.example",
+    "postgres://b.example@a.example:5432",
+    "mysql://a.example",
+    "mysql://user:pw@a.example:3306",
+    "a.example:389:extra",
+    "a.example:389:b.example",
+    " a.example",
+    "a.example ",
+    "a.example b.example",
+    "a.example\tb.example",
+    "a.example\nb.example",
+    "a.example#b.example",
+    "a.example?b.example",
+    "a.example/b.example",
+    "/var/run/a.example",
+    "ldap://a.example#b.example",
+    "ldap://a.example?b.example",
+    "https://a.example#b.example",
+    "https://a.example?x=b.example",
+    "https://a.example\\@b.example",
+    "ldap://a.example\\@b.example",
+    "a.example\\@b.example",
+    "a.example,b.example",
+    "a.example:389,b.example:389",
+    "a.example,b.example:5432",
+)
+
+_PARSER_AGREEMENT_IDS = [f"c{i:02d}" for i in range(len(PARSER_AGREEMENT_CORPUS))]
+
+OUT_OF_AGREEMENT_SCOPE = {
+    "check-registry": (
+        "image references: the consumer is the registry client's reference parser; "
+        "LEDGER 261118-registry-kubeconfig-host-agreement-test"
+    ),
+    "check-kubeconfig": (
+        "cluster servers are read from a file by the kubernetes client; "
+        "LEDGER 261118-registry-kubeconfig-host-agreement-test"
+    ),
+}
+
+CHECK_FIELDS = [
+    f.name
+    for f in dataclasses.fields(ConnectorsCfg)
+    if _tt.CONNECTOR_HOST_FIELD_DISPOSITION.get(f.name) == "check"
+]
+
+
+def _norm(host) -> str:
+    text = str(host)
+    if text.startswith("[") and text.endswith("]"):
+        text = text[1:-1]
+    try:
+        return text.lower().encode("idna").decode("ascii") if not text.isascii() else text.lower()
+    except UnicodeError:
+        return text.lower()
+
+
+def _real_ldap3():
+    import ldap3
+
+    return ldap3
+
+
+def _ldap_consumer(module_name, function_name):
+    def run(value, mp):
+        mod = importlib.import_module(module_name)
+        calls = []
+
+        class _Server:
+            def __init__(self, *a, **k):
+                calls.append((a, k))
+
+        class _Connection:
+            def __init__(self, *a, **k):
+                raise RuntimeError("stop before any network I/O")
+
+        fake = SimpleNamespace(
+            Server=_Server, Connection=_Connection, ALL="ALL", SIMPLE="SIMPLE",
+            ANONYMOUS="ANONYMOUS", NONE="NONE", SUBTREE="SUBTREE",
+        )
+        mp.setattr(mod, "ldap3", fake, raising=False)
+        mp.setattr(mod, "LDAP3_AVAILABLE", True, raising=False)
+        try:
+            getattr(mod, function_name)([value], 1, search_base="DC=a,DC=example")
+        except Exception:  # noqa: BLE001 - the consumer may refuse the value
+            pass
+        hosts = set()
+        real = _real_ldap3()
+        for args, kwargs in calls:
+            try:
+                server = real.Server(*args, port=kwargs.get("port"))
+            except Exception:  # noqa: BLE001 - ldap3 refused the host string
+                continue
+            hosts.add(server.host)
+        return hosts
+
+    return run
+
+
+def _libpq_hosts(host) -> set:
+    """Endpoints libpq contacts for a ``host`` connection parameter.
+
+    Per the libpq connection-string documentation (the ``host`` parameter): a
+    comma separates several hosts, and a value starting with ``/`` names the
+    directory of a Unix-domain socket.
+    """
+    if host.startswith("/"):
+        return {host}
+    return set(host.split(","))
+
+
+def _pymysql_hosts(host, kwargs) -> set:
+    """Endpoints PyMySQL contacts: the ``host`` argument of ``Connection`` verbatim.
+
+    A socket is the separate ``unix_socket`` argument, which the scanner never
+    sets.
+    """
+    assert "unix_socket" not in kwargs
+    return {host}
+
+
+def _db_consumer(kind):
+    def run(value, mp):
+        from quirk.scanner import db_connector as mod
+
+        recorded = []
+
+        def connect(**kw):
+            recorded.append(kw)
+            raise RuntimeError("stop before any network I/O")
+
+        if kind == "pg":
+            mp.setattr(mod, "PSYCOPG2_AVAILABLE", True)
+            mp.setattr(mod, "psycopg2", SimpleNamespace(connect=connect), raising=False)
+            mod.scan_pg_targets([value])
+            return set().union(*[_libpq_hosts(kw["host"]) for kw in recorded]) if recorded else set()
+        mp.setattr(mod, "PYMYSQL_AVAILABLE", True)
+        mp.setattr(mod, "pymysql", SimpleNamespace(connect=connect), raising=False)
+        mod.scan_mysql_targets([value])
+        return set().union(*[_pymysql_hosts(kw["host"], kw) for kw in recorded]) if recorded else set()
+
+    return run
+
+
+def _kerberos_consumer(value, mp):
+    from quirk.scanner import kerberos_scanner as mod
+
+    if mod._invalid_target_reason(value) is not None:
+        return set()
+    try:
+        return {mod._wire_name(value)}
+    except UnicodeError:
+        return set()
+
+
+def _dnssec_consumer(value, mp):
+    from quirk.scanner import dnssec_scanner as mod
+
+    asked = []
+
+    def resolve(domain, timeout, resolver=None, diag=None):
+        asked.append(domain)
+        return []
+
+    mp.setattr(mod, "DNSPYTHON_AVAILABLE", True)
+    mp.setattr(mod, "_resolve_ns", resolve)
+    mod.scan_dnssec_targets([value], timeout=1)
+    return set(asked)
+
+
+def _broker_consumer(value, mp):
+    from quirk.config import _parse_host_port
+
+    try:
+        return {_parse_host_port(value, field_name="connectors.broker_targets")[0]}
+    except ValueError:
+        return set()
+
+
+def _http_consumer(kind):
+    def run(value, mp):
+        import httpx
+
+        from quirk.util import url_allowlist
+
+        seen = []
+
+        def handler(request):
+            seen.append(request.url.host)
+            return httpx.Response(404)
+
+        class _MockClient(httpx.Client):
+            def __init__(self, *a, **k):
+                k["transport"] = httpx.MockTransport(handler)
+                super().__init__(*a, **k)
+
+        shim = SimpleNamespace(
+            getaddrinfo=lambda *a, **k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("192.0.2.10", 0))],
+            gaierror=socket.gaierror,
+            AF_UNSPEC=socket.AF_UNSPEC,
+        )
+        mp.setattr(url_allowlist, "socket", shim)
+        mp.setattr(httpx._api, "Client", _MockClient)
+        if kind == "jwt":
+            from quirk.scanner import jwt_scanner
+
+            jwt_scanner.scan_jwt_targets([value], timeout=1, allow_internal=True)
+        else:
+            from quirk.scanner import saml_scanner
+
+            saml_scanner._fetch_metadata(value, 1, allow_internal=True)
+        return set(seen)
+
+    return run
+
+
+def _urllib3_consumer(value, mp):
+    """hvac/azure-core (through requests, models.py prepare_url) and botocore
+    (httpsession.py send -> connection_from_url) all hand the URL to urllib3's
+    ``parse_url``."""
+    from urllib3.exceptions import LocationParseError
+    from urllib3.util import parse_url
+
+    try:
+        host = parse_url(value).host
+    except LocationParseError:
+        return set()
+    return {host} if host else set()
+
+
+CONSUMERS = {
+    "adcs_targets": (_ldap_consumer("quirk.scanner.adcs_scanner", "scan_adcs_targets"), "ldap://dc.example:389", "dc.example"),
+    "smime_targets": (_ldap_consumer("quirk.scanner.smime_scanner", "scan_smime_targets"), "ldap://dc.example:389", "dc.example"),
+    "codesign_targets": (_ldap_consumer("quirk.scanner.codesign_scanner", "scan_codesign_from_ldap"), "ldap://dc.example:389", "dc.example"),
+    "pg_targets": (_db_consumer("pg"), "db.example:5432", "db.example"),
+    "mysql_targets": (_db_consumer("mysql"), "db.example:3306", "db.example"),
+    "kerberos_targets": (_kerberos_consumer, "kdc.example", "kdc.example"),
+    "dnssec_targets": (_dnssec_consumer, "zone.example", "zone.example"),
+    "broker_targets": (_broker_consumer, "mq.example:9093", "mq.example"),
+    "jwt_targets": (_http_consumer("jwt"), "https://svc.example/x", "svc.example"),
+    "saml_targets": (_http_consumer("saml"), "https://svc.example/x", "svc.example"),
+    "vault_addr": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
+    "aws_endpoint_url": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
+    "azure_keyvault_urls": (_urllib3_consumer, "https://svc.example/x", "svc.example"),
+}
+
+
+def test_every_check_field_has_a_consumer():
+    assert len(CHECK_FIELDS) >= 13, CHECK_FIELDS
+    missing = sorted(set(CHECK_FIELDS) - set(CONSUMERS))
+    extra = sorted(set(CONSUMERS) - set(CHECK_FIELDS))
+    assert not missing, f"check field(s) with no registered consumer: {missing}"
+    assert not extra, f"consumer registered for non-check field(s): {extra}"
+    kinds = {
+        d for d in _tt.CONNECTOR_HOST_FIELD_DISPOSITION.values()
+        if d.startswith("check") and d != "check"
+    }
+    assert kinds <= set(OUT_OF_AGREEMENT_SCOPE), kinds
+
+
+@pytest.mark.parametrize("field", CHECK_FIELDS)
+def test_benign_targets_keep_their_host(monkeypatch, field):
+    consumer, benign, expected = CONSUMERS[field]
+    pairs = _tt.connector_host_values({field: [benign]})
+    assert [h for _f, h in pairs] == [expected]
+    assert _tt.is_target_trusted(expected, [expected]).ok
+    contacted = {_norm(c) for c in consumer(benign, monkeypatch)}
+    assert contacted == {expected}
+    if field in ("jwt_targets", "saml_targets"):
+        assert contacted
+
+
+@pytest.mark.parametrize("value", PARSER_AGREEMENT_CORPUS, ids=_PARSER_AGREEMENT_IDS)
+@pytest.mark.parametrize("field", CHECK_FIELDS)
+def test_gate_and_consumer_agree_on_host(monkeypatch, field, value):
+    pairs = _tt.connector_host_values({field: [value]})
+    gate_hosts = [h for _f, h in pairs if isinstance(h, str)]
+    allow = gate_hosts or ["192.0.2.254"]
+    gate_refuses = any(not _tt.is_target_trusted(h, allow).ok for _f, h in pairs)
+    contacted = CONSUMERS[field][0](value, monkeypatch)
+    assert gate_refuses or {_norm(c) for c in contacted} <= {_norm(h) for h in gate_hosts}, (
+        f"{field}: the gate and the consumer read the value differently "
+        f"(corpus id c{PARSER_AGREEMENT_CORPUS.index(value):02d})"
+    )
