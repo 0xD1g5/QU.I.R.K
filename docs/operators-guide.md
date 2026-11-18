@@ -164,7 +164,7 @@ Three small operator-facing additions shipped in Phase 143:
   value with no readable host is refused while `trusted_targets` is set, and an IP literal containing
   non-ASCII characters is refused with its own message. A connector target value that does not read as exactly one host and port is refused while
   `trusted_targets` is set, and the AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a
-  value; a `trusted_targets` entry that is not a string refuses every target until it is fixed, and the CLI
+  value; kubeconfig cluster servers and explicit image registries are held to the same rule, and URL target fields take `http` and `https` URLs; a `trusted_targets` entry that is not a string refuses every target until it is fixed, and the CLI
   exits 2 on a trust-gate refusal. The AD CS, S/MIME and code-signing connectors
   follow no LDAP referral, so a directory cannot redirect them to a host the trusted-targets check did
   not see. See
