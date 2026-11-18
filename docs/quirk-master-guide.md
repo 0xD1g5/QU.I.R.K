@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,936 lines, in reading order.
+Five guides, 7,938 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -2306,11 +2306,13 @@ security:
 
 - LDAP connectors (`adcs_targets`, `smime_targets`, `codesign_targets`): `host`, `host:port`, `ldap://host[:port]` or `ldaps://host[:port]`; an IPv6 address is written in brackets when a port follows.
 - Database and broker targets (`pg_targets`, `mysql_targets`, `broker_targets`): `host` or `host:port`; an IPv6 address is written in brackets when a port follows (the bracketed form is the accepted syntax for PostgreSQL and MySQL).
-- URL fields (`jwt_targets`, `saml_targets`, `vault_addr`, `aws_endpoint_url`, `azure_keyvault_urls`): a URL without user information; put credentials in the connector's credential fields.
+- URL fields (`jwt_targets`, `saml_targets`, `vault_addr`, `aws_endpoint_url`, `azure_keyvault_urls`): an `http://` or `https://` URL, or a bare `host[:port]`, without user information; put credentials in the connector's credential fields.
+- `k8s_kubeconfig`: every `clusters[].cluster.server` in the file is read in the URL form above.
+- `container_targets`: an explicit registry is the part before the first `/`, written `host` or `host:port` (an IPv6 address in brackets); a reference with no explicit registry uses the default registry and is not checked; a reference naming a local-file or container-daemon source scheme is refused before the scan runs.
 - `kerberos_targets`: a bare host name or IP address. `dnssec_targets`: a domain name.
 - A value is written exactly: no surrounding whitespace (a padded value is skipped, not trimmed), and a port is digits only.
 
-While `trusted_targets` is set, a connector target value that does not read as exactly one host and port in its connector's form is refused, the refusal names the field, and the value is not echoed. The AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a value (recorded as not probed, including a malformed port) even when `trusted_targets` is empty. An entry of `trusted_targets` that is not a string (for example `false` or a number) refuses every target until it is fixed; an empty list or an absent key still allows every target. The CLI exits with code 2 and prints the refusal message when the trust gate refuses a scan.
+While `trusted_targets` is set, a connector target value that does not read as exactly one host and port in its connector's form is refused, the refusal names the field, and the value is not echoed. The AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a value (recorded as not probed, including a malformed port) even when `trusted_targets` is empty. An entry of `trusted_targets` that is not a string (for example `false` or a number) refuses every target until it is fixed; an empty list or an absent key still allows every target. The CLI exits with code 2 and prints the refusal message when the trust gate refuses a scan. While `trusted_targets` is set, a kubeconfig cluster server or an explicit registry that does not read as exactly one host and port is refused, and the refusal names the field.
 
 > **Operator note:** This is an opt-in consent gate, not a security boundary against a malicious
 > operator — it exists to prevent an operator (or an automated scheduler) from accidentally
@@ -3579,7 +3581,7 @@ Three small operator-facing additions shipped in Phase 143:
   value with no readable host is refused while `trusted_targets` is set, and an IP literal containing
   non-ASCII characters is refused with its own message. A connector target value that does not read as exactly one host and port is refused while
   `trusted_targets` is set, and the AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a
-  value; a `trusted_targets` entry that is not a string refuses every target until it is fixed, and the CLI
+  value; kubeconfig cluster servers and explicit image registries are held to the same rule, and URL target fields take `http` and `https` URLs; a `trusted_targets` entry that is not a string refuses every target until it is fixed, and the CLI
   exits 2 on a trust-gate refusal. The AD CS, S/MIME and code-signing connectors
   follow no LDAP referral, so a directory cannot redirect them to a host the trusted-targets check did
   not see. See
