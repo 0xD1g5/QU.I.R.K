@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (308)
+## Open (309)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -355,8 +355,9 @@ the Evidence cell.
 | 261117-run-stats-phase-records-object-repr | OPEN | P3 | cli | run-stats JSON writes phase_records as a Python object repr instead of the phase records | Phase 238 (238-08-SUMMARY.md) | pre-existing since Phase 192 (50b626ee), found by 238-08: run_scan.py:2200 stores a live _PhaseRecorder in run_stats['phase_records'] and the run-stats writer stringifies it to '<__main__._PhaseRecorder object at 0x...>'; the scan_phase_records table is correct, only the run-stats artifact is useless; not caused by Phase 238 |
 | 261117-api-scans-target-string-includes-saml-scanner | OPEN | P3 | dashboard | /api/scans target string for a CLI scan lists scanner pseudo-hosts such as 'saml_scanner' | Phase 238 (238-08-SUMMARY.md) | pre-existing, found by 238-08: quirk/dashboard/api/routes/scan.py:1181-1182 builds target from every distinct endpoint host when no ScanJob exists, so coverage/ADVISORY rows whose host is the scanner label (saml_scanner) appear as a target; not caused by Phase 238 |
 | 261117-rsa-pss-keys-reported-as-rsa | OPEN | P3 | scanner | TLS scanner reports RSA-PSS leaf keys as 'RSA', so RSA-PSS rules have no live TLS input | Phase 238 code review (238-REVIEW.md IN-02) | verified open at e26bbe9c: quirk/scanner/tls_scanner.py:45-47 _pubkey_info returns ('RSA', size) for every RSAPublicKey, PSS included, so no live TLS row carries an RSA-PSS key algorithm and the shared undersized-RSA predicate's RSA-PSS branch (238 D-20) has nothing to read from a scan; related 261117-rsa-pss-large-key-no-quantum-vulnerable-finding |
+| 261117-phase239-release-notes | OPEN | P1 | release | Phase 239 user-visible changes to put in CHANGELOG 5.29.0 (owned by Phase 240 REL-14) | Phase 239 (239-CONTEXT.md) | to state, in fix wording only (D-20): a scalar connector target or trusted_targets value loads as one target, and null/empty mean no targets; a connector target with no readable host is refused while trusted_targets is set; AD CS, S/MIME and code-signing connectors do not follow LDAP referrals; the trust gate refuses an IP literal containing non-ASCII characters; whether 5.29.0 carries a security line or advisory is an operator call (239-CONTEXT item 8). |
 
-## Deferred (28)
+## Deferred (30)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -388,6 +389,8 @@ the Evidence cell.
 | 261116-healthy-quantum-vulnerable-jwks-key-finding | DEFERRED | P3 | scoring | No finding for healthy but quantum-vulnerable JWKS keys (RS256/ES256) | Phase 238 (238-CONTEXT.md) | D-02: healthy RS256/ES256/EdDSA JWKS keys produce no finding; the multihost oracle row 20001 asked for one, but it would cap nearly every real estate's score, so it needs its own severity decision; deferred by Phase 238 |
 | 261116-identity-page-per-key-jwks-inventory | DEFERRED | P3 | dashboard | Identity page has no per-key JWKS inventory | Phase 238 (238-CONTEXT.md) | A per-key JWKS table on the Identity page was out of Phase 238 scope (238-CONTEXT.md Deferred Ideas); deferred by Phase 238 |
 | 261116-sslyze-optional-client-auth-info-finding | DEFERRED | P3 | scanner | sslyze OPTIONAL client authentication could be an informational finding | Phase 238 (238-CONTEXT.md) | Phase 238 D-13 uses OPTIONAL only as the trigger for the post-handshake probe (quirk/scanner/tls_scanner.py _scan_one_sslyze); OPTIONAL alone produces nothing; deferred by Phase 238 |
+| 261117-referral-only-ldap-answer-reads-ran | DEFERRED | P2 | connector | A directory that answers an LDAP connector only with a referral reads as ran with zero results | Phase 239 (239-CONTEXT.md) | deferred by Phase 239 D-11: with referrals off (TRUST-02) AD CS, S/MIME and code signing return the referral unfollowed; whether a referral-only answer is a coverage skip belongs to the coverage-truth family (235.3/238); measured in 239-RESEARCH.md D-11 answer. |
+| 261117-trust-gate-refuse-all-ipv6-zone-ids | DEFERRED | P3 | security | Decide whether the shared trust gate should refuse every IPv6 zone id, as the Kerberos scanner does | Phase 239 (239-CONTEXT.md) | deferred by Phase 239 D-15: Phase 239 refuses non-ASCII IP literals only; the Kerberos rule (Phase 230 R18-R21) needs per-connector measurement before it is shared. |
 
 ## Development tooling (not shipped) (11)
 
