@@ -11,13 +11,17 @@ from __future__ import annotations
 import dataclasses
 import importlib
 import inspect
+import io
 import itertools
 import os
 import re
 import shutil
 import socket
 import subprocess
+import sys
+import textwrap
 import threading
+import tokenize
 import typing
 from pathlib import Path
 from types import SimpleNamespace
@@ -816,3 +820,100 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
                 f"{ref!r}: the model predicts {sorted(predicted)}, syft contacted {sorted(observed)}"
             )
     assert total >= 1, "the proxy recorded no CONNECT: the cross-check is vacuous"
+
+
+def _code_names_recursive(code) -> set:
+    names = set(code.co_names)
+    for const in code.co_consts:
+        if inspect.iscode(const):
+            names |= _code_names_recursive(const)
+    return names
+
+
+def _source_name_tokens(src) -> set:
+    reader = io.StringIO(textwrap.dedent(src)).readline
+    return {t.string for t in tokenize.generate_tokens(reader) if t.type == tokenize.NAME}
+
+
+def _forbidden_gate_names(names) -> set:
+    exact = {"_tt", "target_trust", "parse_target", "_registry_host"}
+    return {n for n in names if n in exact or n.startswith("SHAPE_")}
+
+
+def test_syft_observation_check_allows_default_registry_only_for_default_refs():
+    problems = _syft_observation_problems
+    assert problems("a.example/x", {"a.example"}, {"a.example", "registry-1.docker.io"})
+    assert not problems("nginx:1", set(), {"registry-1.docker.io", "auth.docker.io"})
+    assert not problems("a.example/x", {"a.example"}, {"a.example", "api.snapcraft.io"})
+    assert problems("a.example/x", {"a.example"}, set())
+    assert problems("nginx:1", set(), {"b.example"})
+
+
+def test_syft_model_is_independent_of_the_gate():
+    roots = (
+        "_syft_registry_hosts",
+        "_syft_observation_problems",
+        "_observe_syft",
+        "test_syft_registry_model_matches_real_syft",
+    )
+    module_globals = globals()
+    missing = [r for r in roots if r not in module_globals]
+    assert not missing, missing
+    seen = {}
+    queue = [module_globals[r] for r in roots]
+    while queue:
+        fn = queue.pop()
+        if fn.__name__ in seen:
+            continue
+        seen[fn.__name__] = fn
+        for name in _code_names_recursive(fn.__code__):
+            target = module_globals.get(name)
+            if inspect.isfunction(target) and target.__module__ == __name__:
+                queue.append(target)
+    assert len(seen) >= 3, sorted(seen)
+    for name, fn in sorted(seen.items()):
+        assert not _forbidden_gate_names(_code_names_recursive(fn.__code__)), name
+        assert not _forbidden_gate_names(_source_name_tokens(inspect.getsource(fn))), name
+    assert isinstance(module_globals.get("SYFT_MODEL_VERSION"), str)
+    doc = _syft_registry_hosts.__doc__ or ""
+    assert SYFT_MODEL_VERSION in doc
+    assert "github.com/" in doc and "/v" in doc
+
+
+@pytest.mark.parametrize(
+    "body",
+    ["return [_tt for _x in range(1)]", "return lambda: _tt"],
+    ids=["comprehension", "lambda"],
+)
+def test_independence_walk_sees_nested_code_objects(body):
+    ns: dict = {}
+    exec("def f():\n    " + body, ns)
+    code = ns["f"].__code__
+    assert "_tt" in _code_names_recursive(code)
+    if body.startswith("return lambda") or sys.version_info < (3, 12):
+        assert "_tt" not in code.co_names
+
+
+def test_independence_name_match_is_exact():
+    assert _forbidden_gate_names(
+        {"_syft_registry_hosts", "SHAPE", "NOT_SHAPE_X", "registry_host"}
+    ) == set()
+    everything = {"_registry_host", "SHAPE_HOST_PORT", "_tt", "target_trust", "parse_target"}
+    assert _forbidden_gate_names(everything) == everything
+    own = "def _syft_registry_hosts(ref):\n    return _syft_registry_hosts\n"
+    assert _forbidden_gate_names(_source_name_tokens(own)) == set()
+
+
+def test_ci_installs_the_syft_version_the_model_cites():
+    workflow = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "python-ci.yml"
+    steps = yaml.safe_load(workflow.read_text(encoding="utf-8"))["jobs"]["linux-full-suite"]["steps"]
+    names = [st.get("name") for st in steps]
+    assert "Run full test suite" in names
+    run_at = names.index("Run full test suite")
+    tarball = f"syft_{SYFT_MODEL_VERSION}_linux_amd64.tar.gz"
+    hits = [
+        i for i, st in enumerate(steps)
+        if tarball in st.get("run", "") and "sha256sum -c" in st.get("run", "")
+    ]
+    assert hits and hits[0] < run_at, hits
+    assert re.search(r"\b[0-9a-f]{64}\b", steps[hits[0]]["run"])
