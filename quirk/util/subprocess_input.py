@@ -74,12 +74,14 @@ _IMAGE_REF_RE: re.Pattern[str] = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._\-/:@]{0,2
 # daemon rather than pull from a registry (analogous to the blocked dir:/file:
 # vectors).  The list follows the source schemes in ``syft scan --help``
 # (docker, podman, docker-archive, oci-archive, oci-dir, singularity, dir,
-# file) plus the ones the binary also resolves (containerd, snap).  Prefixes
-# are stored lowercase and matched in any letter case against the lowercased
-# reference.
+# file) plus the ones the binary also resolves (containerd, snap, image).
+# Prefixes are stored lowercase and matched in any letter case against the
+# lowercased reference.  tests/test_connector_target_shape.py ties this tuple
+# to the agreement test's syft scheme model at run time.
 _LOCAL_REF_PREFIXES = (
     "dir:", "file:", "oci:", "docker-daemon:", "podman:", "docker-archive:",
     "oci-archive:", "oci-dir:", "singularity:", "docker:", "containerd:", "snap:",
+    "image:",
 )
 
 # Pattern for stripping ASCII control characters (D-08).
@@ -168,7 +170,7 @@ def validate_image_ref(r: str) -> ValidationResult:
     - Refs starting with any local-access scheme prefix, in any letter case
       (``dir:``, ``file:``, ``oci:``, ``docker-daemon:``, ``podman:``,
       ``docker-archive:``, ``oci-archive:``, ``oci-dir:``, ``singularity:``,
-      ``docker:``, ``containerd:``, ``snap:``) → RC_INVALID_IMAGE_REF
+      ``docker:``, ``containerd:``, ``snap:``, ``image:``) → RC_INVALID_IMAGE_REF
       (Syft/Trivy local-filesystem / daemon-socket escape vectors).
     - Refs containing shell metacharacters → RC_SHELL_METACHAR.
     - Empty string or refs not matching the OCI distribution-spec regex →
