@@ -139,11 +139,12 @@ def test_outcome_mixed_two_images():
 
 
 def test_outcome_credentials_redacted_in_resolved():
-    ref = "docker://user:pass@registry.example.com/img:1"
+    ref = "user:pass@registry.example.com/img:1"
     sink = TargetOutcomes([ref])
     with patch("shutil.which", return_value="/usr/bin/syft"), \
-         patch("subprocess.run", return_value=_proc("x", rc=1)):
+         patch("subprocess.run", return_value=_proc("x", rc=1)) as run:
         scan_container_targets([ref], outcomes=sink)
+    assert run.call_count >= 1
     assert "user:pass" not in repr(sink.resolved())
 
 
