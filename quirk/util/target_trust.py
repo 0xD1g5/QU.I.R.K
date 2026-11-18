@@ -18,6 +18,8 @@ from typing import Final
 from urllib.parse import urlparse
 
 RC_NOT_IN_ALLOWLIST: Final[str] = "not_in_trusted_targets"
+RC_UNREADABLE_TARGET: Final[str] = "unreadable_target_value"
+RC_NON_ASCII_IP_LITERAL: Final[str] = "non_ascii_ip_literal"
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,20 @@ def is_target_trusted(host_or_ip: str, trusted_targets: list) -> ValidationResul
     """
     if not trusted_targets:
         return ValidationResult(True, "", "")
+
+    if not isinstance(host_or_ip, str):
+        return ValidationResult(False, RC_UNREADABLE_TARGET, "<unreadable value>")
+
+    # Phase 239 TRUST-03 D-12: refuse before the exact match so a listed non-ASCII
+    # string cannot pass. Non-IP forms go through resolution below and the gate
+    # checks the resolved address.
+    try:
+        ipaddress.ip_address(host_or_ip)
+    except ValueError:
+        pass
+    else:
+        if not host_or_ip.isascii():
+            return ValidationResult(False, RC_NON_ASCII_IP_LITERAL, host_or_ip[:32])
 
     if host_or_ip in trusted_targets:
         return ValidationResult(True, "", "")
@@ -269,7 +285,12 @@ def as_target_list(value) -> list:
 
 
 def connector_host_values(connectors) -> list:
-    """``(field_name, host)`` for every host named by a ``check*`` field."""
+    """``(field_name, host)`` for every host named by a ``check*`` field.
+
+    An element with no readable host (mapping without a host, int, None) is
+    yielded as ``(field, None)`` so the gate refuses it while an allowlist is
+    set. Empty and whitespace-only strings name nothing and are skipped.
+    """
     pairs = []
     if connectors is None:
         return pairs
@@ -283,13 +304,37 @@ def connector_host_values(connectors) -> list:
             host = _registry_host(value) if disposition == "check-registry" else _extract_host(value)
             if host:
                 pairs.append((name, host))
+            elif disposition == "check" and not (isinstance(value, str) and not value.strip()):
+                pairs.append((name, None))
+            elif disposition == "check-registry" and not isinstance(value, str):
+                pairs.append((name, None))
     return pairs
 
 
 def _broker_target_hosts(cfg) -> list:
     """Thin wrapper kept for callers: hosts of connectors.broker_targets."""
     connectors = getattr(cfg, "connectors", None)
-    return [h for _n, h in connector_host_values(connectors) if _n == "broker_targets"]
+    return [h for _n, h in connector_host_values(connectors) if _n == "broker_targets" and h is not None]
+
+
+def refusal_message(result: ValidationResult, field_name: "str | None" = None) -> str:
+    """The one operator-facing refusal text, used at every refusal site (D-14/D-24)."""
+    where = f" (connectors.{field_name})" if field_name else ""
+    if result.reason == RC_NON_ASCII_IP_LITERAL:
+        return (
+            f"Target {result.redacted_preview!r}{where} is an IP address literal "
+            f"containing non-ASCII characters and is refused "
+            f"(security.trusted_targets in config.yaml)."
+        )
+    if result.reason == RC_UNREADABLE_TARGET:
+        return (
+            f"A value{where} has no readable host and is refused while the "
+            f"trusted-targets check is on (security.trusted_targets in config.yaml)."
+        )
+    return (
+        f"Target {result.redacted_preview!r}{where} is not in the trusted-targets "
+        f"allowlist (security.trusted_targets in config.yaml)."
+    )
 
 
 def enforce_trusted_targets(cfg) -> None:
@@ -307,14 +352,8 @@ def enforce_trusted_targets(cfg) -> None:
     for target in plain:
         result = is_target_trusted(target, trusted)
         if not result.ok:
-            raise ValueError(
-                f"Target {result.redacted_preview!r} is not in the trusted-targets "
-                f"allowlist (security.trusted_targets in config.yaml)."
-            )
+            raise ValueError(refusal_message(result))
     for field_name, host in connector_host_values(getattr(cfg, "connectors", None)):
         result = is_target_trusted(host, trusted)
         if not result.ok:
-            raise ValueError(
-                f"Target {result.redacted_preview!r} (connectors.{field_name}) is not in "
-                f"the trusted-targets allowlist (security.trusted_targets in config.yaml)."
-            )
+            raise ValueError(refusal_message(result, field_name))
