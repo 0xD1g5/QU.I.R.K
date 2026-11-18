@@ -53,7 +53,7 @@ from datetime import datetime, timezone
 from quirk.errors import format_error
 
 from quirk.models import CryptoEndpoint
-from quirk.util.target_trust import _extract_host  # 230-REVIEW-R15 CR-02
+from quirk.util.target_trust import CONNECTOR_FIELD_TARGET_SHAPE, AmbiguousTargetError, parse_target  # 230-REVIEW-R15 CR-02
 from quirk.scanner.target_outcome import OUTCOME_ANSWERED, OUTCOME_UNREACHABLE
 from quirk.util.safe_exc import safe_str  # IN-01: sanitize tcp_error onto unreachable endpoint
 
@@ -281,10 +281,15 @@ def _invalid_target_reason(target):
         return "KDC target contains a control or surrogate character"
     if any(c.isspace() for c in raw):
         return "KDC target contains whitespace"
-    # 230-REVIEW-R15 CR-02: the trusted-targets gate reads host:port, [v6] and
-    # URL forms itself.  A target it parses into a different host is refused,
-    # so the gate and the scanner always start from the same string.
-    gate_host = _extract_host(raw)
+    # 230-REVIEW-R15 CR-02: the trusted-targets gate reads kerberos_targets with
+    # parse_target (host:port, [v6] and URL forms).  A target it parses into
+    # another host is refused, so the gate and the scanner always start from
+    # the same string.
+    try:
+        gate_host = parse_target(raw, CONNECTOR_FIELD_TARGET_SHAPE["kerberos_targets"]).host
+    except AmbiguousTargetError:
+        return ("KDC target must be a bare host name or IP address; the trusted-targets "
+                "gate does not read it as one host (the port is always 88)")
     if gate_host != raw:
         return (f"KDC target must be a bare host name or IP address; the trusted-targets "
                 f"gate reads it as {gate_host!r} (the port is always 88)")

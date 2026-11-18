@@ -17,7 +17,6 @@ import socket
 import unicodedata
 from dataclasses import dataclass
 from typing import Final, Optional
-from urllib.parse import urlparse
 
 RC_NOT_IN_ALLOWLIST: Final[str] = "not_in_trusted_targets"
 RC_UNREADABLE_TARGET: Final[str] = "unreadable_target_value"
@@ -386,37 +385,6 @@ def _kubeconfig_server_hosts(path) -> list:
         else:
             hosts.append(path)
     return hosts or [path]
-
-
-def _extract_host(value) -> "str | None":
-    """Best-effort HOST of a target value. Never imports quirk.config.
-
-    Handles URLs, ``[v6]``/``[v6]:port``, ``host:port``, bare hosts, dicts and
-    objects with a ``host`` attribute. Anything unparseable is returned whole
-    (stripped) so it is checked as a unit and fails closed.
-    """
-    if isinstance(value, dict):
-        value = value.get("host")
-    elif value is not None and not isinstance(value, str):
-        value = getattr(value, "host", None)
-    if not isinstance(value, str):
-        return None
-    candidate = value.strip()
-    if not candidate:
-        return None
-    if "://" in candidate:
-        try:
-            host = urlparse(candidate).hostname
-        except ValueError:
-            host = None
-        return host or candidate
-    if candidate.startswith("["):
-        rb = candidate.find("]")
-        host = candidate[1:rb].strip() if rb != -1 else candidate
-        return host or candidate
-    if candidate.count(":") == 1:
-        return candidate.split(":", 1)[0].strip() or candidate
-    return candidate
 
 
 def _registry_host(image_ref):

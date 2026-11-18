@@ -146,21 +146,6 @@ def test_disabled_connector_still_checked():
         enforce_trusted_targets(cfg)
 
 
-@pytest.mark.parametrize(
-    "raw,host",
-    [
-        ("https://idp.example/metadata", "idp.example"),
-        ("ldaps://ca.example:636", "ca.example"),
-        ("[2001:db8::5]:5671", "2001:db8::5"),
-        ("db.example:5432", "db.example"),
-        ({"host": "x"}, "x"),
-        ("bare.example", "bare.example"),
-    ],
-)
-def test_extract_host_shapes(raw, host):
-    assert _tt._extract_host(raw) == host
-
-
 def test_unparseable_checked_whole_and_fails_closed():
     cfg = _cfg(["t.example"], {"saml_targets": ["not a host!!"]})
     with pytest.raises(ValueError):

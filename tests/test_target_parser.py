@@ -142,6 +142,7 @@ def test_parser_does_not_use_stdlib_url_accessors():
         inspect.getsource(f) for f in (tt.parse_target, tt._split_authority, tt._parse_port)
     )
     assert not any(k in src for k in ("urlsplit", "urlparse", ".hostname", ".port"))
+    assert not any(k in inspect.getsource(tt) for k in ("urlparse", "urlsplit"))
 
 
 def test_connector_host_values_marks_a_refused_value():

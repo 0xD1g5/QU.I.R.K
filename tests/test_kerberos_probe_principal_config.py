@@ -1837,7 +1837,7 @@ def test_kerberos_self_check_uses_the_gate_parser():
 
 
 def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
-    from quirk.util import target_trust as tt
+    from quirk.util.target_trust import CONNECTOR_FIELD_TARGET_SHAPE, parse_target
 
     checked = 0
     for t in _sweep_targets():
@@ -1845,7 +1845,7 @@ def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
             continue
         checked += 1
         raw = t.strip()
-        assert tt._extract_host(t) == raw, repr(t)
+        assert parse_target(raw, CONNECTOR_FIELD_TARGET_SHAPE["kerberos_targets"]).host == raw, repr(t)
         wire = ks._wire_name(t)
         # 230-REVIEW-R16 WR-02: an oracle independent of _wire_name.  The bytes
         # the scanner hands the resolver equal the bytes getaddrinfo(raw) sends
@@ -1891,10 +1891,12 @@ def test_every_accepted_target_is_probed_as_the_gate_resolves_it():
     "dc:\uff1a1", "fe80:\ufe551%en0", "0:\uff1affff\uff1aa00\uff1a1",
 ])
 def test_r15_divergent_targets_are_rejected_or_probed_as_the_gate_resolves(target):
-    from quirk.util import target_trust as tt
+    from quirk.util.target_trust import CONNECTOR_FIELD_TARGET_SHAPE, parse_target
 
     if ks._invalid_target_reason(target) is None:
-        assert tt._extract_host(target) == target.strip()
+        assert parse_target(
+            target.strip(), CONNECTOR_FIELD_TARGET_SHAPE["kerberos_targets"]
+        ).host == target.strip()
         assert ks._wire_name(target) == target.strip().encode("idna").decode("ascii")
 
 
@@ -1974,14 +1976,28 @@ def test_ldap_leg_follows_no_referrals(monkeypatch):
 
 @pytest.mark.parametrize("target, gate_host", [
     ("dc01.corp.local:88", "dc01.corp.local"), ("[::1]", "::1"),
-    ("ldap://dc01.corp.local", "dc01.corp.local"), ("dc:\uff1a1", "dc"),
 ])
 def test_target_the_gate_reads_as_another_host_is_refused_by_that_rule(target, gate_host):
     """230-REVIEW-R15 CR-02: the structural guard (refuse what the gate parses
     into a different host) names the gate's reading, so it is tested on its
     own and not only through the later wire-name character check."""
+    from quirk.util.target_trust import CONNECTOR_FIELD_TARGET_SHAPE, parse_target
+
+    assert parse_target(target, CONNECTOR_FIELD_TARGET_SHAPE["kerberos_targets"]).host == gate_host
     reason = ks._invalid_target_reason(target)
     assert reason and f"gate reads it as {gate_host!r}" in reason
+
+
+@pytest.mark.parametrize("target", ["dc:\uff1a1", "a.example:5000:6000", "ldap://u@a.example", "ldap://dc01.corp.local"])
+def test_target_the_gate_refuses_outright_is_refused(target):
+    from quirk.util.target_trust import (
+        CONNECTOR_FIELD_TARGET_SHAPE, AmbiguousTargetError, parse_target,
+    )
+
+    with pytest.raises(AmbiguousTargetError):
+        parse_target(target, CONNECTOR_FIELD_TARGET_SHAPE["kerberos_targets"])
+    reason = ks._invalid_target_reason(target)
+    assert reason and "does not read it as one host" in reason
 
 
 @pytest.mark.parametrize("target", [
