@@ -14,10 +14,13 @@ from typing import List, Optional
 
 from quirk.models import CryptoEndpoint
 from quirk.scanner.target_outcome import (
+    OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
     outcome_for_db_exception,
+    redact_target,
 )
 from quirk.util.safe_exc import safe_str
+from quirk.util.target_trust import AmbiguousTargetError, SHAPE_HOST_PORT, parse_target
 
 # ---------------------------------------------------------------------------
 # Optional imports with module-level None (required for test patching)
@@ -56,6 +59,27 @@ def _is_weak_mysql_cipher(cipher: str) -> bool:
 # PostgreSQL scanner (DB-01)
 # ---------------------------------------------------------------------------
 
+def _db_host_port(target, default_port: int) -> "tuple[str, int]":
+    """Host and port of a database target, read by the trust gate's parser."""
+    parsed = parse_target(str(target), SHAPE_HOST_PORT, default_port=default_port)
+    return parsed.host, parsed.port
+
+
+def _record_unreadable(target, outcomes, logger, label: str) -> None:
+    """Record a target value the shared parser rejected; nothing is dialled."""
+    if logger:
+        logger.v(
+            f"{label}: target {redact_target(target)} does not read as one host "
+            "and port; not probed"
+        )
+    if outcomes is not None:
+        outcomes.record(
+            target, OUTCOME_UNREACHABLE,
+            "not-probed: target value does not read as one host and port",
+            row_emitted=False,
+        )
+
+
 def scan_pg_targets(
     targets: list,
     user: Optional[str] = None,
@@ -87,8 +111,11 @@ def scan_pg_targets(
         db_connect_timeout = cfg.scan.timeouts.db_connect_seconds
 
     for target in targets:
-        host, _, port_str = str(target).partition(":")
-        port = int(port_str) if port_str.isdigit() else 5432
+        try:
+            host, port = _db_host_port(target, 5432)
+        except AmbiguousTargetError:
+            _record_unreadable(target, outcomes, logger, "PostgreSQL")
+            continue
         ep_host = f"postgresql://{host}:{port}"
 
         # Phase 72 D-20 / WR-07: password kwarg handling.
@@ -235,8 +262,11 @@ def scan_mysql_targets(
         db_connect_timeout = cfg.scan.timeouts.db_connect_seconds
 
     for target in targets:
-        host, _, port_str = str(target).partition(":")
-        port = int(port_str) if port_str.isdigit() else 3306
+        try:
+            host, port = _db_host_port(target, 3306)
+        except AmbiguousTargetError:
+            _record_unreadable(target, outcomes, logger, "MySQL")
+            continue
         ep_host = f"mysql://{host}:{port}"
 
         # Phase 72 D-20 / WR-07: password kwarg handling (mirrors postgres branch).

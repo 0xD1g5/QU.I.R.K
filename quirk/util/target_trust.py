@@ -28,8 +28,8 @@ SHAPE_URL: Final[str] = "url"
 SHAPE_LDAP: Final[str] = "ldap"
 SHAPE_HOST_PORT: Final[str] = "host-port"
 SHAPE_NAME: Final[str] = "name"
-# Host and port with no IP-literal host containing ":"; used while a connector still
-# splits its target on the first ":" (plan 239-06 moves it to parse_target).
+# Host and port with no IP-literal host containing ":". No connector field maps to it
+# now that the database connectors read targets with parse_target (kept for its tests).
 SHAPE_HOST_PORT_NO_V6: Final[str] = "host-port-no-v6"
 
 
@@ -284,8 +284,8 @@ CONNECTOR_FIELD_TARGET_SHAPE: Final[dict] = {
     "adcs_targets": SHAPE_LDAP,
     "smime_targets": SHAPE_LDAP,
     "codesign_targets": SHAPE_LDAP,
-    "pg_targets": SHAPE_HOST_PORT_NO_V6,
-    "mysql_targets": SHAPE_HOST_PORT_NO_V6,
+    "pg_targets": SHAPE_HOST_PORT,
+    "mysql_targets": SHAPE_HOST_PORT,
     "broker_targets": SHAPE_HOST_PORT,
     "kerberos_targets": SHAPE_HOST_PORT,
     "dnssec_targets": SHAPE_NAME,
