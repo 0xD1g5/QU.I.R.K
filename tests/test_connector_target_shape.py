@@ -23,6 +23,7 @@ import textwrap
 import threading
 import tokenize
 import typing
+import urllib.parse
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -520,13 +521,39 @@ _SYFT_DAEMON_SCHEMES = ("docker:", "podman:", "containerd:", "docker-daemon:", "
 _SYFT_LOCAL_SCHEMES = (
     "docker-archive:", "oci-archive:", "oci-dir:", "singularity:", "dir:", "file:", "oci:", "snap:",
 )
+SYFT_MODEL_VERSION = "1.57.2"
+
+
+def _parse_syft_version(text):
+    match = re.search(r"^Version:[ \t]*(\S.*)$", text, re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
 def _syft_exe_or_skip() -> str:
     exe = shutil.which("syft")
     if exe is None:
         if os.environ.get("CI"):
             pytest.fail("syft is not on PATH; the Linux Full Suite job must install the pinned syft")
         pytest.skip("syft is not on PATH; the cross-check needs the real binary")
+    proc = subprocess.run(
+        [exe, "version"], capture_output=True, text=True, timeout=30, close_fds=False,
+    )
+    found = _parse_syft_version(proc.stdout + proc.stderr)
+    if found != SYFT_MODEL_VERSION:
+        message = (
+            f"syft on PATH is {found}, the model cites {SYFT_MODEL_VERSION}; "
+            "install the pinned version or bump SYFT_MODEL_VERSION with the model"
+        )
+        if os.environ.get("CI"):
+            pytest.fail(message)
+        pytest.skip(message)
     return exe
+
+
+def test_parse_syft_version_reads_the_version_line():
+    sample = "Application:   syft\nVersion:           1.57.2\nBuildDate:     2026-11-16\n"
+    assert _parse_syft_version(sample) == "1.57.2"
+    assert _parse_syft_version("Application: syft\nBuildDate: x\n") is None
 
 
 def test_syft_model_daemon_and_local_schemes_are_refused():
@@ -576,30 +603,94 @@ def test_syft_model_schemes_cover_syft_help():
     assert found <= model, sorted(found - model)
 
 
-_IMAGE_DOMAIN = re.compile(r"^(?:[A-Za-z0-9.-]+|\[[0-9a-fA-F:.]+\])(?::[0-9]*)?$")
-_IMAGE_PATH = re.compile(
-    r"^[a-z0-9_.\-/]*(?::[\w][\w.-]{0,127})?(?:@[A-Za-z][A-Za-z0-9]*:[0-9a-fA-F]{32,})?$"
-)
+_GO_HOST_CHARS = re.compile(r"^[A-Za-z0-9._~!$&'()*+,;=<>\"-]*$")
+_GO_REPOSITORY_CHARS = re.compile(r"^[a-z0-9_./-]{1,255}$")
+_GO_TAG_CHARS = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
+_GO_DIGEST_HEX = {"sha256": 64, "sha384": 96, "sha512": 128}
+
+
+def _syft_authority_hostname(name):
+    """Hostname of the URI authority ``name``, or None when it is not one."""
+    if name.startswith("["):
+        match = re.match(r"^\[([0-9A-Fa-f:.]+)\](?::[0-9]*)?$", name)
+        return match.group(1) if match else None
+    host = name
+    if ":" in name:
+        host, port = name.rsplit(":", 1)
+        if not port.isascii() or not (port == "" or port.isdigit()):
+            return None
+    return host if _GO_HOST_CHARS.match(host) else None
+
+
+def _syft_split_repository(name):
+    """Split ``name`` into (registry, repository); None when it does not parse."""
+    if not name:
+        return None
+    registry, repository = "", name
+    parts = name.split("/", 1)
+    if len(parts) == 2 and (parts[0] == "localhost" or "." in parts[0] or ":" in parts[0]):
+        registry, repository = parts
+    if not _GO_REPOSITORY_CHARS.match(repository):
+        return None
+    if registry and _syft_authority_hostname(registry) is None:
+        return None
+    return registry, repository
+
+
+def _syft_split_tag(name):
+    """Split ``name`` into (base, tag) as the upstream tag parser does; None on failure."""
+    base, tag = name, ""
+    pieces = name.split(":")
+    if len(pieces) > 1 and "/" not in pieces[-1]:
+        base, tag = ":".join(pieces[:-1]), pieces[-1]
+        if tag == "":
+            return None
+    if tag and not _GO_TAG_CHARS.match(tag):
+        return None
+    return base, tag
+
+
+def _syft_valid_digest(text):
+    algorithm, _, encoded = text.partition(":")
+    width = _GO_DIGEST_HEX.get(algorithm)
+    return bool(width) and len(encoded) == width and all(c in "0123456789abcdef" for c in encoded)
 
 
 def _syft_registry_hosts(ref) -> set:
     """Registry hosts syft contacts for the argv reference ``ref``.
 
-    Source of the scheme lists: ``syft scan --help`` (syft 1.57.2): explicit
-    schemes ``docker:``, ``podman:``, ``registry:``, ``docker-archive:``,
-    ``oci-archive:``, ``oci-dir:``, ``singularity:``, ``oci-model-registry:``,
-    ``dir:``, ``file:``; the installed binary also resolves ``snap:`` and
-    ``image:``.  A scheme is matched in any letter case; local-file sources
-    contact no registry.  The remainder is read the way the registry client
-    reads a reference: the first ``/`` component is the registry when it
-    contains ``.`` or ``:`` or equals ``localhost``, and is taken as a URL
-    authority (host with an optional, possibly empty, numeric port; a bracketed
-    IPv6 form); the rest is a repository of lowercase alphanumerics and
-    ``._-/``, an optional ``:tag`` and an optional ``@digest``.  An ``http:``
-    or ``https:`` head is a URL, which syft does not resolve as a registry
-    (observed with syft 1.57.2).  A reference with no explicit registry goes
-    to the default registry, and syft also probes the snap store; the
-    cross-check lists both separately.
+    Written from the reference parser syft 1.57.2 (SYFT_MODEL_VERSION) uses for
+    registry sources: stereoscope v0.4.2 calls ``name.ParseReference`` from
+    github.com/google/go-containerregistry, version v0.22.1 (pinned by syft's
+    go.mod at tag v1.57.2), package ``pkg/name``:
+    https://github.com/google/go-containerregistry/blob/v0.22.1/pkg/name/repository.go
+    (``NewRepository``), registry.go (``checkRegistry``, ``NewRegistry``),
+    tag.go (``NewTag``), digest.go (``NewDigest``) and ref.go
+    (``ParseReference``).  The rules, as that source states them:
+
+    * ``ParseReference`` refuses a reference starting with ``http://`` or
+      ``https://``; it tries ``NewTag`` first and ``NewDigest`` second.
+    * ``NewTag`` splits on ``:``; the last piece is the tag when it contains
+      no ``/``; the tag uses letters, digits and ``_-.`` (1-128).
+    * ``NewDigest`` needs exactly one ``@``; the part before it goes through
+      ``NewTag`` and then ``NewRepository``.
+    * ``NewRepository`` splits once on ``/``; the first piece is the registry
+      when it is ``localhost`` or contains ``.`` or ``:``, otherwise the whole
+      name is the repository and the registry is the default.  The repository
+      uses lowercase letters, digits and ``_-./`` (1-255).
+    * ``checkRegistry`` accepts the registry when ``url.Parse`` of the name
+      behind two slashes gives a host equal to the name: a URI authority with
+      an optional, possibly empty, numeric port, a bracketed IPv6 form, and no
+      case rule; the toolchain's URL parser behind it rejects a colon in an
+      unbracketed host (observed with syft 1.57.2).
+    * ``NewRegistry`` rewrites ``docker.io`` to ``index.docker.io``.
+
+    Scheme handling is observed syft behaviour: ``scan --help`` lists the
+    explicit schemes (matched in any letter case here); local-file and daemon
+    sources contact no registry; a head of ``http:`` or ``https:`` is not
+    resolved as a registry.  A reference with no explicit registry goes to the
+    default registry, and syft also probes the snap store; the cross-check
+    lists both separately.
     """
     lowered = ref.lower()
     rest = ref
@@ -609,21 +700,27 @@ def _syft_registry_hosts(ref) -> set:
                 return set()
             rest = ref[len(scheme):]
             break
-    if "/" not in rest:
+    if rest.startswith(("http://", "https://")) or rest.split("/", 1)[0].lower() in ("http:", "https:"):
         return set()
-    first, tail = rest.split("/", 1)
-    if not ("." in first or ":" in first or first == "localhost"):
+    split = None
+    tagged = _syft_split_tag(rest)
+    if tagged is not None:
+        split = _syft_split_repository(tagged[0])
+    if split is None:
+        pieces = rest.split("@")
+        if len(pieces) == 2 and _syft_valid_digest(pieces[1]):
+            base = pieces[0]
+            retagged = _syft_split_tag(base)
+            if retagged is not None:
+                base = retagged[0]
+            split = _syft_split_repository(base)
+    if split is None or not split[0]:
         return set()
-    if first.lower() in ("http:", "https:"):
+    host = _syft_authority_hostname(split[0])
+    if not host:
         return set()
-    if not _IMAGE_DOMAIN.match(first) or not tail or not _IMAGE_PATH.match(tail):
-        return set()
-    host = first
-    if host.startswith("["):
-        host = host[1 : host.index("]")]
-    elif ":" in host:
-        host = host.rsplit(":", 1)[0]
-    return {host.lower()}
+    host = host.lower()
+    return {"index.docker.io" if host == "docker.io" else host}
 
 
 def _container_consumer(value, mp):
@@ -727,6 +824,32 @@ DEFAULT_REGISTRY_HOSTS = {"docker.io", "index.docker.io", "registry-1.docker.io"
 SYFT_FIXED_PROBE_HOSTS = {"api.snapcraft.io"}
 
 
+_SYFT_RULE_PROBES = (
+    "regs.example:/app",
+    "regs:5000/app",
+    "UP.Example/app",
+    "regs:/app",
+    "reg.example:5000/app:1",
+)
+
+
+def _syft_observation_problems(ref, predicted, observed) -> list:
+    allowed = set(predicted) | SYFT_FIXED_PROBE_HOSTS
+    if not predicted:
+        allowed |= DEFAULT_REGISTRY_HOSTS
+    problems = []
+    extra = sorted(set(observed) - allowed)
+    if extra:
+        problems.append(
+            f"{ref!r}: syft contacted {extra}, the model allowed {sorted(allowed)}"
+        )
+    if predicted and not (set(predicted) & set(observed)):
+        problems.append(
+            f"{ref!r}: the model predicts {sorted(predicted)}, syft contacted {sorted(observed)}"
+        )
+    return problems
+
+
 def _loopback_registry(ref) -> bool:
     first = ref.split("/", 1)[0].rsplit(":", 1)[0].lower() if "/" in ref else ""
     return first == "localhost" or first.startswith("127.") or first in ("[::1]", "::1")
@@ -796,11 +919,17 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
     base_env = dict(os.environ)
     for name in ("NO_PROXY", "no_proxy", "ALL_PROXY", "all_proxy"):
         base_env.pop(name, None)
+    version = subprocess.run(
+        [exe, "version"], capture_output=True, text=True, timeout=30, close_fds=False,
+    ).stdout
     refs = [
         r for r in PARSER_AGREEMENT_CORPUS
         if isinstance(r, str) and validate_image_ref(r).ok and not _loopback_registry(r)
     ]
     assert len(refs) >= 5, refs
+    for probe in _SYFT_RULE_PROBES:
+        assert validate_image_ref(probe).ok, probe
+        refs.append(probe)
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(
             pool.map(
@@ -810,15 +939,10 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
         )
     total = 0
     for ref, authorities in zip(refs, results):
-        observed = {_tt.parse_target(a, _tt.SHAPE_HOST_PORT).host.lower() for a in authorities}
+        observed = {urllib.parse.urlsplit("//" + a).hostname or "" for a in authorities}
         total += len(authorities)
-        predicted = _syft_registry_hosts(ref)
-        extra = observed - DEFAULT_REGISTRY_HOSTS - SYFT_FIXED_PROBE_HOSTS - predicted
-        assert not extra, f"{ref!r}: syft contacted {sorted(extra)}, the model predicted {sorted(predicted)}"
-        if predicted:
-            assert predicted & observed, (
-                f"{ref!r}: the model predicts {sorted(predicted)}, syft contacted {sorted(observed)}"
-            )
+        problems = _syft_observation_problems(ref, _syft_registry_hosts(ref), observed)
+        assert not problems, f"{problems} (syft version: {version.strip()!r})"
     assert total >= 1, "the proxy recorded no CONNECT: the cross-check is vacuous"
 
 
