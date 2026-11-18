@@ -212,7 +212,7 @@ Plans:
   1. A scalar `*_targets` value for any connector loads as a one-element list, and a test that enumerates the target fields from `ConnectorsCfg` at run time shows the trust gate and the scanner see the same target set for every field.
   2. LDAP-based connectors do not follow a directory referral to a host the trust gate has not checked, and a run-time source scan finds every `ldap3.Server` / `Connection` in `quirk/` and fails if any one is not covered.
   3. The trust gate refuses an IP literal that is not ASCII instead of passing it through.
-**Plans**: 14 plans (4 + 7 gap closure + 3 gap closure 3)
+**Plans**: 18 plans (4 + 7 gap closure + 3 gap closure 3 + 4 gap closure 4)
 Plans:
 **Wave 1**
 - [ ] 239-01-PLAN.md — Ledger-first rows, then one target shape for every list-typed connector field and trusted_targets via a shared as_target_list (TRUST-01, D-01..D-05, D-07, D-18, D-21, D-22)
@@ -234,6 +234,11 @@ Plans:
 - [x] 239-12-PLAN.md — Ledger rows first for the ledger-only review items; container image references naming a local-file or container-daemon source scheme are refused in any letter case, tied to the syft model by a run-time test (RED first) (TRUST-01, WR-03)
 - [x] 239-13-PLAN.md — The syft registry model follows syft's upstream reference parser, allows the default registry only where it predicts it, and its real-syft check runs in Linux Full Suite with a pinned syft (RED first) (TRUST-01, WR-04)
 - [x] 239-14-PLAN.md — UAT-239-08, UAT-239-07 CI-EXEMPT withdrawn (CI execution junit-proven; substitute-runner gap ledgered), vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
+**Gap closure 4 (SC#1 for container_targets, from the third 239 re-verification)**
+- [ ] 239-15-PLAN.md — Ledger evidence first; container images are scanned from the registry only, only plain registry image references are accepted, and more non-registry source schemes are refused in any letter case (RED first) (TRUST-01)
+- [ ] 239-16-PLAN.md — The container agreement test follows the scanner's own syft argv and is anchored to syft's observed behaviour by real-syft tests in Linux Full Suite (TRUST-01)
+- [ ] 239-17-PLAN.md — Docs for registry-only container scanning and plain image references, registry lab check, UAT-239-09, vault sync (TRUST-01)
+- [ ] 239-18-PLAN.md — Release-notes hand-off, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
 
 ### Phase 240: Regressions and Release 5.29.0
 **Goal**: Scan confidence reflects a high probe error rate again, and 5.29.0 ships the milestone's fixes with the known-defect wording for every fixed item withdrawn and every date-gated catalog green on an honest re-verification.
