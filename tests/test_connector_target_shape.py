@@ -1168,9 +1168,12 @@ def _syft_candidate_words(exe, template, work, base_env, proxy) -> dict:
 
 def _run_syft_isolated(argv, env, cwd, timeout=60):
     cwd.mkdir(parents=True, exist_ok=True)
+    # The working directory is set by the shell, not by a cwd keyword, so the spawn stays
+    # on the fork-safe path the crash-exposed-spawn gate requires.
+    wrapped = ["/bin/sh", "-c", 'cd "$1" && shift && exec "$@"', "sh", str(cwd), *argv]
     try:
         return subprocess.run(
-            argv, env=env, cwd=str(cwd), capture_output=True, timeout=timeout, close_fds=False,
+            wrapped, env=env, capture_output=True, timeout=timeout, close_fds=False,
         )
     except subprocess.TimeoutExpired:
         return None
