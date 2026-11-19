@@ -8,7 +8,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
-## [5.29.0] - 2026-11-19
+## [5.29.0] - 2026-11-20
 
 This release closes the v5.29 Truth milestone. It makes the dashboard and the report agree on far more of
 what one scan found, makes History, Trends and Compare count what a scan actually observed, corrects
