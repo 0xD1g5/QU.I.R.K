@@ -24,6 +24,7 @@ from tests.test_changelog_5280_section import _parity_violations
 
 _ROOT = Path(__file__).resolve().parent.parent
 _CHANGELOG = _ROOT / "CHANGELOG.md"
+_README = _ROOT / "README.md"
 
 _PINNED_VERSION = "5.29.0"
 
@@ -64,6 +65,18 @@ _TODO_DIVERGENCE_PHRASES: tuple[tuple[str, str], ...] = (
     ("report lists MEDIUM/LOW findings the dashboard does not derive", "below-HIGH findings"),
 )
 _HEDGE = "other findings may also differ"
+
+# README is the PyPI long description: none of these withdrawn 5.28.0 divergence phrasings may survive anywhere in it.
+_WITHDRAWN_README_PHRASES: tuple[str, ...] = (
+    "legacy TLS version finding",
+    "weak cipher suites (dashboard only",
+    "undersized ECDSA certificate keys (",
+    "end-of-life crypto libraries in container images (report only)",
+    "scores 84 in the report and 69 on the dashboard",
+    "84 in the report and 69 on the dashboard",
+    "drift notification can show a different score",
+    "Known gaps in 5.28.2",
+)
 
 # Divergences fixed in 5.29.0; the section must say they no longer differ.
 _WITHDRAWN_CASES: tuple[str, ...] = (
@@ -182,3 +195,36 @@ def test_withdrawal_of_fixed_cases_is_stated() -> None:
 
 def test_no_unqualified_parity_claim() -> None:
     assert _parity_violations(_section()) == []
+
+
+def _readme() -> str:
+    return _README.read_text(encoding="utf-8")
+
+
+def _readme_whats_new_v529() -> str:
+    text = _readme()
+    m = re.search(r"^## What's New in v5\.29\s*$", text, re.M)
+    assert m, "README.md has no \"## What's New in v5.29\" heading"
+    assert m.start() < text.index("## What's New in v5.28"), "v5.29 must sit above v5.28"
+    rest = text[m.end():]
+    nxt = re.search(r"^## ", rest, re.M)
+    return rest[: nxt.start()] if nxt else rest
+
+
+def test_readme_whats_new_v529_discloses_divergences() -> None:
+    sec = _norm(_readme_whats_new_v529()).lower()
+    phrases = (list(_DIVERGENCE_PHRASES.values()) + list(_DASHBOARD_ONLY_PHRASES.values())
+               + [p for _, p in _TODO_DIVERGENCE_PHRASES] + [_HEDGE])
+    missing = [p for p in phrases if p.lower() not in sec]
+    assert not missing, f"README What's New v5.29 omits divergence phrases: {missing}"
+    assert "semgrep" in sec and "key vault" in sec and "sensor identity" in sec
+
+
+def test_readme_no_unqualified_parity_claim() -> None:
+    assert _parity_violations(_readme()) == []
+
+
+def test_readme_withdrawn_divergence_phrases_absent() -> None:
+    norm = _norm(_readme()).lower()
+    present = [p for p in _WITHDRAWN_README_PHRASES if p.lower() in norm]
+    assert not present, f"README still carries withdrawn divergence wording: {present}"
