@@ -48,6 +48,8 @@ _REQUIRED_TERMS: tuple[str, ...] = (
     "trusted_targets", "referrals", "non-ASCII", "registry",
     # Phase 236 outcomes
     "legacy TLS", "end-of-life",
+    # SNMP vendor catalog corrections
+    "PAN-OS",
 )
 
 # Live-derived: the key sets must EQUAL the live dicts.

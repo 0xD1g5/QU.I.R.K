@@ -74,6 +74,9 @@ you upgrade.
   gains a JWT key card, the dashboard shows an "mTLS required" INFO, and skip sentences on the dashboard and
   in Export PDF no longer show the internal outcome code. The Executive Skipped badge shows a categoryless
   error row as Failed.
+- **SNMP identification of a Palo Alto firewall no longer rates it PQC-capable.** A PAN-OS firewall that decrypts
+  traffic removes post-quantum key-exchange groups, so the SNMP vendor catalog now rates PAN-OS `unsupported`
+  instead of `partial`.
 
 ### Security
 

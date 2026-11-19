@@ -73,22 +73,29 @@ SNMP_VENDOR_MATRIX = {
         {
             "vendor": "Palo Alto",
             "model_pattern": r"PAN-OS|Palo Alto",
-            "pqc_status": "partial",
+            "pqc_status": "unsupported",
             "last_verified": "2026-09-02",
             "source_url": (
-                "https://docs.paloaltonetworks.com/pan-os/11-1/pan-os-admin/"
-                "decryption/post-quantum-cryptography"
+                "https://docs.paloaltonetworks.com/network-security/decryption/"
+                "administration/post-quantum-cryptography-decryption/"
+                "detection-control-post-quantum-cryptography"
             ),
             "notes": (
-                "PAN-OS 11.1+ supports X25519MLKEM768 hybrid KEM for TLS "
-                "decryption; management plane and older releases remain "
-                "unsupported. KNOWN ISSUE (2026-09-02): this deep link now "
-                "404s; docs.paloaltonetworks.com's own site index confirms "
-                "the content was reorganized into a dedicated 'Quantum "
-                "Security Administration' book, but the exact new URL could "
-                "not be resolved during this sweep. pqc_status corroborated "
-                "via that site-index evidence, not a live page fetch — "
-                "flagged for a follow-up doc-link fix."
+                "In a decryption path a PAN-OS NGFW is a PQC downgrade point, "
+                "not a PQC-capable device: under SSL Forward Proxy or SSL "
+                "Inbound Inspection rules it removes PQC and hybrid PQC groups "
+                "from the ClientHello and drops sessions that negotiate only "
+                "PQC; traffic matching a no-decrypt rule, or no rule, may "
+                "negotiate PQC end to end. "
+                "source_url corrected 2026-11-19: the prior "
+                "pan-os/11-1/.../post-quantum-cryptography deep link 404s; "
+                "the live page is 'Post-Quantum Cryptography Detection and "
+                "Control' (read 2026-11-19). notes corrected 2026-11-19: the "
+                "prior claim that PAN-OS 11.1+ supports X25519MLKEM768 hybrid "
+                "KEM for TLS decryption was inverted, matching the same "
+                "correction in hardware_meta (2026-09-13); pqc_status moved "
+                "partial -> unsupported. The entry's last_verified is not "
+                "bumped: the catalog-level re-verification is pending."
             ),
         },
     ],
