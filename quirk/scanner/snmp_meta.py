@@ -32,12 +32,29 @@ SNMP_VENDOR_MATRIX = {
         {
             "vendor": "Juniper",
             "model_pattern": r"JUNOS|Juniper Networks|Juniper.*SRX|Juniper.*EX|Juniper.*QFX",
-            "pqc_status": "unsupported",
+            "pqc_status": "partial",
             "last_verified": "2026-09-02",
-            "source_url": "https://www.juniper.net/documentation/",
+            "source_url": (
+                "https://networkingdocs.hpe.com/documentation/us/en/software/junos/"
+                "release-notes/25.4/junos-evo-release-notes-25.4r1/topics/"
+                "new-features/feature-descriptions/Post-Quantum-Cryptography.html"
+            ),
             "notes": (
-                "Juniper Networks JUNOS does not support PQC cipher suites "
-                "as of 2026-Q2. Consult Juniper roadmap for future PQC support."
+                "Junos OS Evolved 25.4R1 introduces PQC on ACX, PTX and QFX "
+                "Series: ML-DSA-87 software-image signatures and the hybrid "
+                "sntrup761x25519-sha512 SSH key exchange. SCOPE CAVEAT: the "
+                "cited release note covers ACX/PTX/QFX on Junos OS Evolved "
+                "only; classic Junos OS (SRX, MX, EX) is not covered by it. "
+                "source_url corrected 2026-11-19: the prior "
+                "juniper.net/documentation/ index now redirects to a generic "
+                "HPE Networking Documentation landing page that supports no "
+                "claim; the 25.4R1 release note (read 2026-11-19) is the live "
+                "replacement. notes corrected 2026-11-19: the prior 'JUNOS "
+                "does not support PQC cipher suites as of 2026-Q2' is "
+                "contradicted by that release note, matching hardware_meta "
+                "(2026-09-13); pqc_status moved unsupported -> partial. The "
+                "entry's last_verified is not bumped: the catalog-level "
+                "re-verification is pending."
             ),
         },
         {

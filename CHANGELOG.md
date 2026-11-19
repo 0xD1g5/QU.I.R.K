@@ -77,6 +77,9 @@ you upgrade.
 - **SNMP identification of a Palo Alto firewall no longer rates it PQC-capable.** A PAN-OS firewall that decrypts
   traffic removes post-quantum key-exchange groups, so the SNMP vendor catalog now rates PAN-OS `unsupported`
   instead of `partial`.
+- **SNMP identification of a Juniper device no longer rates it PQC-unsupported.** Junos OS Evolved 25.4R1 ships
+  post-quantum signatures and SSH key exchange on ACX, PTX and QFX, so the SNMP vendor catalog now rates JUNOS
+  `partial`; classic Junos OS on SRX, MX and EX is not covered by that evidence.
 
 ### Security
 
