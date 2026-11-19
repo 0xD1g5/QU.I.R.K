@@ -237,7 +237,7 @@ Plans:
 **Gap closure 4 (SC#1 for container_targets, from the third 239 re-verification)**
 - [x] 239-15-PLAN.md — Ledger evidence first; container images are scanned from the registry only, only plain registry image references are accepted, and more non-registry source schemes are refused in any letter case (RED first) (TRUST-01)
 - [x] 239-16-PLAN.md — The container agreement test follows the scanner's own syft argv and is anchored to syft's observed behaviour by real-syft tests in Linux Full Suite (TRUST-01)
-- [ ] 239-17-PLAN.md — Docs for registry-only container scanning and plain image references, registry lab check, UAT-239-09, vault sync (TRUST-01)
+- [x] 239-17-PLAN.md — Docs for registry-only container scanning and plain image references, registry lab check, UAT-239-09, vault sync (TRUST-01)
 - [ ] 239-18-PLAN.md — Release-notes hand-off, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
 
 ### Phase 240: Regressions and Release 5.29.0
