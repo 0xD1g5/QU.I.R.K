@@ -41,3 +41,7 @@ R16 read ldap3 2.9.1 (`strategy/base.py:774-778`): on a referral, the AD CS scan
 
 - **Item 1:** the risk is CONFIRMED for the Kerberos leg (loopback measurement). For AD CS it is LIKELY, from an ldap3 source read; it was not measured. Effort is **S** per scanner, plus one loopback test helper.
 - **Item 2:** CONFIRMED by R16's end-to-end run through `enforce_trusted_targets`. Effort is **S**. Fail-closed for every connector, so the dashboard is unaffected.
+
+## Resolution (2026-11-19)
+
+Fixed by Phase 239 (TRUST-02, TRUST-03): AD CS, S/MIME and code signing follow no referral (allowed_referral_hosts=[] and auto_referrals=False on every ldap3 Server and Connection), held by the AST gate in tests/test_ldap_referral_hardening.py and proven by its three loopback nodes; the trust gate refuses an IP literal containing non-ASCII characters with its own message at all six refusal sites. Commits main 9bb6c072 (merge of PR #88; fixes 77628738, 867447b3, 174f06a2). The wider rule of refusing every IPv6 zone id is deferred to 261117-trust-gate-refuse-all-ipv6-zone-ids, and the referral-only-answer coverage question to 261117-referral-only-ldap-answer-reads-ran.
