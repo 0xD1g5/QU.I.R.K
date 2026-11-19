@@ -50,6 +50,7 @@ _REQUIRED_TERMS: tuple[str, ...] = (
     "legacy TLS", "end-of-life",
     # SNMP vendor catalog corrections
     "PAN-OS",
+    "FortiOS",
     "Junos OS Evolved",
 )
 

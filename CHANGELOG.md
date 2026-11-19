@@ -80,6 +80,9 @@ you upgrade.
 - **SNMP identification of a Juniper device no longer rates it PQC-unsupported.** Junos OS Evolved 25.4R1 ships
   post-quantum signatures and SSH key exchange on ACX, PTX and QFX, so the SNMP vendor catalog now rates JUNOS
   `partial`; classic Junos OS on SRX, MX and EX is not covered by that evidence.
+- **SNMP identification of a Fortinet device no longer rates it PQC-unsupported.** FortiOS supports post-quantum
+  preshared keys and, from 7.6.1, ML-KEM key exchange for IPsec, so the SNMP vendor catalog now rates FortiGate and
+  FortiOS `partial`; TLS and management-plane PQC are not addressed.
 
 ### Security
 

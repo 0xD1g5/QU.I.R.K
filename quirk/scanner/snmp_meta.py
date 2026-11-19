@@ -60,16 +60,28 @@ SNMP_VENDOR_MATRIX = {
         {
             "vendor": "Fortinet",
             "model_pattern": r"FortiGate|FortiOS|Fortinet",
-            "pqc_status": "unsupported",
+            "pqc_status": "partial",
             "last_verified": "2026-09-02",
-            "source_url": "https://support.fortinet.com/Information/ProductLifecycle.aspx",
+            "source_url": (
+                "https://docs.fortinet.com/document/fortigate/8.0.0/"
+                "administration-guide/527690/post-quantum-preshared-key-support"
+            ),
             "notes": (
-                "FortiGate and FortiOS do not support PQC cipher suites "
-                "as of 2026-Q2. Verify against FortiOS 7.x release notes. "
-                "source_url corrected 2026-09-02: the prior "
-                "fortinet.com/support/product-lifecycle URL now 404s; "
-                "support.fortinet.com/Information/ProductLifecycle.aspx is "
-                "the live replacement."
+                "FortiOS supports post-quantum preshared keys (PPK, RFC 8784) "
+                "for IPsec IKEv2, and FortiOS 7.6.1+ supports PQC KEM for "
+                "IPsec key exchange (RFC 9370 / RFC 9242, ML-KEM per FIPS "
+                "203). TLS and management-plane PQC are not addressed by that "
+                "documentation. "
+                "source_url corrected 2026-11-19: the prior "
+                "support.fortinet.com/Information/ProductLifecycle.aspx now "
+                "redirects to a JavaScript lifecycle application with no "
+                "readable content; the FortiOS 8.0.0 PPK page (read "
+                "2026-11-19) is the live replacement. notes corrected "
+                "2026-11-19: the prior 'do not support PQC cipher suites' "
+                "ignored IPsec PQC, matching hardware_meta (2026-09-13); "
+                "pqc_status moved unsupported -> partial. The entry's "
+                "last_verified is not bumped: the catalog-level "
+                "re-verification is pending."
             ),
         },
         {
