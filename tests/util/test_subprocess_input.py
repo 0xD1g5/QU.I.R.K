@@ -32,6 +32,7 @@ from quirk.util.subprocess_input import (
     RC_NONEXISTENT_PATH,
     RC_INVALID_IMAGE_REF,
     RC_LEADING_DASH,
+    RC_IMAGE_REF_NOT_PLAIN,
     RC_PATH_SHAPED_REF,  # Phase 123 SSRF-03 — does not exist yet; import fails until Plan 02
 )
 
@@ -115,6 +116,65 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("localhost/img:tag", True, ""),
     ("localhost:5000/img", True, ""),
     ("docker.io/library/nginx", True, ""),
+    # source-scheme prefixes listed by syft's help text
+    ("oci-archive:/x.tar", False, RC_INVALID_IMAGE_REF),
+    ("oci-dir:/x", False, RC_INVALID_IMAGE_REF),
+    ("singularity:/x.sif", False, RC_INVALID_IMAGE_REF),
+    ("docker:alpine", False, RC_INVALID_IMAGE_REF),
+    ("containerd:alpine", False, RC_INVALID_IMAGE_REF),
+    ("snap:x", False, RC_INVALID_IMAGE_REF),
+    ("image:a.example/x", False, RC_INVALID_IMAGE_REF),
+    ("IMAGE:a.example/x", False, RC_INVALID_IMAGE_REF),
+    ("Image:a.example/x", False, RC_INVALID_IMAGE_REF),
+    # prefixes are matched in any letter case
+    ("DIR:/x", False, RC_INVALID_IMAGE_REF),
+    ("Dir:/x", False, RC_INVALID_IMAGE_REF),
+    ("File:/x", False, RC_INVALID_IMAGE_REF),
+    ("OCI-ARCHIVE:/x.tar", False, RC_INVALID_IMAGE_REF),
+    ("Docker:alpine", False, RC_INVALID_IMAGE_REF),
+    # registry-type scheme words before an explicit registry are not plain references
+    ("registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-model-registry:ai/llama", False, RC_IMAGE_REF_NOT_PLAIN),
+    # added refused schemes, not-plain forms and plain controls
+    ("local-file:x.tar", False, RC_INVALID_IMAGE_REF),
+    ("LOCAL-FILE:x.tar", False, RC_INVALID_IMAGE_REF),
+    ("Local-File:x.tar", False, RC_INVALID_IMAGE_REF),
+    ("local-directory:d", False, RC_INVALID_IMAGE_REF),
+    ("LOCAL-DIRECTORY:d", False, RC_INVALID_IMAGE_REF),
+    ("Local-Directory:d", False, RC_INVALID_IMAGE_REF),
+    ("daemon:alpine", False, RC_INVALID_IMAGE_REF),
+    ("DAEMON:alpine", False, RC_INVALID_IMAGE_REF),
+    ("Daemon:alpine", False, RC_INVALID_IMAGE_REF),
+    ("pull:alpine", False, RC_INVALID_IMAGE_REF),
+    ("PULL:alpine", False, RC_INVALID_IMAGE_REF),
+    ("Pull:alpine", False, RC_INVALID_IMAGE_REF),
+    ("containers-storage:alpine", False, RC_INVALID_IMAGE_REF),
+    ("CONTAINERS-STORAGE:alpine", False, RC_INVALID_IMAGE_REF),
+    ("Containers-Storage:alpine", False, RC_INVALID_IMAGE_REF),
+    ("registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("OCI-REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Oci-Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-model:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("OCI-MODEL:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Oci-Model:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-model-registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("OCI-MODEL-REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Oci-Model-Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("registry:2", True, ""),
+    ("oci-registry:alpine", True, ""),
+    ("oci-model:alpine", True, ""),
+    ("oci-model-registry:alpine", True, ""),
+    ("foo:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("a.example:5000:6000/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("registry:5000/x", True, ""),
+    ("Registry:5000/x", True, ""),
+    ("a.example:5000/x", True, ""),
+    ("regs.example:/app", True, ""),
+    ("docker.io/library/registry:2", True, ""),
+    ("a.example/x@sha256:abababababababababababababababababababababababababababababababab", True, ""),
 ], ids=[
     "valid_registry_tag",
     "valid_alpine",
@@ -133,6 +193,61 @@ def test_validate_repo_path_existing_dir(tmp_path):
     "valid_localhost_img",
     "valid_localhost_port",
     "valid_dockerio_library",
+    "oci_archive_prefix",
+    "oci_dir_prefix",
+    "singularity_prefix",
+    "docker_prefix",
+    "containerd_prefix",
+    "snap_prefix",
+    "image_scheme",
+    "image_scheme_upper",
+    "image_scheme_title",
+    "dir_prefix_upper",
+    "dir_prefix_mixed",
+    "file_prefix_mixed",
+    "oci_archive_prefix_upper",
+    "docker_prefix_mixed",
+    "registry_prefix_not_plain",
+    "model_registry_prefix_not_plain",
+    "added_scheme_1_lower",
+    "added_scheme_1_upper",
+    "added_scheme_1_title",
+    "added_scheme_2_lower",
+    "added_scheme_2_upper",
+    "added_scheme_2_title",
+    "added_scheme_3_lower",
+    "added_scheme_3_upper",
+    "added_scheme_3_title",
+    "added_scheme_4_lower",
+    "added_scheme_4_upper",
+    "added_scheme_4_title",
+    "storage_scheme_lower",
+    "storage_scheme_upper",
+    "storage_scheme_title",
+    "not_plain_scheme_1_lower",
+    "not_plain_scheme_1_upper",
+    "not_plain_scheme_1_title",
+    "not_plain_scheme_2_lower",
+    "not_plain_scheme_2_upper",
+    "not_plain_scheme_2_title",
+    "not_plain_scheme_3_lower",
+    "not_plain_scheme_3_upper",
+    "not_plain_scheme_3_title",
+    "not_plain_scheme_4_lower",
+    "not_plain_scheme_4_upper",
+    "not_plain_scheme_4_title",
+    "plain_scheme_word_tag_1",
+    "plain_scheme_word_tag_2",
+    "plain_scheme_word_tag_3",
+    "plain_scheme_word_tag_4",
+    "not_plain_port_1",
+    "not_plain_port_2",
+    "plain_scheme_word_host_port_1",
+    "plain_scheme_word_host_port_2",
+    "plain_host_port",
+    "plain_empty_port",
+    "plain_library_path",
+    "plain_digest_ref",
 ])
 def test_validate_image_ref(ref, expected_ok, expected_reason):
     result = validate_image_ref(ref)
@@ -142,6 +257,21 @@ def test_validate_image_ref(ref, expected_ok, expected_reason):
         assert len(result.redacted_preview) <= 32
         for ch in result.redacted_preview:
             assert ord(ch) >= 0x20, f"Control char 0x{ord(ch):02x} in preview"
+
+
+def test_source_scheme_prefixes_are_stored_lowercase():
+    from quirk.util import subprocess_input
+
+    assert subprocess_input._LOCAL_REF_PREFIXES
+    for prefix in subprocess_input._LOCAL_REF_PREFIXES:
+        assert prefix == prefix.lower(), prefix
+
+
+def test_source_scheme_prefix_count_and_storage_selector():
+    from quirk.util import subprocess_input
+
+    assert "containers-storage:" in subprocess_input._LOCAL_REF_PREFIXES
+    assert len(subprocess_input._LOCAL_REF_PREFIXES) == 18
 
 
 # ---------------------------------------------------------------------------
@@ -179,3 +309,75 @@ def test_validate_image_ref_returns_validation_result():
     """validate_image_ref must return a ValidationResult instance."""
     result = validate_image_ref("alpine:latest")
     assert isinstance(result, ValidationResult)
+
+
+# ---------------------------------------------------------------------------
+# Review GAP4: a refused image reference must not echo registry credentials.
+# ---------------------------------------------------------------------------
+
+_DIGEST64 = "ab" * 32
+
+
+@pytest.mark.parametrize("ref", [
+    "user:hunter2@registry.example.com/img:1",
+    "USER:hunter2@registry.example.com/img:1",
+    "user@a.example/x",
+    "user@a.example:443/x",
+    "USER@A.EXAMPLE/x",
+    "hunter2@a.example/x",
+    "user:hunter2@a.example:443/x",
+    "user:hunter2@host",
+    "user@host",
+])
+def test_image_ref_with_user_part_is_not_plain(ref):
+    res = validate_image_ref(ref)
+    assert not res.ok and res.reason == RC_IMAGE_REF_NOT_PLAIN, res
+    assert "hunter2" not in res.redacted_preview, res
+    assert "user" not in res.redacted_preview.lower(), res
+    assert "@" not in res.redacted_preview, res
+
+
+@pytest.mark.parametrize("ref,reason", [
+    ("user:hunter2@a.example/x;y", RC_SHELL_METACHAR),
+    ("-user:hunter2@a.example/x", RC_LEADING_DASH),
+    ("dir:user:hunter2@a.example/x", RC_INVALID_IMAGE_REF),
+    ("user:hunter2@a.example/x y", RC_SHELL_METACHAR),
+    ("user:hunter2@a.example/x#", RC_INVALID_IMAGE_REF),
+])
+def test_every_refusal_branch_drops_the_user_part(ref, reason):
+    res = validate_image_ref(ref)
+    assert not res.ok and res.reason == reason, res
+    assert "hunter2" not in res.redacted_preview, res
+
+
+def test_refusal_preview_keeps_a_digest():
+    res = validate_image_ref("a.ex/x@sha256:abcdef;")
+    assert not res.ok and res.reason == RC_SHELL_METACHAR, res
+    assert "@sha256:abcdef" in res.redacted_preview, res
+
+
+def test_refusal_preview_keeps_a_digest_after_a_user_part():
+    res = validate_image_ref("user:hunter2@a.ex/x@sha256:abcdef;")
+    assert not res.ok, res
+    assert "hunter2" not in res.redacted_preview, res
+    assert "@sha256:abcdef" in res.redacted_preview, res
+
+
+@pytest.mark.parametrize("ref", [
+    f"a.example/x@sha256:{_DIGEST64}",
+    f"a.example:5000/x:1@sha256:{_DIGEST64}",
+    f"docker.io/library/nginx@sha256:{_DIGEST64}",
+    "nginx@sha256:abc123",
+])
+def test_digest_references_stay_accepted(ref):
+    assert validate_image_ref(ref).ok, ref
+
+
+def test_a_redaction_helper_is_exported():
+    import quirk.util.subprocess_input as mod
+
+    assert hasattr(mod, "redact_image_ref_userinfo")
+    redact = mod.redact_image_ref_userinfo
+    assert redact("user:hunter2@a.example/x") == "a.example/x"
+    assert redact(f"a.example/x@sha256:{_DIGEST64}") == f"a.example/x@sha256:{_DIGEST64}"
+    assert redact("alpine:latest") == "alpine:latest"

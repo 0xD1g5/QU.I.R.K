@@ -22,7 +22,11 @@ from quirk.scanner.target_outcome import (
     TargetOutcomeContractError,
 )
 from quirk.util.safe_exc import safe_str
-from quirk.util.subprocess_input import validate_image_ref
+from quirk.util.subprocess_input import (
+    RC_IMAGE_REF_NOT_PLAIN,
+    redact_image_ref_userinfo,
+    validate_image_ref,
+)
 
 _LOG = logging.getLogger(__name__)
 
@@ -83,7 +87,14 @@ def scan_container_image(
     _validation = validate_image_ref(image_ref)
     if not _validation.ok:
         if logger:
-            logger.v(f"CONTAINER rejected {_validation.redacted_preview!r}: {_validation.reason}")
+            _hint = (
+                "; write the plain registry reference, host/repository:tag"
+                if _validation.reason == RC_IMAGE_REF_NOT_PLAIN
+                else ""
+            )
+            logger.v(
+                f"CONTAINER rejected {_validation.redacted_preview!r}: {_validation.reason}{_hint}"
+            )
         # 235.3 review A-IN-01: the reason is a fixed reason-code constant, not
         # an exception; safe_str() would render it as "str: <code>".
         _report(OUTCOME_UNREACHABLE, f"rejected: {_validation.reason}", row_emitted=True)
@@ -107,8 +118,11 @@ def scan_container_image(
         return []
 
     try:
+        # Registry sources only (Phase 239): syft pulls the image from its
+        # registry and never picks a source from the reference text;
+        # validate_image_ref is a second layer.
         proc = subprocess.run(
-            [exe, "-o", "json", "--", image_ref],
+            [exe, "-o", "json", "--from", "registry", "--", image_ref],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -124,9 +138,14 @@ def scan_container_image(
         json.JSONDecodeError,
     ) as e:
         _LOG.warning(
-            "subprocess failed in scan_container_image for %r: %s", image_ref, e
+            "subprocess failed in scan_container_image for %r: %s",
+            redact_image_ref_userinfo(image_ref),
+            str(e).replace(image_ref, redact_image_ref_userinfo(image_ref)),
         )
-        _report(OUTCOME_UNREACHABLE, safe_str(e))
+        _report(
+            OUTCOME_UNREACHABLE,
+            safe_str(e).replace(image_ref, redact_image_ref_userinfo(image_ref)),
+        )
         return []
 
     if proc.returncode != 0:
@@ -137,13 +156,13 @@ def scan_container_image(
         if not isinstance(data.get("artifacts"), list):
             _LOG.warning(
                 "syft exited with status %s for %r and produced no artifacts",
-                proc.returncode, image_ref,
+                proc.returncode, redact_image_ref_userinfo(image_ref),
             )
             _report(OUTCOME_UNREACHABLE, f"syft exited with status {proc.returncode}")
             return []
         _LOG.warning(
             "syft exited with status %s for %r but produced a parseable SBOM; "
-            "keeping its artifacts", proc.returncode, image_ref,
+            "keeping its artifacts", proc.returncode, redact_image_ref_userinfo(image_ref),
         )
     _report(OUTCOME_ANSWERED)
 
@@ -167,7 +186,7 @@ def scan_container_image(
         endpoints.append(ep)
 
         if logger:
-            logger.v(f"CONTAINER {image_ref} {name}@{artifact.get('version')}")
+            logger.v(f"CONTAINER {redact_image_ref_userinfo(image_ref)} {name}@{artifact.get('version')}")
 
     return endpoints
 
@@ -197,7 +216,10 @@ def scan_container_targets(
             raise
         except Exception as exc:
             if logger:
-                logger.v(f"Container scan error for {image_ref}: {safe_str(exc)}")
+                logger.v(
+                    f"Container scan error for {redact_image_ref_userinfo(image_ref)}: "
+                    f"{safe_str(exc)}"
+                )
             if outcomes is not None:
                 outcomes.record(image_ref, OUTCOME_UNREACHABLE, safe_str(exc))
             continue

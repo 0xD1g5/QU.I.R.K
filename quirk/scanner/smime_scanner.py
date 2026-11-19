@@ -33,11 +33,13 @@ from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.log_text import strip_control_chars
 from quirk.util.safe_exc import safe_str
+from quirk.util.target_trust import AmbiguousTargetError, SHAPE_LDAP, parse_target
 from quirk.scanner.target_outcome import (
     OUTCOME_AUTH_FAILED,
     OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
+    redact_target,
 )
 
 # Module-level logger (mirror saml_scanner / kerberos_scanner pattern)
@@ -173,11 +175,17 @@ def _bind_and_search(host: str, port: int, base_dn: str, timeout: int):
     at the caller; this helper raises so the caller can attach
     ``scan_error`` if needed.
     """
-    server = ldap3.Server(host, port=port, get_info=ldap3.ALL, connect_timeout=timeout)
+    # Phase 239 TRUST-02: follow no referral. ldap3 defaults to following one to any host and
+    # re-binding there, and the trusted-targets gate never checked that host.
+    server = ldap3.Server(
+        host, port=port, get_info=ldap3.ALL, connect_timeout=timeout,
+        allowed_referral_hosts=[],
+    )
     conn = ldap3.Connection(
         server,
         authentication=ldap3.ANONYMOUS,
         receive_timeout=timeout,
+        auto_referrals=False,
     )
     if not conn.bind():
         logger.warning("SMIME: anonymous bind rejected on %s:%d", host, port)
@@ -201,7 +209,8 @@ def _parse_target(target) -> "tuple[str, int, str | None]":
 
     Accepts:
       - ``ldap://host:port`` / ``ldaps://host:port`` URL strings
-      - bare ``host`` / ``host:port`` strings
+      - bare ``host`` / ``host:port`` strings (read by the trust gate's parser;
+        a value it rejects raises AmbiguousTargetError)
       - SimpleNamespace-style objects with attributes
         ``host``, optional ``port``, optional ``realm``.
     """
@@ -212,24 +221,8 @@ def _parse_target(target) -> "tuple[str, int, str | None]":
         realm = getattr(target, "realm", None)
         return str(host), port, realm
 
-    s = str(target).strip()
-    if "://" in s:
-        scheme, _, rest = s.partition("://")
-        host_part = rest.split("/", 1)[0]
-        default_port = 636 if scheme.lower() == "ldaps" else 389
-    else:
-        host_part = s
-        default_port = 389
-    if ":" in host_part:
-        host, _, p = host_part.rpartition(":")
-        try:
-            port = int(p)
-        except ValueError:
-            port = default_port
-    else:
-        host = host_part
-        port = default_port
-    return host, port, realm
+    parsed = parse_target(str(target), SHAPE_LDAP)
+    return parsed.host, parsed.port, realm
 
 
 def scan_smime_targets(
@@ -261,7 +254,20 @@ def scan_smime_targets(
     results: list = []
 
     for target in targets:
-        host, port, realm = _parse_target(target)
+        try:
+            host, port, realm = _parse_target(target)
+        except AmbiguousTargetError:
+            log.warning(
+                "SMIME: target %s does not read as one host and port; not probed",
+                redact_target(target),
+            )
+            if outcomes is not None:
+                outcomes.record(
+                    target, OUTCOME_UNREACHABLE,
+                    "not-probed: target value does not read as one host and port",
+                    row_emitted=False,
+                )
+            continue
         base_dn = search_base or _realm_to_base_dn(realm or "")
         if not base_dn:
             if outcomes is not None:

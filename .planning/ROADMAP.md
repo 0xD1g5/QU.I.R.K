@@ -212,7 +212,33 @@ Plans:
   1. A scalar `*_targets` value for any connector loads as a one-element list, and a test that enumerates the target fields from `ConnectorsCfg` at run time shows the trust gate and the scanner see the same target set for every field.
   2. LDAP-based connectors do not follow a directory referral to a host the trust gate has not checked, and a run-time source scan finds every `ldap3.Server` / `Connection` in `quirk/` and fails if any one is not covered.
   3. The trust gate refuses an IP literal that is not ASCII instead of passing it through.
-**Plans**: TBD
+**Plans**: 18 plans (4 + 7 gap closure + 3 gap closure 3 + 4 gap closure 4)
+Plans:
+**Wave 1**
+- [ ] 239-01-PLAN.md — Ledger-first rows, then one target shape for every list-typed connector field and trusted_targets via a shared as_target_list (TRUST-01, D-01..D-05, D-07, D-18, D-21, D-22)
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 239-02-PLAN.md — AD CS, S/MIME and code-signing LDAP connectors follow no referral; AST gate and loopback responder tests (TRUST-02, D-08..D-11, D-23, D-25)
+- [ ] 239-03-PLAN.md — Gate refuses unreadable targets and non-ASCII IP literals; one refusal_message at six sites (TRUST-01 D-06, TRUST-03, D-12..D-15, D-24)
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 239-04-PLAN.md — Docs, UAT Series 239, vault sync, ledger evidence, staged post-merge closure, full suite and branch CI (D-16..D-20)
+**Gap closure (SC#1, from 239-VERIFICATION.md)**
+- [ ] 239-05-PLAN.md — Ledger rows first; parser-agreement SC#1 test against each check field's real consumer (RED first); one shared parse_target in the trust gate, refusing values that do not read as exactly one host and port (TRUST-01)
+- [ ] 239-06-PLAN.md — AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors read targets with the shared parser; non-string trusted_targets entries get a coded refusal (TRUST-01, WR-02)
+- [ ] 239-07-PLAN.md — Docs, UAT-239-04/05, regenerated artifacts, vault sync, ledger evidence, wording scan, full suite (no push)
+- [ ] 239-08-PLAN.md — Operator decision on unpushed history, STATE.md rewording, final wording scan before push, push and branch CI (checkpoint)
+**Gap closure 2 (SC#1 for k8s_kubeconfig and container_targets, from the 239 re-verification)**
+- [x] 239-09-PLAN.md — Ledger rows first; kubeconfig cluster servers join the agreement test (RED first); the trust gate reads them with the shared parser and URL target fields accept http and https only (TRUST-01, WR-01)
+- [x] 239-10-PLAN.md — Container image registries join the agreement test with a real-syft cross-check (RED first); the gate reads an explicit registry with the shared parser; Kerberos self-check uses the same parser (TRUST-01, WR-03)
+- [x] 239-11-PLAN.md — Docs, UAT-239-06, regenerated artifacts, vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
+**Gap closure 3 (code review 239-REVIEW-GAP2, operator scope 239-GAP3-SCOPE.md)**
+- [x] 239-12-PLAN.md — Ledger rows first for the ledger-only review items; container image references naming a local-file or container-daemon source scheme are refused in any letter case, tied to the syft model by a run-time test (RED first) (TRUST-01, WR-03)
+- [x] 239-13-PLAN.md — The syft registry model follows syft's upstream reference parser, allows the default registry only where it predicts it, and its real-syft check runs in Linux Full Suite with a pinned syft (RED first) (TRUST-01, WR-04)
+- [x] 239-14-PLAN.md — UAT-239-08, UAT-239-07 CI-EXEMPT withdrawn (CI execution junit-proven; substitute-runner gap ledgered), vault sync, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
+**Gap closure 4 (SC#1 for container_targets, from the third 239 re-verification)**
+- [x] 239-15-PLAN.md — Ledger evidence first; container images are scanned from the registry only, only plain registry image references are accepted, and more non-registry source schemes are refused in any letter case (RED first) (TRUST-01)
+- [x] 239-16-PLAN.md — The container agreement test follows the scanner's own syft argv and is anchored to syft's observed behaviour by real-syft tests in Linux Full Suite (TRUST-01)
+- [x] 239-17-PLAN.md — Docs for registry-only container scanning and plain image references, registry lab check, UAT-239-09, vault sync (TRUST-01)
+- [x] 239-18-PLAN.md — Release-notes hand-off, ledger evidence, wording scan, full suite, push and branch CI (TRUST-01)
 
 ### Phase 240: Regressions and Release 5.29.0
 **Goal**: Scan confidence reflects a high probe error rate again, and 5.29.0 ships the milestone's fixes with the known-defect wording for every fixed item withdrawn and every date-gated catalog green on an honest re-verification.

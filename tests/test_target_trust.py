@@ -146,21 +146,6 @@ def test_disabled_connector_still_checked():
         enforce_trusted_targets(cfg)
 
 
-@pytest.mark.parametrize(
-    "raw,host",
-    [
-        ("https://idp.example/metadata", "idp.example"),
-        ("ldaps://ca.example:636", "ca.example"),
-        ("[2001:db8::5]:5671", "2001:db8::5"),
-        ("db.example:5432", "db.example"),
-        ({"host": "x"}, "x"),
-        ("bare.example", "bare.example"),
-    ],
-)
-def test_extract_host_shapes(raw, host):
-    assert _tt._extract_host(raw) == host
-
-
 def test_unparseable_checked_whole_and_fails_closed():
     cfg = _cfg(["t.example"], {"saml_targets": ["not a host!!"]})
     with pytest.raises(ValueError):
@@ -179,10 +164,23 @@ def test_empty_allowlist_allows_connector_hosts():
         ("ghcr.io/org/app", "ghcr.io"),
         ("nginx:1.25", None),
         ("library/nginx", None),
+        ("[2001:db8::1]:5000/x", "2001:db8::1"),
+        ("registry:a.example/x", _tt.AMBIGUOUS_TARGET),
+        ("a.example:5000:6000/x", _tt.AMBIGUOUS_TARGET),
     ],
+    ids=[f"r{i:02d}" for i in range(8)],
 )
 def test_registry_host(ref, host):
     assert _tt._registry_host(ref) == host
+
+
+@pytest.mark.parametrize("ref", ["registry:a.example/x", "a.example:5000:6000/x"])
+def test_container_registry_not_one_host_is_refused(ref):
+    pairs = _tt.connector_host_values({"container_targets": [ref]})
+    assert [h for _f, h in pairs] == [_tt.AMBIGUOUS_TARGET]
+    with pytest.raises(ValueError, match="connectors.container_targets") as exc:
+        enforce_trusted_targets(_cfg(["t.example"], {"container_targets": [ref]}))
+    assert "does not read as exactly one host and port" in str(exc.value)
 
 
 def test_container_registry_host_checked():
@@ -255,6 +253,29 @@ def test_kubeconfig_cluster_servers_are_checked(tmp_path):
         enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": mixed}))
 
 
+@pytest.mark.parametrize(
+    "server", ["https://u@api.trusted.example:6443", "ftp://api.trusted.example"], ids=["k00", "k01"]
+)
+def test_kubeconfig_server_not_one_host_is_refused(tmp_path, server):
+    path = _kubeconfig(tmp_path, server)
+    with pytest.raises(ValueError) as exc:
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": path}))
+    msg = str(exc.value)
+    assert "connectors.k8s_kubeconfig" in msg
+    assert "does not read as exactly one host and port" in msg
+
+
+def test_kubeconfig_cluster_without_server_is_checked_as_the_path(tmp_path):
+    path = tmp_path / "kubeconfig"
+    path.write_text(
+        "apiVersion: v1\nkind: Config\nclusters:\n"
+        "- name: a\n  cluster:\n    server: https://api.trusted.example:6443\n"
+        "- name: b\n  cluster: {}\n"
+    )
+    with pytest.raises(ValueError, match="k8s_kubeconfig"):
+        enforce_trusted_targets(_cfg(["api.trusted.example"], {"k8s_kubeconfig": str(path)}))
+
+
 @pytest.mark.parametrize("shape", ["missing", "directory", "not-yaml", "no-clusters"])
 def test_unusable_kubeconfig_fails_closed(tmp_path, shape):
     path = tmp_path / "kc"
@@ -270,3 +291,174 @@ def test_unusable_kubeconfig_fails_closed(tmp_path, shape):
 
 def test_kubeconfig_not_read_when_allowlist_empty(tmp_path):
     enforce_trusted_targets(_cfg([], {"k8s_kubeconfig": str(tmp_path / "absent")}))
+
+
+# ---------------------------------------------------------------------------
+# Phase 239 plan 03: TRUST-01 (D-06 gate element rule) and TRUST-03 (D-12..D-15)
+# ---------------------------------------------------------------------------
+# Non-ASCII zone-id IP literals, written with escapes (neutral ids on purpose).
+R16_STRINGS = (
+    "fe80::1%\u0131.attacker.example",
+    "fe80::1%en\u0131",
+    "::ffff:1.2.3.4%\u00e9",
+)
+R16_IDS = ["dotted-zone", "suffix-zone", "v4mapped-zone"]
+_NON_ASCII_ALLOWLIST = ["fe80::/10", "::ffff:0:0/96"]
+
+
+@pytest.mark.parametrize("target", R16_STRINGS, ids=R16_IDS)
+def test_non_ascii_ip_literal_refused(target):
+    from quirk.util import target_trust as _tt
+
+    result = is_target_trusted(target, _NON_ASCII_ALLOWLIST)
+    assert result.ok is False
+    assert result.reason == _tt.RC_NON_ASCII_IP_LITERAL
+
+
+@pytest.mark.parametrize("target", R16_STRINGS, ids=R16_IDS)
+def test_non_ascii_ip_literal_refused_even_if_listed_exactly(target):
+    from quirk.util import target_trust as _tt
+
+    result = is_target_trusted(target, [target, "fe80::/10"])
+    assert result.ok is False
+    assert result.reason == _tt.RC_NON_ASCII_IP_LITERAL
+
+
+def test_ascii_zone_id_still_passes():
+    assert is_target_trusted("fe80::1%en0", ["fe80::/10"]).ok is True
+
+
+@pytest.mark.parametrize("target", R16_STRINGS, ids=R16_IDS)
+def test_non_ascii_ip_literal_passes_when_allowlist_empty(target):
+    assert is_target_trusted(target, []).ok is True
+
+
+def test_non_ascii_url_form_refused_via_enforce():
+    cfg = _cfg(["fe80::/10"], {"jwt_targets": ["https://[fe80::1%\u0131.x]:389"]})
+    with pytest.raises(ValueError) as exc:
+        enforce_trusted_targets(cfg)
+    msg = str(exc.value)
+    assert "non-ASCII" in msg and "jwt_targets" in msg
+    assert "is not in the trusted-targets allowlist" not in msg
+
+
+@pytest.mark.parametrize("shape", [{"dc01.evil.example": 1}, 123, None],
+                         ids=["mapping-no-host", "int", "none"])
+def test_unreadable_check_element_refused_and_named(shape):
+    cfg = _cfg(["trusted.invalid"], {"jwt_targets": [shape]})
+    with pytest.raises(ValueError, match="jwt_targets") as exc:
+        enforce_trusted_targets(cfg)
+    assert "no readable host" in str(exc.value)
+
+
+def test_unreadable_pairs_emitted():
+    from quirk.util.target_trust import connector_host_values
+
+    pairs = connector_host_values({"jwt_targets": [{"dc01.evil.example": 1}, 123, None, "", "  "]})
+    assert pairs == [("jwt_targets", None)] * 3
+
+
+def test_empty_elements_still_pass():
+    enforce_trusted_targets(_cfg(["trusted.invalid"], {"jwt_targets": ["", "  "]}))
+
+
+def test_unreadable_passes_when_allowlist_empty():
+    enforce_trusted_targets(_cfg([], {"jwt_targets": [123]}))
+
+
+def test_container_non_str_element_refused():
+    with pytest.raises(ValueError, match="container_targets"):
+        enforce_trusted_targets(_cfg(["trusted.invalid"], {"container_targets": [123]}))
+
+
+def test_container_registryless_ref_still_passes():
+    enforce_trusted_targets(_cfg(["trusted.invalid"], {"container_targets": ["nginx:1.25"]}))
+
+
+@pytest.mark.parametrize("value", [None, 123, {"a": 1}], ids=["none", "int", "mapping"])
+def test_is_target_trusted_non_str_never_raises(value):
+    from quirk.util import target_trust as _tt
+
+    result = is_target_trusted(value, ["trusted.invalid"])
+    assert result.ok is False
+    assert result.reason == _tt.RC_UNREADABLE_TARGET
+    assert isinstance(result.redacted_preview, str)
+
+
+def test_refusal_message_default_branch_byte_identical():
+    from quirk.util import target_trust as _tt
+
+    r = _tt.ValidationResult(False, RC_NOT_IN_ALLOWLIST, "x.invalid")
+    assert _tt.refusal_message(r) == (
+        "Target 'x.invalid' is not in the trusted-targets allowlist "
+        "(security.trusted_targets in config.yaml)."
+    )
+    assert _tt.refusal_message(r, "jwt_targets") == (
+        "Target 'x.invalid' (connectors.jwt_targets) is not in the trusted-targets "
+        "allowlist (security.trusted_targets in config.yaml)."
+    )
+
+
+def test_refusal_message_used_at_every_site():
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    files = [
+        "quirk/util/target_trust.py",
+        "quirk/dashboard/api/routes/jobs.py",
+        "quirk/dashboard/api/routes/schedules.py",
+        "quirk/cli/schedule_cmd.py",
+    ]
+    assert len(files) == 4
+    for rel in files:
+        src = (root / rel).read_text(encoding="utf-8")
+        assert "refusal_message(" in src, rel
+        tree = ast.parse(src)
+        allowed = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "refusal_message":
+                allowed.update(id(n) for n in ast.walk(node))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Constant)
+                and isinstance(node.value, str)
+                and ("trusted-targets allowlist" in node.value
+                     or "is not in the trusted-targets" in node.value)
+            ):
+                assert id(node) in allowed, f"{rel}:{node.lineno} formats the refusal text locally"
+
+
+@pytest.mark.parametrize(
+    "entries",
+    [[10], [True], [False], [1.5], ["10.0.0.0/8", 10]],
+    ids=["int", "true", "false", "float", "mixed"],
+)
+@pytest.mark.parametrize("target", ["10.1.1.1", "localhost", "ambiguous"])
+def test_non_string_allowlist_entry_refused_with_code(entries, target):
+    from quirk.util import target_trust as _tt
+
+    host = _tt.AMBIGUOUS_TARGET if target == "ambiguous" else target
+    result = _tt.is_target_trusted(host, entries)
+    assert result.ok is False
+    assert result.reason == _tt.RC_INVALID_ALLOWLIST_ENTRY
+
+
+def test_empty_allowlist_and_string_allowlist_unchanged():
+    assert is_target_trusted("10.1.1.1", []).ok
+    assert is_target_trusted("10.1.1.1", ["10.0.0.0/8"]).ok
+    assert not is_target_trusted("11.1.1.1", ["10.0.0.0/8"]).ok
+
+
+def test_enforce_non_string_allowlist_entry_raises_refusal():
+    from quirk.util import target_trust as _tt
+
+    cfg = _cfg(False)
+    cfg.targets.fqdns = ["a.example"]
+    expected = _tt.refusal_message(
+        _tt.ValidationResult(False, _tt.RC_INVALID_ALLOWLIST_ENTRY, "")
+    )
+    with pytest.raises(ValueError) as excinfo:
+        enforce_trusted_targets(cfg)
+    assert str(excinfo.value) == expected
+    assert "not a host name, IP address or CIDR string" in expected

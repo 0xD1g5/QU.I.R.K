@@ -52,6 +52,7 @@ RC_NONEXISTENT_PATH: Final[str] = "nonexistent_path"
 RC_INVALID_IMAGE_REF: Final[str] = "invalid_image_ref"
 RC_LEADING_DASH: Final[str] = "leading_dash"
 RC_PATH_SHAPED_REF: Final[str] = "path_shaped_ref"  # SSRF-03 / SP-04: path-shaped ref (e.g. etc/passwd) to syft
+RC_IMAGE_REF_NOT_PLAIN: Final[str] = "image_ref_not_plain"  # not a plain registry reference; write host/repository:tag
 
 
 # ---------------------------------------------------------------------------
@@ -69,10 +70,26 @@ _SHELL_METACHARS: re.Pattern[str] = re.compile(r"[;|&$`<>*?()\\\s]")
 # Starts with an alphanumeric character; max 255 chars total.
 _IMAGE_REF_RE: re.Pattern[str] = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._\-/:@]{0,254}$")
 
-# Local-filesystem / daemon-socket scheme prefixes that must be blocked.
-# These cause Syft/Trivy to read from the local filesystem or Docker daemon
-# rather than pull from a registry (analogous to the blocked dir:/file: vectors).
-_LOCAL_REF_PREFIXES = ("dir:", "file:", "oci:", "docker-daemon:", "podman:", "docker-archive:")
+# Source schemes other than a registry pull.  A reference that starts with one
+# is refused in any letter case as a second layer: the scanner already asks
+# syft for registry sources only, so the reference text never picks the source.
+# The list follows the source schemes in ``syft scan --help`` plus the ones the
+# binary also resolves.  Prefixes are stored lowercase and matched against the
+# lowercased reference.  tests/test_connector_target_shape.py ties this tuple
+# to the agreement test's syft scheme model at run time.
+_LOCAL_REF_PREFIXES = (
+    "dir:", "file:", "oci:", "docker-daemon:", "podman:", "docker-archive:",
+    "oci-archive:", "oci-dir:", "singularity:", "docker:", "containerd:", "snap:",
+    "image:", "local-file:", "local-directory:", "daemon:", "pull:",
+    "containers-storage:",
+)
+
+# Registry-type scheme words, kept only to classify the syft scheme model in
+# tests/test_connector_target_shape.py.  validate_image_ref does not consult
+# this tuple: the plain-reference rule below keeps the accepted form to plain
+# registry references, which syft parses under the scanner's argv and the trust
+# gate reads.
+_REGISTRY_SCHEME_PREFIXES = ("registry:", "oci-registry:", "oci-model:", "oci-model-registry:")
 
 # Pattern for stripping ASCII control characters (D-08).
 _CTRL_RE: re.Pattern[str] = re.compile(r"[\x00-\x1f\x7f]")
@@ -105,6 +122,42 @@ def _truncate_preview(raw: str, max_len: int = 32) -> str:
     """
     cleaned = _CTRL_RE.sub("", raw)
     return cleaned[:max_len]
+
+
+# An image digest tail, ``algorithm:hex``, as found after the ``@`` of
+# ``repo@sha256:<hex>``.  Only the OCI digest algorithms are accepted, so a
+# ``host:port`` that follows a user part is not mistaken for a digest.  Any
+# other ``@`` in an image reference is registry user information
+# (``user[:secret]@host``), which a plain registry reference never has.
+_DIGEST_TAIL_RE: re.Pattern[str] = re.compile(
+    r"(?:sha256|sha384|sha512|blake3):[0-9A-Fa-f]+", re.IGNORECASE
+)
+
+
+def _userinfo_end(r: str) -> int:
+    """Index just past the last ``@`` of *r* that does not start a digest, else 0."""
+    pos = r.rfind("@")
+    while pos >= 0:
+        if not _DIGEST_TAIL_RE.match(r, pos + 1):
+            return pos + 1
+        pos = r.rfind("@", 0, pos)
+    return 0
+
+
+def redact_image_ref_userinfo(r: str) -> str:
+    """Return the image reference *r* without registry user information.
+
+    Everything up to and including the last ``@`` that does not start an
+    ``algorithm:hex`` digest is dropped, so a ``@sha256:...`` digest is kept.
+    Use it for every preview, log line or result row built from an image
+    reference.  ``_truncate_preview`` is not a substitute: it only truncates.
+    """
+    return r[_userinfo_end(r):]
+
+
+def _image_ref_preview(r: str) -> str:
+    """Redacted, control-character-free, truncated preview of an image reference."""
+    return _truncate_preview(redact_image_ref_userinfo(r))
 
 
 # ---------------------------------------------------------------------------
@@ -157,9 +210,15 @@ def validate_image_ref(r: str) -> ValidationResult:
 
     Rejects:
     - Refs starting with ``-`` → RC_LEADING_DASH (argv injection guard).
-    - Refs starting with any local-access prefix (``dir:``, ``file:``, ``oci:``,
-      ``docker-daemon:``, ``podman:``, ``docker-archive:``) → RC_INVALID_IMAGE_REF
-      (Syft/Trivy local-filesystem / daemon-socket escape vectors).
+    - Refs starting with any non-registry source scheme prefix in
+      ``_LOCAL_REF_PREFIXES``, in any letter case → RC_INVALID_IMAGE_REF
+      (second layer; the scanner asks syft for registry sources only).
+    - Refs carrying registry user information (an ``@`` that does not start a
+      digest, e.g. ``user@host/img``) → RC_IMAGE_REF_NOT_PLAIN.  Previews of
+      every rejection drop that part.
+    - Refs whose explicit registry part (the text before the first ``/``)
+      carries a port that is not empty and not ASCII digits → RC_IMAGE_REF_NOT_PLAIN
+      (write the plain registry reference ``host/repository:tag``).
     - Refs containing shell metacharacters → RC_SHELL_METACHAR.
     - Empty string or refs not matching the OCI distribution-spec regex →
       RC_INVALID_IMAGE_REF.
@@ -173,16 +232,28 @@ def validate_image_ref(r: str) -> ValidationResult:
         otherwise.
     """
     if r.startswith("-"):
-        return ValidationResult(False, RC_LEADING_DASH, _truncate_preview(r))
+        return ValidationResult(False, RC_LEADING_DASH, _image_ref_preview(r))
 
-    if any(r.startswith(p) for p in _LOCAL_REF_PREFIXES):
-        return ValidationResult(False, RC_INVALID_IMAGE_REF, _truncate_preview(r))
+    if any(r.lower().startswith(p) for p in _LOCAL_REF_PREFIXES):
+        return ValidationResult(False, RC_INVALID_IMAGE_REF, _image_ref_preview(r))
 
     if _SHELL_METACHARS.search(r):
-        return ValidationResult(False, RC_SHELL_METACHAR, _truncate_preview(r))
+        return ValidationResult(False, RC_SHELL_METACHAR, _image_ref_preview(r))
 
     if not _IMAGE_REF_RE.match(r):
-        return ValidationResult(False, RC_INVALID_IMAGE_REF, _truncate_preview(r))
+        return ValidationResult(False, RC_INVALID_IMAGE_REF, _image_ref_preview(r))
+
+    # Only plain registry references are accepted: an explicit registry part with
+    # a non-empty, non-digit port is not one.  An empty port stays accepted
+    # because syft's parser accepts it.
+    if _userinfo_end(r):
+        return ValidationResult(False, RC_IMAGE_REF_NOT_PLAIN, _image_ref_preview(r))
+    if "/" in r:
+        _registry_part = r.split("/", 1)[0]
+        if ":" in _registry_part:
+            _port = _registry_part.split(":", 1)[1]
+            if _port and not (_port.isascii() and _port.isdigit()):
+                return ValidationResult(False, RC_IMAGE_REF_NOT_PLAIN, _image_ref_preview(r))
 
     # SSRF-03 / SP-04: reject path-shaped refs (e.g. ``etc/passwd``) before syft.
     # OCI Distribution Spec registry-authority rule: when a ref contains ``/``, the
@@ -195,6 +266,6 @@ def validate_image_ref(r: str) -> ValidationResult:
     if "/" in r:
         first_seg = r.split("/", 1)[0]
         if "." not in first_seg and ":" not in first_seg and first_seg != "localhost":
-            return ValidationResult(False, RC_PATH_SHAPED_REF, _truncate_preview(r))
+            return ValidationResult(False, RC_PATH_SHAPED_REF, _image_ref_preview(r))
 
     return ValidationResult(True, "", "")

@@ -225,3 +225,26 @@ def test_cors_default_never_contains_wildcard():
         os.environ.pop("QUIRK_DASHBOARD_PORT", None)
         origins = get_cors_origins()
     assert "*" not in origins
+
+
+def test_scalar_trusted_targets_loads_as_one_entry():
+    from quirk.config import config_from_dict
+
+    raw = _base_raw()
+    raw["security"] = {"trusted_targets": "10.0.0.0/8"}
+    assert config_from_dict(raw).security.trusted_targets == ["10.0.0.0/8"]
+
+
+import pytest as _pytest_239  # noqa: E402
+
+
+@_pytest_239.mark.parametrize(
+    "given,expected",
+    [(None, []), ("", []), (("10.0.0.0/8",), ["10.0.0.0/8"])],
+)
+def test_trusted_targets_shapes_coerce(given, expected):
+    from quirk.config import config_from_dict
+
+    raw = _base_raw()
+    raw["security"] = {"trusted_targets": given}
+    assert config_from_dict(raw).security.trusted_targets == expected

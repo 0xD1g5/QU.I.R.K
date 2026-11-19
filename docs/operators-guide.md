@@ -160,7 +160,14 @@ Three small operator-facing additions shipped in Phase 143:
   whether or not that connector is enabled, and the explicit registry host of a container image
   reference). The dashboard's "New Scan" page checks the form targets and the Connectors-panel
   hosts against the server config's list, and writes that list into the job config so the scan
-  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. See
+  enforces it too; an unreadable server config refuses the job with `QRK-DASHBOARD-014`. A connector target
+  value with no readable host is refused while `trusted_targets` is set, and an IP literal containing
+  non-ASCII characters is refused with its own message. A connector target value that does not read as exactly one host and port is refused while
+  `trusted_targets` is set, and the AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors skip such a
+  value; kubeconfig cluster servers and explicit image registries are held to the same rule, and URL target fields take `http` and `https` URLs; a `trusted_targets` entry that is not a string refuses every target until it is fixed, and the CLI
+  exits 2 on a trust-gate refusal. The AD CS, S/MIME and code-signing connectors
+  follow no LDAP referral, so a directory cannot redirect them to a host the trusted-targets check did
+  not see. See
   [`docs/configuration.md`](configuration.md) § `security.trusted_targets`.
 - **Windows Authenticode signing (build mechanism, not yet activated)** — the
   `windows-package` release CI job now contains the wiring to Authenticode-sign the Windows
@@ -1355,7 +1362,7 @@ See the `security:` block reference in `docs/configuration.md` for the full
 
 #### Container scanner
 
-For each entry in `container_targets`, generates a Syft SBOM of the named image and
+For each entry in `container_targets`, generates a Syft SBOM of the named image, pulled from its registry (entries must be plain registry references, `host/repository:tag`), and
 keeps the packages whose names are on a fixed crypto-library allowlist (OpenSSL and
 its `libssl`/`libcrypto` packages, mbedTLS, wolfSSL, GnuTLS, NSS, libgcrypt, Botan, and
 the Python `cryptography`, `pyopenssl`, `pycryptodome`, `bcrypt` and `pynacl`

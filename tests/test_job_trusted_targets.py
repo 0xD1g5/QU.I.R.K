@@ -174,6 +174,23 @@ def test_post_jobs_rejects_untrusted_overlay_host(monkeypatch, tmp_path):
     db.close()
 
 
+def test_post_jobs_refuses_non_ascii_ip_literal(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    _server_config(monkeypatch, tmp_path, ["fe80::/10"])
+    _, tc, TestingSession = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "fe80::1%en\u0131"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 422, response.text
+    assert "non-ASCII" in response.text
+    db = TestingSession()
+    assert db.query(ScanJob).count() == 0
+    db.close()
+
+
 def test_post_jobs_trusted_overlay_host_writes_trusted_targets_to_yaml(monkeypatch, tmp_path):
     import yaml
 
@@ -211,3 +228,32 @@ def test_post_jobs_unreadable_server_config_is_503(monkeypatch, tmp_path):
     )
     assert response.status_code == 503, response.text
     assert "DASHBOARD-014" in response.text
+
+
+def test_server_config_scalar_trusted_targets_is_one_entry(monkeypatch, tmp_path):
+    from quirk.util.server_config import load_server_security
+
+    path = tmp_path / "server.yaml"
+    path.write_text("security:\n  trusted_targets: 10.0.0.0/8\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
+    assert load_server_security().trusted_targets == ["10.0.0.0/8"]
+
+
+def test_post_jobs_non_string_trusted_targets_entry_is_422(monkeypatch, tmp_path):
+    _patch_probe_all_available(monkeypatch)
+    monkeypatch.setattr("quirk.dashboard.api.routes.jobs.subprocess.Popen", _fake_popen)
+    path = tmp_path / "server.yaml"
+    path.write_text("security:\n  trusted_targets: false\n")
+    monkeypatch.setenv("QUIRK_CONFIG_PATH", str(path))
+    monkeypatch.delenv("QUIRK_API_TOKEN", raising=False)
+    _, tc, TestingSession = _app_with_db()
+    response = tc.post(
+        "/api/jobs",
+        json={"targets": "10.1.1.1"},
+        headers={"X-Quirk-Request": "1"},
+    )
+    assert response.status_code == 422, response.text
+    assert "not a host name, IP address or CIDR string" in response.text
+    db = TestingSession()
+    assert db.query(ScanJob).count() == 0
+    db.close()

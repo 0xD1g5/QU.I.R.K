@@ -43,6 +43,26 @@ def test_valid_image_ref_uses_argv_terminator():
         assert argv[-1] == "alpine:latest"
 
 
+@pytest.mark.parametrize("ref", ["alpine:latest", "reg.example:5000/app:1"])
+def test_syft_is_asked_for_registry_sources_only(ref):
+    """The scanner asks syft for registry sources only, so an image reference cannot choose another source."""
+    proc = MagicMock()
+    proc.returncode = 0
+    proc.stdout = '{"artifacts": []}'
+    proc.stderr = ""
+    with patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", return_value=proc) as mock_run:
+        scan_container_image(ref, timeout=120)
+        assert mock_run.call_count == 1
+        argv = mock_run.call_args.args[0]
+        assert argv.count("--from") == 1
+        i = argv.index("--from")
+        assert argv[i:i + 2] == ["--from", "registry"]
+        assert i < argv.index("--")
+        assert argv[-2] == "--"
+        assert argv[-1] == ref
+
+
 def test_registry_image_passes():
     proc = MagicMock()
     proc.returncode = 0

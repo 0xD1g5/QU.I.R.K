@@ -28,11 +28,13 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from quirk.models import CryptoEndpoint
 from quirk.util.weak_crypto import is_weak_cipher
 from quirk.util.safe_exc import safe_str
+from quirk.util.target_trust import AmbiguousTargetError, SHAPE_LDAP, parse_target
 from quirk.scanner.target_outcome import (
     OUTCOME_AUTH_FAILED,
     OUTCOME_MISSING_CREDENTIALS,
     OUTCOME_UNREACHABLE,
     TargetOutcomeContractError,
+    redact_target,
 )
 
 # Module-level logger (mirror smime_scanner / saml_scanner / kerberos_scanner pattern)
@@ -87,24 +89,8 @@ def _parse_target(target) -> "tuple[str, int, str | None]":
         realm = getattr(target, "realm", None)
         return str(host), port, realm
 
-    s = str(target).strip()
-    if "://" in s:
-        scheme, _, rest = s.partition("://")
-        host_part = rest.split("/", 1)[0]
-        default_port = 636 if scheme.lower() == "ldaps" else 389
-    else:
-        host_part = s
-        default_port = 389
-    if ":" in host_part:
-        host, _, p = host_part.rpartition(":")
-        try:
-            port = int(p)
-        except ValueError:
-            port = default_port
-    else:
-        host = host_part
-        port = default_port
-    return host, port, realm
+    parsed = parse_target(str(target), SHAPE_LDAP)
+    return parsed.host, parsed.port, realm
 
 
 def _parse_ca_cert(der_bytes: bytes) -> "dict | None":
@@ -279,15 +265,22 @@ def _bind_and_query(
     Raises ``ldap3.core.exceptions.LDAPBindError`` on bind failure so the
     caller converts to an ADCS-UNREACH coverage gap.
     """
-    server = ldap3.Server(host, port=port, get_info=ldap3.ALL, connect_timeout=timeout)
+    # Phase 239 TRUST-02: follow no referral. ldap3 defaults to following one to any host and
+    # re-binding there, and the trusted-targets gate never checked that host.
+    server = ldap3.Server(
+        host, port=port, get_info=ldap3.ALL, connect_timeout=timeout,
+        allowed_referral_hosts=[],
+    )
     if user and password:
         conn = ldap3.Connection(
             server, user=user, password=password,
             authentication=ldap3.SIMPLE, receive_timeout=timeout,
+            auto_referrals=False,
         )
     else:
         conn = ldap3.Connection(
             server, authentication=ldap3.ANONYMOUS, receive_timeout=timeout,
+            auto_referrals=False,
         )
     if not conn.bind():
         bind_exc = ldap3.core.exceptions.LDAPBindError(
@@ -339,7 +332,20 @@ def scan_adcs_targets(
     results: list = []
 
     for target in targets:
-        host, port, realm = _parse_target(target)
+        try:
+            host, port, realm = _parse_target(target)
+        except AmbiguousTargetError:
+            log.warning(
+                "ADCS: target %s does not read as one host and port; not probed",
+                redact_target(target),
+            )
+            if outcomes is not None:
+                outcomes.record(
+                    target, OUTCOME_UNREACHABLE,
+                    "not-probed: target value does not read as one host and port",
+                    row_emitted=False,
+                )
+            continue
         base_dn = search_base or _realm_to_base_dn(realm or "")
         # Per-target user/password override (target object can carry them)
         t_user = getattr(target, "user", None) or user
