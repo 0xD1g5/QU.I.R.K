@@ -148,6 +148,9 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("pull:alpine", False, RC_INVALID_IMAGE_REF),
     ("PULL:alpine", False, RC_INVALID_IMAGE_REF),
     ("Pull:alpine", False, RC_INVALID_IMAGE_REF),
+    ("containers-storage:alpine", False, RC_INVALID_IMAGE_REF),
+    ("CONTAINERS-STORAGE:alpine", False, RC_INVALID_IMAGE_REF),
+    ("Containers-Storage:alpine", False, RC_INVALID_IMAGE_REF),
     ("registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
     ("REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
     ("Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
@@ -218,6 +221,9 @@ def test_validate_repo_path_existing_dir(tmp_path):
     "added_scheme_4_lower",
     "added_scheme_4_upper",
     "added_scheme_4_title",
+    "storage_scheme_lower",
+    "storage_scheme_upper",
+    "storage_scheme_title",
     "not_plain_scheme_1_lower",
     "not_plain_scheme_1_upper",
     "not_plain_scheme_1_title",
@@ -259,6 +265,13 @@ def test_source_scheme_prefixes_are_stored_lowercase():
     assert subprocess_input._LOCAL_REF_PREFIXES
     for prefix in subprocess_input._LOCAL_REF_PREFIXES:
         assert prefix == prefix.lower(), prefix
+
+
+def test_source_scheme_prefix_count_and_storage_selector():
+    from quirk.util import subprocess_input
+
+    assert "containers-storage:" in subprocess_input._LOCAL_REF_PREFIXES
+    assert len(subprocess_input._LOCAL_REF_PREFIXES) == 18
 
 
 # ---------------------------------------------------------------------------
