@@ -1555,6 +1555,22 @@ computed value.
 | 40 and above | LOW |
 | below 40 | VERY_LOW |
 
+### High error-rate ceiling (formula 2.1.0)
+
+When more than half of all probed rows errored (the existing `scan_error.rate`, which counts closed
+and timed-out ports), the confidence score is capped at 59 (`LOW`). Exactly 50% is not capped. With
+every other factor at its best, a 50% scan reads 85 and a 51% scan reads 59; that cliff is
+intended, not a rounding artifact. The block `confidence_factors.high_error_rate_ceiling` reports
+`applied`, `threshold`, `ceiling` and `uncapped_score` (the number the scan would have scored
+without the cap), so a capped score is always explainable from the report itself.
+
+Unanswered mail probes count in the rate's denominator without counting as errors, so a scan
+dominated by refused mail ports can stay under the threshold and escape the ceiling.
+
+Confidence is not stored. After upgrading to 5.29.0 the dashboard shows the capped number for
+older scans, because it recomputes from the stored endpoints, while report files already written
+keep their 2.0.0 number.
+
 ### `NO_DATA`
 
 `confidence_rating` is `NO_DATA` (with `confidence_score: 0`) in two distinct cases, neither of
@@ -1571,7 +1587,7 @@ which awards a partial score:
 ### D-15: absence of the formula-version marker means the report predates Phase 184.1
 
 Every `compute_confidence()` result produced from Phase 184.1 onward carries a
-`confidence_formula_version` field, currently `"2.0.0"`. **A report or API response carrying no
+`confidence_formula_version` field, currently `"2.1.0"` (reports written by 5.28.x read `"2.0.0"`). **A report or API response carrying no
 `confidence_formula_version` field predates Phase 184.1 and was produced under the older formula**,
 in which `coverage_ratio` counted only TLS and SSH endpoints (`protocol_counts["TLS"] +
 protocol_counts["SSH"]`) against every endpoint in the scan, including advisories and closed
@@ -1607,7 +1623,7 @@ the dashboard view of an old scan shows the new-formula number
 immediately — no backfill, no migration. Report files already written are not changed. When a client
 asks why a confidence rating moved between two report files of the same estate, the answer is
 readable from the files themselves: the older one has no `confidence_formula_version` field in
-its intelligence JSON or executive summary, the newer one reads `"2.0.0"` in both, and this section names
+its intelligence JSON or executive summary, the newer one reads `"2.1.0"` in both (reports from 5.28.x read `"2.0.0"`), and this section names
 exactly what changed between them.
 
 ---
