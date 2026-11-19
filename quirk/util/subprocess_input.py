@@ -135,10 +135,19 @@ _DIGEST_TAIL_RE: re.Pattern[str] = re.compile(
 
 
 def _userinfo_end(r: str) -> int:
-    """Index just past the last ``@`` of *r* that does not start a digest, else 0."""
+    """Index just past the last ``@`` of *r* that does not start a digest, else 0.
+
+    A digest separator only counts when it follows the first ``/`` of the
+    reference (when the reference has one).
+    """
+    first_slash = r.find("/")
     pos = r.rfind("@")
     while pos >= 0:
-        if not _DIGEST_TAIL_RE.match(r, pos + 1):
+        is_digest = (
+            (first_slash < 0 or pos > first_slash)
+            and _DIGEST_TAIL_RE.match(r, pos + 1)
+        )
+        if not is_digest:
             return pos + 1
         pos = r.rfind("@", 0, pos)
     return 0
