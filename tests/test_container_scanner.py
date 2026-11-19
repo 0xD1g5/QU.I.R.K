@@ -144,7 +144,8 @@ def test_outcome_credentials_redacted_in_resolved():
     with patch("shutil.which", return_value="/usr/bin/syft"), \
          patch("subprocess.run", return_value=_proc("x", rc=1)) as run:
         scan_container_targets([ref], outcomes=sink)
-    assert run.call_count >= 1
+    # a userinfo-shaped registry part is not a plain registry reference (refused before syft runs)
+    assert run.call_count == 0
     assert "user:pass" not in repr(sink.resolved())
 
 

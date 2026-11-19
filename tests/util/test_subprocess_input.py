@@ -23,7 +23,6 @@ Covers:
 """
 import pytest
 
-from quirk.util import subprocess_input
 from quirk.util.subprocess_input import (
     validate_repo_path,
     validate_image_ref,
@@ -33,12 +32,9 @@ from quirk.util.subprocess_input import (
     RC_NONEXISTENT_PATH,
     RC_INVALID_IMAGE_REF,
     RC_LEADING_DASH,
+    RC_IMAGE_REF_NOT_PLAIN,
     RC_PATH_SHAPED_REF,  # Phase 123 SSRF-03 — does not exist yet; import fails until Plan 02
 )
-
-
-# Task 3 replaces this fallback with a direct import.
-RC_NOT_PLAIN = getattr(subprocess_input, "RC_IMAGE_REF_NOT_PLAIN", "image_ref_not_plain")
 
 
 # ---------------------------------------------------------------------------
@@ -137,8 +133,8 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("OCI-ARCHIVE:/x.tar", False, RC_INVALID_IMAGE_REF),
     ("Docker:alpine", False, RC_INVALID_IMAGE_REF),
     # registry-type scheme words before an explicit registry are not plain references
-    ("registry:a.example/x", False, RC_NOT_PLAIN),
-    ("oci-model-registry:ai/llama", False, RC_NOT_PLAIN),
+    ("registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-model-registry:ai/llama", False, RC_IMAGE_REF_NOT_PLAIN),
     # added refused schemes, not-plain forms and plain controls
     ("local-file:x.tar", False, RC_INVALID_IMAGE_REF),
     ("LOCAL-FILE:x.tar", False, RC_INVALID_IMAGE_REF),
@@ -152,24 +148,24 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("pull:alpine", False, RC_INVALID_IMAGE_REF),
     ("PULL:alpine", False, RC_INVALID_IMAGE_REF),
     ("Pull:alpine", False, RC_INVALID_IMAGE_REF),
-    ("registry:a.example/x", False, RC_NOT_PLAIN),
-    ("REGISTRY:a.example/x", False, RC_NOT_PLAIN),
-    ("Registry:a.example/x", False, RC_NOT_PLAIN),
-    ("oci-registry:a.example/x", False, RC_NOT_PLAIN),
-    ("OCI-REGISTRY:a.example/x", False, RC_NOT_PLAIN),
-    ("Oci-Registry:a.example/x", False, RC_NOT_PLAIN),
-    ("oci-model:a.example/x", False, RC_NOT_PLAIN),
-    ("OCI-MODEL:a.example/x", False, RC_NOT_PLAIN),
-    ("Oci-Model:a.example/x", False, RC_NOT_PLAIN),
-    ("oci-model-registry:a.example/x", False, RC_NOT_PLAIN),
-    ("OCI-MODEL-REGISTRY:a.example/x", False, RC_NOT_PLAIN),
-    ("Oci-Model-Registry:a.example/x", False, RC_NOT_PLAIN),
+    ("registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("OCI-REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Oci-Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-model:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("OCI-MODEL:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Oci-Model:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("oci-model-registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("OCI-MODEL-REGISTRY:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("Oci-Model-Registry:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
     ("registry:2", True, ""),
     ("oci-registry:alpine", True, ""),
     ("oci-model:alpine", True, ""),
     ("oci-model-registry:alpine", True, ""),
-    ("foo:a.example/x", False, RC_NOT_PLAIN),
-    ("a.example:5000:6000/x", False, RC_NOT_PLAIN),
+    ("foo:a.example/x", False, RC_IMAGE_REF_NOT_PLAIN),
+    ("a.example:5000:6000/x", False, RC_IMAGE_REF_NOT_PLAIN),
     ("registry:5000/x", True, ""),
     ("Registry:5000/x", True, ""),
     ("a.example:5000/x", True, ""),

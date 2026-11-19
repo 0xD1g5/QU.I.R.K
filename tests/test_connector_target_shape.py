@@ -574,12 +574,12 @@ def test_syft_model_registry_schemes_are_not_refused():
     """Name kept because UAT-239-08 cites this node. Asserts that a registry-type scheme word
     followed by a host and a path (<word>:host/...) is refused as not a plain registry
     reference, never as a local source."""
-    from quirk.util import subprocess_input
-    from quirk.util.subprocess_input import RC_INVALID_IMAGE_REF, validate_image_ref
-
-    RC_IMAGE_REF_NOT_PLAIN = getattr(
-        subprocess_input, "RC_IMAGE_REF_NOT_PLAIN", "image_ref_not_plain"
+    from quirk.util.subprocess_input import (
+        RC_IMAGE_REF_NOT_PLAIN,
+        RC_INVALID_IMAGE_REF,
+        validate_image_ref,
     )
+
     assert _SYFT_REGISTRY_SCHEMES
     for scheme in _SYFT_REGISTRY_SCHEMES:
         for variant in (scheme, scheme.upper(), scheme.title()):
@@ -596,7 +596,7 @@ def test_production_prefixes_are_classified_by_the_syft_model():
     production = set(subprocess_input._LOCAL_REF_PREFIXES)
     assert production <= model, sorted(production - model)
     assert production == model, sorted(model - production)
-    registry = set(getattr(subprocess_input, "_REGISTRY_SCHEME_PREFIXES", ()))
+    registry = set(subprocess_input._REGISTRY_SCHEME_PREFIXES)
     assert registry == set(_SYFT_REGISTRY_SCHEMES), sorted(set(_SYFT_REGISTRY_SCHEMES) ^ registry)
 
 
