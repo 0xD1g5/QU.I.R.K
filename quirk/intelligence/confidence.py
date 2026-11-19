@@ -15,7 +15,14 @@ CONFIDENCE_WEIGHTS: Dict[str, float] = {
 # Phase 184.1 (the old tls_count-plus-ssh_count coverage formula). Deliberately
 # separate from the three drifting intelligence_version values in config.py,
 # jobs.py, and reports/writer.py — none of those answer "which formula" (D-12).
-CONFIDENCE_FORMULA_VERSION = "2.0.0"
+CONFIDENCE_FORMULA_VERSION = "2.1.0"
+
+# Phase 240 SCORE-11: CLOSED rows leave the coverage denominator, so a scan whose
+# probes mostly failed (scan_error rate above 0.5) kept full coverage points and
+# still read as MEDIUM/HIGH confidence. The rate definition is unchanged (D-01/D-03);
+# the ceiling is additive: above the threshold the score is capped at 59.
+HIGH_ERROR_RATE_THRESHOLD = 0.5
+HIGH_ERROR_RATE_CEILING = 59
 
 _LOGGER = logging.getLogger(__name__)
 _KNOWN_CONFIDENCE_KEYS = frozenset(CONFIDENCE_WEIGHTS.keys())
@@ -47,6 +54,15 @@ def _rating(score: int) -> str:
     if score >= 40:
         return "LOW"
     return "VERY_LOW"
+
+
+def _ceiling_entry(applied: bool, uncapped_score: int) -> Dict[str, Any]:
+    return {
+        "applied": applied,
+        "threshold": HIGH_ERROR_RATE_THRESHOLD,
+        "ceiling": HIGH_ERROR_RATE_CEILING,
+        "uncapped_score": uncapped_score,
+    }
 
 
 def compute_confidence(
@@ -94,6 +110,7 @@ def compute_confidence(
                 "scan_error_ratio": {"value": 0.0, "weight": w["scan_error_ratio"], "points": 0.0},
                 "unknown_ratio": {"value": 0.0, "weight": w["unknown_ratio"], "points": 0.0},
                 "tls_enum_coverage_ratio": {"value": 0.0, "weight": w["tls_enum_coverage_ratio"], "points": 0.0},
+                "high_error_rate_ceiling": _ceiling_entry(False, 0),
             },
         }
 
@@ -114,6 +131,7 @@ def compute_confidence(
                 "scan_error_ratio": {"value": 0.0, "weight": w["scan_error_ratio"], "points": 0.0},
                 "unknown_ratio": {"value": 0.0, "weight": w["unknown_ratio"], "points": 0.0},
                 "tls_enum_coverage_ratio": {"value": 0.0, "weight": w["tls_enum_coverage_ratio"], "points": 0.0},
+                "high_error_rate_ceiling": _ceiling_entry(False, 0),
             },
         }
 
@@ -152,7 +170,10 @@ def compute_confidence(
         else 0.0
     )
 
-    score = int(round(_clamp(points_coverage + points_scan_error + points_unknown + points_tls_enum, 0.0, 100.0)))
+    raw_score = int(round(_clamp(points_coverage + points_scan_error + points_unknown + points_tls_enum, 0.0, 100.0)))
+    # Phase 240 SCORE-11: strict > on both comparisons; applied means the cap lowered the score.
+    ceiling_applied = scan_error_ratio > HIGH_ERROR_RATE_THRESHOLD and raw_score > HIGH_ERROR_RATE_CEILING
+    score = HIGH_ERROR_RATE_CEILING if ceiling_applied else raw_score
     rating = _rating(score)
 
     return {
@@ -180,5 +201,6 @@ def compute_confidence(
                 "weight": round(w["tls_enum_coverage_ratio"], 4),
                 "points": round(points_tls_enum, 2),
             },
+            "high_error_rate_ceiling": _ceiling_entry(ceiling_applied, raw_score),
         },
     }
