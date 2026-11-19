@@ -309,3 +309,75 @@ def test_validate_image_ref_returns_validation_result():
     """validate_image_ref must return a ValidationResult instance."""
     result = validate_image_ref("alpine:latest")
     assert isinstance(result, ValidationResult)
+
+
+# ---------------------------------------------------------------------------
+# Review GAP4: a refused image reference must not echo registry credentials.
+# ---------------------------------------------------------------------------
+
+_DIGEST64 = "ab" * 32
+
+
+@pytest.mark.parametrize("ref", [
+    "user:hunter2@registry.example.com/img:1",
+    "USER:hunter2@registry.example.com/img:1",
+    "user@a.example/x",
+    "user@a.example:443/x",
+    "USER@A.EXAMPLE/x",
+    "hunter2@a.example/x",
+    "user:hunter2@a.example:443/x",
+    "user:hunter2@host",
+    "user@host",
+])
+def test_image_ref_with_user_part_is_not_plain(ref):
+    res = validate_image_ref(ref)
+    assert not res.ok and res.reason == RC_IMAGE_REF_NOT_PLAIN, res
+    assert "hunter2" not in res.redacted_preview, res
+    assert "user" not in res.redacted_preview.lower(), res
+    assert "@" not in res.redacted_preview, res
+
+
+@pytest.mark.parametrize("ref,reason", [
+    ("user:hunter2@a.example/x;y", RC_SHELL_METACHAR),
+    ("-user:hunter2@a.example/x", RC_LEADING_DASH),
+    ("dir:user:hunter2@a.example/x", RC_INVALID_IMAGE_REF),
+    ("user:hunter2@a.example/x y", RC_SHELL_METACHAR),
+    ("user:hunter2@a.example/x#", RC_INVALID_IMAGE_REF),
+])
+def test_every_refusal_branch_drops_the_user_part(ref, reason):
+    res = validate_image_ref(ref)
+    assert not res.ok and res.reason == reason, res
+    assert "hunter2" not in res.redacted_preview, res
+
+
+def test_refusal_preview_keeps_a_digest():
+    res = validate_image_ref("a.ex/x@sha256:abcdef;")
+    assert not res.ok and res.reason == RC_SHELL_METACHAR, res
+    assert "@sha256:abcdef" in res.redacted_preview, res
+
+
+def test_refusal_preview_keeps_a_digest_after_a_user_part():
+    res = validate_image_ref("user:hunter2@a.ex/x@sha256:abcdef;")
+    assert not res.ok, res
+    assert "hunter2" not in res.redacted_preview, res
+    assert "@sha256:abcdef" in res.redacted_preview, res
+
+
+@pytest.mark.parametrize("ref", [
+    f"a.example/x@sha256:{_DIGEST64}",
+    f"a.example:5000/x:1@sha256:{_DIGEST64}",
+    f"docker.io/library/nginx@sha256:{_DIGEST64}",
+    "nginx@sha256:abc123",
+])
+def test_digest_references_stay_accepted(ref):
+    assert validate_image_ref(ref).ok, ref
+
+
+def test_a_redaction_helper_is_exported():
+    import quirk.util.subprocess_input as mod
+
+    assert hasattr(mod, "redact_image_ref_userinfo")
+    redact = mod.redact_image_ref_userinfo
+    assert redact("user:hunter2@a.example/x") == "a.example/x"
+    assert redact(f"a.example/x@sha256:{_DIGEST64}") == f"a.example/x@sha256:{_DIGEST64}"
+    assert redact("alpine:latest") == "alpine:latest"

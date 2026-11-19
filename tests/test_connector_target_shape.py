@@ -1192,6 +1192,49 @@ def _sbom_source_type(proc):
     return None
 
 
+def _expect_assertion(fn):
+    try:
+        fn()
+    except AssertionError:
+        return True
+    return False
+
+
+def _timing_out_run(*args, **kwargs):
+    raise subprocess.TimeoutExpired(cmd="syft", timeout=60)
+
+
+def test_a_syft_timeout_is_not_a_clean_result(monkeypatch, tmp_path):
+    """A timed-out syft run is inconclusive, never read as 'no non-registry source'."""
+    monkeypatch.setattr(subprocess, "run", _timing_out_run)
+    proc = _run_syft_isolated(["syft"], {}, tmp_path)
+    assert _sbom_source_type(proc) is not None, "a timeout was classified as a clean result"
+
+
+def test_unreadable_syft_output_is_not_a_clean_result():
+    ok_but_not_json = subprocess.CompletedProcess(["syft"], 0, b"not json at all", b"")
+    assert _sbom_source_type(ok_but_not_json) is not None
+    half_json = subprocess.CompletedProcess(["syft"], 1, b'{"source": ', b"")
+    assert _sbom_source_type(half_json) is not None
+
+
+def test_a_refusing_syft_run_with_no_stdout_stays_clean():
+    refused = subprocess.CompletedProcess(["syft"], 1, b"", b"unable to parse")
+    assert _sbom_source_type(refused) is None
+
+
+def test_the_error_text_of_a_timed_out_run_is_not_empty_text():
+    assert _expect_assertion(lambda: _syft_error_text(None)), (
+        "a timed-out run read as empty error text"
+    )
+
+
+def test_a_timed_out_observation_is_inconclusive(tmp_path):
+    assert _expect_assertion(
+        lambda: _observe_syft("syft", "a.example/x", dict(os.environ), tmp_path, run=_timing_out_run)
+    ), "a timed-out observation returned the (empty) set of contacted hosts"
+
+
 @pytest.mark.slow
 def test_scanner_argv_yields_only_registry_sources(tmp_path):
     """The scanner's syft argv yields only registry sources for any scheme word, in any letter case."""

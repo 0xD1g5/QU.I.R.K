@@ -138,15 +138,54 @@ def test_outcome_mixed_two_images():
     assert [o.kind for o in sink.resolved()] == ["answered", "unreachable"]
 
 
-def test_outcome_credentials_redacted_in_resolved():
-    ref = "user:pass@registry.example.com/img:1"
+class _Log:
+    def __init__(self):
+        self.lines = []
+
+    def v(self, msg):
+        self.lines.append(str(msg))
+
+
+_USER_PART_REFS = [
+    "user:hunter2@registry.example.com/img:1",
+    "user@a.example/x",
+    "user@a.example:443/x",
+    "user:hunter2@a.example/x;y",
+    "-user:hunter2@a.example/x",
+    "user:hunter2@a.example/x#",
+]
+
+
+@pytest.mark.parametrize("ref", _USER_PART_REFS)
+def test_outcome_credentials_redacted_in_resolved(ref):
     sink = TargetOutcomes([ref])
+    log = _Log()
     with patch("shutil.which", return_value="/usr/bin/syft"), \
          patch("subprocess.run", return_value=_proc("x", rc=1)) as run:
-        scan_container_targets([ref], outcomes=sink)
-    # a userinfo-shaped registry part is not a plain registry reference (refused before syft runs)
+        rows = scan_container_targets([ref], outcomes=sink, logger=log)
+    # a user part in the registry part is not a plain registry reference (refused before syft runs)
     assert run.call_count == 0
-    assert "user:pass" not in repr(sink.resolved())
+    for text in (repr(sink.resolved()), repr(rows), "\n".join(log.lines)):
+        assert "hunter2" not in text, text
+        assert "user" not in text.lower(), text
+    assert rows, "a refused reference still returns its in-band error row"
+    for row in rows:
+        assert "@" not in row.host and "hunter2" not in repr(vars(row)), row
+
+
+def test_syft_failure_log_lines_carry_no_user_part(caplog):
+    import quirk.scanner.container_scanner as mod
+    from quirk.util.subprocess_input import ValidationResult
+
+    ref = "user:hunter2@a.example/x:1"
+    sink = TargetOutcomes([ref])
+    with patch.object(mod, "validate_image_ref", return_value=ValidationResult(True, "", "")), \
+         patch("shutil.which", return_value="/usr/bin/syft"), \
+         patch("subprocess.run", return_value=_proc("not json", rc=1)):
+        with caplog.at_level("DEBUG"):
+            scan_container_targets([ref], outcomes=sink)
+    assert "hunter2" not in caplog.text, caplog.text
+    assert "hunter2" not in repr(sink.resolved())
 
 
 def test_outcome_contract_violation_propagates():
