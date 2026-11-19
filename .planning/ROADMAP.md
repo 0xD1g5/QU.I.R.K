@@ -249,7 +249,23 @@ Plans:
   2. Every date-gated catalog is green at release time, each re-verified against its `source_url` (hw_cve trips 2026-11-29, pqc_deadlines and snmp_meta 2026-12-02), with no `last_verified` bump that lacks a re-verification.
   3. The CHANGELOG and README known-defect wording is removed for every item fixed in this milestone and kept for anything not fixed; the 5.28.0 score-divergence disclosure is withdrawn only for what Phase 236 fixed.
   4. `v5.29.0` is tagged and published to PyPI and GitHub Releases, and UAT-1-02 passes on the published wheel.
-**Plans**: TBD
+**Plans**: 14 plans
+
+Plans:
+- [ ] 240-01-PLAN.md — Ledger-first rows, Phase 240 embargo scan with positive control, private ledger reconciliation (D-21, D-22, D-30)
+- [ ] 240-02-PLAN.md — SCORE-11 confidence ceiling at 59 above 50% probe errors, formula 2.1.0, UAT-8-02 runner check (RED-first; D-01..D-05, D-23, D-24)
+- [ ] 240-03-PLAN.md — Refused image reference preview redaction fold-in and snmp_meta age gate (RED-first; D-12, D-25)
+- [ ] 240-04-PLAN.md — Private V8+ advisory drafts and the v5.29.0 hand-off (D-15, D-30)
+- [ ] 240-05-PLAN.md — Confidence 2.1.0 docs, claim rows, live low-coverage run (D-05, D-23, D-31)
+- [ ] 240-06-PLAN.md — CHANGELOG 5.29.0, README What's New v5.29, narrowed known defects and gates (D-09..D-11, D-27, D-29)
+- [ ] 240-07-PLAN.md — Catalog re-verification against source_url, operator browser reads (REL-15; D-06..D-08, D-25, D-26, D-28)
+- [ ] 240-08-PLAN.md — Version bump to 5.29.0, candidate commit C (D-13)
+- [ ] 240-09-PLAN.md — Candidate build, macOS smoke, embargo scan, push, branch CI green at C (D-14)
+- [ ] 240-10-PLAN.md — Operator-led walkthrough on the candidate with lab.sh all (D-16)
+- [ ] 240-11-PLAN.md — UAT-8-02 PASS, release PR, operator merge, main green at M, path check and dry run (D-14)
+- [ ] 240-12-PLAN.md — Operator tag push, publish verification, RECORD and attestations, smoke legs, UAT-1-02 PASS (REL-13)
+- [ ] 240-13-PLAN.md — Operator advisory publication, advisory links, ledger closures on main (D-15, D-30)
+- [ ] 240-14-PLAN.md — Vault sync, validation, lab down, final branch CI observation, close PR (CITRUTH-03)
 
 ## Previous Milestone: v5.28.2 Connector Coverage Truth — SHIPPED 2026-11-08 (tag `v5.28.2`)
 
