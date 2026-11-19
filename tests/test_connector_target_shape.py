@@ -8,11 +8,14 @@ the elements the scanner iterates.
 """
 from __future__ import annotations
 
+import contextlib
 import dataclasses
+import functools
 import importlib
 import inspect
 import io
 import itertools
+import json
 import os
 import re
 import shutil
@@ -26,6 +29,7 @@ import typing
 import urllib.parse
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 import pytest
 import yaml
@@ -526,6 +530,37 @@ _SYFT_LOCAL_SCHEMES = (
 )
 SYFT_MODEL_VERSION = "1.57.2"
 
+# Scheme words syft resolves as source selectors under its default argv but that the
+# validator refuses without the syft selector behaviour being observable here; the
+# behavioural node fills these from observed behaviour.  A word listed here is one syft
+# does not resolve as a selector although the validator refuses it as defence in depth.
+_SYFT_REFUSED_UNRESOLVED_LOCAL = ()
+_SYFT_REFUSED_UNRESOLVED_REGISTRY = ()
+
+# Sentinel prediction: the model says syft cannot parse the reference and contacts no host.
+SYFT_NO_CONTACT = frozenset({"<no-contact>"})
+
+# Registry-type scheme-prefixed references that name an explicit registry.  The validator
+# refuses them; the cross-check observes them with syft directly anyway.
+_SYFT_REFUSED_REGISTRY_PROBES = (
+    "registry:a.example/x",
+    "oci-registry:a.example/x",
+    "oci-model:a.example/x",
+    "oci-model-registry:a.example/x",
+)
+
+# Provider tags and provider names read from the syft v1.57.2 and stereoscope v0.4.2 source:
+#   https://raw.githubusercontent.com/anchore/syft/v1.57.2/syft/source/sourceproviders/source_providers.go
+#     (FileTag, DirTag, PullTag, SnapTag = "snap", provider names, "registry")
+#   https://raw.githubusercontent.com/anchore/stereoscope/v0.4.2/providers.go
+#     (FileTag, DirTag, DaemonTag, PullTag, RegistryTag; provider names docker, podman,
+#     containerd, containers-storage, oci-registry, docker-archive, oci-archive, oci-dir, singularity)
+_SYFT_SOURCE_TAGS = (
+    "file", "dir", "daemon", "pull", "registry", "snap",
+    "docker", "podman", "containerd", "containers-storage",
+    "oci-registry", "oci-model", "docker-archive", "oci-archive", "oci-dir", "singularity",
+)
+
 
 def _parse_syft_version(text):
     match = re.search(r"^Version:[ \t]*(\S.*)$", text, re.MULTILINE)
@@ -871,8 +906,9 @@ def _loopback_registry(ref) -> bool:
     return first == "localhost" or first.startswith("127.") or first in ("[::1]", "::1")
 
 
-def _observe_syft(exe, ref, base_env, work):
-    """Run syft over ``ref`` behind a private recording proxy; return the CONNECT authorities."""
+@contextlib.contextmanager
+def _recording_proxy():
+    """A private CONNECT-recording proxy on 127.0.0.1; yields (proxy url, list of authorities)."""
     seen = []
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
@@ -898,9 +934,21 @@ def _observe_syft(exe, ref, base_env, work):
 
     thread = threading.Thread(target=serve, daemon=True)
     thread.start()
-    proxy = f"http://127.0.0.1:{listener.getsockname()[1]}"
+    try:
+        yield f"http://127.0.0.1:{listener.getsockname()[1]}", seen
+    finally:
+        stop.set()
+        thread.join(timeout=2)
+        listener.close()
+
+
+def _isolated_syft_env(base_env, work, proxy):
+    """The environment every real-syft run uses: recording proxy, missing runtime sockets,
+    HOME and XDG under ``work``, no proxy exemptions, no update check."""
     absent = work / "absent.sock"
     env = dict(base_env)
+    for name in ("NO_PROXY", "no_proxy", "ALL_PROXY", "all_proxy"):
+        env.pop(name, None)
     env.update(
         HTTPS_PROXY=proxy, HTTP_PROXY=proxy, https_proxy=proxy, http_proxy=proxy,
         HOME=str(work / "home"),
@@ -913,15 +961,64 @@ def _observe_syft(exe, ref, base_env, work):
     )
     for sub in ("home", "xdg-config", "xdg-cache"):
         (work / sub).mkdir(parents=True, exist_ok=True)
-    try:
-        subprocess.run([exe, "-o", "json", "--", ref], env=env, capture_output=True, timeout=60,
-                       close_fds=False)
-    except subprocess.TimeoutExpired:
-        pass
-    finally:
-        stop.set()
-        thread.join(timeout=2)
-        listener.close()
+    return env
+
+
+@functools.lru_cache(maxsize=1)
+def _scanner_syft_argv_template() -> tuple:
+    """The syft argv the container scanner builds, captured once from scan_container_image.
+
+    Only the scanner module's own references are replaced, never the real modules, so this
+    is safe to call before a worker pool starts and must not be called from workers."""
+    from quirk.scanner import container_scanner as mod
+
+    recorded = []
+
+    def recorder(argv, *a, **k):
+        recorded.append(list(argv))
+        raise subprocess.TimeoutExpired(argv, 1)
+
+    stub = SimpleNamespace(
+        run=recorder,
+        TimeoutExpired=subprocess.TimeoutExpired,
+        CalledProcessError=subprocess.CalledProcessError,
+    )
+    which = SimpleNamespace(which=lambda name, *a, **k: "/placeholder/syft")
+    with mock.patch.object(mod, "subprocess", stub), mock.patch.object(mod, "shutil", which):
+        mod.scan_container_image("reg.example/app:1", timeout=1)
+    assert len(recorded) == 1, recorded
+    return tuple(recorded[0])
+
+
+def _syft_argv_for(template, exe, ref) -> list:
+    argv = list(template)
+    assert argv[-2:] == ["--", "reg.example/app:1"], argv
+    argv[0] = exe
+    argv[-1] = ref
+    return argv
+
+
+def _default_syft_argv(template) -> tuple:
+    argv = list(template)
+    for i in range(len(argv) - 1):
+        if argv[i] == "--from" and argv[i + 1] == "registry":
+            del argv[i:i + 2]
+            break
+    else:
+        raise AssertionError(f"no registry selection to remove from {argv}")
+    return tuple(argv)
+
+
+def _observe_syft(exe, ref, base_env, work, *, argv=None, run=subprocess.run):
+    """Run syft over ``ref`` behind a private recording proxy; return the CONNECT authorities."""
+    with _recording_proxy() as (proxy, seen):
+        env = _isolated_syft_env(base_env, work, proxy)
+        if argv is None:
+            argv = [exe, "-o", "json", "--", ref]
+        try:
+            run(argv, env=env, capture_output=True, timeout=60, close_fds=False)
+        except subprocess.TimeoutExpired:
+            pass
     return list(seen)
 
 
@@ -946,6 +1043,12 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
     for probe in _SYFT_RULE_PROBES:
         assert validate_image_ref(probe).ok, probe
         refs.append(probe)
+    from quirk.util.subprocess_input import RC_IMAGE_REF_NOT_PLAIN
+
+    for probe in _SYFT_REFUSED_REGISTRY_PROBES:
+        refused = validate_image_ref(probe)
+        assert not refused.ok and refused.reason == RC_IMAGE_REF_NOT_PLAIN, probe
+        refs.append(probe)
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(
             pool.map(
@@ -960,6 +1063,230 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
         problems = _syft_observation_problems(ref, _syft_registry_hosts(ref), observed)
         assert not problems, f"{problems} (syft version: {version.strip()!r})"
     assert total >= 1, "the proxy recorded no CONNECT: the cross-check is vacuous"
+
+
+def test_cross_check_runs_syft_with_the_scanner_argv(tmp_path):
+    template = _scanner_syft_argv_template()
+    assert "--" in template, template
+    terminator = template.index("--")
+    pairs = [
+        i for i in range(terminator - 1)
+        if template[i] == "--from" and template[i + 1] == "registry"
+    ]
+    assert pairs, f"the scanner's argv carries no registry-only selection before the terminator: {template}"
+    assert template[terminator + 1:] == ("reg.example/app:1",), template
+    recorded = []
+
+    def recorder(argv, *a, **k):
+        recorded.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    _observe_syft("/placeholder/syft", "reg.example/app:1", dict(os.environ), tmp_path, run=recorder)
+    assert recorded == [_syft_argv_for(template, "/placeholder/syft", "reg.example/app:1")], recorded
+
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _syft_help_schemes(exe) -> set:
+    proc = subprocess.run(
+        [exe, "scan", "--help"], capture_output=True, text=True, timeout=60, close_fds=False,
+    )
+    text = proc.stdout + proc.stderr
+    marker = "explicitly specify the scheme"
+    assert marker in text, text[:500]
+    section = text.split(marker, 1)[1].split("Flags:", 1)[0]
+    return set(re.findall(r"^\s*syft scan ([a-z][a-z0-9-]*):", section, re.MULTILINE))
+
+
+def _syft_error_text(proc) -> str:
+    if proc is None:
+        return ""
+    return _ANSI.sub("", (proc.stdout + proc.stderr).decode("utf-8", "replace"))
+
+
+def _syft_tried_providers(text) -> set:
+    names = set(re.findall(r"^\s+- ([a-z][a-z0-9-]*):", text, re.MULTILINE))
+    # a single failing provider is reported inline, without the bullet list
+    names |= set(re.findall(r"attempting to resolve '[^']*': ([a-z][a-z0-9-]*):", text))
+    tail = re.search(r"failed with file does not exist: ([^\n]*)", text)
+    if tail:
+        names |= set(re.findall(r"[a-z][a-z0-9-]*", tail.group(1)))
+    names.discard("additionally")
+    return names
+
+
+def _syft_candidate_words(exe, template, work, base_env, proxy) -> dict:
+    """Candidate scheme words, each mapped to the set of places it came from."""
+    from quirk.util import subprocess_input
+
+    words: dict = {}
+
+    def add(word, source):
+        word = word.rstrip(":").lower()
+        if re.fullmatch(r"[a-z][a-z0-9-]*", word):
+            words.setdefault(word, set()).add(source)
+
+    env = _isolated_syft_env(base_env, work / "candidates", proxy)
+    proc = _run_syft_isolated(
+        _syft_argv_for(_default_syft_argv(template), exe, "no-such-name-239"), env, work,
+    )
+    providers = _syft_tried_providers(_syft_error_text(proc))
+    assert len(providers) >= 8, f"syft's error output changed shape: {sorted(providers)}"
+    for name in providers:
+        add(name, "provider-error")
+    helped = _syft_help_schemes(exe)
+    assert len(helped) >= 8, helped
+    for name in helped:
+        add(name, "help")
+    for group in (
+        _SYFT_REGISTRY_SCHEMES, _SYFT_DAEMON_SCHEMES, _SYFT_LOCAL_SCHEMES,
+        _SYFT_REFUSED_UNRESOLVED_LOCAL, _SYFT_REFUSED_UNRESOLVED_REGISTRY,
+    ):
+        for name in group:
+            add(name, "model")
+    for name in subprocess_input._LOCAL_REF_PREFIXES + subprocess_input._REGISTRY_SCHEME_PREFIXES:
+        add(name, "production")
+    for name in _SYFT_SOURCE_TAGS:
+        add(name, "syft-source")
+    return words
+
+
+def _run_syft_isolated(argv, env, cwd, timeout=60):
+    cwd.mkdir(parents=True, exist_ok=True)
+    try:
+        return subprocess.run(
+            argv, env=env, cwd=str(cwd), capture_output=True, timeout=timeout, close_fds=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def _sbom_source_type(proc):
+    if proc is None:
+        return None
+    try:
+        doc = json.loads(proc.stdout.decode("utf-8", "replace"))
+    except ValueError:
+        return None
+    if isinstance(doc, dict) and "source" in doc:
+        source = doc["source"]
+        return source.get("type", "?") if isinstance(source, dict) else "?"
+    return None
+
+
+@pytest.mark.slow
+def test_scanner_argv_yields_only_registry_sources(tmp_path):
+    """The scanner's syft argv yields only registry sources for any scheme word, in any letter case."""
+    exe = _syft_exe_or_skip()
+    template = _scanner_syft_argv_template()
+    from concurrent.futures import ThreadPoolExecutor
+
+    cwd = tmp_path / "cwd"
+    (cwd / "d").mkdir(parents=True)
+    (cwd / "f.txt").write_text("x\n", encoding="utf-8")
+    (cwd / "d" / "x.txt").write_text("x\n", encoding="utf-8")
+    base_env = dict(os.environ)
+    with _recording_proxy() as (proxy, _seen):
+        words = _syft_candidate_words(exe, template, tmp_path, base_env, proxy)
+        control = _run_syft_isolated(
+            _syft_argv_for(_default_syft_argv(template), exe, "local-directory:d"),
+            _isolated_syft_env(base_env, tmp_path / "control", proxy), cwd,
+        )
+        if _sbom_source_type(control) != "directory":
+            pytest.fail(
+                "positive control produced no directory source: the node cannot detect a non-registry source"
+            )
+        cases = []
+        for word in sorted(words):
+            for variant in (word, word.upper(), word.title()):
+                for target in ("f.txt", "d"):
+                    cases.append(f"{variant}:{target}")
+        cases = sorted(set(cases))
+
+        def work(item):
+            index, ref = item
+            env = _isolated_syft_env(base_env, tmp_path / f"e{index}", proxy)
+            argv = _syft_argv_for(template, exe, ref)
+            return ref, _sbom_source_type(_run_syft_isolated(argv, env, cwd))
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(work, enumerate(cases)))
+    assert len(cases) >= 100, len(cases)
+    offending = [(ref, kind) for ref, kind in results if kind is not None]
+    assert not offending, f"syft produced an SBOM under the scanner's argv: {offending}"
+
+
+@pytest.mark.slow
+def test_syft_scheme_words_are_classified_by_behaviour(tmp_path):
+    """Every source selector syft resolves is refused before syft runs."""
+    exe = _syft_exe_or_skip()
+    template = _scanner_syft_argv_template()
+    from concurrent.futures import ThreadPoolExecutor
+
+    from quirk.util import subprocess_input
+    from quirk.util.subprocess_input import (
+        RC_IMAGE_REF_NOT_PLAIN,
+        RC_INVALID_IMAGE_REF,
+        validate_image_ref,
+    )
+
+    base_env = dict(os.environ)
+    missing = "zz-missing-239"
+    default = _default_syft_argv(template)
+    with _recording_proxy() as (proxy, _seen):
+        words = _syft_candidate_words(exe, template, tmp_path, base_env, proxy)
+        cwd = tmp_path / "cwd"
+        cwd.mkdir()
+        jobs = [(w, v) for w in sorted(words) for v in (w, w.upper())]
+        jobs.append(("", missing))
+
+        def classify(item):
+            index, (word, variant) = item
+            ref = f"{variant}:{missing}" if word else missing
+            env = _isolated_syft_env(base_env, tmp_path / f"c{index}", proxy)
+            text = _syft_error_text(
+                _run_syft_isolated(_syft_argv_for(default, exe, ref), env, cwd)
+            )
+            stripped = ref not in text and missing in text
+            return stripped, _syft_tried_providers(text)
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(classify, enumerate(jobs)))
+    observed = dict(zip(jobs, results))
+    assert observed[("", missing)][0] is False, "the control name was classified as a stripped selector"
+
+    def kind(word, variant):
+        stripped, tried = observed[(word, variant)]
+        if not stripped:
+            return "none"
+        return "registry" if tried and tried <= {"oci-registry", "oci-model"} else "other"
+
+    for word in words:
+        assert kind(word, word) == kind(word, word.upper()), (word, kind(word, word), kind(word, word.upper()))
+    selectors = {w: kind(w, w) for w in words if kind(w, w) != "none"}
+    assert len(selectors) >= 12, selectors
+    local = set(subprocess_input._LOCAL_REF_PREFIXES)
+    registry = set(subprocess_input._REGISTRY_SCHEME_PREFIXES)
+    for word, found in sorted(selectors.items()):
+        prefix = word + ":"
+        if found == "other":
+            assert prefix in local, f"syft resolves {word!r} to a non-registry source and the validator does not list it"
+            for variant in (prefix, prefix.upper(), prefix.title()):
+                res = validate_image_ref(variant + missing)
+                assert not res.ok and res.reason == RC_INVALID_IMAGE_REF, variant
+        else:
+            assert prefix in registry, f"syft resolves {word!r} as a registry selector and it is not classified"
+            for variant in (prefix, prefix.upper(), prefix.title()):
+                res = validate_image_ref(variant + "a.example/x")
+                assert not res.ok and res.reason == RC_IMAGE_REF_NOT_PLAIN, variant
+    not_selectors = {w for w in words if kind(w, w) == "none"}
+    for prefix in sorted(local - {w + ":" for w in selectors}):
+        assert prefix in _SYFT_REFUSED_UNRESOLVED_LOCAL, f"{prefix} is not resolved by syft and not justified"
+    for prefix in sorted(registry - {w + ":" for w in selectors}):
+        assert prefix in _SYFT_REFUSED_UNRESOLVED_REGISTRY, f"{prefix} is not resolved by syft and not justified"
+    for prefix in _SYFT_REFUSED_UNRESOLVED_LOCAL + _SYFT_REFUSED_UNRESOLVED_REGISTRY:
+        assert prefix.rstrip(":") in not_selectors, prefix
 
 
 def _code_names_recursive(code) -> set:
@@ -987,6 +1314,10 @@ def test_syft_observation_check_allows_default_registry_only_for_default_refs():
     assert not problems("a.example/x", {"a.example"}, {"a.example", "api.snapcraft.io"})
     assert problems("a.example/x", {"a.example"}, set())
     assert problems("nginx:1", set(), {"b.example"})
+    assert not problems("registry:a.example/x", SYFT_NO_CONTACT, set())
+    assert problems("registry:a.example/x", SYFT_NO_CONTACT, {"index.docker.io"})
+    assert problems("registry:a.example/x", SYFT_NO_CONTACT, {"a.example"})
+    assert problems("registry:a.example/x", SYFT_NO_CONTACT, {"api.snapcraft.io"})
 
 
 def test_syft_model_is_independent_of_the_gate():
