@@ -81,6 +81,7 @@ _LOCAL_REF_PREFIXES = (
     "dir:", "file:", "oci:", "docker-daemon:", "podman:", "docker-archive:",
     "oci-archive:", "oci-dir:", "singularity:", "docker:", "containerd:", "snap:",
     "image:", "local-file:", "local-directory:", "daemon:", "pull:",
+    "containers-storage:",
 )
 
 # Registry-type scheme words, kept only to classify the syft scheme model in
