@@ -1362,7 +1362,7 @@ See the `security:` block reference in `docs/configuration.md` for the full
 
 #### Container scanner
 
-For each entry in `container_targets`, generates a Syft SBOM of the named image and
+For each entry in `container_targets`, generates a Syft SBOM of the named image, pulled from its registry (entries must be plain registry references, `host/repository:tag`), and
 keeps the packages whose names are on a fixed crypto-library allowlist (OpenSSL and
 its `libssl`/`libcrypto` packages, mbedTLS, wolfSSL, GnuTLS, NSS, libgcrypt, Botan, and
 the Python `cryptography`, `pyopenssl`, `pycryptodome`, `bcrypt` and `pynacl`

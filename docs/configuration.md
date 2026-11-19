@@ -1563,7 +1563,7 @@ security:
 - Database and broker targets (`pg_targets`, `mysql_targets`, `broker_targets`): `host` or `host:port`; an IPv6 address is written in brackets when a port follows (the bracketed form is the accepted syntax for PostgreSQL and MySQL).
 - URL fields (`jwt_targets`, `saml_targets`, `vault_addr`, `aws_endpoint_url`, `azure_keyvault_urls`): an `http://` or `https://` URL, or a bare `host[:port]`, without user information; put credentials in the connector's credential fields.
 - `k8s_kubeconfig`: every `clusters[].cluster.server` in the file is read in the URL form above.
-- `container_targets`: an explicit registry is the part before the first `/`, written `host` or `host:port` (an IPv6 address in brackets); a reference with no explicit registry uses the default registry and is not checked; a reference naming a local-file or container-daemon source scheme is refused before the scan runs.
+- `container_targets`: an explicit registry is the part before the first `/`, written `host` or `host:port` (an IPv6 address in brackets); a reference with no explicit registry uses the default registry and is not checked; a reference naming a local-file or container-daemon source scheme is refused before the scan runs; images are always pulled from the registry, and a local container runtime is not consulted; an entry must be a plain registry reference (`host/repository:tag`), and any other form is refused before the scan runs.
 - `kerberos_targets`: a bare host name or IP address. `dnssec_targets`: a domain name.
 - A value is written exactly: no surrounding whitespace (a padded value is skipped, not trimmed), and a port is digits only.
 

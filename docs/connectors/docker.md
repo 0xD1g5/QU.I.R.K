@@ -21,15 +21,9 @@ a LOW inventory finding.
   Do not install Syft from PyPI: the `syft` package there is OpenMined's PySyft, an
   unrelated project, and it does not provide the Anchore `syft` binary.
 
-- A container runtime is optional. For a plain image reference Syft checks the local Docker
-  daemon first, then Podman, then containerd, and finally pulls directly from the registry.
-
-> **Note:** If you want Syft to read images from your local Docker daemon on Linux, add your
-> user to the `docker` group if needed:
->
-> ```bash
-> sudo usermod -aG docker $USER && newgrp docker
-> ```
+- A container runtime is not needed. QU.I.R.K. asks Syft to pull each image from its registry; it
+  does not read images from a local Docker, Podman or containerd runtime. To scan a locally built
+  image, push it to a registry the scan host can reach.
 
 ## config.yaml Snippet
 
@@ -42,10 +36,12 @@ connectors:
     - "nginx@sha256:<64-hex-digest>"       # image pinned by digest
 ```
 
-Each entry in `container_targets` is passed to `syft` as the image reference, after QU.I.R.K.
-validates it as an OCI image reference. Entries that start with `-`, use a local-access prefix
-such as `dir:` or `docker-daemon:`, or contain shell metacharacters are rejected and reported as
-an `invalid_input` error instead of being scanned.
+Each entry must be a plain registry reference: `host/repository:tag`, `host:port/repository:tag`,
+a reference pinned by digest, or a Docker Hub name such as `nginx:1.18`. QU.I.R.K. validates every
+entry before Syft runs. An entry that starts with `-`, uses a local-access prefix such as `dir:` or
+`docker-daemon:`, carries a prefix or port that is not part of a registry address, or contains
+shell metacharacters is refused and reported as an `invalid_input` error naming the expected form
+`host/repository:tag`, instead of being scanned.
 
 ## What Gets Scanned
 
@@ -68,13 +64,8 @@ in the QU.I.R.K. report.
 
 ## How the Scan Works
 
-QU.I.R.K. calls:
-
-```
-syft -o json -- <image_ref>
-```
-
-The JSON output is parsed for the `artifacts` list. Each artifact whose `name` matches the
+QU.I.R.K. runs `syft` with JSON output, selects the registry as the only image source, and
+passes the validated image reference after an option terminator. The JSON output is parsed for the `artifacts` list. Each artifact whose `name` matches the
 allowlist above is converted to a finding with the library name and version.
 
 The default scan timeout is **120 seconds** per image. Large images or slow registries may
@@ -88,9 +79,8 @@ For private registries, authenticate before running the scan:
 docker login myregistry.example.com
 ```
 
-Syft reads the registry credentials from the container runtime you logged in with (for the
-direct-registry path, from `~/.docker/config.json`), so no additional configuration is needed in
-`config.yaml`.
+Syft reads the credentials `docker login` writes to `~/.docker/config.json`, so no additional
+configuration is needed in `config.yaml`.
 
 ## Graceful Degradation
 
@@ -107,6 +97,6 @@ include container results.
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
 | Empty results for all images | Syft not on PATH | Run `which syft`; if not found, install via `brew install syft` or the install script above |
-| `permission denied` on `/var/run/docker.sock` (Docker daemon path) | User not in docker group | Run `sudo usermod -aG docker $USER && newgrp docker` |
-| Timeout for large image | Default 120s exceeded | Raise `scan.timeouts.container_seconds`, or pull the image first with `docker pull <image>` so Syft reads from the local daemon |
+| Timeout for large image | Default 120s exceeded | Raise `scan.timeouts.container_seconds` |
+| `invalid_input` with `image_ref_not_plain` | The entry is not a plain registry reference | Rewrite it as `host/repository:tag` |
 | Private registry: `authentication required` | Docker credentials not set | Run `docker login <registry>` before running the scan |
