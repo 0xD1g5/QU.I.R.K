@@ -516,10 +516,13 @@ def _k8s_consumer(path, mp):
     return set(dialled)
 
 
-_SYFT_REGISTRY_SCHEMES = ("registry:", "oci-model-registry:")
-_SYFT_DAEMON_SCHEMES = ("docker:", "podman:", "containerd:", "docker-daemon:", "image:")
+_SYFT_REGISTRY_SCHEMES = ("registry:", "oci-model-registry:", "oci-registry:", "oci-model:")
+_SYFT_DAEMON_SCHEMES = (
+    "docker:", "podman:", "containerd:", "docker-daemon:", "image:", "daemon:", "pull:",
+)
 _SYFT_LOCAL_SCHEMES = (
     "docker-archive:", "oci-archive:", "oci-dir:", "singularity:", "dir:", "file:", "oci:", "snap:",
+    "local-file:", "local-directory:",
 )
 SYFT_MODEL_VERSION = "1.57.2"
 
@@ -568,11 +571,22 @@ def test_syft_model_daemon_and_local_schemes_are_refused():
 
 
 def test_syft_model_registry_schemes_are_not_refused():
-    from quirk.util.subprocess_input import validate_image_ref
+    """Name kept because UAT-239-08 cites this node. Asserts that a registry-type scheme word
+    followed by a host and a path (<word>:host/...) is refused as not a plain registry
+    reference, never as a local source."""
+    from quirk.util import subprocess_input
+    from quirk.util.subprocess_input import RC_INVALID_IMAGE_REF, validate_image_ref
 
+    RC_IMAGE_REF_NOT_PLAIN = getattr(
+        subprocess_input, "RC_IMAGE_REF_NOT_PLAIN", "image_ref_not_plain"
+    )
     assert _SYFT_REGISTRY_SCHEMES
     for scheme in _SYFT_REGISTRY_SCHEMES:
-        assert validate_image_ref(scheme + "a.example/x").ok, scheme
+        for variant in (scheme, scheme.upper(), scheme.title()):
+            res = validate_image_ref(variant + "a.example/x")
+            assert not res.ok, variant
+            assert res.reason == RC_IMAGE_REF_NOT_PLAIN, variant
+            assert res.reason != RC_INVALID_IMAGE_REF, variant
 
 
 def test_production_prefixes_are_classified_by_the_syft_model():
@@ -582,6 +596,8 @@ def test_production_prefixes_are_classified_by_the_syft_model():
     production = set(subprocess_input._LOCAL_REF_PREFIXES)
     assert production <= model, sorted(production - model)
     assert production == model, sorted(model - production)
+    registry = set(getattr(subprocess_input, "_REGISTRY_SCHEME_PREFIXES", ()))
+    assert registry == set(_SYFT_REGISTRY_SCHEMES), sorted(set(_SYFT_REGISTRY_SCHEMES) ^ registry)
 
 
 def test_syft_model_schemes_cover_syft_help():

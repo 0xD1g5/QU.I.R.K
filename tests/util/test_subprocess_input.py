@@ -23,6 +23,7 @@ Covers:
 """
 import pytest
 
+from quirk.util import subprocess_input
 from quirk.util.subprocess_input import (
     validate_repo_path,
     validate_image_ref,
@@ -34,6 +35,10 @@ from quirk.util.subprocess_input import (
     RC_LEADING_DASH,
     RC_PATH_SHAPED_REF,  # Phase 123 SSRF-03 — does not exist yet; import fails until Plan 02
 )
+
+
+# Task 3 replaces this fallback with a direct import.
+RC_NOT_PLAIN = getattr(subprocess_input, "RC_IMAGE_REF_NOT_PLAIN", "image_ref_not_plain")
 
 
 # ---------------------------------------------------------------------------
@@ -131,9 +136,46 @@ def test_validate_repo_path_existing_dir(tmp_path):
     ("File:/x", False, RC_INVALID_IMAGE_REF),
     ("OCI-ARCHIVE:/x.tar", False, RC_INVALID_IMAGE_REF),
     ("Docker:alpine", False, RC_INVALID_IMAGE_REF),
-    # registry-pulling schemes are unaffected
-    ("registry:a.example/x", True, ""),
-    ("oci-model-registry:ai/llama", True, ""),
+    # registry-type scheme words before an explicit registry are not plain references
+    ("registry:a.example/x", False, RC_NOT_PLAIN),
+    ("oci-model-registry:ai/llama", False, RC_NOT_PLAIN),
+    # added refused schemes, not-plain forms and plain controls
+    ("local-file:x.tar", False, RC_INVALID_IMAGE_REF),
+    ("LOCAL-FILE:x.tar", False, RC_INVALID_IMAGE_REF),
+    ("Local-File:x.tar", False, RC_INVALID_IMAGE_REF),
+    ("local-directory:d", False, RC_INVALID_IMAGE_REF),
+    ("LOCAL-DIRECTORY:d", False, RC_INVALID_IMAGE_REF),
+    ("Local-Directory:d", False, RC_INVALID_IMAGE_REF),
+    ("daemon:alpine", False, RC_INVALID_IMAGE_REF),
+    ("DAEMON:alpine", False, RC_INVALID_IMAGE_REF),
+    ("Daemon:alpine", False, RC_INVALID_IMAGE_REF),
+    ("pull:alpine", False, RC_INVALID_IMAGE_REF),
+    ("PULL:alpine", False, RC_INVALID_IMAGE_REF),
+    ("Pull:alpine", False, RC_INVALID_IMAGE_REF),
+    ("registry:a.example/x", False, RC_NOT_PLAIN),
+    ("REGISTRY:a.example/x", False, RC_NOT_PLAIN),
+    ("Registry:a.example/x", False, RC_NOT_PLAIN),
+    ("oci-registry:a.example/x", False, RC_NOT_PLAIN),
+    ("OCI-REGISTRY:a.example/x", False, RC_NOT_PLAIN),
+    ("Oci-Registry:a.example/x", False, RC_NOT_PLAIN),
+    ("oci-model:a.example/x", False, RC_NOT_PLAIN),
+    ("OCI-MODEL:a.example/x", False, RC_NOT_PLAIN),
+    ("Oci-Model:a.example/x", False, RC_NOT_PLAIN),
+    ("oci-model-registry:a.example/x", False, RC_NOT_PLAIN),
+    ("OCI-MODEL-REGISTRY:a.example/x", False, RC_NOT_PLAIN),
+    ("Oci-Model-Registry:a.example/x", False, RC_NOT_PLAIN),
+    ("registry:2", True, ""),
+    ("oci-registry:alpine", True, ""),
+    ("oci-model:alpine", True, ""),
+    ("oci-model-registry:alpine", True, ""),
+    ("foo:a.example/x", False, RC_NOT_PLAIN),
+    ("a.example:5000:6000/x", False, RC_NOT_PLAIN),
+    ("registry:5000/x", True, ""),
+    ("Registry:5000/x", True, ""),
+    ("a.example:5000/x", True, ""),
+    ("regs.example:/app", True, ""),
+    ("docker.io/library/registry:2", True, ""),
+    ("a.example/x@sha256:abababababababababababababababababababababababababababababababab", True, ""),
 ], ids=[
     "valid_registry_tag",
     "valid_alpine",
@@ -166,8 +208,44 @@ def test_validate_repo_path_existing_dir(tmp_path):
     "file_prefix_mixed",
     "oci_archive_prefix_upper",
     "docker_prefix_mixed",
-    "registry_prefix_unaffected",
-    "model_registry_prefix_unaffected",
+    "registry_prefix_not_plain",
+    "model_registry_prefix_not_plain",
+    "added_scheme_1_lower",
+    "added_scheme_1_upper",
+    "added_scheme_1_title",
+    "added_scheme_2_lower",
+    "added_scheme_2_upper",
+    "added_scheme_2_title",
+    "added_scheme_3_lower",
+    "added_scheme_3_upper",
+    "added_scheme_3_title",
+    "added_scheme_4_lower",
+    "added_scheme_4_upper",
+    "added_scheme_4_title",
+    "not_plain_scheme_1_lower",
+    "not_plain_scheme_1_upper",
+    "not_plain_scheme_1_title",
+    "not_plain_scheme_2_lower",
+    "not_plain_scheme_2_upper",
+    "not_plain_scheme_2_title",
+    "not_plain_scheme_3_lower",
+    "not_plain_scheme_3_upper",
+    "not_plain_scheme_3_title",
+    "not_plain_scheme_4_lower",
+    "not_plain_scheme_4_upper",
+    "not_plain_scheme_4_title",
+    "plain_scheme_word_tag_1",
+    "plain_scheme_word_tag_2",
+    "plain_scheme_word_tag_3",
+    "plain_scheme_word_tag_4",
+    "not_plain_port_1",
+    "not_plain_port_2",
+    "plain_scheme_word_host_port_1",
+    "plain_scheme_word_host_port_2",
+    "plain_host_port",
+    "plain_empty_port",
+    "plain_library_path",
+    "plain_digest_ref",
 ])
 def test_validate_image_ref(ref, expected_ok, expected_reason):
     result = validate_image_ref(ref)
