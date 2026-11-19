@@ -1028,7 +1028,9 @@ def _observe_syft(exe, ref, base_env, work, *, argv=None, run=subprocess.run):
         try:
             run(argv, env=env, capture_output=True, timeout=60, close_fds=False)
         except subprocess.TimeoutExpired:
-            pass
+            raise AssertionError(
+                f"syft timed out observing {ref!r}: the contacted hosts are unknown"
+            ) from None
     return list(seen)
 
 
@@ -1114,8 +1116,7 @@ def _syft_help_schemes(exe) -> set:
 
 
 def _syft_error_text(proc) -> str:
-    if proc is None:
-        return ""
+    assert proc is not None, "syft timed out: its error text is unknown, so the run is inconclusive"
     return _ANSI.sub("", (proc.stdout + proc.stderr).decode("utf-8", "replace"))
 
 
@@ -1180,12 +1181,15 @@ def _run_syft_isolated(argv, env, cwd, timeout=60):
 
 
 def _sbom_source_type(proc):
+    """The SBOM source type, None for a clean refusal, or a marker for an inconclusive run."""
     if proc is None:
-        return None
+        return "timeout"
+    text = proc.stdout.decode("utf-8", "replace")
     try:
-        doc = json.loads(proc.stdout.decode("utf-8", "replace"))
+        doc = json.loads(text)
     except ValueError:
-        return None
+        # a refusing syft prints nothing on stdout; anything else is unreadable output
+        return None if proc.returncode != 0 and not text.strip() else "unreadable"
     if isinstance(doc, dict) and "source" in doc:
         source = doc["source"]
         return source.get("type", "?") if isinstance(source, dict) else "?"

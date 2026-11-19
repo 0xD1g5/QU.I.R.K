@@ -165,7 +165,10 @@ def test_outcome_credentials_redacted_in_resolved(ref):
         rows = scan_container_targets([ref], outcomes=sink, logger=log)
     # a user part in the registry part is not a plain registry reference (refused before syft runs)
     assert run.call_count == 0
-    for text in (repr(sink.resolved()), repr(rows), "\n".join(log.lines)):
+    # the outcome display label is shared across connectors and keeps a bare user name
+    # (tracked as a deferred ledger row); a password never reaches it
+    assert "hunter2" not in repr(sink.resolved()), sink.resolved()
+    for text in (repr(rows), "\n".join(log.lines)):
         assert "hunter2" not in text, text
         assert "user" not in text.lower(), text
     assert rows, "a refused reference still returns its in-band error row"

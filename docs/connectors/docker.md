@@ -39,7 +39,8 @@ connectors:
 Each entry must be a plain registry reference: `host/repository:tag`, `host:port/repository:tag`,
 a reference pinned by digest, or a Docker Hub name such as `nginx:1.18`. QU.I.R.K. validates every
 entry before Syft runs. An entry that starts with `-`, uses a local-access prefix such as `dir:` or
-`docker-daemon:`, carries a prefix or port that is not part of a registry address, or contains
+`docker-daemon:`, carries a user name or credentials before the registry host, carries a
+prefix or port that is not part of a registry address, or contains
 shell metacharacters is refused and reported as an `invalid_input` error naming the expected form
 `host/repository:tag`, instead of being scanned.
 
