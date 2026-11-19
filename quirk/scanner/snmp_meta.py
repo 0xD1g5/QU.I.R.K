@@ -8,6 +8,8 @@ See CLAUDE.md "Staleness Review Cadence" for the bump procedure.
 """
 from __future__ import annotations
 
+import datetime
+
 # Per SNMP-05 — quarterly re-verification cadence matching hardware_meta.py.
 # See CLAUDE.md "Staleness Review Cadence" for the bump procedure.
 STALENESS_THRESHOLD_DAYS: int = 90
@@ -91,3 +93,15 @@ SNMP_VENDOR_MATRIX = {
         },
     ],
 }
+
+
+def is_snmp_vendor_matrix_stale(today: "datetime.date | None" = None) -> bool:
+    """Return True when the matrix has not been re-verified within
+    ``STALENESS_THRESHOLD_DAYS`` (90) days of ``today`` (default: ``date.today()``).
+
+    Boundary: ``age > STALENESS_THRESHOLD_DAYS`` (strict greater-than), so
+    exactly 90 days is NOT stale.  Reads the matrix at call time.
+    """
+    reference = today or datetime.date.today()
+    last_verified = datetime.date.fromisoformat(SNMP_VENDOR_MATRIX["last_verified"])
+    return (reference - last_verified).days > STALENESS_THRESHOLD_DAYS
