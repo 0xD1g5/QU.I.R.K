@@ -112,7 +112,7 @@ each other and can run in any order. Phase 240 depends on all four, because 5.29
 - [x] **Phase 236: Score Divergence Closure** - The dashboard and the report give the same severities and the same headline score for the same scan, and a new divergence fails CI
 - [x] **Phase 237: History and Count Truth** - Scan History, Trends, Compare, the Executive Skipped badge, Export PDF and notify count and show every finding, skip and outage
 - [x] **Phase 238: Identity and Certificate Findings** - Weak JWKS algorithms, non-metadata SAML answers, TLS 1.3 mTLS rejections and SHA-1-signed certificates each produce the right finding or skip
-- [ ] **Phase 239: Connector Target Trust-Gate Hardening** - The trust gate checks exactly the targets each connector scans, including scalar target values, directory referrals and non-ASCII IP literals
+- [x] **Phase 239: Connector Target Trust-Gate Hardening** - The trust gate checks exactly the targets each connector scans, including scalar target values, directory referrals and non-ASCII IP literals
 - [ ] **Phase 240: Regressions and Release 5.29.0** - Scan confidence reflects a high probe error rate, and 5.29.0 is published with its fixed known-defect wording withdrawn
 
 ## Phase Details
@@ -215,17 +215,17 @@ Plans:
 **Plans**: 18 plans (4 + 7 gap closure + 3 gap closure 3 + 4 gap closure 4)
 Plans:
 **Wave 1**
-- [ ] 239-01-PLAN.md — Ledger-first rows, then one target shape for every list-typed connector field and trusted_targets via a shared as_target_list (TRUST-01, D-01..D-05, D-07, D-18, D-21, D-22)
+- [x] 239-01-PLAN.md — Ledger-first rows, then one target shape for every list-typed connector field and trusted_targets via a shared as_target_list (TRUST-01, D-01..D-05, D-07, D-18, D-21, D-22)
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 239-02-PLAN.md — AD CS, S/MIME and code-signing LDAP connectors follow no referral; AST gate and loopback responder tests (TRUST-02, D-08..D-11, D-23, D-25)
-- [ ] 239-03-PLAN.md — Gate refuses unreadable targets and non-ASCII IP literals; one refusal_message at six sites (TRUST-01 D-06, TRUST-03, D-12..D-15, D-24)
+- [x] 239-02-PLAN.md — AD CS, S/MIME and code-signing LDAP connectors follow no referral; AST gate and loopback responder tests (TRUST-02, D-08..D-11, D-23, D-25)
+- [x] 239-03-PLAN.md — Gate refuses unreadable targets and non-ASCII IP literals; one refusal_message at six sites (TRUST-01 D-06, TRUST-03, D-12..D-15, D-24)
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 239-04-PLAN.md — Docs, UAT Series 239, vault sync, ledger evidence, staged post-merge closure, full suite and branch CI (D-16..D-20)
+- [x] 239-04-PLAN.md — Docs, UAT Series 239, vault sync, ledger evidence, staged post-merge closure, full suite and branch CI (D-16..D-20)
 **Gap closure (SC#1, from 239-VERIFICATION.md)**
-- [ ] 239-05-PLAN.md — Ledger rows first; parser-agreement SC#1 test against each check field's real consumer (RED first); one shared parse_target in the trust gate, refusing values that do not read as exactly one host and port (TRUST-01)
-- [ ] 239-06-PLAN.md — AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors read targets with the shared parser; non-string trusted_targets entries get a coded refusal (TRUST-01, WR-02)
-- [ ] 239-07-PLAN.md — Docs, UAT-239-04/05, regenerated artifacts, vault sync, ledger evidence, wording scan, full suite (no push)
-- [ ] 239-08-PLAN.md — Operator decision on unpushed history, STATE.md rewording, final wording scan before push, push and branch CI (checkpoint)
+- [x] 239-05-PLAN.md — Ledger rows first; parser-agreement SC#1 test against each check field's real consumer (RED first); one shared parse_target in the trust gate, refusing values that do not read as exactly one host and port (TRUST-01)
+- [x] 239-06-PLAN.md — AD CS, S/MIME, code-signing, PostgreSQL and MySQL connectors read targets with the shared parser; non-string trusted_targets entries get a coded refusal (TRUST-01, WR-02)
+- [x] 239-07-PLAN.md — Docs, UAT-239-04/05, regenerated artifacts, vault sync, ledger evidence, wording scan, full suite (no push)
+- [x] 239-08-PLAN.md — Operator decision on unpushed history, STATE.md rewording, final wording scan before push, push and branch CI (checkpoint)
 **Gap closure 2 (SC#1 for k8s_kubeconfig and container_targets, from the 239 re-verification)**
 - [x] 239-09-PLAN.md — Ledger rows first; kubeconfig cluster servers join the agreement test (RED first); the trust gate reads them with the shared parser and URL target fields accept http and https only (TRUST-01, WR-01)
 - [x] 239-10-PLAN.md — Container image registries join the agreement test with a real-syft cross-check (RED first); the gate reads an explicit registry with the shared parser; Kerberos self-check uses the same parser (TRUST-01, WR-03)

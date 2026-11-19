@@ -75,13 +75,13 @@ tracked file.
 
 ### Trust gate (TRUST)
 
-- [ ] **TRUST-01**: A scalar `*_targets` value for any connector loads as a one-element list, with the
+- [x] **TRUST-01**: A scalar `*_targets` value for any connector loads as a one-element list, with the
   field set enumerated from `ConnectorsCfg` at run time, so the trust gate checks exactly what the
   scanner scans. Source: `261023-detect-scalar-connector-targets-bypass-trust-gate` (P1, owner 999.136).
-- [ ] **TRUST-02**: LDAP-based connectors never follow a referral to a host the trust gate has not
+- [x] **TRUST-02**: LDAP-based connectors never follow a referral to a host the trust gate has not
   checked; every `ldap3.Server`/`Connection` in `quirk/` is checked by a run-time source scan. Source:
   `261023-detect-ldap-referrals-and-zone-id-literals-in-other-connectors` (P1, owner 999.136).
-- [ ] **TRUST-03**: The trust gate fails closed on an IP literal that is not ASCII. Source: same row.
+- [x] **TRUST-03**: The trust gate fails closed on an IP literal that is not ASCII. Source: same row.
 
 ### Scan confidence (SCORE)
 
@@ -137,9 +137,9 @@ tracked file.
 | IDENT-07 | Phase 238 | Complete |
 | DETECT-06 | Phase 238 | Complete |
 | DETECT-07 | Phase 238 | Complete |
-| TRUST-01 | Phase 239 | Pending |
-| TRUST-02 | Phase 239 | Pending |
-| TRUST-03 | Phase 239 | Pending |
+| TRUST-01 | Phase 239 | Complete |
+| TRUST-02 | Phase 239 | Complete |
+| TRUST-03 | Phase 239 | Complete |
 | SCORE-11 | Phase 240 | Pending |
 | REL-13 | Phase 240 | Pending |
 | REL-14 | Phase 240 | Pending |

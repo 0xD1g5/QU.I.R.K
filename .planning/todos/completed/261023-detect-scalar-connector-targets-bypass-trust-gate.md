@@ -41,3 +41,7 @@ Only `kerberos_targets` and `broker_targets` are coerced.
 
 - **CONFIRMED** for `kerberos_targets` (R12 evidence, fixed in Phase 230). **LIKELY** for some of the 11 others.
 - **LIKELY** effort **S**: one loop in `config.py` plus one parametrised test. Dashboard-built configs write lists, so GUI parity is unaffected.
+
+## Resolution (2026-11-19)
+
+Fixed by Phase 239 (TRUST-01): every list-typed ConnectorsCfg field (enumerated at run time) and security.trusted_targets load a scalar as one target through as_target_list, and null or an empty string as no targets; a target element with no readable host is refused, naming the field, while trusted_targets is set. Commits main 9bb6c072 (merge of PR #88; fixes 7939462e, 867447b3). Tests: tests/test_connector_target_shape.py, the unreadable-element nodes in tests/test_target_trust.py, tests/test_security_config.py::test_scalar_trusted_targets_loads_as_one_entry. Behaviour change: malformed target values are now refused while trusted_targets is set; null shows as [].
