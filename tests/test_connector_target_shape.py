@@ -520,22 +520,23 @@ def _k8s_consumer(path, mp):
     return set(dialled)
 
 
-_SYFT_REGISTRY_SCHEMES = ("registry:", "oci-model-registry:", "oci-registry:", "oci-model:")
+_SYFT_REGISTRY_SCHEMES = ("registry:", "oci-registry:", "oci-model:")
 _SYFT_DAEMON_SCHEMES = (
-    "docker:", "podman:", "containerd:", "docker-daemon:", "image:", "daemon:", "pull:",
+    "docker:", "podman:", "containerd:", "image:", "daemon:", "pull:",
 )
+# containers-storage: is a local-store selector syft resolves; the Homebrew 1.57.2 build
+# reports it as not compiled in, other builds may include it.
 _SYFT_LOCAL_SCHEMES = (
-    "docker-archive:", "oci-archive:", "oci-dir:", "singularity:", "dir:", "file:", "oci:", "snap:",
-    "local-file:", "local-directory:",
+    "docker-archive:", "oci-archive:", "oci-dir:", "singularity:", "dir:", "file:", "snap:",
+    "local-file:", "local-directory:", "containers-storage:",
 )
 SYFT_MODEL_VERSION = "1.57.2"
 
-# Scheme words syft resolves as source selectors under its default argv but that the
-# validator refuses without the syft selector behaviour being observable here; the
-# behavioural node fills these from observed behaviour.  A word listed here is one syft
-# does not resolve as a selector although the validator refuses it as defence in depth.
-_SYFT_REFUSED_UNRESOLVED_LOCAL = ()
-_SYFT_REFUSED_UNRESOLVED_REGISTRY = ()
+# Words the validator refuses although syft 1.57.2 does not resolve them as source
+# selectors (observed by test_syft_scheme_words_are_classified_by_behaviour): a reference
+# starting with one of them is read as an ordinary name.  Kept as defence in depth.
+_SYFT_REFUSED_UNRESOLVED_LOCAL = ("docker-daemon:", "oci:")
+_SYFT_REFUSED_UNRESOLVED_REGISTRY = ("oci-model-registry:",)
 
 # Sentinel prediction: the model says syft cannot parse the reference and contacts no host.
 SYFT_NO_CONTACT = frozenset({"<no-contact>"})
@@ -597,7 +598,7 @@ def test_parse_syft_version_reads_the_version_line():
 def test_syft_model_daemon_and_local_schemes_are_refused():
     from quirk.util.subprocess_input import RC_INVALID_IMAGE_REF, validate_image_ref
 
-    schemes = _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES
+    schemes = _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES + _SYFT_REFUSED_UNRESOLVED_LOCAL
     assert len(schemes) >= 10, schemes
     for scheme in schemes:
         for variant in (scheme, scheme.upper(), scheme.title()):
@@ -616,7 +617,7 @@ def test_syft_model_registry_schemes_are_not_refused():
     )
 
     assert _SYFT_REGISTRY_SCHEMES
-    for scheme in _SYFT_REGISTRY_SCHEMES:
+    for scheme in _SYFT_REGISTRY_SCHEMES + _SYFT_REFUSED_UNRESOLVED_REGISTRY:
         for variant in (scheme, scheme.upper(), scheme.title()):
             res = validate_image_ref(variant + "a.example/x")
             assert not res.ok, variant
@@ -627,12 +628,13 @@ def test_syft_model_registry_schemes_are_not_refused():
 def test_production_prefixes_are_classified_by_the_syft_model():
     from quirk.util import subprocess_input
 
-    model = set(_SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES)
+    model = set(_SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES + _SYFT_REFUSED_UNRESOLVED_LOCAL)
     production = set(subprocess_input._LOCAL_REF_PREFIXES)
     assert production <= model, sorted(production - model)
     assert production == model, sorted(model - production)
     registry = set(subprocess_input._REGISTRY_SCHEME_PREFIXES)
-    assert registry == set(_SYFT_REGISTRY_SCHEMES), sorted(set(_SYFT_REGISTRY_SCHEMES) ^ registry)
+    model_registry = set(_SYFT_REGISTRY_SCHEMES + _SYFT_REFUSED_UNRESOLVED_REGISTRY)
+    assert registry == model_registry, sorted(model_registry ^ registry)
 
 
 def test_syft_model_schemes_cover_syft_help():
@@ -649,7 +651,10 @@ def test_syft_model_schemes_cover_syft_help():
     assert len(found) >= 8, found
     model = set(
         s.rstrip(":")
-        for s in _SYFT_REGISTRY_SCHEMES + _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES
+        for s in (
+            _SYFT_REGISTRY_SCHEMES + _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES
+            + _SYFT_REFUSED_UNRESOLVED_LOCAL + _SYFT_REFUSED_UNRESOLVED_REGISTRY
+        )
     )
     assert found <= model, sorted(found - model)
 
@@ -736,23 +741,18 @@ def _syft_registry_hosts(ref) -> set:
       unbracketed host (observed with syft 1.57.2).
     * ``NewRegistry`` rewrites ``docker.io`` to ``index.docker.io``.
 
-    Scheme handling is observed syft behaviour: ``scan --help`` lists the
-    explicit schemes (matched in any letter case here); local-file and daemon
-    sources contact no registry; a head of ``http:`` or ``https:`` is not
-    resolved as a registry.  A reference with no explicit registry goes to the
-    default registry, and syft also probes the snap store; the cross-check
-    lists both separately.
+    The scanner passes a registry-only source selection, so syft strips no
+    scheme and parses the whole argument as a registry reference.  A
+    scheme-looking head becomes part of the registry or repository name: it
+    either fails to parse (syft contacts no host, ``SYFT_NO_CONTACT``) or the
+    reference names the default registry.  Observed with syft 1.57.2 (see
+    syft-registry-only-probe.txt).  A reference with no explicit registry goes
+    to the default registry, and syft also probes the snap store; the
+    cross-check lists both separately.
     """
-    lowered = ref.lower()
     rest = ref
-    for scheme in _SYFT_REGISTRY_SCHEMES + _SYFT_DAEMON_SCHEMES + _SYFT_LOCAL_SCHEMES:
-        if lowered.startswith(scheme):
-            if scheme in _SYFT_LOCAL_SCHEMES:
-                return set()
-            rest = ref[len(scheme):]
-            break
     if rest.startswith(("http://", "https://")) or rest.split("/", 1)[0].lower() in ("http:", "https:"):
-        return set()
+        return SYFT_NO_CONTACT
     split = None
     tagged = _syft_split_tag(rest)
     if tagged is not None:
@@ -765,11 +765,13 @@ def _syft_registry_hosts(ref) -> set:
             if retagged is not None:
                 base = retagged[0]
             split = _syft_split_repository(base)
-    if split is None or not split[0]:
+    if split is None:
+        return SYFT_NO_CONTACT
+    if not split[0]:
         return set()
     host = _syft_authority_hostname(split[0])
     if not host:
-        return set()
+        return SYFT_NO_CONTACT
     host = host.lower()
     return {"index.docker.io" if host == "docker.io" else host}
 
@@ -792,7 +794,9 @@ def _container_consumer(value, mp):
     mod.scan_container_targets([value], timeout=1)
     hosts = set()
     for argv in recorded:
-        hosts |= _syft_registry_hosts(argv[-1])
+        predicted = _syft_registry_hosts(argv[-1])
+        if predicted != SYFT_NO_CONTACT:
+            hosts |= predicted
     return hosts
 
 
@@ -881,10 +885,16 @@ _SYFT_RULE_PROBES = (
     "UP.Example/app",
     "regs:/app",
     "reg.example:5000/app:1",
+    "registry:2",
+    "Oci-Model:alpine",
 )
 
 
 def _syft_observation_problems(ref, predicted, observed) -> list:
+    if predicted == SYFT_NO_CONTACT:
+        if observed:
+            return [f"{ref!r}: the model predicts no contact, syft contacted {sorted(observed)}"]
+        return []
     allowed = set(predicted) | SYFT_FIXED_PROBE_HOSTS
     if not predicted:
         allowed |= DEFAULT_REGISTRY_HOSTS
@@ -1014,7 +1024,7 @@ def _observe_syft(exe, ref, base_env, work, *, argv=None, run=subprocess.run):
     with _recording_proxy() as (proxy, seen):
         env = _isolated_syft_env(base_env, work, proxy)
         if argv is None:
-            argv = [exe, "-o", "json", "--", ref]
+            argv = _syft_argv_for(_scanner_syft_argv_template(), exe, ref)
         try:
             run(argv, env=env, capture_output=True, timeout=60, close_fds=False)
         except subprocess.TimeoutExpired:
@@ -1032,6 +1042,7 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
     base_env = dict(os.environ)
     for name in ("NO_PROXY", "no_proxy", "ALL_PROXY", "all_proxy"):
         base_env.pop(name, None)
+    template = _scanner_syft_argv_template()
     version = subprocess.run(
         [exe, "version"], capture_output=True, text=True, timeout=30, close_fds=False,
     ).stdout
@@ -1052,7 +1063,10 @@ def test_syft_registry_model_matches_real_syft(tmp_path):
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(
             pool.map(
-                lambda item: _observe_syft(exe, item[1], base_env, tmp_path / f"w{item[0]}"),
+                lambda item: _observe_syft(
+                    exe, item[1], base_env, tmp_path / f"w{item[0]}",
+                    argv=_syft_argv_for(template, exe, item[1]),
+                ),
                 enumerate(refs),
             )
         )
@@ -1318,6 +1332,9 @@ def test_syft_observation_check_allows_default_registry_only_for_default_refs():
     assert problems("registry:a.example/x", SYFT_NO_CONTACT, {"index.docker.io"})
     assert problems("registry:a.example/x", SYFT_NO_CONTACT, {"a.example"})
     assert problems("registry:a.example/x", SYFT_NO_CONTACT, {"api.snapcraft.io"})
+    assert _syft_registry_hosts("registry:2") == set()
+    assert _syft_registry_hosts("registry:a.example/x") is SYFT_NO_CONTACT
+    assert _syft_registry_hosts("reg.example/app:1") == {"reg.example"}
 
 
 def test_syft_model_is_independent_of_the_gate():
