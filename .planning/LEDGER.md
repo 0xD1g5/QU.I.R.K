@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (323)
+## Open (324)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -371,6 +371,7 @@ the Evidence cell.
 | 261120-identity-jwt-rows-port-443-for-url-targets | OPEN | P3 | dashboard | Identity JWT rows show port 443 for URL targets with an explicit port | .planning/phases/240-regressions-and-release-5-29-0/240-evidence/walkthrough/WALKTHROUGH.md | found in the 5.29.0 candidate walkthrough (2026-11-19/20): a target such as http://localhost:20002 is listed as port 443; the port should come from the URL. quirk/scanner/jwt_scanner.py hard-codes port=443 on its finding rows (v5.28.2 line 449, so present there). |
 | 261120-dashboard-quality-axe-color-contrast-flake | OPEN | P3 | ci | Intermittent Dashboard Quality 'Axe + Console Gate' color-contrast failure | .planning/phases/240-regressions-and-release-5-29-0/240-evidence/walkthrough/WALKTHROUGH.md | found in the 5.29.0 candidate walkthrough (2026-11-19/20): Dashboard Quality run 44616022519 attempt 1 failed the findings-storyline color-contrast check (1 violation against a baseline of 0) with no src/dashboard diff against main; attempt 2 passed. Product CI, so listed here, not under Development tooling. Not reproduced; treat a green run as a sample. First suspect: a transient theme or animation state at the moment axe samples. |
 | 261120-dashboard-012-mislabels-missing-browser-and-render-timeout | OPEN | P3 | reports | DASHBOARD-012 says 'Playwright not installed' for a missing browser build or a /print render timeout | .planning/phases/240-regressions-and-release-5-29-0/240-evidence/walkthrough/WALKTHROUGH.md | found in the 5.29.0 candidate walkthrough (2026-11-19/20): quirk/dashboard/api/routes/pdf.py maps any exception mentioning chromium, executable, timeout or net::err to DASHBOARD-012, so the playwright package present but its browser build missing reads as a missing package, and the pip install half of the fix is wrong. Present at v5.28.2 (same signature tuple). Suggested split: browser-missing vs render-unreachable. |
+| 261120-scan-crashes-when-playwright-driver-cannot-start | OPEN | P1 | reports | A scan crashes and loses its results when the PDF browser driver cannot start | .planning/phases/240-regressions-and-release-5-29-0/240-evidence/smoke-pypi/linux-3.11.FAIL-1.txt | found by the 5.29.0 post-publish linux-3.11 smoke leg (2026-11-20): playwright 1.65.2's bundled node driver needs libatomic.so.1, absent from python:3.11-slim on both arm64 and amd64, so README `playwright install chromium` fails and sync_playwright() raises a bare Exception ('Connection closed while reading from the driver') that quirk/reports/html_renderer.py:1401 does not catch; it escapes write_reports (writer.py:919), the scan exits non-zero and later reports are not written, contradicting README 'Without Chromium the scan still writes the HTML report and skips the PDF'. render_pdf_report identical at v5.28.2 (present there with playwright>=1.65). Fix owned by the 5.29.1 hotfix |
 
 ## Deferred (44)
 
