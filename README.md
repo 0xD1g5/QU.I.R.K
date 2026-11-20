@@ -46,6 +46,12 @@ Nothing is installed on the systems being scanned.
 
 QU.I.R.K. supports Python 3.10 to 3.14. Python 3.15 is not supported yet, so check `python3 --version` first (Homebrew's default `python3` on macOS may already be 3.15). Use any of `python3.10` to `python3.14`; the example below uses `python3.12`.
 
+On Debian or Ubuntu, install one system library first. Playwright's browser driver needs it, and minimal and container images lack it. Skip this on macOS and Windows:
+
+```bash
+sudo apt-get update && sudo apt-get install -y libatomic1    # Linux (Debian/Ubuntu) only
+```
+
 Install into a virtual environment. This is recommended on every platform and **required** on Debian 12, Kali and other distributions that mark their system Python as externally managed (see the note below).
 
 ```bash
