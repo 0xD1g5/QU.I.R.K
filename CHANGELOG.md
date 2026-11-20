@@ -99,11 +99,11 @@ you upgrade.
 
 ### Security
 
-- Hardened connector target checking: every connector target field now accepts one shape, and the trusted-targets check reads each target's host the way the connectors do.
-- Hardened the trusted-targets check, which now refuses IP literals containing non-ASCII characters.
-- Hardened the AD CS, S/MIME and code-signing LDAP connectors, which no longer follow directory referrals.
-- Hardened container image scans, which now pull from a registry only and accept only plain registry image references.
-- Hardened container scan log and error text, which now redacts registry user information from image references.
+- Hardened connector target checking: every connector target field now accepts one shape, and the trusted-targets check reads each target's host the way the connectors do. ([GHSA-6gm7-948q-7r75](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-6gm7-948q-7r75))
+- Hardened the trusted-targets check, which now refuses IP literals containing non-ASCII characters. ([GHSA-6gm7-948q-7r75](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-6gm7-948q-7r75))
+- Hardened the AD CS, S/MIME and code-signing LDAP connectors, which no longer follow directory referrals. ([GHSA-3jq6-mvgr-v2r2](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-3jq6-mvgr-v2r2))
+- Hardened container image scans, which now pull from a registry only and accept only plain registry image references. ([GHSA-crv3-xj4c-65wq](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-crv3-xj4c-65wq))
+- Hardened container scan log and error text, which now redacts registry user information from image references. ([GHSA-qh89-6q2c-56mq](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-qh89-6q2c-56mq))
 
 ### Known defects
 
