@@ -44,11 +44,13 @@ class ResizeObserverStub {
 
 beforeEach(() => {
   fetchApiMock.mockReset()
-  fetchApiMock.mockResolvedValue({
+  // The page also fetches the report manifest on mount; give it a well-formed (empty) one so
+  // the render does not throw an unhandled error that fails the whole vitest run.
+  fetchApiMock.mockImplementation(async (url: string) => ({
     ok: true,
-    json: async () => ({}),
+    json: async () => (url === "/api/reports/latest/manifest" ? { formats: {} } : {}),
     blob: async () => new Blob(["%PDF-1.4"], { type: "application/pdf" }),
-  })
+  }))
   vi.stubGlobal("URL", { createObjectURL: () => "blob:fake", revokeObjectURL: () => {} })
   vi.stubGlobal("ResizeObserver", ResizeObserverStub)
 })
