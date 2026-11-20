@@ -43,7 +43,7 @@ folders, the 2026-05-08 audit (169 findings), the 2026-05-27 audit (55 tabled fi
 46 human-verification files plus the v5.4 deferred UAT. Confidence below `high` is noted in
 the Evidence cell.
 
-## Open (316)
+## Open (317)
 
 | ID | Status | Priority | Area | Title | Source | Evidence |
 |---|---|---|---|---|---|---|
@@ -364,6 +364,7 @@ the Evidence cell.
 | 261119-snmp-meta-dead-vendor-sources | OPEN | P1 | catalog | Two SNMP_VENDOR_MATRIX vendor source_urls no longer serve their page | .planning/phases/240-regressions-and-release-5-29-0/240-RESEARCH.md | verified 2026-11-19: Palo Alto source returns HTTP 404; Cisco source returns 200 with a No Data Found body; owned by Phase 240 D-25/REL-15. Extended 2026-11-19 (240-07): Cisco entry still unread and its source dead; Fortinet lifecycle source unreadable; Palo Alto/Juniper/Fortinet content corrected from sources read, but SNMP_VENDOR_MATRIX last_verified deliberately NOT bumped; re-verify the remaining reads before the window closes (last green day 2026-12-01); evidence .planning/phases/240-regressions-and-release-5-29-0/240-evidence/catalogs/snmp_meta.md |
 | 261119-hardware-meta-browser-only-reverify | OPEN | P1 | catalog | HARDWARE_MATRIX browser-only sources (F5, Cisco ASA, HPE iLO, IPMI, NSA, Thales detail) not re-read; must be re-verified before the window closes | .planning/phases/240-regressions-and-release-5-29-0/240-evidence/catalogs/hardware_meta.md | 240-07 2026-11-19: not read, operator decision to defer; catalog stays at last_verified 2026-09-13, last green day 2026-12-12; Palo Alto, Fortinet, Juniper were read unchanged |
 | 261119-confidence-error-rate-diluted-by-unanswered-email-rows | OPEN | P3 | scoring | Unanswered email probe rows count in the error-rate denominator without a scan_error, diluting the rate | .planning/phases/240-regressions-and-release-5-29-0/240-RESEARCH.md (F3) | verified 2026-11-19: a scan dominated by refused mail ports can sit under the 0.5 ceiling threshold; D-03 keeps the definition and the docs name it; target v5.30 |
+| 261120-export-pdf-ignores-selected-scan | OPEN | P1 | reports | Dashboard Export PDF renders the latest scan, not the scan selected in the dashboard | .planning/phases/240-regressions-and-release-5-29-0/240-evidence/walkthrough/WALKTHROUGH.md | found in the 5.29.0 candidate walkthrough step 15 (2026-11-19): with the 5:59 PM scan (score 19) selected, the PDF showed the latest scan (score 43). Selection is in-tab React state (src/dashboard/src/context/ScanProvider.tsx:6); executive.tsx:302 POSTs /api/export/pdf with no scan id; quirk/dashboard/api/routes/pdf.py:69 prints a bare /print, which loads the latest scan. Pre-existing since 0af72717 (2026-05-06), present in v5.28.2; fix owned by Phase 240 |
 
 ## Deferred (44)
 
