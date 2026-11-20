@@ -45,6 +45,8 @@ you upgrade.
 
 ### Fixed
 
+- **Export PDF prints the scan selected in the dashboard.** Before, it always printed the most recent scan
+  whichever scan was selected.
 - **Dashboard and report agree on more findings.** The legacy TLS version finding, weak cipher suites,
   undersized ECDSA certificate keys, end-of-life crypto libraries in container images, the drift notification
   and the headline score no longer differ between the dashboard and the report for the covered cases.
@@ -71,9 +73,9 @@ you upgrade.
   target, null or empty mean no targets, and a connector target with no readable host is refused while
   `trusted_targets` is set. The CLI exits 2 on a trust-gate refusal.
 - **Compare gains Finding and Port columns,** Export PDF gains a Scan Coverage section, the Identity page
-  gains a JWT key card, the dashboard shows an "mTLS required" INFO, and skip sentences on the dashboard and
-  in Export PDF no longer show the internal outcome code. The Executive Skipped badge shows a categoryless
-  error row as Failed.
+  gains a JWT key card, the dashboard shows an "mTLS required" INFO, and the per-target reason text on the
+  Identity page and in Export PDF no longer shows the internal outcome code. The Executive Skipped badge shows a
+  categoryless error row as Failed.
 - **SNMP identification of a Palo Alto firewall no longer rates it PQC-capable.** A PAN-OS firewall that decrypts
   traffic removes post-quantum key-exchange groups, so the SNMP vendor catalog now rates PAN-OS `unsupported`
   instead of `partial`.
