@@ -12,9 +12,12 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Optional
+from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from quirk.errors import format_error
 
 from quirk.dashboard.api.middleware.auth import require_auth
@@ -33,9 +36,20 @@ except ImportError:
     sync_playwright = None  # type: ignore[assignment]
 
 
+class ExportPdfRequest(BaseModel):
+    """Optional body: the scan selected in the dashboard (omit or null for the latest)."""
+
+    # 261120: scan ids are ISO timestamps ("2026-11-19 23:42:32.617768") or scan_run_ids.
+    # The allowlist keeps the value from adding a path, query or fragment to the /print URL.
+    scan_id: Optional[str] = Field(default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9 .:+_-]+$")
+
+
 @router.post("/export/pdf")
-def export_pdf() -> Response:
+def export_pdf(body: Optional[ExportPdfRequest] = Body(default=None)) -> Response:
     """POST /api/export/pdf — renders the /print route with Playwright and returns a PDF.
+
+    The selected scan lives in the dashboard tab's React state, so the request names it
+    (`{"scan_id": ...}`) and /print loads it from its URL; without it /print loads the latest.
 
     Returns:
         200: PDF binary (application/pdf)
@@ -68,6 +82,8 @@ def export_pdf() -> Response:
         )
 
     print_url = f"http://127.0.0.1:{port}/print"
+    if body is not None and body.scan_id is not None:
+        print_url += "?" + urlencode({"scan_id": body.scan_id}, quote_via=quote)
 
     try:
         with sync_playwright() as p:

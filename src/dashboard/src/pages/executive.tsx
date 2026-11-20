@@ -1,4 +1,5 @@
 import { useScanData } from "@/hooks/useScanData"
+import { useSelectedScan } from "@/hooks/useSelectedScan"
 import { formatInstantDate } from "@/lib/datetime"
 import { fetchApi } from "@/lib/api"
 import { COVERAGE_SKIP_ADVISORY_CATEGORIES } from "@/lib/coverage-reason"
@@ -185,6 +186,7 @@ export function ScannerStatusCard({ failures }: { failures: PartialFailureEntry[
 
 export function ExecutivePage() {
   const { data, loading, error } = useScanData()
+  const { selectedScanId } = useSelectedScan()
   const { merge } = useMergeLatest()
   const vertical = useVertical()
   const [pdfExporting, setPdfExporting] = useState(false)
@@ -299,7 +301,11 @@ export function ExecutivePage() {
     setPdfExporting(true)
     setPdfMessage("Generating PDF...")
     try {
-      const resp = await fetchApi("/api/export/pdf", { method: "POST" })
+      // 261120: the server renders /print in its own browser, so name the selected scan.
+      const resp = await fetchApi("/api/export/pdf", {
+        method: "POST",
+        body: JSON.stringify(selectedScanId ? { scan_id: selectedScanId } : {}),
+      })
       if (resp.ok) {
         const blob = await resp.blob()
         const url = URL.createObjectURL(blob)
