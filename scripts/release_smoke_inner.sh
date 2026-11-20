@@ -134,6 +134,25 @@ finally:
 PY
 }
 
+# apt_step_plan UNAME EUID HAS_SUDO TEXT : how to treat a README apt-get step.
+#   NA|<reason>   not a Linux host: the step does not apply
+#   STRIP|<text>  Linux as root with no sudo binary: TEXT with every `sudo ` removed
+#   ASIS|<text>   anything else: run it as written
+apt_step_plan() {
+  local un="$1" eu="$2" hs="$3" text="$4"
+  if [ "${un}" != "Linux" ]; then
+    echo "NA|Linux-only system package step"
+  elif [ "${eu}" = "0" ] && [ "${hs}" = "no" ]; then
+    echo "STRIP|${text//sudo /}"
+  else
+    echo "ASIS|${text}"
+  fi
+}
+
+if [ "${1:-}" = "--apt-plan" ]; then
+  apt_step_plan "${2:?uname}" "${3:?euid}" "${4:?has_sudo}" "${5:?text}"; exit 0
+fi
+
 if [ "${1:-}" = "--probe-port" ]; then
   if port_in_use "${2:?port}"; then echo "port ${2} already in use"; exit 1; fi
   echo "port ${2} free"; exit 0
@@ -173,6 +192,10 @@ if [ "${1:-}" = "--self-check" ]; then
   [ "$(verdict_line 0 0 0)" = "RESULT: FAIL" ] && echo "  ok   verdict_line: zero checks is FAIL" || { echo "  FAIL verdict_line accepted zero checks"; bad=1; }
   [ "$(verdict_line 1 0 3)" = "RESULT: FAIL" ] && echo "  ok   verdict_line: a failure is FAIL" || { echo "  FAIL verdict_line accepted a failure"; bad=1; }
   [ "$(verdict_line 0 0 3)" = "RESULT: PASS" ] && echo "  ok   verdict_line: clean run is PASS" || { echo "  FAIL verdict_line rejected a clean run"; bad=1; }
+  # apt_step_plan: macOS not-applicable, root-without-sudo strips sudo, otherwise as written
+  [ "$(apt_step_plan Darwin 501 yes 'sudo apt-get x')" = "NA|Linux-only system package step" ] && echo "  ok   apt_step_plan: off Linux is not-applicable" || { echo "  FAIL apt_step_plan off Linux"; bad=1; }
+  [ "$(apt_step_plan Linux 0 no 'sudo apt-get a && sudo apt-get b')" = "STRIP|apt-get a && apt-get b" ] && echo "  ok   apt_step_plan: root without sudo strips sudo" || { echo "  FAIL apt_step_plan root strip"; bad=1; }
+  [ "$(apt_step_plan Linux 1000 yes 'sudo apt-get x')" = "ASIS|sudo apt-get x" ] && echo "  ok   apt_step_plan: non-root runs as written" || { echo "  FAIL apt_step_plan non-root"; bad=1; }
   # watchdog: a hung command must come back 124 quickly (WR-10)
   t0="$(date +%s)"
   run_bounded 1 'sleep 12' >/dev/null 2>&1; wrc=$?
@@ -495,6 +518,21 @@ while IFS=$'\t' read -r LN KIND BLOCK TEXT; do
     git\ clone*)
       disposition "${LN}" "ran-substituted" "${TEXT}"
       say "SUBSTITUTED: ${LN} | ${TEXT} -> already cloned by the driver at ${Q_SOURCE_VALUE} | the README clones the default branch; the leg must test the ref under review (see CLONE_HEAD in the header)" ;;
+
+    sudo\ apt-get*|apt-get*)
+      HAS_SUDO=no; command -v sudo >/dev/null 2>&1 && HAS_SUDO=yes
+      APT_PLAN="$(apt_step_plan "$(uname -s)" "$(id -u)" "${HAS_SUDO}" "${TEXT}")"
+      APT_KIND="${APT_PLAN%%|*}"; APT_TXT="${APT_PLAN#*|}"
+      case "${APT_KIND}" in
+        NA) disposition "${LN}" "not-applicable" "${APT_TXT}: ${TEXT}" ;;
+        STRIP)
+          say "SUBSTITUTED: ${LN} | ${TEXT} -> ${APT_TXT} | the leg container runs as root and has no sudo"
+          disposition "${LN}" "ran-substituted" "${TEXT}"
+          run_readme_cmd "${APT_TXT}" || { fail "command failed: ${APT_TXT}" "see commands.log"; diverge "line ${LN}: ${TEXT} failed"; } ;;
+        *)
+          disposition "${LN}" "ran-as-written" "${TEXT}"
+          run_readme_cmd "${TEXT}" || { fail "command failed: ${TEXT}" "see commands.log"; diverge "line ${LN}: ${TEXT} failed"; } ;;
+      esac ;;
 
     *)
       disposition "${LN}" "ran-as-written" "${TEXT}"
