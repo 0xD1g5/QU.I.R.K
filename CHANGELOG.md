@@ -8,6 +8,17 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
+## [5.29.1] - 2026-11-20
+
+This is a fix release for installs on minimal Linux images. It changes no score and no finding.
+
+### Fixed
+
+- A scan no longer stops, and keeps its HTML and data reports, when the PDF browser driver cannot start. The
+  scan prints a note that the PDF was skipped and exits normally.
+- The install docs now list the Linux prerequisite: on Debian or Ubuntu, install `libatomic1` first, because
+  Playwright's browser driver needs it and minimal and container images lack it.
+
 ## [5.29.0] - 2026-11-20
 
 This release closes the v5.29 Truth milestone. It makes the dashboard and the report agree on far more of
