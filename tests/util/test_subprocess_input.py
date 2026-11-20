@@ -381,3 +381,19 @@ def test_a_redaction_helper_is_exported():
     assert redact("user:hunter2@a.example/x") == "a.example/x"
     assert redact(f"a.example/x@sha256:{_DIGEST64}") == f"a.example/x@sha256:{_DIGEST64}"
     assert redact("alpine:latest") == "alpine:latest"
+
+
+@pytest.mark.parametrize("ref", [
+    "user:hunter2@sha256:5000/img",
+    "user:hunter2@sha512:5000/img:1",
+])
+def test_redaction_covers_registry_host_variant_b(ref):
+    res = validate_image_ref(ref)
+    assert not res.ok, res
+    assert "hunter2" not in res.redacted_preview, res
+
+
+def test_redaction_helper_covers_registry_host_variant_b():
+    from quirk.util.subprocess_input import redact_image_ref_userinfo
+
+    assert redact_image_ref_userinfo("user:hunter2@sha256:5000/img") == "sha256:5000/img"

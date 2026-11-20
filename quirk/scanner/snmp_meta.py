@@ -8,6 +8,8 @@ See CLAUDE.md "Staleness Review Cadence" for the bump procedure.
 """
 from __future__ import annotations
 
+import datetime
+
 # Per SNMP-05 — quarterly re-verification cadence matching hardware_meta.py.
 # See CLAUDE.md "Staleness Review Cadence" for the bump procedure.
 STALENESS_THRESHOLD_DAYS: int = 90
@@ -30,27 +32,56 @@ SNMP_VENDOR_MATRIX = {
         {
             "vendor": "Juniper",
             "model_pattern": r"JUNOS|Juniper Networks|Juniper.*SRX|Juniper.*EX|Juniper.*QFX",
-            "pqc_status": "unsupported",
+            "pqc_status": "partial",
             "last_verified": "2026-09-02",
-            "source_url": "https://www.juniper.net/documentation/",
+            "source_url": (
+                "https://networkingdocs.hpe.com/documentation/us/en/software/junos/"
+                "release-notes/25.4/junos-evo-release-notes-25.4r1/topics/"
+                "new-features/feature-descriptions/Post-Quantum-Cryptography.html"
+            ),
             "notes": (
-                "Juniper Networks JUNOS does not support PQC cipher suites "
-                "as of 2026-Q2. Consult Juniper roadmap for future PQC support."
+                "Junos OS Evolved 25.4R1 introduces PQC on ACX, PTX and QFX "
+                "Series: ML-DSA-87 software-image signatures and the hybrid "
+                "sntrup761x25519-sha512 SSH key exchange. SCOPE CAVEAT: the "
+                "cited release note covers ACX/PTX/QFX on Junos OS Evolved "
+                "only; classic Junos OS (SRX, MX, EX) is not covered by it. "
+                "source_url corrected 2026-11-19: the prior "
+                "juniper.net/documentation/ index now forwards to a generic "
+                "HPE Networking Documentation landing page that supports no "
+                "claim; the 25.4R1 release note (read 2026-11-19) is the live "
+                "replacement. notes corrected 2026-11-19: the prior 'JUNOS "
+                "does not support PQC cipher suites as of 2026-Q2' is "
+                "contradicted by that release note, matching hardware_meta "
+                "(2026-09-13); pqc_status moved unsupported -> partial. The "
+                "entry's last_verified is not bumped: the catalog-level "
+                "re-verification is pending."
             ),
         },
         {
             "vendor": "Fortinet",
             "model_pattern": r"FortiGate|FortiOS|Fortinet",
-            "pqc_status": "unsupported",
+            "pqc_status": "partial",
             "last_verified": "2026-09-02",
-            "source_url": "https://support.fortinet.com/Information/ProductLifecycle.aspx",
+            "source_url": (
+                "https://docs.fortinet.com/document/fortigate/8.0.0/"
+                "administration-guide/527690/post-quantum-preshared-key-support"
+            ),
             "notes": (
-                "FortiGate and FortiOS do not support PQC cipher suites "
-                "as of 2026-Q2. Verify against FortiOS 7.x release notes. "
-                "source_url corrected 2026-09-02: the prior "
-                "fortinet.com/support/product-lifecycle URL now 404s; "
-                "support.fortinet.com/Information/ProductLifecycle.aspx is "
-                "the live replacement."
+                "FortiOS supports post-quantum preshared keys (PPK, RFC 8784) "
+                "for IPsec IKEv2, and FortiOS 7.6.1+ supports PQC KEM for "
+                "IPsec key exchange (RFC 9370 / RFC 9242, ML-KEM per FIPS "
+                "203). TLS and management-plane PQC are not addressed by that "
+                "documentation. "
+                "source_url corrected 2026-11-19: the prior "
+                "support.fortinet.com/Information/ProductLifecycle.aspx now "
+                "forwards to a JavaScript lifecycle application with no "
+                "readable content; the FortiOS 8.0.0 PPK page (read "
+                "2026-11-19) is the live replacement. notes corrected "
+                "2026-11-19: the prior 'do not support PQC cipher suites' "
+                "ignored IPsec PQC, matching hardware_meta (2026-09-13); "
+                "pqc_status moved unsupported -> partial. The entry's "
+                "last_verified is not bumped: the catalog-level "
+                "re-verification is pending."
             ),
         },
         {
@@ -71,23 +102,42 @@ SNMP_VENDOR_MATRIX = {
         {
             "vendor": "Palo Alto",
             "model_pattern": r"PAN-OS|Palo Alto",
-            "pqc_status": "partial",
+            "pqc_status": "unsupported",
             "last_verified": "2026-09-02",
             "source_url": (
-                "https://docs.paloaltonetworks.com/pan-os/11-1/pan-os-admin/"
-                "decryption/post-quantum-cryptography"
+                "https://docs.paloaltonetworks.com/network-security/decryption/"
+                "administration/post-quantum-cryptography-decryption/"
+                "detection-control-post-quantum-cryptography"
             ),
             "notes": (
-                "PAN-OS 11.1+ supports X25519MLKEM768 hybrid KEM for TLS "
-                "decryption; management plane and older releases remain "
-                "unsupported. KNOWN ISSUE (2026-09-02): this deep link now "
-                "404s; docs.paloaltonetworks.com's own site index confirms "
-                "the content was reorganized into a dedicated 'Quantum "
-                "Security Administration' book, but the exact new URL could "
-                "not be resolved during this sweep. pqc_status corroborated "
-                "via that site-index evidence, not a live page fetch — "
-                "flagged for a follow-up doc-link fix."
+                "In a decryption path a PAN-OS NGFW is a PQC downgrade point, "
+                "not a PQC-capable device: under SSL Forward Proxy or SSL "
+                "Inbound Inspection rules it removes PQC and hybrid PQC groups "
+                "from the ClientHello and drops sessions that negotiate only "
+                "PQC; traffic matching a no-decrypt rule, or no rule, may "
+                "negotiate PQC end to end. "
+                "source_url corrected 2026-11-19: the prior "
+                "pan-os/11-1/.../post-quantum-cryptography deep link 404s; "
+                "the live page is 'Post-Quantum Cryptography Detection and "
+                "Control' (read 2026-11-19). notes corrected 2026-11-19: the "
+                "prior claim that PAN-OS 11.1+ supports X25519MLKEM768 hybrid "
+                "KEM for TLS decryption was inverted, matching the same "
+                "correction in hardware_meta (2026-09-13); pqc_status moved "
+                "partial -> unsupported. The entry's last_verified is not "
+                "bumped: the catalog-level re-verification is pending."
             ),
         },
     ],
 }
+
+
+def is_snmp_vendor_matrix_stale(today: "datetime.date | None" = None) -> bool:
+    """Return True when the matrix has not been re-verified within
+    ``STALENESS_THRESHOLD_DAYS`` (90) days of ``today`` (default: ``date.today()``).
+
+    Boundary: ``age > STALENESS_THRESHOLD_DAYS`` (strict greater-than), so
+    exactly 90 days is NOT stale.  Reads the matrix at call time.
+    """
+    reference = today or datetime.date.today()
+    last_verified = datetime.date.fromisoformat(SNMP_VENDOR_MATRIX["last_verified"])
+    return (reference - last_verified).days > STALENESS_THRESHOLD_DAYS

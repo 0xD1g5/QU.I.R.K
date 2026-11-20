@@ -62,7 +62,7 @@ from quirk.cbom.classifier import classify_algorithm, _ALGORITHM_TABLE
 STALENESS_THRESHOLD_DAYS: int = 90
 
 PQC_DEADLINE_TABLE_META = {
-    "last_verified": "2026-09-02",
+    "last_verified": "2026-11-19",
     "source": (
         "Federal Register Vol. 91 No. 121 (2026-06-25), FR Doc 2026-12909, "
         "Executive Order 14412"

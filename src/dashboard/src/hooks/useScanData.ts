@@ -9,8 +9,11 @@ interface UseScanDataResult {
   error: string | null
 }
 
-export function useScanData(): UseScanDataResult {
-  const { selectedScanId } = useSelectedScan()
+// 261120: /print passes the scan named in its URL so its first fetch targets that scan;
+// every dashboard page omits it and follows the context selection.
+export function useScanData(scanIdOverride?: string | null): UseScanDataResult {
+  const { selectedScanId: contextScanId } = useSelectedScan()
+  const selectedScanId = scanIdOverride ?? contextScanId
   const [data, setData] = useState<ScanLatestResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

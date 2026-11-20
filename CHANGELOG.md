@@ -8,6 +8,112 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); a few
 
 ## [Unreleased]
 
+## [5.29.0] - 2026-11-20
+
+This release closes the v5.29 Truth milestone. It makes the dashboard and the report agree on far more of
+what one scan found, makes History, Trends and Compare count what a scan actually observed, corrects
+identity and certificate findings that were wrong or missing, hardens how connector targets are checked
+against the trusted-targets allowlist, and stops a scan that mostly failed from reading as high-confidence.
+`SCORING_VERSION` stays 4.0.
+
+### Upgrade notes
+
+**Scores move on upgrade, in both directions.** Saved reports and intelligence files keep the number they
+were written with; the dashboard recomputes from stored scans, so existing scans can read differently after
+you upgrade.
+
+- **Scores that drop.** Report scores fall for endpoints that offer no TLS 1.2 or newer (TLS 1.0 and 1.1 only,
+  and SSLv2 or SSLv3 only), and for endpoints that accept RC4, 3DES, NULL, EXPORT or MD5 cipher suites or SSLv2
+  or SSLv3, which now raise a HIGH "Weak TLS cipher suites accepted" finding. Dashboard scores fall for ECDSA
+  certificate keys under 256 bits (MEDIUM becomes HIGH), for end-of-life OpenSSL and outdated Python
+  `cryptography` in container images (new findings; one replayed estate went from 42 to 27), and for
+  SSLv2 or SSLv3-only endpoints (new HIGH). Dashboard scores of existing scans with weak JWT signing keys or SHA-1
+  leaf certificates drop the next time you view them. A report row with an RSA key size of 0 loses a HIGH,
+  and an RSA-PSS key under 2048 bits gains one.
+- **Scores that rise.** New scans of mTLS endpoints gain the +6 mTLS presence credit and keep their observed
+  certificate findings, and a TLS 1.2 strict-mTLS endpoint now reads as a full TLS row with an INFO "mTLS
+  required" instead of "TLS handshake blocked assessment". The dashboard score rises slightly for a legacy
+  protocol offered next to TLS 1.2 or newer (a small LOW), and for a TLS or HTTP row whose scan errored after
+  it recorded some fields, which no longer raises dashboard HIGH or CRITICAL findings.
+- **Counts that move.** History, Trends and Compare now count the findings the Findings page shows, so counts
+  change for scans you already have. A measured cloud scan went from 27 HIGH to 12 HIGH and 13 MEDIUM. A full
+  outage of a database, Kubernetes or cloud connector now counts up to 2N scan errors.
+- **Confidence can fall.** A scan with more than 50% of its probes failing now reads a confidence of at most
+  59, however many probes succeeded. Older report files keep the confidence they were written with.
+- **The Slack and notify drift score** now follows the Trends page recipe, so a drift notification can differ
+  from earlier ones for the same data.
+
+### Fixed
+
+- **Export PDF prints the scan selected in the dashboard.** Before, it always printed the most recent scan
+  whichever scan was selected.
+- **Dashboard and report agree on more findings.** The legacy TLS version finding, weak cipher suites,
+  undersized ECDSA certificate keys, end-of-life crypto libraries in container images, the drift notification
+  and the headline score no longer differ between the dashboard and the report for the covered cases.
+- **notify reports scan errors and new TLS HIGH findings.** notify alerts on a new scan error and on a new TLS
+  HIGH, skips a failed or interrupted scheduled run so the previous pair is not alerted again, and never
+  alerts on scan errors when there is no previous scan.
+- **CLI and scheduled scans write checkpoints,** and `--list-resumable` lists interrupted runs. A CLI or
+  scheduled scan still in progress now reads Incomplete, not Running.
+- **Identity and certificate findings are corrected.** JWT signing keys that share a key id are each evaluated; JWT or
+  SAML targets that answer an unexpected document become a scan error; an uncredentialed JWT 401 or 403 reads
+  missing-credentials, and a 401 or 403 from a same-origin key-set URL reads as a credentials problem; SAML metadata
+  with a byte-order mark or on a `.well-known` URL reads answered.
+- **The mTLS check is gentler.** It listens first and sends an HTTP request only on web-like ports or ALPN
+  http/1.1, with a Host header that is safe for IPv6, ports and IDN names. The technical report shows the
+  observed TLS version for an mTLS row and no longer lists it under TLS Blockers.
+
+### Changed
+
+- **Container images are scanned from a registry only.** A plain image reference is no longer looked up in a
+  local Docker, Podman or containerd runtime first, so push a locally built image to a registry the scan host
+  can reach. An image reference must be a plain registry reference, `host/repository:tag`; other forms
+  are refused with a message naming the form.
+- **Connector targets accept one shape.** A scalar connector target or `trusted_targets` value loads as one
+  target, null or empty mean no targets, and a connector target with no readable host is refused while
+  `trusted_targets` is set. The CLI exits 2 on a trust-gate refusal.
+- **Compare gains Finding and Port columns,** Export PDF gains a Scan Coverage section, the Identity page
+  gains a JWT key card, the dashboard shows an "mTLS required" INFO, and the per-target reason text on the
+  Identity page and in Export PDF no longer shows the internal outcome code. The Executive Skipped badge shows a
+  categoryless error row as Failed.
+- **SNMP identification of a Palo Alto firewall no longer rates it PQC-capable.** A PAN-OS firewall that decrypts
+  traffic removes post-quantum key-exchange groups, so the SNMP vendor catalog now rates PAN-OS `unsupported`
+  instead of `partial`.
+- **SNMP identification of a Juniper device no longer rates it PQC-unsupported.** Junos OS Evolved 25.4R1 ships
+  post-quantum signatures and SSH key exchange on ACX, PTX and QFX, so the SNMP vendor catalog now rates JUNOS
+  `partial`; classic Junos OS on SRX, MX and EX is not covered by that evidence.
+- **SNMP identification of a Fortinet device no longer rates it PQC-unsupported.** FortiOS supports post-quantum
+  preshared keys and, from 7.6.1, ML-KEM key exchange for IPsec, so the SNMP vendor catalog now rates FortiGate and
+  FortiOS `partial`; TLS and management-plane PQC are not addressed.
+
+### Security
+
+- Hardened connector target checking: every connector target field now accepts one shape, and the trusted-targets check reads each target's host the way the connectors do.
+- Hardened the trusted-targets check, which now refuses IP literals containing non-ASCII characters.
+- Hardened the AD CS, S/MIME and code-signing LDAP connectors, which no longer follow directory referrals.
+- Hardened container image scans, which now pull from a registry only and accept only plain registry image references.
+- Hardened container scan log and error text, which now redacts registry user information from image references.
+
+### Known defects
+
+- Source code scanning still records a "ruleset unavailable" scan error and reads Not assessed, because the
+  upstream Semgrep `p/cryptography` ruleset is no longer available.
+- Azure Key Vault key scanning has a known defect and currently records no keys.
+- The Windows sensor installer script does not write a sensor identity or scan configuration, so pushes are
+  rejected until the sensor is enrolled by hand; see the admin guide. A score merged from sensor reports does
+  not include connector coverage skips.
+- The dashboard and the report can still differ in the score they give one scan, because some findings are
+  raised on one surface only. Known cases: Kerberos weak-encryption findings and DNSSEC findings (dashboard
+  only); an HTTP service beside an mTLS-required TLS endpoint (HIGH on the dashboard, INFO in the report);
+  TLS-designated ports configured with `scan.tls_designated_ports`, which merge and notification scores do
+  not apply; and below-HIGH findings, for example the dashboard's MEDIUM finding for non-RSA certificate
+  keys, which does not move the score, while the report lists more MEDIUM and LOW findings than the
+  dashboard. Other findings may also differ in ways not listed here.
+- The 5.28.0 known defects for the legacy TLS version finding, weak cipher suites, undersized ECDSA
+  certificate keys, end-of-life crypto libraries in container images and the drift notification are
+  withdrawn: those cases no longer differ between the dashboard and the report, and the headline score
+  no longer differs for them either.
+
 ## [5.28.2] - 2026-11-08
 
 This release makes the Scan Coverage section tell the truth about connectors. Before it, a connector

@@ -944,6 +944,27 @@ def run_series_7_api():
 # SERIES 8: Scoring & Intelligence
 # ──────────────────────────────────────────────────────────────────────
 
+def uat_8_02_verdict(d):
+    """UAT-8-02 verdict (Phase 240 D-24): range check plus rate > 0.5 => confidence < 60.
+
+    Builtins only so tests can exec it in isolation. Returns (status, notes, actual).
+    """
+    conf_raw = d.get('confidence')
+    conf = conf_raw.get('confidence') if isinstance(conf_raw, dict) else conf_raw
+    ev = d.get('evidence_summary')
+    se = ev.get('scan_error') if isinstance(ev, dict) else None
+    rate = se.get('rate') if isinstance(se, dict) else None
+    actual = f"rate={rate} conf={conf}"
+    in_range = isinstance(conf, (int, float)) and not isinstance(conf, bool) and 0 <= conf <= 100
+    if not in_range:
+        return 'FAIL', f'confidence={conf} out of range', actual
+    if not isinstance(rate, (int, float)) or isinstance(rate, bool):
+        return 'PASS', 'scan_error rate absent; range check only', actual
+    if rate > 0.5 and conf >= 60:
+        return 'FAIL', f'scan_error rate {rate} > 0.5 but confidence {conf} >= 60', actual
+    return 'PASS', '', actual
+
+
 def run_series_8(lab_out_dir=None):
     print("\n[Series 8] Scoring & Intelligence")
 
@@ -981,14 +1002,10 @@ def run_series_8(lab_out_dir=None):
     t = time.time()
     if intel_path and intel_path.exists():
         d = jload(intel_path)
-        conf_raw = d.get('confidence')
-        conf = conf_raw.get('confidence') if isinstance(conf_raw, dict) else conf_raw
-        conf_ok = isinstance(conf, (int, float)) and 0 <= conf <= 100
-        status = 'PASS' if conf_ok else 'FAIL'
-        notes = '' if conf_ok else f'confidence={conf}'
+        status, notes, actual = uat_8_02_verdict(d)
     else:
-        status = 'FAIL'; notes = 'No intelligence file'
-    rlog('UAT-8-02', 'Confidence Score — Low Coverage Scenario', 'Scoring & Intelligence', status, notes, '', time.time()-t)
+        status = 'FAIL'; notes = 'No intelligence file'; actual = ''
+    rlog('UAT-8-02', 'Confidence Score — Low Coverage Scenario', 'Scoring & Intelligence', status, notes, actual, time.time()-t)
 
     # UAT-8-03: Score impact (needs 2 scans — TLS-only vs TLS+HTTP)
     t = time.time()

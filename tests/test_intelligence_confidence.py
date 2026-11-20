@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from quirk.intelligence.confidence import compute_confidence
+from quirk.intelligence.confidence import CONFIDENCE_FORMULA_VERSION, compute_confidence
 from quirk.intelligence.scoring import compute_readiness_score
 
 
@@ -108,7 +108,7 @@ class ConfidenceTests(unittest.TestCase):
         marker (distinct from the three drifting intelligence_version values elsewhere in the
         codebase), so a client asking why the score moved gets a checkable answer."""
         result = compute_confidence(_evidence())
-        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+        self.assertEqual(result["confidence_formula_version"], CONFIDENCE_FORMULA_VERSION)
 
     def test_confidence_formula_version_present_on_no_data(self) -> None:
         """D-15: absence of confidence_formula_version means a report predates Phase 184.1 —
@@ -116,7 +116,7 @@ class ConfidenceTests(unittest.TestCase):
         the pre-existing endpoints == 0 NO_DATA short-circuit."""
         result = compute_confidence({"totals": {"endpoints": 0}})
         self.assertEqual(result["confidence_rating"], "NO_DATA")
-        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+        self.assertEqual(result["confidence_formula_version"], CONFIDENCE_FORMULA_VERSION)
 
     def test_zero_assessable_endpoints_returns_no_data(self) -> None:
         """D-10: totals.endpoints > 0 but assessable_endpoint_count == 0 (e.g. a port sweep that
@@ -133,7 +133,7 @@ class ConfidenceTests(unittest.TestCase):
         )
         self.assertEqual(result["confidence_score"], 0)
         self.assertEqual(result["confidence_rating"], "NO_DATA")
-        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+        self.assertEqual(result["confidence_formula_version"], CONFIDENCE_FORMULA_VERSION)
 
     def test_all_plaintext_http_yields_full_coverage(self) -> None:
         """D-08: coverage answers "did we assess it", not "is it good". An evidence set whose
@@ -221,7 +221,7 @@ class ConfidenceTests(unittest.TestCase):
         # 14.3478... unknown + 20.0 tls_enum = 94.5428..., rounds to 95).
         self.assertEqual(result["confidence_score"], 95)
         self.assertEqual(result["confidence_rating"], "HIGH")
-        self.assertEqual(result["confidence_formula_version"], "2.0.0")
+        self.assertEqual(result["confidence_formula_version"], CONFIDENCE_FORMULA_VERSION)
 
 
 if __name__ == "__main__":

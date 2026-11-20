@@ -72,3 +72,17 @@ def test_registry_image_passes():
          patch("subprocess.run", return_value=proc) as mock_run:
         scan_container_image("ghcr.io/org/repo:1.2.3", timeout=120)
         mock_run.assert_called_once()
+
+
+def test_refused_reference_variant_b_row_and_log_carry_no_user_part(caplog):
+    ref = "user:hunter2@sha256:5000/img"
+    with patch("subprocess.run") as mock_run, \
+         patch("shutil.which", return_value="/usr/bin/syft"), \
+         caplog.at_level("DEBUG"):
+        endpoints = scan_container_image(ref, timeout=120)
+        mock_run.assert_not_called()
+    assert len(endpoints) == 1
+    ep = endpoints[0]
+    assert "hunter2" not in ep.host
+    assert "hunter2" not in (ep.scan_error or "")
+    assert "hunter2" not in caplog.text

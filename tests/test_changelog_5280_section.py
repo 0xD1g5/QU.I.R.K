@@ -12,6 +12,7 @@ The test reads CHANGELOG.md and README.md from disk and never touches
 This file pins the 5.28.0 notes forever (``_PINNED_VERSION``): it does not read
 pyproject's version, so the 5.28.1 bump cannot redirect it at another section.
 5.28.1 assertions live in tests/test_changelog_5281_section.py (plan 12).
+In 5.29.0 its README assertions moved to tests/test_changelog_5290_section.py; the CHANGELOG-5.28.0 assertions stay pinned.
 """
 from __future__ import annotations
 
@@ -187,23 +188,6 @@ def test_todo_divergence_row_count():
 
 def test_no_unqualified_parity_claim():
     assert _parity_violations(_section()) == []
-
-
-def test_readme_no_unqualified_parity_claim():
-    assert _parity_violations(_README.read_text(encoding="utf-8")) == []
-
-
-def test_readme_whats_new_discloses_divergences():
-    """README What's New and the CHANGELOG disclose the same divergence phrases (235-10)."""
-    text = _README.read_text(encoding="utf-8")
-    m = re.search(r"^## What's New in v5\.28\s*$", text, re.M)
-    assert m, "README.md has no \"## What's New in v5.28\" heading"
-    rest = text[m.end():]
-    nxt = re.search(r"^## ", rest, re.M)
-    sec = (rest[: nxt.start()] if nxt else rest).lower()
-    phrases = list(_DIVERGENCE_PHRASES.values()) + [p for _, p in _TODO_DIVERGENCE_PHRASES]
-    missing = [p for p in phrases if p.lower() not in sec]
-    assert not missing, f"README What's New v5.28 omits divergence phrases: {missing}"
 
 
 def test_parity_detector_self_test():

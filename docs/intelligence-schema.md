@@ -26,7 +26,7 @@ Each scan writes `intelligence-<timestamp>.json` in the configured output direct
   - `total`, `subscores`, `drivers` (a list of reason strings), `rating_cap_reason`, `domains_assessed`, `domains_total`, `score_divisor`, `coverage_disclosure`, `scoring_version`
   - `subscores` contains six entries: `hygiene`, `modern_tls`, `identity_trust`, `agility_signals`, `data_at_rest`, `data_in_motion` (each 0–25, or `null` for a domain that was not assessed)
 - `confidence`: confidence output
-  - `confidence` (a number), `confidence_factors` (an object with `coverage_ratio`, `scan_error_ratio`, `tls_enum_coverage_ratio`, `unknown_ratio`), `confidence_formula_version`
+  - `confidence` (a number), `confidence_factors` (an object with `coverage_ratio`, `scan_error_ratio`, `tls_enum_coverage_ratio`, `unknown_ratio`, `high_error_rate_ceiling`), `confidence_formula_version`
 - `roadmap`: phased roadmap output (an object)
   - `roadmap_version`, `item_count`, `phase_counts`, `items`
 - `calibration`: the scoring calibration in effect

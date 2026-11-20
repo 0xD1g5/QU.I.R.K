@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useScanData } from "@/hooks/useScanData"
 import { useQRAMMPrintData } from "@/hooks/useQRAMMPrintData"
 import type { FindingItem, CertItem, CbomComponent, RoadmapNode } from "@/types/api"
@@ -449,7 +449,10 @@ function PrintQRAMM({
 }
 
 export function PrintPage() {
-  const { data, loading, error } = useScanData()
+  // 261120: Export PDF opens /print?scan_id=... in a fresh browser with no dashboard
+  // state; read it once so the first fetch already targets the selected scan.
+  const [urlScanId] = useState(() => new URLSearchParams(window.location.search).get("scan_id"))
+  const { data, loading, error } = useScanData(urlScanId)
   const {
     scoreResult,
     complianceRows,
