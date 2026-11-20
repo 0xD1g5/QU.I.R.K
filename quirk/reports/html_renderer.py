@@ -1375,8 +1375,10 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
         return False
     browser = None
     context = None
+    driver_started = False
     try:
         with sync_playwright() as p:
+            driver_started = True
             browser = p.chromium.launch()
             # Phase 78 / HARDEN-04: explicit deny on JS, network, and CSP bypass.
             context = browser.new_context(
@@ -1399,6 +1401,17 @@ def render_pdf_report(html_path: str, pdf_path: str) -> bool:
         _inject_pdf_metadata(pdf_path)
         return True
     except (PlaywrightError, PlaywrightTimeoutError, OSError, RuntimeError) as e:
+        print(
+            f"PDF generation failed: {safe_str(e)}; scan complete, HTML report at {html_path}",
+            file=sys.stderr,
+        )
+        return False
+    except Exception as e:
+        # 261120: a driver that cannot start (e.g. its node binary needs a missing system
+        # library) raises a bare Exception before any of our code runs. That is the
+        # environment, so degrade like a missing Chromium. After start, WR-01 still applies.
+        if driver_started:
+            raise
         print(
             f"PDF generation failed: {safe_str(e)}; scan complete, HTML report at {html_path}",
             file=sys.stderr,

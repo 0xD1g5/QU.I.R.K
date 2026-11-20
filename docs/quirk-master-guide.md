@@ -11,7 +11,7 @@
 > Editing this file directly loses the change on the next regeneration and puts
 > two contradictory descriptions of the same behaviour in the repository.
 
-Five guides, 7,938 lines, in reading order.
+Five guides, 7,940 lines, in reading order.
 
 | Part | Source | Covers |
 |------|--------|--------|
@@ -132,7 +132,7 @@ playwright install chromium    # needed for the PDF report; one-time download
 quirk serve
 ```
 
-QU.I.R.K. supports Python 3.10 to 3.14 (3.15 is not supported yet); `python3.12` is only an example. On Linux, also run `playwright install-deps chromium` once (see [Installation](#linux-ubuntu--debian)).
+QU.I.R.K. supports Python 3.10 to 3.14 (3.15 is not supported yet); `python3.12` is only an example. On Debian or Ubuntu, first run `sudo apt-get update && sudo apt-get install -y libatomic1`, because Playwright's browser driver needs it and minimal and container images lack it. Then also run `playwright install-deps chromium` once (see [Installation](#linux-ubuntu--debian)).
 
 > **Use a venv + quote the extras.** Debian 12, Kali (2024.4 and later), and other distributions that mark their system Python as "externally managed" ([PEP 668](https://peps.python.org/pep-0668/)) reject a bare `pip install` with `externally-managed-environment`; the `.venv` avoids this. zsh treats an unquoted `[all]` as a glob and fails with `no matches found`, so keep the quotes. Full Parrot/Kali steps: [Installation → Parrot OS / Kali / Debian](#parrot-os--kali--debian-pep-668).
 
@@ -426,8 +426,10 @@ quirk serve --help
 **Install system packages:**
 
 ```bash
-sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv git
+sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv git libatomic1
 ```
+
+`libatomic1` is needed by Playwright's browser driver, which minimal and container images leave out.
 
 **Clone and install:**
 

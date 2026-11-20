@@ -62,8 +62,10 @@ quirk serve --help
 **Install system packages:**
 
 ```bash
-sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv git
+sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv git libatomic1
 ```
+
+`libatomic1` is needed by Playwright's browser driver, which minimal and container images leave out.
 
 **Clone and install:**
 

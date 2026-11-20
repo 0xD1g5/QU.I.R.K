@@ -270,3 +270,37 @@ def test_refused_out_off_volume_creates_nothing(home_out):
 
 def test_driver_has_no_dead_run_env():
     assert "run_env" not in DRIVER.read_text(encoding="utf-8")
+
+
+# ------------------------------------------------- README Linux apt prerequisite
+APT_TEXT = "sudo apt-get update && sudo apt-get install -y libatomic1    # Linux (Debian/Ubuntu) only"
+
+
+def _apt_plan(uname: str, euid: str, has_sudo: str, text: str = APT_TEXT) -> str:
+    r = run_fork_safe([BASH, str(INNER), "--apt-plan", uname, euid, has_sudo, text], timeout=60)
+    assert r.returncode == 0, _diag(r)
+    return r.stdout.strip()
+
+
+def test_apt_step_is_not_applicable_off_linux():
+    assert _apt_plan("Darwin", "501", "yes").startswith("NA|")
+
+
+def test_apt_step_strips_sudo_for_root_without_sudo():
+    out = _apt_plan("Linux", "0", "no")
+    assert out == ("STRIP|apt-get update && apt-get install -y libatomic1    # Linux (Debian/Ubuntu) only")
+    assert "sudo " not in out.split("|", 1)[1]
+
+
+def test_apt_step_runs_as_written_for_non_root():
+    assert _apt_plan("Linux", "1000", "yes") == "ASIS|" + APT_TEXT
+
+
+def test_apt_step_runs_as_written_for_root_with_sudo():
+    assert _apt_plan("Linux", "0", "yes") == "ASIS|" + APT_TEXT
+
+
+def test_inner_script_routes_apt_steps_to_the_arm():
+    src = INNER.read_text(encoding="utf-8")
+    assert r"sudo\ apt-get*|apt-get*)" in src
+    assert "Linux-only system package step" in src

@@ -179,3 +179,34 @@ def test_render_pdf_import_error_returns_false(tmp_path, capsys, monkeypatch):
     err = capsys.readouterr().err
     # ImportError branch must NOT emit the narrowed-except advisory
     assert "PDF generation failed:" not in err
+
+
+# 261120: a Playwright driver that cannot start (e.g. its bundled node needs a system library
+# the host lacks) raises a bare Exception from sync_playwright().__enter__. That is the
+# environment, not our code, so it must degrade like a missing Chromium: no PDF, advisory, scan
+# continues. Errors raised after the driver started keep the narrowed WR-01 handling.
+
+def test_render_pdf_returns_false_when_driver_cannot_start(tmp_path, capsys):
+    html_path = str(tmp_path / "in.html")
+    pdf_path = str(tmp_path / "out.pdf")
+
+    fake_mod, _browser, _PWErr, _PWTOErr = _patch_playwright(None)
+    cm = fake_mod.sync_playwright.return_value
+    cm.__enter__.side_effect = Exception("Connection closed while reading from the driver")
+
+    with mock.patch.dict(sys.modules, {"playwright.sync_api": fake_mod}):
+        result = render_pdf_report(html_path, pdf_path)
+
+    assert result is False
+    err = capsys.readouterr().err
+    assert "PDF generation failed:" in err
+    assert "Connection closed while reading from the driver" in err
+    assert f"scan complete, HTML report at {html_path}" in err
+
+
+def test_render_pdf_still_propagates_unexpected_exception_after_driver_start(tmp_path):
+    fake_mod, _browser, _PWErr, _PWTOErr = _patch_playwright(Exception("not a driver start failure"))
+
+    with mock.patch.dict(sys.modules, {"playwright.sync_api": fake_mod}):
+        with pytest.raises(Exception, match="not a driver start failure"):
+            render_pdf_report(str(tmp_path / "in.html"), str(tmp_path / "out.pdf"))
