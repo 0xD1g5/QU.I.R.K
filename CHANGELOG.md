@@ -104,6 +104,7 @@ you upgrade.
 - Hardened the AD CS, S/MIME and code-signing LDAP connectors, which no longer follow directory referrals. ([GHSA-3jq6-mvgr-v2r2](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-3jq6-mvgr-v2r2))
 - Hardened container image scans, which now pull from a registry only and accept only plain registry image references. ([GHSA-crv3-xj4c-65wq](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-crv3-xj4c-65wq))
 - Hardened container scan log and error text, which now redacts registry user information from image references. ([GHSA-qh89-6q2c-56mq](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-qh89-6q2c-56mq))
+- Hardened the JWT scan record, which no longer stores secret key members that a misconfigured JWKS endpoint publishes. ([GHSA-vc29-g45j-vm8g](https://github.com/0xD1g5/QU.I.R.K/security/advisories/GHSA-vc29-g45j-vm8g))
 
 ### Known defects
 

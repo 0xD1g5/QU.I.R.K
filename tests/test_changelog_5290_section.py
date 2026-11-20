@@ -35,8 +35,9 @@ _INTERNAL_IDS = re.compile(
 )
 _GHSA = re.compile(r"GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}")
 
-# Number of public fix-only lines in the private release hand-off (one per advisory area).
-_SECURITY_LINE_COUNT = 5
+# Number of public fix-only lines in the private release hand-off (one per advisory area), plus the JWT scan
+# record line added after its advisory was published.
+_SECURITY_LINE_COUNT = 6
 
 # One distinctive phrase per user-visible change, grouped by the release-notes row it comes from.
 _REQUIRED_TERMS: tuple[str, ...] = (
