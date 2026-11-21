@@ -15,25 +15,43 @@ import datetime
 STALENESS_THRESHOLD_DAYS: int = 90
 
 SNMP_VENDOR_MATRIX = {
-    "last_verified": "2026-09-02",
+    "last_verified": "2026-11-19",
     "source_url": "https://www.iana.org/assignments/enterprise-numbers/enterprise-numbers",
     "entries": [
         {
             "vendor": "Cisco",
             "model_pattern": r"Cisco|IOS Software|IOS XR|NX-OS",
-            "pqc_status": "unsupported",
-            "last_verified": "2026-09-02",
-            "source_url": "https://sec.cloudapps.cisco.com/security/center/resources/pqc-readiness",
+            "pqc_status": "partial",
+            "last_verified": "2026-11-21",
+            "source_url": (
+                "https://www.cisco.com/c/en/us/td/docs/routers/ios-xe/"
+                "security-vpn/security-vpn/m-pqc-ikev2.html"
+            ),
             "notes": (
-                "Cisco IOS, IOS XR, and NX-OS do not support PQC cipher suites "
-                "as of 2026-Q2. PQC is on Cisco roadmap for future FTD releases."
+                "Cisco IOS XE 26.1 and later supports hybrid post-quantum key "
+                "exchange (ML-KEM, for example mlkem768, combined with P-256 or "
+                "X25519) for IKEv2, and for SSHv2 per the companion "
+                "pqc-for-ssh.html guide, only on the Cisco 8000 Series Secure "
+                "Routers (C8100 to C8500) in autonomous mode. SCOPE CAVEAT: "
+                "IOS XR and NX-OS are matched by this pattern but no PQC "
+                "statement for them was read, so none is claimed. "
+                "source_url corrected 2026-11-21: the prior "
+                "sec.cloudapps.cisco.com pqc-readiness page returns 'No Data "
+                "Found For This Page.'; the IOS XE Post-Quantum Cryptography "
+                "for IKEv2 guide (updated 2026-09-28, read 2026-11-21) is the "
+                "live replacement. notes corrected 2026-11-21: the prior 'IOS, "
+                "IOS XR, and NX-OS do not support PQC cipher suites' is "
+                "contradicted by that guide for IOS XE 26.1+; pqc_status moved "
+                "unsupported -> partial. The prior FTD roadmap clause was "
+                "dropped, not re-sourced: a roadmap is a promise, not a "
+                "capability (the same call hardware_meta made 2026-09-13)."
             ),
         },
         {
             "vendor": "Juniper",
             "model_pattern": r"JUNOS|Juniper Networks|Juniper.*SRX|Juniper.*EX|Juniper.*QFX",
             "pqc_status": "partial",
-            "last_verified": "2026-09-02",
+            "last_verified": "2026-11-19",
             "source_url": (
                 "https://networkingdocs.hpe.com/documentation/us/en/software/junos/"
                 "release-notes/25.4/junos-evo-release-notes-25.4r1/topics/"
@@ -53,15 +71,16 @@ SNMP_VENDOR_MATRIX = {
                 "does not support PQC cipher suites as of 2026-Q2' is "
                 "contradicted by that release note, matching hardware_meta "
                 "(2026-09-13); pqc_status moved unsupported -> partial. The "
-                "entry's last_verified is not bumped: the catalog-level "
-                "re-verification is pending."
+                "catalog-level re-verification completed 2026-11-21 (Cisco "
+                "re-read in a browser); this entry is dated 2026-11-19, the "
+                "day its source was read."
             ),
         },
         {
             "vendor": "Fortinet",
             "model_pattern": r"FortiGate|FortiOS|Fortinet",
             "pqc_status": "partial",
-            "last_verified": "2026-09-02",
+            "last_verified": "2026-11-19",
             "source_url": (
                 "https://docs.fortinet.com/document/fortigate/8.0.0/"
                 "administration-guide/527690/post-quantum-preshared-key-support"
@@ -79,16 +98,16 @@ SNMP_VENDOR_MATRIX = {
                 "2026-11-19) is the live replacement. notes corrected "
                 "2026-11-19: the prior 'do not support PQC cipher suites' "
                 "ignored IPsec PQC, matching hardware_meta (2026-09-13); "
-                "pqc_status moved unsupported -> partial. The entry's "
-                "last_verified is not bumped: the catalog-level "
-                "re-verification is pending."
+                "pqc_status moved unsupported -> partial. The "
+                "catalog-level re-verification completed 2026-11-21; this "
+                "entry is dated 2026-11-19, the day its source was read."
             ),
         },
         {
             "vendor": "Linux",
             "model_pattern": r"Linux.*\d+\.\d+|GNU/Linux",
             "pqc_status": "partial",
-            "last_verified": "2026-09-02",
+            "last_verified": "2026-11-19",
             "source_url": "https://github.com/open-quantum-safe/oqs-provider",
             "notes": (
                 "Linux hosts with OpenSSL 3.x + OQS provider can support PQC "
@@ -103,7 +122,7 @@ SNMP_VENDOR_MATRIX = {
             "vendor": "Palo Alto",
             "model_pattern": r"PAN-OS|Palo Alto",
             "pqc_status": "unsupported",
-            "last_verified": "2026-09-02",
+            "last_verified": "2026-11-19",
             "source_url": (
                 "https://docs.paloaltonetworks.com/network-security/decryption/"
                 "administration/post-quantum-cryptography-decryption/"
@@ -123,8 +142,9 @@ SNMP_VENDOR_MATRIX = {
                 "prior claim that PAN-OS 11.1+ supports X25519MLKEM768 hybrid "
                 "KEM for TLS decryption was inverted, matching the same "
                 "correction in hardware_meta (2026-09-13); pqc_status moved "
-                "partial -> unsupported. The entry's last_verified is not "
-                "bumped: the catalog-level re-verification is pending."
+                "partial -> unsupported. The catalog-level "
+                "re-verification completed 2026-11-21; this entry is dated "
+                "2026-11-19, the day its source was read."
             ),
         },
     ],
