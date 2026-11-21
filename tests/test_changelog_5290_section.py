@@ -28,13 +28,16 @@ _README = _ROOT / "README.md"
 
 _PINNED_VERSION = "5.29.0"
 
-# GHSA- is banned while the advisories are unpublished; the post-publication link commit relaxes it.
+# The pre-publication tag carried no advisory ids (checked at tag time, Plan 12); the post-publication link
+# commit adds them. GHSA ids are therefore policed separately, by test_advisory_ids_only_on_security_bullets.
 _INTERNAL_IDS = re.compile(
-    r"999\.|\.planning|\b261\d{3}-|\bD-\d{2}\b|\bCR-0\d\b|\bWR-\d{2}\b|\bP-\d{2}\b|GHSA-"
+    r"999\.|\.planning|\b261\d{3}-|\bD-\d{2}\b|\bCR-0\d\b|\bWR-\d{2}\b|\bP-\d{2}\b"
 )
+_GHSA = re.compile(r"GHSA-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}-[23456789cfghjmpqrvwx]{4}")
 
-# Number of public fix-only lines in the private release hand-off (one per advisory area).
-_SECURITY_LINE_COUNT = 5
+# Number of public fix-only lines in the private release hand-off (one per advisory area), plus the JWT scan
+# record line added after its advisory was published.
+_SECURITY_LINE_COUNT = 6
 
 # One distinctive phrase per user-visible change, grouped by the release-notes row it comes from.
 _REQUIRED_TERMS: tuple[str, ...] = (
@@ -142,6 +145,20 @@ def test_no_internal_or_advisory_ids() -> None:
     low = _section().lower()
     for banned in ("dependabot", "embargo"):
         assert banned not in low, banned
+
+
+def test_advisory_ids_only_on_security_bullets() -> None:
+    """GHSA ids appear only on ``### Security`` bullet lines, at most one per line."""
+    security = {ln for ln in _subsection("Security").splitlines() if ln.startswith("- ")}
+    for ln in _section().splitlines():
+        if "GHSA" not in ln:
+            continue
+        assert ln in security, f"advisory id outside a Security bullet: {ln}"
+        ids = sorted(set(_GHSA.findall(ln)))
+        assert len(ids) == 1 and ln.count("GHSA") == 2, f"expected one linked advisory id: {ln}"
+        assert ln.endswith(
+            f"([{ids[0]}](https://github.com/0xD1g5/QU.I.R.K/security/advisories/{ids[0]}))"
+        ), ln
 
 
 def test_upgrade_notes_lead_with_score_movements() -> None:
