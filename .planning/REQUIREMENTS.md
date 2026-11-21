@@ -85,16 +85,16 @@ tracked file.
 
 ### Scan confidence (SCORE)
 
-- [ ] **SCORE-11**: A scan whose probe error rate is above 50% reports confidence below 60
+- [x] **SCORE-11**: A scan whose probe error rate is above 50% reports confidence below 60
   (regression; UAT-8-02 PASS 2026-08-27). Source: `261110-reg-confidence-ignores-high-scan-error-rate`.
 
 ### Release (REL)
 
-- [ ] **REL-13**: 5.29.0 is tagged and published to PyPI and GitHub Releases, and UAT-1-02 passes on
+- [x] **REL-13**: 5.29.0 is tagged and published to PyPI and GitHub Releases, and UAT-1-02 passes on
   the published wheel.
-- [ ] **REL-14**: The CHANGELOG and README known-defect wording for every item fixed in this milestone
+- [x] **REL-14**: The CHANGELOG and README known-defect wording for every item fixed in this milestone
   is removed in 5.29.0 (the 5.28.0 score-divergence disclosure is withdrawn only for what is fixed).
-- [ ] **REL-15**: Every date-gated catalog is green at release time, each re-verified against its
+- [x] **REL-15**: Every date-gated catalog is green at release time, each re-verified against its
   `source_url` (hw_cve trips 2026-11-29; pqc_deadlines and snmp_meta 2026-12-02). No bare date bumps.
 
 ## Future Requirements (v5.30 candidates)
@@ -140,10 +140,10 @@ tracked file.
 | TRUST-01 | Phase 239 | Complete |
 | TRUST-02 | Phase 239 | Complete |
 | TRUST-03 | Phase 239 | Complete |
-| SCORE-11 | Phase 240 | Pending |
-| REL-13 | Phase 240 | Pending |
-| REL-14 | Phase 240 | Pending |
-| REL-15 | Phase 240 | Pending |
+| SCORE-11 | Phase 240 | Complete |
+| REL-13 | Phase 240 | Complete |
+| REL-14 | Phase 240 | Complete |
+| REL-15 | Phase 240 | Complete |
 
 ---
 *Requirements defined: 2026-11-15*
